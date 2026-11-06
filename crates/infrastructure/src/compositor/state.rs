@@ -103,6 +103,13 @@ impl BabyDraCompositorState {
                     None
                 }
             },
+            Command::CycleFocus(forward) => {
+                if let Some(next_id) = self.window_manager.cycle_focus(forward) {
+                    Some(DesktopEnvironmentEvent::WindowFocused { id: next_id })
+                } else {
+                    None
+                }
+            }
         }
     }
 }

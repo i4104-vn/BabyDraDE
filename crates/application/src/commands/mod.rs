@@ -13,6 +13,7 @@ pub enum Command {
     Window(WindowCommand),
     Workspace(WorkspaceCommand),
     System(SystemCommand),
+    CycleFocus(bool),
 }
 
 impl From<WindowCommand> for Command {
