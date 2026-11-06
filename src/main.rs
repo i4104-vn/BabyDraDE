@@ -1,7 +1,7 @@
 //! BabyDraDE — Wayland Desktop Environment
 //! Root entry point
 
-use domain::{CompositorBackend, Rect};
+use domain::{AppRegistry, CompositorBackend, Rect};
 use infrastructure::{BabyDraCompositorState, WaylandServer, WinitBackend};
 use presentation::CompositorRenderPipeline;
 use tracing::{info, Level};
@@ -40,9 +40,31 @@ fn main() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!(e))?;
     info!("Wayland compositor listening on WAYLAND_DISPLAY={}", socket);
 
-    // 4. Initialize core compositor state & render pipeline
+    // 4. Initialize desktop app scanner & launcher overlay
+    let mut app_scanner = infrastructure::DesktopFileScanner::new();
+    let apps = app_scanner.refresh().unwrap_or_default();
+    info!("Scanned {} application(s) for App Launcher.", apps.len());
+
+    let mut launcher = presentation::LauncherOverlay::new();
+    launcher.open(&app_scanner);
+
+    // 5. Initialize core compositor state & render pipeline
     let state = BabyDraCompositorState::new(primary_screen);
-    let _pipeline = CompositorRenderPipeline::new();
+    let pipeline = CompositorRenderPipeline::new();
+
+    // 6. Demonstrate frame rendering with active workspace
+    let mut renderer = infrastructure::GlRenderer::new();
+    let active_ws_windows = state.workspace_manager.current_workspace().windows();
+    pipeline
+        .render_frame_full(
+            &mut renderer,
+            &state.window_manager,
+            Some(active_ws_windows),
+            Some(&launcher),
+            primary_screen,
+            None,
+        )
+        .map_err(|e| anyhow::anyhow!(e))?;
 
     info!(
         "BabyDraDE ready. Socket='{}', Workspaces=4. Run apps with: WAYLAND_DISPLAY={} <app>",
