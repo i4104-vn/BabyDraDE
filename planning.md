@@ -358,29 +358,29 @@ BabyDraDE/
 **Mục tiêu:** Quản lý cửa sổ hoàn chỉnh, phím tắt, workspace, app launcher cơ bản.
 
 **Keybinding System:**
-- [ ] Đọc bảng keybinding từ config
-- [ ] `InputDispatcher`: raw key event → tra bảng → dispatch command
-- [ ] Implement tất cả phím tắt trong bảng ở mục 4
+- [x] Đọc bảng keybinding từ config
+- [x] `InputDispatcher`: raw key event → tra bảng → dispatch command
+- [x] Implement tất cả phím tắt trong bảng ở mục 4
 
 **Window States:**
-- [ ] Maximize: cửa sổ chiếm toàn màn hình (ẩn titlebar tuỳ chọn), bấm lại → phục hồi vị trí cũ
-- [ ] Minimize: ẩn cửa sổ, vẫn giữ trong danh sách
-- [ ] Fullscreen: app request fullscreen (video player) → cửa sổ chiếm toàn màn hình, ẩn mọi thứ
-- [ ] Cascade placement: mở cửa sổ mới lệch xuống-phải 30px
+- [x] Maximize: cửa sổ chiếm toàn màn hình (ẩn titlebar tuỳ chọn), bấm lại → phục hồi vị trí cũ
+- [x] Minimize: ẩn cửa sổ, vẫn giữ trong danh sách
+- [x] Fullscreen: app request fullscreen (video player) → cửa sổ chiếm toàn màn hình, ẩn mọi thứ
+- [x] Cascade placement: mở cửa sổ mới lệch xuống-phải 30px
 
 **Workspace:**
-- [ ] Tối thiểu 4 workspace
-- [ ] `Super + 1..4`: chuyển workspace (ẩn/hiện nhóm cửa sổ)
-- [ ] `Super + Shift + 1..4`: chuyển cửa sổ đang focus sang workspace khác
+- [x] Tối thiểu 4 workspace
+- [x] `Super + 1..4`: chuyển workspace (ẩn/hiện nhóm cửa sổ)
+- [x] `Super + Shift + 1..4`: chuyển cửa sổ đang focus sang workspace khác
 
 **App Launcher (cơ bản):**
-- [ ] Quét `.desktop` files từ `/usr/share/applications` và `~/.local/share/applications`
-- [ ] `Super + D` → hiện overlay tìm kiếm đơn giản → chọn app → launch
-- [ ] Spawn child process với `WAYLAND_DISPLAY=me.babydra.compositor`
+- [x] Quét `.desktop` files từ `/usr/share/applications` và `~/.local/share/applications`
+- [x] `Super + D` → hiện overlay tìm kiếm đơn giản → chọn app → launch
+- [x] Spawn child process với `WAYLAND_DISPLAY=me.babydra.compositor`
 
 **XWayland (tuỳ chọn):**
-- [ ] Khởi tạo XWayland subprocess
-- [ ] Map cửa sổ X11 → floating window trên canvas
+- [x] Khởi tạo XWayland subprocess
+- [x] Map cửa sổ X11 → floating window trên canvas
 
 **Milestone:** Mở nhiều app cùng lúc, kéo thả tự do, chuyển workspace, phím tắt hoạt động. App launcher mở được Firefox, Terminal, File Manager.
 
