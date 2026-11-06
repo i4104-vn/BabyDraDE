@@ -51,3 +51,4 @@ BabyDraDE is a lightweight floating Wayland Desktop Environment built in Rust us
 - **Compositor:** Wayland display server, socket binding (`me.babydra.compositor`), global registration, XDG shell and seat handlers.
 - **Backends:** `WinitBackend` (for development inside an OS window) and `DrmBackend` (bare-metal KMS).
 - **Rendering:** `TextureCache` for zero-redundancy GPU buffer uploads, and `GlRenderer`.
+

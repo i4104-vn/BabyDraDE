@@ -60,3 +60,4 @@ WAYLAND_DISPLAY=me.babydra.compositor alacritty
 ## License
 
 MIT
+
