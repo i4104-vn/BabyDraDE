@@ -293,12 +293,12 @@ BabyDraDE/
 
 **Mục tiêu:** Định nghĩa toàn bộ dữ liệu cốt lõi và contracts. Không phụ thuộc thư viện ngoài.
 
-- [ ] Entities: `Window`, `Workspace`, `Output`, `Cursor`
-- [ ] Value Objects: `Rect`, `Point`, `Size`, `Color`, `KeyCombo`
-- [ ] Traits: `CompositorBackend`, `CanvasRenderer`, `InputSource`, `ConfigStore`, `AppRegistry`
-- [ ] Placement rules: `CascadePlacement` (mở cửa sổ mới lệch xuống-phải 30px so với cửa sổ trước), `CenterPlacement` (giữa màn hình)
-- [ ] Focus rules: MRU (Most Recently Used) — khi đóng cửa sổ, focus quay về cửa sổ gần nhất
-- [ ] Unit tests cho placement & focus logic
+- [x] Entities: `Window`, `Workspace`, `Output`, `Cursor`
+- [x] Value Objects: `Rect`, `Point`, `Size`, `Color`, `KeyCombo`
+- [x] Traits: `CompositorBackend`, `CanvasRenderer`, `InputSource`, `ConfigStore`, `AppRegistry`
+- [x] Placement rules: `CascadePlacement` (mở cửa sổ mới lệch xuống-phải 30px so với cửa sổ trước), `CenterPlacement` (giữa màn hình)
+- [x] Focus rules: MRU (Most Recently Used) — khi đóng cửa sổ, focus quay về cửa sổ gần nhất
+- [x] Unit tests cho placement & focus logic
 
 **Milestone:** `cargo test -p domain` — tất cả pass. Logic thuần túy, không cần GPU.
 
