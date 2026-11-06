@@ -33,6 +33,24 @@ impl SceneGraph {
         windows_in_z_order: impl Iterator<Item = WindowSceneNode<'a>>,
         cursor: Option<&Cursor>,
     ) -> Result<(), RenderError> {
+        Self::render_with_overlay(
+            renderer,
+            screen_rect,
+            background,
+            windows_in_z_order,
+            None,
+            cursor,
+        )
+    }
+
+    pub fn render_with_overlay<'a>(
+        renderer: &mut dyn CanvasRenderer,
+        screen_rect: Rect,
+        background: &CanvasBackground,
+        windows_in_z_order: impl Iterator<Item = WindowSceneNode<'a>>,
+        launcher: Option<&crate::launcher::LauncherOverlay>,
+        cursor: Option<&Cursor>,
+    ) -> Result<(), RenderError> {
         // 1. Layer: Background
         background.render(renderer, screen_rect)?;
 
@@ -60,7 +78,12 @@ impl SceneGraph {
             )?;
         }
 
-        // 3. Layer: Cursor
+        // 3. Layer: Overlay (Launcher, dialogs)
+        if let Some(l) = launcher {
+            l.render(renderer, screen_rect)?;
+        }
+
+        // 4. Layer: Cursor
         if let Some(c) = cursor {
             if c.visible {
                 // Draw cursor pointer indicator (12x12 white square with black border for dev)

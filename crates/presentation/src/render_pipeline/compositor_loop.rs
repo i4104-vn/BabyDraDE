@@ -21,12 +21,13 @@ impl CompositorRenderPipeline {
         }
     }
 
-    /// Renders frame with optional workspace window filtering and fullscreen handling.
-    pub fn render_frame_with_workspace(
+    /// Renders frame with optional workspace window filtering, launcher overlay and fullscreen handling.
+    pub fn render_frame_full(
         &self,
         renderer: &mut dyn CanvasRenderer,
         window_manager: &WindowManager,
         active_window_ids: Option<&[WindowId]>,
+        launcher: Option<&crate::launcher::LauncherOverlay>,
         screen_rect: Rect,
         cursor: Option<&Cursor>,
     ) -> Result<(), RenderError> {
@@ -83,7 +84,32 @@ impl CompositorRenderPipeline {
                 }
             });
 
-        SceneGraph::render(renderer, screen_rect, &self.background, nodes, cursor)
+        SceneGraph::render_with_overlay(
+            renderer,
+            screen_rect,
+            &self.background,
+            nodes,
+            launcher,
+            cursor,
+        )
+    }
+
+    pub fn render_frame_with_workspace(
+        &self,
+        renderer: &mut dyn CanvasRenderer,
+        window_manager: &WindowManager,
+        active_window_ids: Option<&[WindowId]>,
+        screen_rect: Rect,
+        cursor: Option<&Cursor>,
+    ) -> Result<(), RenderError> {
+        self.render_frame_full(
+            renderer,
+            window_manager,
+            active_window_ids,
+            None,
+            screen_rect,
+            cursor,
+        )
     }
 
     pub fn render_frame(
