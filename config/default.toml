@@ -1,0 +1,43 @@
+# BabyDraDE — Default Configuration
+
+[general]
+socket_name = "me.babydra.compositor"
+default_terminal = "alacritty"
+default_launcher = "babydra-launcher"
+
+[window]
+border_width = 2
+titlebar_height = 32
+gaps = 8
+placement = "cascade" # "cascade" or "center"
+
+[theme]
+# Background canvas
+background_color = "#1e1e2e"
+wallpaper = ""
+
+# Window frames
+border_focused = "#89b4fa"
+border_unfocused = "#313244"
+titlebar_focused = "#232634"
+titlebar_unfocused = "#181926"
+text_focused = "#ffffff"
+text_unfocused = "#8c91a0"
+
+[keybindings]
+"Super + Return" = "launch:alacritty"
+"Super + Q" = "window:close"
+"Super + F" = "window:fullscreen"
+"Super + M" = "window:maximize"
+"Super + H" = "window:minimize"
+"Super + Tab" = "focus:cycle"
+"Super + Shift + Q" = "system:quit"
+"Super + D" = "launch:babydra-launcher"
+"Super + 1" = "workspace:switch:1"
+"Super + 2" = "workspace:switch:2"
+"Super + 3" = "workspace:switch:3"
+"Super + 4" = "workspace:switch:4"
+"Super + Shift + 1" = "workspace:move_window:1"
+"Super + Shift + 2" = "workspace:move_window:2"
+"Super + Shift + 3" = "workspace:move_window:3"
+"Super + Shift + 4" = "workspace:move_window:4"
