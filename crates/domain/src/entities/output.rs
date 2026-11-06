@@ -70,12 +70,7 @@ mod tests {
 
     #[test]
     fn test_output_logical_geometry() {
-        let out = Output::new(
-            OutputId::new(1),
-            "eDP-1",
-            Rect::new(0, 0, 3840, 2160),
-            2.0,
-        );
+        let out = Output::new(OutputId::new(1), "eDP-1", Rect::new(0, 0, 3840, 2160), 2.0);
 
         assert_eq!(out.logical_size(), Size::new(1920, 1080));
     }

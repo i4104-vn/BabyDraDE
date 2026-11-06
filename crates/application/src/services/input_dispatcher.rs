@@ -131,9 +131,7 @@ impl InputDispatcher {
         match action {
             Action::Static(cmd) => Some(cmd.clone()),
             Action::TargetFocusedWindow(f) => focused_window.map(f),
-            Action::TargetFocusedWindowAndWorkspace(f, ws) => {
-                focused_window.map(|win| f(win, *ws))
-            }
+            Action::TargetFocusedWindowAndWorkspace(f, ws) => focused_window.map(|win| f(win, *ws)),
         }
     }
 }

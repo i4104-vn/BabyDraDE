@@ -93,13 +93,22 @@ impl TitlebarDecorator {
             return TitlebarHit::None;
         }
 
-        if self.button_rect(window_rect, TitlebarButton::Close).contains_point(point) {
+        if self
+            .button_rect(window_rect, TitlebarButton::Close)
+            .contains_point(point)
+        {
             return TitlebarHit::Button(TitlebarButton::Close);
         }
-        if self.button_rect(window_rect, TitlebarButton::Maximize).contains_point(point) {
+        if self
+            .button_rect(window_rect, TitlebarButton::Maximize)
+            .contains_point(point)
+        {
             return TitlebarHit::Button(TitlebarButton::Maximize);
         }
-        if self.button_rect(window_rect, TitlebarButton::Minimize).contains_point(point) {
+        if self
+            .button_rect(window_rect, TitlebarButton::Minimize)
+            .contains_point(point)
+        {
             return TitlebarHit::Button(TitlebarButton::Minimize);
         }
 
@@ -130,7 +139,10 @@ mod tests {
 
         // Drag hit
         let drag_point = Point::new(200, 110);
-        assert_eq!(decorator.hit_test(&win, drag_point), TitlebarHit::DragTitlebar);
+        assert_eq!(
+            decorator.hit_test(&win, drag_point),
+            TitlebarHit::DragTitlebar
+        );
 
         // Close button hit (right: 900, close btn: [868..900])
         let close_point = Point::new(880, 110);

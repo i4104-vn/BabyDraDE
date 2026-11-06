@@ -54,10 +54,7 @@ impl SceneGraph {
             renderer.draw_rect(node.titlebar_rect, node.titlebar_bg_color)?;
             renderer.draw_text(
                 &node.window.title,
-                Point::new(
-                    node.titlebar_rect.x() + 10,
-                    node.titlebar_rect.y() + 8,
-                ),
+                Point::new(node.titlebar_rect.x() + 10, node.titlebar_rect.y() + 8),
                 14.0,
                 node.titlebar_text_color,
             )?;

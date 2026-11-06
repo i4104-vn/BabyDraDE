@@ -24,10 +24,7 @@ impl SeatHandler {
     }
 
     /// Handles pointer motion across the screen.
-    pub fn handle_pointer_motion(
-        _state: &mut BabyDraCompositorState,
-        _position: Point,
-    ) {
+    pub fn handle_pointer_motion(_state: &mut BabyDraCompositorState, _position: Point) {
         // Track pointer position or perform window move/resize if dragging
     }
 

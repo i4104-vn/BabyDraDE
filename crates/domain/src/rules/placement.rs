@@ -51,7 +51,11 @@ pub fn place_cascade(
     last_window_rect: Option<Rect>,
     offset: i32,
 ) -> Rect {
-    let offset = if offset <= 0 { DEFAULT_CASCADE_OFFSET } else { offset };
+    let offset = if offset <= 0 {
+        DEFAULT_CASCADE_OFFSET
+    } else {
+        offset
+    };
     let initial_x = screen.x() + offset;
     let initial_y = screen.y() + offset;
 

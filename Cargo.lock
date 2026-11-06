@@ -22,6 +22,7 @@ name = "application"
 version = "0.1.0"
 dependencies = [
  "domain",
+ "serde",
  "thiserror",
  "tracing",
 ]
@@ -89,6 +90,7 @@ name = "infrastructure"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "application",
  "domain",
  "serde",
  "thiserror",
@@ -156,6 +158,7 @@ version = "0.1.0"
 dependencies = [
  "application",
  "domain",
+ "serde",
  "tracing",
 ]
 

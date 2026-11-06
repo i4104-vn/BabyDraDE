@@ -26,8 +26,8 @@ impl PointerDevice {
     pub fn on_button(&mut self, button: u32, state: ButtonState) {
         let is_down = state == ButtonState::Pressed;
         match button {
-            1 | 272 => self.left_button_down = is_down,   // BTN_LEFT / Linux 272
-            2 | 273 => self.right_button_down = is_down,  // BTN_RIGHT / Linux 273
+            1 | 272 => self.left_button_down = is_down, // BTN_LEFT / Linux 272
+            2 | 273 => self.right_button_down = is_down, // BTN_RIGHT / Linux 273
             3 | 274 => self.middle_button_down = is_down, // BTN_MIDDLE / Linux 274
             _ => {}
         }

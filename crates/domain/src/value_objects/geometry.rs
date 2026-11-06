@@ -36,7 +36,10 @@ pub struct Size {
 }
 
 impl Size {
-    pub const ZERO: Self = Self { width: 0, height: 0 };
+    pub const ZERO: Self = Self {
+        width: 0,
+        height: 0,
+    };
 
     pub const fn new(width: u32, height: u32) -> Self {
         Self { width, height }

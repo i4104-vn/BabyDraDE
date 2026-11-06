@@ -70,9 +70,7 @@ impl BabyDraCompositorState {
                     ev
                 }
                 WindowCommand::RestoreWindow { id } => self.window_manager.restore_window(id),
-                WindowCommand::ToggleFullscreen { id } => {
-                    self.window_manager.toggle_fullscreen(id)
-                }
+                WindowCommand::ToggleFullscreen { id } => self.window_manager.toggle_fullscreen(id),
             },
             Command::Workspace(ws_cmd) => match ws_cmd {
                 WorkspaceCommand::SwitchWorkspace { workspace_id } => {
@@ -87,9 +85,7 @@ impl BabyDraCompositorState {
                     None
                 }
                 WorkspaceCommand::NextWorkspace => self.workspace_manager.next_workspace(),
-                WorkspaceCommand::PreviousWorkspace => {
-                    self.workspace_manager.previous_workspace()
-                }
+                WorkspaceCommand::PreviousWorkspace => self.workspace_manager.previous_workspace(),
             },
             Command::System(sys_cmd) => match sys_cmd {
                 SystemCommand::QuitCompositor => {

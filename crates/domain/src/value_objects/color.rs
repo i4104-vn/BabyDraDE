@@ -17,7 +17,10 @@ pub enum ColorParseError {
 impl std::fmt::Display for ColorParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidFormat => write!(f, "Invalid color format, expected #RGB, #RGBA, #RRGGBB, or #RRGGBBAA"),
+            Self::InvalidFormat => write!(
+                f,
+                "Invalid color format, expected #RGB, #RGBA, #RRGGBB, or #RRGGBBAA"
+            ),
             Self::InvalidHexValue => write!(f, "Invalid hexadecimal character in color string"),
         }
     }
@@ -26,12 +29,42 @@ impl std::fmt::Display for ColorParseError {
 impl std::error::Error for ColorParseError {}
 
 impl Color {
-    pub const TRANSPARENT: Self = Self { r: 0, g: 0, b: 0, a: 0 };
-    pub const BLACK: Self = Self { r: 0, g: 0, b: 0, a: 255 };
-    pub const WHITE: Self = Self { r: 255, g: 255, b: 255, a: 255 };
-    pub const RED: Self = Self { r: 255, g: 0, b: 0, a: 255 };
-    pub const GREEN: Self = Self { r: 0, g: 255, b: 0, a: 255 };
-    pub const BLUE: Self = Self { r: 0, g: 0, b: 255, a: 255 };
+    pub const TRANSPARENT: Self = Self {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 0,
+    };
+    pub const BLACK: Self = Self {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 255,
+    };
+    pub const WHITE: Self = Self {
+        r: 255,
+        g: 255,
+        b: 255,
+        a: 255,
+    };
+    pub const RED: Self = Self {
+        r: 255,
+        g: 0,
+        b: 0,
+        a: 255,
+    };
+    pub const GREEN: Self = Self {
+        r: 0,
+        g: 255,
+        b: 0,
+        a: 255,
+    };
+    pub const BLUE: Self = Self {
+        r: 0,
+        g: 0,
+        b: 255,
+        a: 255,
+    };
 
     pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
         Self { r, g, b, a: 255 }
@@ -63,32 +96,46 @@ impl Color {
         match hex.len() {
             // #RGB
             3 => {
-                let r = u8::from_str_radix(&hex[0..1].repeat(2), 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let g = u8::from_str_radix(&hex[1..2].repeat(2), 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let b = u8::from_str_radix(&hex[2..3].repeat(2), 16).map_err(|_| ColorParseError::InvalidHexValue)?;
+                let r = u8::from_str_radix(&hex[0..1].repeat(2), 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let g = u8::from_str_radix(&hex[1..2].repeat(2), 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let b = u8::from_str_radix(&hex[2..3].repeat(2), 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
                 Ok(Self::rgb(r, g, b))
             }
             // #RGBA
             4 => {
-                let r = u8::from_str_radix(&hex[0..1].repeat(2), 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let g = u8::from_str_radix(&hex[1..2].repeat(2), 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let b = u8::from_str_radix(&hex[2..3].repeat(2), 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let a = u8::from_str_radix(&hex[3..4].repeat(2), 16).map_err(|_| ColorParseError::InvalidHexValue)?;
+                let r = u8::from_str_radix(&hex[0..1].repeat(2), 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let g = u8::from_str_radix(&hex[1..2].repeat(2), 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let b = u8::from_str_radix(&hex[2..3].repeat(2), 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let a = u8::from_str_radix(&hex[3..4].repeat(2), 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
                 Ok(Self::rgba(r, g, b, a))
             }
             // #RRGGBB
             6 => {
-                let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ColorParseError::InvalidHexValue)?;
+                let r = u8::from_str_radix(&hex[0..2], 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let g = u8::from_str_radix(&hex[2..4], 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let b = u8::from_str_radix(&hex[4..6], 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
                 Ok(Self::rgb(r, g, b))
             }
             // #RRGGBBAA
             8 => {
-                let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ColorParseError::InvalidHexValue)?;
-                let a = u8::from_str_radix(&hex[6..8], 16).map_err(|_| ColorParseError::InvalidHexValue)?;
+                let r = u8::from_str_radix(&hex[0..2], 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let g = u8::from_str_radix(&hex[2..4], 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let b = u8::from_str_radix(&hex[4..6], 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
+                let a = u8::from_str_radix(&hex[6..8], 16)
+                    .map_err(|_| ColorParseError::InvalidHexValue)?;
                 Ok(Self::rgba(r, g, b, a))
             }
             _ => Err(ColorParseError::InvalidFormat),

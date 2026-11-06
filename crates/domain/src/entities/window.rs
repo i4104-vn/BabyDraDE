@@ -78,7 +78,9 @@ impl Window {
         match self.state {
             WindowState::Normal => {
                 let saved = self.geometry;
-                self.state = WindowState::Maximized { saved_geometry: saved };
+                self.state = WindowState::Maximized {
+                    saved_geometry: saved,
+                };
                 self.geometry = screen_rect;
                 self.visible = true;
             }
@@ -86,7 +88,9 @@ impl Window {
                 self.restore();
             }
             _ => {
-                self.state = WindowState::Maximized { saved_geometry: self.geometry };
+                self.state = WindowState::Maximized {
+                    saved_geometry: self.geometry,
+                };
                 self.geometry = screen_rect;
                 self.visible = true;
             }
@@ -95,7 +99,8 @@ impl Window {
 
     pub fn restore(&mut self) {
         match self.state {
-            WindowState::Maximized { saved_geometry } | WindowState::Fullscreen { saved_geometry } => {
+            WindowState::Maximized { saved_geometry }
+            | WindowState::Fullscreen { saved_geometry } => {
                 self.geometry = saved_geometry;
                 self.state = WindowState::Normal;
                 self.visible = true;
@@ -121,12 +126,16 @@ impl Window {
             }
             WindowState::Normal | WindowState::Maximized { .. } => {
                 let saved = self.geometry;
-                self.state = WindowState::Fullscreen { saved_geometry: saved };
+                self.state = WindowState::Fullscreen {
+                    saved_geometry: saved,
+                };
                 self.geometry = screen_rect;
                 self.visible = true;
             }
             WindowState::Minimized => {
-                self.state = WindowState::Fullscreen { saved_geometry: self.geometry };
+                self.state = WindowState::Fullscreen {
+                    saved_geometry: self.geometry,
+                };
                 self.geometry = screen_rect;
                 self.visible = true;
             }

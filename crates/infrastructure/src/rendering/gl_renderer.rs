@@ -94,7 +94,9 @@ mod tests {
         assert!(renderer.draw_window_texture(win, rect).is_ok());
 
         // Update texture cache and draw
-        renderer.texture_cache.update_texture(win, Size::new(800, 568));
+        renderer
+            .texture_cache
+            .update_texture(win, Size::new(800, 568));
         assert!(renderer.draw_window_texture(win, rect).is_ok());
 
         assert!(renderer.render_frame().is_ok());

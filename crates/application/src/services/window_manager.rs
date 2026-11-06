@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use domain::{
-    MruFocusHistory, PlacementPolicy, Point, Rect, Size, Window, WindowId, WindowState,
-};
+use domain::{MruFocusHistory, PlacementPolicy, Point, Rect, Size, Window, WindowId, WindowState};
 
 use crate::events::DesktopEnvironmentEvent;
 
@@ -42,9 +40,9 @@ impl WindowManager {
         app_id: Option<String>,
         initial_size: Size,
     ) -> DesktopEnvironmentEvent {
-        let geometry = self
-            .placement_policy
-            .place(self.screen_rect, initial_size, self.last_window_rect);
+        let geometry =
+            self.placement_policy
+                .place(self.screen_rect, initial_size, self.last_window_rect);
         self.last_window_rect = Some(geometry);
 
         let mut window = Window::new(id, title, geometry);
@@ -225,7 +223,8 @@ impl WindowManager {
     }
 
     pub fn focused_window(&self) -> Option<&Window> {
-        self.focused_window_id().and_then(|id| self.windows.get(&id))
+        self.focused_window_id()
+            .and_then(|id| self.windows.get(&id))
     }
 
     pub fn count(&self) -> usize {
@@ -243,11 +242,21 @@ mod tests {
         let w1 = WindowId::new(1);
         let w2 = WindowId::new(2);
 
-        let ev1 = wm.open_window(w1, "Terminal".into(), Some("alacritty".into()), Size::new(800, 600));
+        let ev1 = wm.open_window(
+            w1,
+            "Terminal".into(),
+            Some("alacritty".into()),
+            Size::new(800, 600),
+        );
         assert!(matches!(ev1, DesktopEnvironmentEvent::WindowCreated { .. }));
         assert_eq!(wm.focused_window_id(), Some(w1));
 
-        let ev2 = wm.open_window(w2, "Browser".into(), Some("firefox".into()), Size::new(800, 600));
+        let ev2 = wm.open_window(
+            w2,
+            "Browser".into(),
+            Some("firefox".into()),
+            Size::new(800, 600),
+        );
         assert!(matches!(ev2, DesktopEnvironmentEvent::WindowCreated { .. }));
         assert_eq!(wm.focused_window_id(), Some(w2));
 

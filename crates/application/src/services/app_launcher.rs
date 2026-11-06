@@ -18,11 +18,7 @@ impl AppLauncherService {
     }
 
     /// Prepares process environment for spawned clients (setting WAYLAND_DISPLAY).
-    pub fn build_spawn_command(
-        &self,
-        exec: &str,
-        wayland_socket: &str,
-    ) -> std::process::Command {
+    pub fn build_spawn_command(&self, exec: &str, wayland_socket: &str) -> std::process::Command {
         let clean_exec = exec
             .split_whitespace()
             .take_while(|arg| !arg.starts_with('%'))

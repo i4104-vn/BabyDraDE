@@ -16,22 +16,10 @@ pub enum ButtonState {
 /// Generic input event emitted from system or backend.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum InputEvent {
-    Key {
-        combo: KeyCombo,
-        state: KeyState,
-    },
-    PointerMotion {
-        position: Point,
-        delta: (i32, i32),
-    },
-    PointerButton {
-        button: u32,
-        state: ButtonState,
-    },
-    PointerAxis {
-        horizontal: f64,
-        vertical: f64,
-    },
+    Key { combo: KeyCombo, state: KeyState },
+    PointerMotion { position: Point, delta: (i32, i32) },
+    PointerButton { button: u32, state: ButtonState },
+    PointerAxis { horizontal: f64, vertical: f64 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

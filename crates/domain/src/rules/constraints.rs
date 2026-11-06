@@ -82,10 +82,8 @@ mod tests {
 
     #[test]
     fn test_size_constraints_clamping() {
-        let constraints = SizeConstraints::new(
-            Some(Size::new(200, 150)),
-            Some(Size::new(1200, 900)),
-        );
+        let constraints =
+            SizeConstraints::new(Some(Size::new(200, 150)), Some(Size::new(1200, 900)));
 
         // Within bounds
         assert_eq!(constraints.clamp(Size::new(800, 600)), Size::new(800, 600));
@@ -94,7 +92,10 @@ mod tests {
         assert_eq!(constraints.clamp(Size::new(100, 100)), Size::new(200, 150));
 
         // Too large -> clamped to max
-        assert_eq!(constraints.clamp(Size::new(2000, 1500)), Size::new(1200, 900));
+        assert_eq!(
+            constraints.clamp(Size::new(2000, 1500)),
+            Size::new(1200, 900)
+        );
     }
 
     #[test]
