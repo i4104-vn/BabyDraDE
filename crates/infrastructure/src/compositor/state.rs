@@ -96,6 +96,17 @@ impl BabyDraCompositorState {
                     command_or_desktop_id,
                 } => {
                     tracing::info!("Launching client app: {}", command_or_desktop_id);
+                    let launcher = application::AppLauncherService::new();
+                    let mut cmd =
+                        launcher.build_spawn_command(&command_or_desktop_id, &self.socket_name);
+                    match cmd.spawn() {
+                        Ok(child) => {
+                            tracing::info!("Spawned client process: pid={}", child.id());
+                        }
+                        Err(e) => {
+                            tracing::warn!("Could not spawn '{}': {}", command_or_desktop_id, e);
+                        }
+                    }
                     None
                 }
                 SystemCommand::ReloadConfig => {

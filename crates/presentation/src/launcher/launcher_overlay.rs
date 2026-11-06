@@ -109,7 +109,12 @@ impl LauncherOverlay {
         renderer.draw_rect(border_right, border_color)?;
 
         // 3. Search input header
-        let search_bar = Rect::new(box_rect.x() + 16, box_rect.y() + 16, box_rect.width() - 32, 40);
+        let search_bar = Rect::new(
+            box_rect.x() + 16,
+            box_rect.y() + 16,
+            box_rect.width() - 32,
+            40,
+        );
         renderer.draw_rect(search_bar, Color::rgb(49, 50, 68))?;
 
         let search_display = if self.search_query.is_empty() {
@@ -134,7 +139,12 @@ impl LauncherOverlay {
         let max_items = 6;
         for (i, entry) in self.matched_entries.iter().take(max_items).enumerate() {
             let item_y = items_start_y + (i as u32 * Self::ITEM_HEIGHT) as i32;
-            let item_rect = Rect::new(box_rect.x() + 16, item_y, box_rect.width() - 32, Self::ITEM_HEIGHT - 4);
+            let item_rect = Rect::new(
+                box_rect.x() + 16,
+                item_y,
+                box_rect.width() - 32,
+                Self::ITEM_HEIGHT - 4,
+            );
 
             let is_selected = i == self.selected_index;
             let item_bg = if is_selected {

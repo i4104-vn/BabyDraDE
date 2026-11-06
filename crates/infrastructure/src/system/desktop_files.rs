@@ -43,9 +43,24 @@ impl DesktopFileScanner {
 
     fn register_default_fallbacks(&mut self) {
         let default_apps = [
-            ("alacritty.desktop", "Alacritty", "alacritty", "Alacritty Terminal Emulator"),
-            ("firefox.desktop", "Firefox", "firefox", "Mozilla Firefox Web Browser"),
-            ("thunar.desktop", "File Manager", "thunar", "Browse the file system"),
+            (
+                "alacritty.desktop",
+                "Alacritty",
+                "alacritty",
+                "Alacritty Terminal Emulator",
+            ),
+            (
+                "firefox.desktop",
+                "Firefox",
+                "firefox",
+                "Mozilla Firefox Web Browser",
+            ),
+            (
+                "thunar.desktop",
+                "File Manager",
+                "thunar",
+                "Browse the file system",
+            ),
         ];
 
         for (id, name, exec, comment) in default_apps {
