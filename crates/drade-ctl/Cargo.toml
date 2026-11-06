@@ -1,0 +1,13 @@
+[package]
+name = "drade-ctl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "BabyDraDE CLI control tool"
+
+[dependencies]
+domain.workspace = true
+serde.workspace = true
+anyhow.workspace = true
+serde_json = "1"
+

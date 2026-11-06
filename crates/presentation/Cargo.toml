@@ -1,0 +1,12 @@
+[package]
+name = "presentation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "BabyDraDE Presentation Layer — Canvas, Bar, Taskbar, Widgets, Window Frames"
+
+[dependencies]
+domain.workspace = true
+application.workspace = true
+tracing.workspace = true
+
