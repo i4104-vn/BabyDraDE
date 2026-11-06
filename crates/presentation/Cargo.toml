@@ -9,4 +9,5 @@ description = "BabyDraDE Presentation Layer — Canvas, Bar, Taskbar, Widgets, W
 domain.workspace = true
 application.workspace = true
 tracing.workspace = true
+serde.workspace = true
 
