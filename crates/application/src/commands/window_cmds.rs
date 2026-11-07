@@ -1,4 +1,4 @@
-use domain::{Point, Size, WindowId};
+use domain::{Point, Size, SnapPosition, WindowId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,8 +28,18 @@ pub enum WindowCommand {
     FocusWindow {
         id: WindowId,
     },
+    RaiseWindow {
+        id: WindowId,
+    },
+    LowerWindow {
+        id: WindowId,
+    },
     ToggleMaximize {
         id: WindowId,
+    },
+    SnapWindow {
+        id: WindowId,
+        position: SnapPosition,
     },
     MinimizeWindow {
         id: WindowId,

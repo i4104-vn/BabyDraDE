@@ -225,10 +225,10 @@ ensure_rust_installed() {
 }
 
 # ------------------------------------------------------------------------------
-# 4. Chuẩn bị môi trường đồ họa cho TTY
+# 4. Chuẩn bị môi trường Wayland Runtime
 # ------------------------------------------------------------------------------
 setup_tty_environment() {
-    echo "[*] Đang cấu hình môi trường đồ họa TTY..."
+    echo "[*] Đang cấu hình môi trường Wayland Compositor..."
 
     # XDG_RUNTIME_DIR bắt buộc cho các session Wayland / DRM
     if [ -z "${XDG_RUNTIME_DIR:-}" ] || [ ! -d "${XDG_RUNTIME_DIR:-}" ]; then
@@ -238,38 +238,14 @@ setup_tty_environment() {
         chmod 0700 "$XDG_RUNTIME_DIR"
     fi
 
-    # Kích hoạt module kernel cho chuột và uinput nếu có
-    run_sudo modprobe mousedev 2>/dev/null || true
-    run_sudo modprobe uinput 2>/dev/null || true
-
-    # Cấp quyền truy cập video / input / framebuffer cho user
+    # Cấp quyền truy cập video / input / render cho user
     if [ "$(id -u)" -ne 0 ]; then
         for grp in video input render; do
             if getent group "$grp" >/dev/null 2>&1; then
                 run_sudo usermod -a -G "$grp" "$USER" 2>/dev/null || true
             fi
         done
-        # Cấp quyền đọc/ghi cho framebuffer, DRM và chuột /dev/input/mice
-        run_sudo chmod 666 /dev/fb0 2>/dev/null || true
-        run_sudo chmod 666 /dev/dri/card* /dev/dri/renderD* 2>/dev/null || true
-        run_sudo chmod 666 /dev/input/mice /dev/input/mouse* /dev/input/event* 2>/dev/null || true
-    fi
-
-    # Tắt nhấp nháy con trỏ text của Linux fbcon để tránh xung đột khung hình
-    echo 0 | run_sudo tee /sys/class/graphics/fbcon/cursor_blink >/dev/null 2>&1 || true
-    echo 0 | run_sudo tee /sys/module/vt/parameters/cur_default >/dev/null 2>&1 || true
-    run_sudo setterm -cursor off -blank 0 -powerdown 0 -powersave off 2>/dev/null || true
-    printf "\033[?25l" 2>/dev/null || true
-
-    # Cấu hình và hiển thị thông số framebuffer
-    if [ -e /dev/fb0 ]; then
-        if command -v fbset >/dev/null 2>&1; then
-            run_sudo fbset -depth 32 2>/dev/null || true
-        fi
-        echo "[*] Thông số Framebuffer (/dev/fb0):"
-        echo "    - Virtual Size : $(cat /sys/class/graphics/fb0/virtual_size 2>/dev/null || echo 'N/A')"
-        echo "    - Stride       : $(cat /sys/class/graphics/fb0/stride 2>/dev/null || echo 'N/A') bytes"
-        echo "    - BPP          : $(cat /sys/class/graphics/fb0/bits_per_pixel 2>/dev/null || echo 'N/A') bits"
+        run_sudo chmod 666 /dev/dri/card* /dev/dri/renderD* /dev/input/event* 2>/dev/null || true
     fi
 
     # D-Bus session bus
@@ -302,63 +278,11 @@ build_babydrade() {
 }
 
 # ------------------------------------------------------------------------------
-# 6. Khởi chạy DE trực tiếp với giao diện đồ họa
+# 6. Khởi chạy Compositor & Window Manager
 # ------------------------------------------------------------------------------
 launch_de() {
-    echo "[*] Đang khởi động BabyDraDE..."
-    echo "[*] Phím tắt trong DE:"
-    echo "    - [Enter]           : Mở Terminal"
-    echo "    - [d]               : Bật/Tắt App Launcher"
-    echo "    - [Tab]             : Đổi focus giữa các cửa sổ"
-    echo "    - [Phím Mũi Tên]   : Di chuyển cửa sổ đang focus"
-    echo "    - [m]               : Maximize / Restore cửa sổ"
-    echo "    - [q]               : Đóng cửa sổ đang chọn"
-    echo "    - [1..4]            : Chuyển Workspace 1..4"
-    echo "    - [Esc]             : Thoát DE về lại TTY"
-    echo "----------------------------------------------------------"
-
-    # Lưu lại trạng thái terminal hiện tại
-    OLD_TTY_SETTINGS=""
-    if [ -t 0 ]; then
-        OLD_TTY_SETTINGS="$(stty -g 2>/dev/null || true)"
-        # Đưa TTY sang raw mode không echo để truyền trực tiếp phím bấm vào DE
-        stty -echo -icanon min 1 time 0 2>/dev/null || true
-        # Ẩn con trỏ text của console
-        tput civis 2>/dev/null || true
-    fi
-
-    # Đảm bảo dọn dẹp và khôi phục console khi thoát
-    cleanup() {
-        if [ -n "$OLD_TTY_SETTINGS" ]; then
-            stty "$OLD_TTY_SETTINGS" 2>/dev/null || stty sane 2>/dev/null || true
-        else
-            stty sane 2>/dev/null || true
-        fi
-        printf "\033[?25h" 2>/dev/null || true
-        run_sudo setterm -cursor on 2>/dev/null || true
-        echo 1 | run_sudo tee /sys/class/graphics/fbcon/cursor_blink >/dev/null 2>&1 || true
-        tput cnorm 2>/dev/null || true
-        clear 2>/dev/null || true
-        echo "[✓] Đã thoát BabyDraDE và khôi phục TTY."
-    }
-    trap cleanup EXIT INT TERM
-
-    # Xoá màn hình TTY trước khi vẽ
-    clear 2>/dev/null || true
-
-    # Khởi chạy Desktop Canvas đồ họa
-    if [ -e /dev/fb0 ] && [ -w /dev/fb0 ]; then
-        echo "[*] Khởi chạy trực tiếp lên Hardware Framebuffer Canvas (/dev/fb0)..."
-        ./target/release/babydrade
-    elif [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
-        echo "[*] Khởi chạy trong graphical session..."
-        ./target/release/babydrade
-    elif command -v xinit >/dev/null 2>&1; then
-        echo "[*] Khởi tạo Xorg session từ TTY để mở Canvas đồ họa..."
-        xinit ./target/release/babydrade -- :0 -nolisten tcp 2>/dev/null || ./target/release/babydrade
-    else
-        ./target/release/babydrade
-    fi
+    echo "[*] Khởi chạy BabyDraDE Window Manager..."
+    ./target/release/babydrade
 }
 
 # ------------------------------------------------------------------------------

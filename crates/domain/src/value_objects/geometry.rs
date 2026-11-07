@@ -228,6 +228,99 @@ impl Rect {
     }
 }
 
+/// Target positions for window snapping / tiling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SnapPosition {
+    LeftHalf,
+    RightHalf,
+    TopHalf,
+    BottomHalf,
+}
+
+/// Directions for interactive window edge/corner resizing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ResizeDirection {
+    Top,
+    Bottom,
+    Left,
+    Right,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+impl ResizeDirection {
+    pub fn to_cursor_icon(self) -> crate::entities::cursor::CursorIcon {
+        use crate::entities::cursor::CursorIcon;
+        match self {
+            Self::Top => CursorIcon::ResizeNorth,
+            Self::Bottom => CursorIcon::ResizeSouth,
+            Self::Left => CursorIcon::ResizeWest,
+            Self::Right => CursorIcon::ResizeEast,
+            Self::TopLeft => CursorIcon::ResizeNorthWest,
+            Self::TopRight => CursorIcon::ResizeNorthEast,
+            Self::BottomLeft => CursorIcon::ResizeSouthWest,
+            Self::BottomRight => CursorIcon::ResizeSouthEast,
+        }
+    }
+
+    /// Calculates new window geometry given an initial rectangle and mouse delta.
+    pub fn apply_resize(&self, initial: Rect, dx: i32, dy: i32, min_size: Size) -> Rect {
+        let mut x = initial.x();
+        let mut y = initial.y();
+        let mut w = initial.width() as i32;
+        let mut h = initial.height() as i32;
+        let min_w = min_size.width as i32;
+        let min_h = min_size.height as i32;
+
+        match self {
+            Self::Right => {
+                w = (w + dx).max(min_w);
+            }
+            Self::Bottom => {
+                h = (h + dy).max(min_h);
+            }
+            Self::Left => {
+                let new_w = (w - dx).max(min_w);
+                x += w - new_w;
+                w = new_w;
+            }
+            Self::Top => {
+                let new_h = (h - dy).max(min_h);
+                y += h - new_h;
+                h = new_h;
+            }
+            Self::BottomRight => {
+                w = (w + dx).max(min_w);
+                h = (h + dy).max(min_h);
+            }
+            Self::BottomLeft => {
+                let new_w = (w - dx).max(min_w);
+                x += w - new_w;
+                w = new_w;
+                h = (h + dy).max(min_h);
+            }
+            Self::TopRight => {
+                w = (w + dx).max(min_w);
+                let new_h = (h - dy).max(min_h);
+                y += h - new_h;
+                h = new_h;
+            }
+            Self::TopLeft => {
+                let new_w = (w - dx).max(min_w);
+                let new_h = (h - dy).max(min_h);
+                x += w - new_w;
+                y += h - new_h;
+                w = new_w;
+                h = new_h;
+            }
+        }
+
+        Rect::new(x, y, w as u32, h as u32)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

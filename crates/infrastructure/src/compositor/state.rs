@@ -64,7 +64,12 @@ impl BabyDraCompositorState {
                     self.window_manager.resize_window(id, new_size)
                 }
                 WindowCommand::FocusWindow { id } => self.window_manager.focus_window(id),
+                WindowCommand::RaiseWindow { id } => self.window_manager.raise_window(id),
+                WindowCommand::LowerWindow { id } => self.window_manager.lower_window(id),
                 WindowCommand::ToggleMaximize { id } => self.window_manager.toggle_maximize(id),
+                WindowCommand::SnapWindow { id, position } => {
+                    self.window_manager.snap_window(id, position)
+                }
                 WindowCommand::MinimizeWindow { id } => {
                     let (ev, _) = self.window_manager.minimize_window(id);
                     ev

@@ -1,4 +1,4 @@
-use crate::value_objects::Rect;
+use crate::value_objects::{Rect, SnapPosition};
 use serde::{Deserialize, Serialize};
 
 /// Unique identifier for a managed window.
@@ -28,6 +28,7 @@ pub enum WindowState {
     Maximized { saved_geometry: Rect },
     Minimized,
     Fullscreen { saved_geometry: Rect },
+    Snapped { position: SnapPosition, saved_geometry: Rect },
 }
 
 /// Core Window entity in BabyDraDE.
@@ -97,10 +98,42 @@ impl Window {
         }
     }
 
+    pub fn snap(&mut self, position: SnapPosition, work_area: Rect) {
+        let saved = match self.state {
+            WindowState::Normal => self.geometry,
+            WindowState::Maximized { saved_geometry }
+            | WindowState::Fullscreen { saved_geometry }
+            | WindowState::Snapped { saved_geometry, .. } => saved_geometry,
+            WindowState::Minimized => self.geometry,
+        };
+
+        let half_w = work_area.width() / 2;
+        let half_h = work_area.height() / 2;
+
+        let target_rect = match position {
+            SnapPosition::LeftHalf => Rect::new(work_area.x(), work_area.y(), half_w, work_area.height()),
+            SnapPosition::RightHalf => {
+                Rect::new(work_area.x() + half_w as i32, work_area.y(), half_w, work_area.height())
+            }
+            SnapPosition::TopHalf => Rect::new(work_area.x(), work_area.y(), work_area.width(), half_h),
+            SnapPosition::BottomHalf => {
+                Rect::new(work_area.x(), work_area.y() + half_h as i32, work_area.width(), half_h)
+            }
+        };
+
+        self.geometry = target_rect;
+        self.state = WindowState::Snapped {
+            position,
+            saved_geometry: saved,
+        };
+        self.visible = true;
+    }
+
     pub fn restore(&mut self) {
         match self.state {
             WindowState::Maximized { saved_geometry }
-            | WindowState::Fullscreen { saved_geometry } => {
+            | WindowState::Fullscreen { saved_geometry }
+            | WindowState::Snapped { saved_geometry, .. } => {
                 self.geometry = saved_geometry;
                 self.state = WindowState::Normal;
                 self.visible = true;
@@ -124,8 +157,14 @@ impl Window {
             WindowState::Fullscreen { .. } => {
                 self.restore();
             }
-            WindowState::Normal | WindowState::Maximized { .. } => {
-                let saved = self.geometry;
+            WindowState::Normal
+            | WindowState::Maximized { .. }
+            | WindowState::Snapped { .. } => {
+                let saved = match self.state {
+                    WindowState::Maximized { saved_geometry }
+                    | WindowState::Snapped { saved_geometry, .. } => saved_geometry,
+                    _ => self.geometry,
+                };
                 self.state = WindowState::Fullscreen {
                     saved_geometry: saved,
                 };
@@ -163,6 +202,10 @@ impl Window {
 
     pub fn is_fullscreen(&self) -> bool {
         matches!(self.state, WindowState::Fullscreen { .. })
+    }
+
+    pub fn is_snapped(&self) -> bool {
+        matches!(self.state, WindowState::Snapped { .. })
     }
 }
 
