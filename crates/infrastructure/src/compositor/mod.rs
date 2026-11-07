@@ -1,11 +1,5 @@
-pub mod seat;
-pub mod state;
-pub mod wayland_server;
-pub mod xdg_shell;
-pub mod xwayland;
+mod handlers;
+mod input;
+mod state;
 
-pub use seat::SeatHandler;
-pub use state::{BabyDraCompositorState, DEFAULT_WAYLAND_SOCKET};
-pub use wayland_server::WaylandServer;
-pub use xdg_shell::XdgShellHandler;
-pub use xwayland::XWaylandBridge;
+pub(crate) use state::{BabydraState, CalloopData};

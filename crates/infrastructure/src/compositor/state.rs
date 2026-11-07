@@ -1,131 +1,144 @@
-use application::{
-    Command, DesktopEnvironmentEvent, InputDispatcher, SystemCommand, WindowCommand, WindowManager,
-    WorkspaceCommand,
+use std::{ffi::OsString, sync::Arc, time::Instant};
+
+use smithay::{
+    desktop::{PopupManager, Space, Window, WindowSurfaceType},
+    input::{Seat, SeatState},
+    reexports::{
+        calloop::{
+            generic::Generic, EventLoop, Interest, LoopSignal, Mode as CalloopMode, PostAction,
+        },
+        wayland_server::{
+            backend::{ClientData, ClientId, DisconnectReason},
+            protocol::wl_surface::WlSurface,
+            Display, DisplayHandle,
+        },
+    },
+    utils::{Logical, Point},
+    wayland::{
+        compositor::{CompositorClientState, CompositorState},
+        output::OutputManagerState,
+        selection::data_device::DataDeviceState,
+        shell::xdg::XdgShellState,
+        shm::ShmState,
+        socket::ListeningSocketSource,
+    },
 };
-use domain::{Rect, WindowId};
 
-pub const DEFAULT_WAYLAND_SOCKET: &str = "me.babydra.compositor";
-
-/// Core state of the BabyDraDE compositor.
-pub struct BabyDraCompositorState {
-    pub socket_name: String,
-    pub window_manager: WindowManager,
-    pub workspace_manager: application::WorkspaceManager,
-    pub input_dispatcher: InputDispatcher,
-    pub is_running: bool,
-    next_window_id: u64,
+pub(crate) struct CalloopData {
+    pub(crate) state: BabydraState,
+    pub(crate) display_handle: DisplayHandle,
 }
 
-impl BabyDraCompositorState {
-    pub fn new(screen_rect: Rect) -> Self {
+pub(crate) struct BabydraState {
+    pub(crate) start_time: Instant,
+    pub(crate) socket_name: OsString,
+    pub(crate) display_handle: DisplayHandle,
+    pub(crate) space: Space<Window>,
+    pub(crate) loop_signal: LoopSignal,
+
+    pub(crate) compositor_state: CompositorState,
+    pub(crate) xdg_shell_state: XdgShellState,
+    pub(crate) shm_state: ShmState,
+    pub(crate) output_manager_state: OutputManagerState,
+    pub(crate) seat_state: SeatState<BabydraState>,
+    pub(crate) data_device_state: DataDeviceState,
+    pub(crate) popups: PopupManager,
+    pub(crate) seat: Seat<BabydraState>,
+}
+
+impl BabydraState {
+    pub(crate) fn new(event_loop: &mut EventLoop<CalloopData>, display: Display<Self>) -> Self {
+        let display_handle = display.handle();
+        let compositor_state = CompositorState::new::<Self>(&display_handle);
+        let xdg_shell_state = XdgShellState::new::<Self>(&display_handle);
+        let shm_state = ShmState::new::<Self>(&display_handle, vec![]);
+        let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&display_handle);
+        let data_device_state = DataDeviceState::new::<Self>(&display_handle);
+        let mut seat_state = SeatState::new();
+        let mut seat = seat_state.new_wl_seat(&display_handle, "babydrade");
+
+        // The nested Winit window provides a keyboard and pointer for this first version.
+        seat.add_keyboard(Default::default(), 200, 25)
+            .expect("failed to initialize keyboard");
+        seat.add_pointer();
+
+        let socket_name = Self::init_wayland_listener(display, event_loop);
+
         Self {
-            socket_name: DEFAULT_WAYLAND_SOCKET.to_string(),
-            window_manager: WindowManager::new(screen_rect),
-            workspace_manager: application::WorkspaceManager::new(4),
-            input_dispatcher: InputDispatcher::new(),
-            is_running: true,
-            next_window_id: 1,
+            start_time: Instant::now(),
+            socket_name,
+            display_handle,
+            space: Space::default(),
+            loop_signal: event_loop.get_signal(),
+            compositor_state,
+            xdg_shell_state,
+            shm_state,
+            output_manager_state,
+            seat_state,
+            data_device_state,
+            popups: PopupManager::default(),
+            seat,
         }
     }
 
-    pub fn allocate_window_id(&mut self) -> WindowId {
-        let id = WindowId::new(self.next_window_id);
-        self.next_window_id += 1;
-        id
-    }
+    fn init_wayland_listener(
+        display: Display<Self>,
+        event_loop: &mut EventLoop<CalloopData>,
+    ) -> OsString {
+        let listening_socket =
+            ListeningSocketSource::new_auto().expect("failed to create Wayland socket");
+        let socket_name = listening_socket.socket_name().to_os_string();
+        let loop_handle = event_loop.handle();
 
-    pub fn handle_command(&mut self, cmd: Command) -> Option<DesktopEnvironmentEvent> {
-        match cmd {
-            Command::Window(win_cmd) => match win_cmd {
-                WindowCommand::OpenWindow {
-                    id,
-                    title,
-                    app_id,
-                    initial_size,
-                } => {
-                    let ev = self
-                        .window_manager
-                        .open_window(id, title, app_id, initial_size);
-                    self.workspace_manager.add_window_to_current(id);
-                    Some(ev)
-                }
-                WindowCommand::CloseWindow { id } => {
-                    let (ev, _) = self.window_manager.close_window(id);
-                    self.workspace_manager.remove_window(id);
-                    ev
-                }
-                WindowCommand::MoveWindow { id, dx, dy } => {
-                    self.window_manager.move_window(id, dx, dy)
-                }
-                WindowCommand::SetWindowPosition { id, position } => {
-                    self.window_manager.set_window_position(id, position)
-                }
-                WindowCommand::ResizeWindow { id, new_size } => {
-                    self.window_manager.resize_window(id, new_size)
-                }
-                WindowCommand::FocusWindow { id } => self.window_manager.focus_window(id),
-                WindowCommand::RaiseWindow { id } => self.window_manager.raise_window(id),
-                WindowCommand::LowerWindow { id } => self.window_manager.lower_window(id),
-                WindowCommand::ToggleMaximize { id } => self.window_manager.toggle_maximize(id),
-                WindowCommand::SnapWindow { id, position } => {
-                    self.window_manager.snap_window(id, position)
-                }
-                WindowCommand::MinimizeWindow { id } => {
-                    let (ev, _) = self.window_manager.minimize_window(id);
-                    ev
-                }
-                WindowCommand::RestoreWindow { id } => self.window_manager.restore_window(id),
-                WindowCommand::ToggleFullscreen { id } => self.window_manager.toggle_fullscreen(id),
-            },
-            Command::Workspace(ws_cmd) => match ws_cmd {
-                WorkspaceCommand::SwitchWorkspace { workspace_id } => {
-                    self.workspace_manager.switch_workspace(workspace_id)
-                }
-                WorkspaceCommand::MoveWindowToWorkspace {
-                    window_id,
-                    workspace_id,
-                } => {
-                    self.workspace_manager
-                        .move_window_to_workspace(window_id, workspace_id);
-                    None
-                }
-                WorkspaceCommand::NextWorkspace => self.workspace_manager.next_workspace(),
-                WorkspaceCommand::PreviousWorkspace => self.workspace_manager.previous_workspace(),
-            },
-            Command::System(sys_cmd) => match sys_cmd {
-                SystemCommand::QuitCompositor => {
-                    self.is_running = false;
-                    Some(DesktopEnvironmentEvent::CompositorExiting)
-                }
-                SystemCommand::LaunchApp {
-                    command_or_desktop_id,
-                } => {
-                    tracing::info!("Launching client app: {}", command_or_desktop_id);
-                    let launcher = application::AppLauncherService::new();
-                    let mut cmd =
-                        launcher.build_spawn_command(&command_or_desktop_id, &self.socket_name);
-                    match cmd.spawn() {
-                        Ok(child) => {
-                            tracing::info!("Spawned client process: pid={}", child.id());
-                        }
-                        Err(e) => {
-                            tracing::warn!("Could not spawn '{}': {}", command_or_desktop_id, e);
-                        }
+        loop_handle
+            .insert_source(listening_socket, move |client_stream, _, state| {
+                state
+                    .display_handle
+                    .insert_client(client_stream, Arc::new(ClientState::default()))
+                    .expect("failed to register Wayland client");
+            })
+            .expect("failed to register Wayland socket with event loop");
+
+        loop_handle
+            .insert_source(
+                Generic::new(display, Interest::READ, CalloopMode::Level),
+                |_, display, state| {
+                    // The display remains owned by the event source for the compositor lifetime.
+                    unsafe {
+                        display
+                            .get_mut()
+                            .dispatch_clients(&mut state.state)
+                            .expect("Wayland client dispatch failed");
                     }
-                    None
-                }
-                SystemCommand::ReloadConfig => {
-                    tracing::info!("Reloading configuration");
-                    None
-                }
-            },
-            Command::CycleFocus(forward) => {
-                if let Some(next_id) = self.window_manager.cycle_focus(forward) {
-                    Some(DesktopEnvironmentEvent::WindowFocused { id: next_id })
-                } else {
-                    None
-                }
-            }
-        }
+                    Ok(PostAction::Continue)
+                },
+            )
+            .expect("failed to register Wayland display with event loop");
+
+        socket_name
     }
+
+    pub(crate) fn surface_under(
+        &self,
+        position: Point<f64, Logical>,
+    ) -> Option<(WlSurface, Point<f64, Logical>)> {
+        self.space
+            .element_under(position)
+            .and_then(|(window, location)| {
+                window
+                    .surface_under(position - location.to_f64(), WindowSurfaceType::ALL)
+                    .map(|(surface, point)| (surface, (point + location).to_f64()))
+            })
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct ClientState {
+    pub(crate) compositor_state: CompositorClientState,
+}
+
+impl ClientData for ClientState {
+    fn initialized(&self, _client_id: ClientId) {}
+
+    fn disconnected(&self, _client_id: ClientId, _reason: DisconnectReason) {}
 }

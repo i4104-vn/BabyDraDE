@@ -3,19 +3,8 @@ name = "infrastructure"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "BabyDraDE Infrastructure Layer — Smithay, DRM, libinput, Filesystem, D-Bus"
+authors.workspace = true
 
 [dependencies]
-domain.workspace = true
-application.workspace = true
+smithay = { version = "=0.7.0", default-features = false, features = ["backend_winit", "wayland_frontend", "desktop"] }
 tracing.workspace = true
-anyhow.workspace = true
-thiserror.workspace = true
-serde.workspace = true
-toml = "0.8"
-
-# Smithay and Wayland dependencies will be added when building on Linux
-# smithay = { version = "0.3", features = [...] }
-# calloop = "0.14"
-# nix = { version = "0.29", features = ["fs", "process", "signal"] }
-

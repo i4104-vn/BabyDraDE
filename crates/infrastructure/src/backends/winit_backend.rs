@@ -1,58 +1,121 @@
-use domain::{CompositorBackend, CompositorError, Output, OutputId, Rect};
+use std::{error::Error, time::Duration};
 
-/// Winit backend implementation for development mode (runs inside a window).
-#[derive(Debug, Default)]
-pub struct WinitBackend {
-    initialized: bool,
-    outputs: Vec<Output>,
-}
+use smithay::{
+    backend::{
+        renderer::{
+            damage::OutputDamageTracker, element::surface::WaylandSurfaceRenderElement,
+            gles::GlesRenderer,
+        },
+        winit::{self, WinitEvent},
+    },
+    output::{Mode, Output, PhysicalProperties, Subpixel},
+    reexports::{
+        calloop::EventLoop,
+        wayland_server::DisplayHandle,
+    },
+    utils::{Rectangle, Transform},
+};
 
-impl WinitBackend {
-    pub fn new() -> Self {
-        Self {
-            initialized: false,
-            outputs: Vec::new(),
-        }
-    }
-}
+use crate::compositor::{BabydraState, CalloopData};
 
-impl CompositorBackend for WinitBackend {
-    fn name(&self) -> &str {
-        "winit"
-    }
+pub(crate) fn init(
+    event_loop: &mut EventLoop<CalloopData>,
+    data: &mut CalloopData,
+) -> Result<(), Box<dyn Error>> {
+    let (mut backend, winit) = winit::init::<GlesRenderer>()?;
+    backend.window().set_title("BabyDraDE");
+    backend.window().set_cursor_visible(true);
 
-    fn is_drm(&self) -> bool {
-        false
-    }
+    let output = Output::new(
+        "babydrade-0".to_string(),
+        PhysicalProperties {
+            size: (0, 0).into(),
+            subpixel: Subpixel::Unknown,
+            make: "BabyDraDE".into(),
+            model: "Winit".into(),
+        },
+    );
+    let mode = Mode {
+        size: backend.window_size(),
+        refresh: 60_000,
+    };
+    let _output_global = output.create_global::<BabydraState>(&data.display_handle);
+    output.change_current_state(Some(mode), Some(Transform::Flipped180), None, Some((0, 0).into()));
+    output.set_preferred(mode);
 
-    fn initialize(&mut self) -> Result<(), CompositorError> {
-        self.initialized = true;
-        // Default virtual output for dev
-        self.outputs = vec![Output::new(
-            OutputId::new(1),
-            "Winit-Output-1",
-            Rect::new(0, 0, 1920, 1080),
-            1.0,
-        )];
-        tracing::info!("Winit development backend initialized");
-        Ok(())
-    }
+    data.state.space.map_output(&output, (0, 0));
+    std::env::set_var("WAYLAND_DISPLAY", &data.state.socket_name);
 
-    fn outputs(&self) -> Vec<Output> {
-        self.outputs.clone()
-    }
-}
+    let mut damage_tracker = OutputDamageTracker::from_output(&output);
+    backend.window().request_redraw();
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    event_loop
+        .handle()
+        .insert_source(winit, move |event, _, data| {
+            let state = &mut data.state;
+            let display_handle: &DisplayHandle = &data.display_handle;
 
-    #[test]
-    fn test_winit_backend() {
-        let mut backend = WinitBackend::new();
-        assert_eq!(backend.name(), "winit");
-        assert!(!backend.is_drm());
-        assert!(backend.initialize().is_ok());
-        assert_eq!(backend.outputs().len(), 1);
-    }
+            match event {
+                WinitEvent::Resized { size, .. } => {
+                    output.change_current_state(
+                        Some(Mode {
+                            size,
+                            refresh: 60_000,
+                        }),
+                        None,
+                        None,
+                        None,
+                    );
+                }
+                WinitEvent::Input(event) => state.process_input_event(event),
+                WinitEvent::Redraw => {
+                    let size = backend.window_size();
+                    let damage = Rectangle::from_size(size);
+
+                    {
+                        let (renderer, mut framebuffer) =
+                            backend.bind().expect("failed to bind Winit framebuffer");
+                        smithay::desktop::space::render_output::<
+                            _,
+                            WaylandSurfaceRenderElement<GlesRenderer>,
+                            _,
+                            _,
+                        >(
+                            &output,
+                            renderer,
+                            &mut framebuffer,
+                            1.0,
+                            0,
+                            [&state.space],
+                            &[],
+                            &mut damage_tracker,
+                            [0.0, 0.0, 0.0, 1.0],
+                        )
+                        .expect("failed to render desktop frame");
+                    }
+
+                    backend
+                        .submit(Some(&[damage]))
+                        .expect("failed to submit Winit frame");
+                    state.space.elements().for_each(|window| {
+                        window.send_frame(
+                            &output,
+                            state.start_time.elapsed(),
+                            Some(Duration::ZERO),
+                            |_, _| Some(output.clone()),
+                        );
+                    });
+
+                    state.space.refresh();
+                    state.popups.cleanup();
+                    let _ = display_handle.flush_clients();
+                    backend.window().set_cursor_visible(true);
+                    backend.window().request_redraw();
+                }
+                WinitEvent::CloseRequested => state.loop_signal.stop(),
+                _ => {}
+            }
+        })?;
+
+    Ok(())
 }
