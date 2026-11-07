@@ -1,9 +1,9 @@
 //! BabyDraDE — Wayland Desktop Environment
 //! Root entry point
 
+use application::{WindowCommand, WorkspaceCommand};
 use domain::{
-    AppRegistry, CanvasRenderer, Color, DesktopEntry, Point, Rect, Size, WindowCommand, WindowId,
-    WorkspaceCommand, WorkspaceId,
+    AppRegistry, CanvasRenderer, Color, DesktopEntry, Point, Rect, Size, WindowId, WorkspaceId,
 };
 use infrastructure::{BabyDraCompositorState, SoftwareRenderer, WaylandServer};
 use presentation::{CanvasBackground, CompositorRenderPipeline, DesktopCanvas};
