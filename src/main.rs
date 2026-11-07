@@ -112,9 +112,9 @@ fn main() -> anyhow::Result<()> {
         render_composite_frame(
             &mut renderer,
             &pipeline,
+            &desktop_canvas,
             &state,
             &launcher,
-            screen_rect,
             &socket,
         )?;
         info!("Compositor initialized successfully.");
@@ -304,9 +304,9 @@ fn main() -> anyhow::Result<()> {
             render_composite_frame(
                 &mut renderer,
                 &pipeline,
+                &desktop_canvas,
                 &state,
                 &launcher,
-                screen_rect,
                 &socket,
             )?;
             last_render = Instant::now();
@@ -319,15 +319,16 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Renders the full desktop scene graph including Top Bar, Floating Windows, and App Launcher
+/// Renders the full desktop scene graph onto the Desktop Canvas
 fn render_composite_frame(
     renderer: &mut SoftwareRenderer,
     pipeline: &CompositorRenderPipeline,
+    canvas: &DesktopCanvas,
     state: &BabyDraCompositorState,
     launcher: &presentation::LauncherOverlay,
-    screen_rect: Rect,
     socket: &str,
 ) -> Result<(), domain::RenderError> {
+    let screen_rect = canvas.bounds;
     let active_ws_windows = state.workspace_manager.current_workspace().windows();
 
     // 1. Render background and window decorations via Clean Architecture pipeline

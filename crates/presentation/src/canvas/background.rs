@@ -14,6 +14,7 @@ impl Default for BackgroundStyle {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanvasBackground {
     pub style: BackgroundStyle,
 }
