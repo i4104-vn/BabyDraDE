@@ -170,7 +170,7 @@ impl CanvasRenderer for SoftwareRenderer {
         }
 
         let mut cur_x = position.x;
-        let cur_y = position.y;
+        let mut cur_y = position.y;
 
         for ch in text.chars() {
             if ch == '\n' {
