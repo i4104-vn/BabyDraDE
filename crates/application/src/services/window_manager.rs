@@ -111,10 +111,8 @@ impl WindowManager {
         &mut self,
         id: WindowId,
     ) -> (Option<DesktopEnvironmentEvent>, Option<WindowId>) {
-        if let Some(ref grab) = self.active_grab {
-            if grab.window_id == id {
-                self.active_grab = None;
-            }
+        if self.active_grab.as_ref().map_or(false, |g| g.window_id == id) {
+            self.active_grab = None;
         }
 
         self.stacking_order.retain(|&w| w != id);
@@ -295,21 +293,23 @@ impl WindowManager {
     // --- Interactive Grab State Machine (Move / Resize) ---
 
     pub fn start_move(&mut self, id: WindowId, grab_point: Point) -> bool {
-        if let Some(win) = self.windows.get(&id) {
-            if win.is_maximized() || win.is_fullscreen() {
-                return false;
-            }
-            self.focus_window(id);
-            self.active_grab = Some(WindowGrab {
-                window_id: id,
-                mode: GrabMode::Move,
-                initial_geometry: win.geometry,
-                grab_point,
-            });
-            true
-        } else {
-            false
+        let (is_invalid, init_geo) = match self.windows.get(&id) {
+            Some(win) => (win.is_maximized() || win.is_fullscreen(), win.geometry),
+            None => return false,
+        };
+
+        if is_invalid {
+            return false;
         }
+
+        self.focus_window(id);
+        self.active_grab = Some(WindowGrab {
+            window_id: id,
+            mode: GrabMode::Move,
+            initial_geometry: init_geo,
+            grab_point,
+        });
+        true
     }
 
     pub fn start_resize(
@@ -318,21 +318,23 @@ impl WindowManager {
         direction: ResizeDirection,
         grab_point: Point,
     ) -> bool {
-        if let Some(win) = self.windows.get(&id) {
-            if win.is_maximized() || win.is_fullscreen() {
-                return false;
-            }
-            self.focus_window(id);
-            self.active_grab = Some(WindowGrab {
-                window_id: id,
-                mode: GrabMode::Resize(direction),
-                initial_geometry: win.geometry,
-                grab_point,
-            });
-            true
-        } else {
-            false
+        let (is_invalid, init_geo) = match self.windows.get(&id) {
+            Some(win) => (win.is_maximized() || win.is_fullscreen(), win.geometry),
+            None => return false,
+        };
+
+        if is_invalid {
+            return false;
         }
+
+        self.focus_window(id);
+        self.active_grab = Some(WindowGrab {
+            window_id: id,
+            mode: GrabMode::Resize(direction),
+            initial_geometry: init_geo,
+            grab_point,
+        });
+        true
     }
 
     pub fn update_grab(
@@ -340,14 +342,17 @@ impl WindowManager {
         current_pointer: Point,
         min_size: Size,
     ) -> Option<DesktopEnvironmentEvent> {
-        let grab = self.active_grab.as_ref()?;
-        let id = grab.window_id;
-        let dx = current_pointer.x - grab.grab_point.x;
-        let dy = current_pointer.y - grab.grab_point.y;
+        let (id, mode, initial_geo, grab_point) = match self.active_grab {
+            Some(ref g) => (g.window_id, g.mode, g.initial_geometry, g.grab_point),
+            None => return None,
+        };
 
-        match grab.mode {
+        let dx = current_pointer.x - grab_point.x;
+        let dy = current_pointer.y - grab_point.y;
+
+        match mode {
             GrabMode::Move => {
-                let new_origin = grab.initial_geometry.origin.translated(dx, dy);
+                let new_origin = initial_geo.origin.translated(dx, dy);
                 if let Some(win) = self.windows.get_mut(&id) {
                     win.geometry.origin = new_origin;
                     Some(DesktopEnvironmentEvent::WindowMoved {
@@ -359,7 +364,7 @@ impl WindowManager {
                 }
             }
             GrabMode::Resize(direction) => {
-                let new_geo = direction.apply_resize(grab.initial_geometry, dx, dy, min_size);
+                let new_geo = direction.apply_resize(initial_geo, dx, dy, min_size);
                 if let Some(win) = self.windows.get_mut(&id) {
                     win.geometry = new_geo;
                     Some(DesktopEnvironmentEvent::WindowResized {
