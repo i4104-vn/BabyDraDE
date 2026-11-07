@@ -2,12 +2,82 @@ use domain::{CanvasRenderer, Color, Point, Rect, RenderError};
 use std::fs::{File, OpenOptions};
 use std::io::{Seek, SeekFrom, Write};
 
+#[repr(C)]
+#[derive(Default, Debug)]
+struct FbBitfield {
+    offset: u32,
+    length: u32,
+    msb_right: u32,
+}
+
+#[repr(C)]
+#[derive(Default, Debug)]
+struct FbVarScreeninfo {
+    xres: u32,
+    yres: u32,
+    xres_virtual: u32,
+    yres_virtual: u32,
+    xoffset: u32,
+    yoffset: u32,
+    bits_per_pixel: u32,
+    grayscale: u32,
+    red: FbBitfield,
+    green: FbBitfield,
+    blue: FbBitfield,
+    transp: FbBitfield,
+    nonstd: u32,
+    activate: u32,
+    height: u32,
+    width: u32,
+    accel_flags: u32,
+    pixclock: u32,
+    left_margin: u32,
+    right_margin: u32,
+    upper_margin: u32,
+    lower_margin: u32,
+    hsync_len: u32,
+    vsync_len: u32,
+    sync: u32,
+    vmode: u32,
+    rotate: u32,
+    colorspace: u32,
+    reserved: [u32; 4],
+}
+
+#[repr(C)]
+#[derive(Default, Debug)]
+struct FbFixScreeninfo {
+    id: [u8; 16],
+    smem_start: usize,
+    smem_len: u32,
+    type_: u32,
+    type_aux: u32,
+    visual: u32,
+    xpanstep: u16,
+    ypanstep: u16,
+    ywrapstep: u16,
+    pad: [u8; 2],
+    line_length: u32,
+    mmio_start: usize,
+    mmio_len: u32,
+    accel: u32,
+    capabilities: u16,
+    reserved: [u16; 2],
+}
+
+#[cfg(unix)]
+extern "C" {
+    fn ioctl(fd: std::os::raw::c_int, request: std::os::raw::c_ulong, ...) -> std::os::raw::c_int;
+}
+
 /// Hardware / Software 2D Canvas Surface Renderer for BabyDraDE.
 /// Implements `CanvasRenderer` to compose and blit pixels directly to the physical
-/// display canvas (/dev/fb0 or DRM framebuffer memory) on bare-metal TTY.
+/// display canvas (/dev/fb0) on bare-metal TTY with exact hardware stride alignment.
 pub struct SoftwareRenderer {
     pub width: u32,
     pub height: u32,
+    pub line_length: u32,
+    pub bits_per_pixel: u32,
     pub buffer: Vec<u32>,
     pub fb_file: Option<File>,
     pub frame_count: u64,
@@ -20,48 +90,113 @@ impl SoftwareRenderer {
         Self {
             width,
             height,
-            buffer: vec![0xFF14161E; size], // Default slate canvas color
+            line_length: width * 4,
+            bits_per_pixel: 32,
+            buffer: vec![0xFF1E1E2E; size], // Default #1e1e2e slate canvas color
             fb_file: None,
             frame_count: 0,
         }
     }
 
-    /// Automatically detects physical screen resolution and connects to /dev/fb0 on Linux TTY.
+    /// Automatically detects physical screen resolution and connects to /dev/fb0 on Linux TTY,
+    /// querying exact line_length (hardware stride) and bits_per_pixel to eliminate screen tearing/skew.
     pub fn auto_detect() -> Self {
-        let mut width = 1920;
-        let mut height = 1080;
+        let mut width = 1280;
+        let mut height = 720;
+        let mut line_length = 0;
+        let mut bits_per_pixel = 32;
 
-        // Try reading physical framebuffer resolution from sysfs
-        if let Ok(content) = std::fs::read_to_string("/sys/class/graphics/fb0/virtual_size") {
-            let parts: Vec<&str> = content.trim().split(',').collect();
-            if parts.len() == 2 {
-                if let (Ok(w), Ok(h)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
-                    if w > 0 && h > 0 {
-                        width = w;
-                        height = h;
+        let fb_file = OpenOptions::new().read(true).write(true).open("/dev/fb0").ok();
+
+        // 1. Query exact hardware dimensions and stride via Linux ioctls
+        #[cfg(unix)]
+        if let Some(file) = &fb_file {
+            use std::os::unix::io::AsRawFd;
+            let fd = file.as_raw_fd();
+
+            // FBIOGET_VSCREENINFO = 0x4600
+            let mut vinfo = FbVarScreeninfo::default();
+            if unsafe { ioctl(fd, 0x4600, &mut vinfo) } == 0 {
+                if vinfo.xres > 0 && vinfo.yres > 0 {
+                    width = vinfo.xres;
+                    height = vinfo.yres;
+                    bits_per_pixel = if vinfo.bits_per_pixel > 0 { vinfo.bits_per_pixel } else { 32 };
+                    tracing::info!(
+                        "ioctl(FBIOGET_VSCREENINFO): {}x{}, {} bpp (virtual: {}x{})",
+                        width,
+                        height,
+                        bits_per_pixel,
+                        vinfo.xres_virtual,
+                        vinfo.yres_virtual
+                    );
+                }
+            }
+
+            // FBIOGET_FSCREENINFO = 0x4602
+            let mut finfo = FbFixScreeninfo::default();
+            if unsafe { ioctl(fd, 0x4602, &mut finfo) } == 0 {
+                if finfo.line_length > 0 {
+                    line_length = finfo.line_length;
+                    tracing::info!(
+                        "ioctl(FBIOGET_FSCREENINFO): line_length (stride) = {} bytes",
+                        line_length
+                    );
+                }
+            }
+        }
+
+        // 2. Sysfs fallback if ioctl didn't get all fields
+        if line_length == 0 {
+            if let Ok(content) = std::fs::read_to_string("/sys/class/graphics/fb0/stride") {
+                if let Ok(stride) = content.trim().parse::<u32>() {
+                    if stride > 0 {
+                        line_length = stride;
                     }
                 }
             }
         }
 
-        let mut renderer = Self::new(width, height);
-
-        // Bind directly to Linux physical display canvas (/dev/fb0)
-        if let Ok(file) = OpenOptions::new().read(true).write(true).open("/dev/fb0") {
-            tracing::info!(
-                "Canvas bound to physical display /dev/fb0 ({}x{})",
-                width,
-                height
-            );
-            renderer.fb_file = Some(file);
-        } else {
-            tracing::info!(
-                "Canvas operating in memory surface mode ({}x{})",
-                width,
-                height
-            );
+        if let Ok(content) = std::fs::read_to_string("/sys/class/graphics/fb0/virtual_size") {
+            let parts: Vec<&str> = content.trim().split(',').collect();
+            if parts.len() == 2 {
+                if let (Ok(w), Ok(h)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                    if w > 0 && h > 0 {
+                        // Only override if ioctl didn't get valid values
+                        if width == 1280 && height == 720 {
+                            width = w;
+                            height = h;
+                        }
+                    }
+                }
+            }
         }
 
+        if let Ok(content) = std::fs::read_to_string("/sys/class/graphics/fb0/bits_per_pixel") {
+            if let Ok(bpp) = content.trim().parse::<u32>() {
+                if bpp > 0 {
+                    bits_per_pixel = bpp;
+                }
+            }
+        }
+
+        // Ensure line_length is never 0
+        if line_length == 0 {
+            let bytes_per_px = (bits_per_pixel / 8).max(1);
+            line_length = width * bytes_per_px;
+        }
+
+        tracing::info!(
+            "Hardware Canvas Display: {}x{}, {} bpp, stride: {} bytes",
+            width,
+            height,
+            bits_per_pixel,
+            line_length
+        );
+
+        let mut renderer = Self::new(width, height);
+        renderer.line_length = line_length;
+        renderer.bits_per_pixel = bits_per_pixel;
+        renderer.fb_file = fb_file;
         renderer
     }
 
@@ -189,17 +324,62 @@ impl CanvasRenderer for SoftwareRenderer {
     fn render_frame(&mut self) -> Result<(), RenderError> {
         self.frame_count += 1;
 
-        // Blit canvas buffer to physical display hardware
+        // Blit canvas buffer to physical display hardware with exact hardware stride alignment
         if let Some(fb) = &mut self.fb_file {
-            let _ = fb.seek(SeekFrom::Start(0));
-            let bytes = unsafe {
-                std::slice::from_raw_parts(
-                    self.buffer.as_ptr() as *const u8,
-                    self.buffer.len() * 4,
-                )
-            };
-            if let Err(e) = fb.write_all(bytes) {
-                tracing::warn!("Failed to blit canvas to /dev/fb0: {}", e);
+            let bytes_per_px = (self.bits_per_pixel / 8).max(1);
+            let row_bytes_to_copy = (self.width * bytes_per_px) as usize;
+
+            if self.bits_per_pixel == 32 {
+                if self.line_length == self.width * 4 {
+                    // Contiguous buffer: single block write
+                    let _ = fb.seek(SeekFrom::Start(0));
+                    let all_bytes = unsafe {
+                        std::slice::from_raw_parts(
+                            self.buffer.as_ptr() as *const u8,
+                            self.buffer.len() * 4,
+                        )
+                    };
+                    let _ = fb.write_all(all_bytes);
+                } else {
+                    // Padded stride: write row by row at exact line_length offset
+                    for y in 0..self.height {
+                        let dst_offset = (y as u64) * (self.line_length as u64);
+                        let src_start = (y * self.width) as usize;
+                        let row_slice: &[u8] = unsafe {
+                            std::slice::from_raw_parts(
+                                self.buffer[src_start..].as_ptr() as *const u8,
+                                (self.width as usize) * 4,
+                            )
+                        };
+                        let _ = fb.seek(SeekFrom::Start(dst_offset));
+                        let _ = fb.write_all(row_slice);
+                    }
+                }
+            } else if self.bits_per_pixel == 16 {
+                // Hardware is 16-bit RGB565: convert row by row
+                let mut row16 = vec![0u16; self.width as usize];
+                for y in 0..self.height {
+                    let dst_offset = (y as u64) * (self.line_length as u64);
+                    let src_start = (y * self.width) as usize;
+                    for x in 0..self.width as usize {
+                        let px32 = self.buffer[src_start + x];
+                        let r = ((px32 >> 16) & 0xFF) as u16;
+                        let g = ((px32 >> 8) & 0xFF) as u16;
+                        let b = (px32 & 0xFF) as u16;
+                        let r5 = (r >> 3) & 0x1F;
+                        let g6 = (g >> 2) & 0x3F;
+                        let b5 = (b >> 3) & 0x1F;
+                        row16[x] = (r5 << 11) | (g6 << 5) | b5;
+                    }
+                    let row_bytes: &[u8] = unsafe {
+                        std::slice::from_raw_parts(
+                            row16.as_ptr() as *const u8,
+                            row16.len() * 2,
+                        )
+                    };
+                    let _ = fb.seek(SeekFrom::Start(dst_offset));
+                    let _ = fb.write_all(row_bytes);
+                }
             }
             let _ = fb.flush();
         }
@@ -346,6 +526,7 @@ mod tests {
         let mut r = SoftwareRenderer::new(800, 600);
         assert_eq!(r.width, 800);
         assert_eq!(r.height, 600);
+        assert_eq!(r.line_length, 800 * 4);
 
         // Clear canvas
         assert!(r.clear(Color::rgb(20, 20, 30)).is_ok());

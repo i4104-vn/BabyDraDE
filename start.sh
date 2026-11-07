@@ -250,6 +250,17 @@ setup_tty_environment() {
         run_sudo chmod 666 /dev/dri/card* /dev/dri/renderD* 2>/dev/null || true
     fi
 
+    # Cấu hình và hiển thị thông số framebuffer
+    if [ -e /dev/fb0 ]; then
+        if command -v fbset >/dev/null 2>&1; then
+            run_sudo fbset -depth 32 2>/dev/null || true
+        fi
+        echo "[*] Thông số Framebuffer (/dev/fb0):"
+        echo "    - Virtual Size : $(cat /sys/class/graphics/fb0/virtual_size 2>/dev/null || echo 'N/A')"
+        echo "    - Stride       : $(cat /sys/class/graphics/fb0/stride 2>/dev/null || echo 'N/A') bytes"
+        echo "    - BPP          : $(cat /sys/class/graphics/fb0/bits_per_pixel 2>/dev/null || echo 'N/A') bits"
+    fi
+
     # D-Bus session bus
     if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
         if command -v dbus-launch >/dev/null 2>&1; then
