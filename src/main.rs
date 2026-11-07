@@ -3,7 +3,7 @@
 
 use domain::{
     AppRegistry, CanvasRenderer, Color, DesktopEntry, Point, Rect, Size, WindowCommand, WindowId,
-    WorkspaceCommand,
+    WorkspaceCommand, WorkspaceId,
 };
 use infrastructure::{BabyDraCompositorState, SoftwareRenderer, WaylandServer};
 use presentation::{CanvasBackground, CompositorRenderPipeline, DesktopCanvas};
@@ -229,7 +229,7 @@ fn main() -> anyhow::Result<()> {
                     let ws_id = (byte - b'0') as u32;
                     state.handle_command(
                         WorkspaceCommand::SwitchWorkspace {
-                            workspace_id: ws_id,
+                            workspace_id: WorkspaceId::new(ws_id),
                         }
                         .into(),
                     );
@@ -403,7 +403,7 @@ fn render_composite_frame(
             renderer.draw_text(
                 &format!(
                     "Active Workspace: [{}] / 4",
-                    state.workspace_manager.current_workspace_id()
+                    state.workspace_manager.active_workspace_id().as_u32()
                 ),
                 Point::new(client_rect.x() + 15, client_rect.y() + 45),
                 14.0,
@@ -459,7 +459,7 @@ fn render_composite_frame(
     // Top Bar items: Logo, Workspace indicator, hints
     renderer.draw_text(" BabyDraDE ", Point::new(10, 8), 14.0, Color::rgb(120, 190, 255))?;
 
-    let cur_ws = state.workspace_manager.current_workspace_id();
+    let cur_ws = state.workspace_manager.active_workspace_id().as_u32();
     for ws in 1..=4 {
         let ws_x = 130 + (ws as i32 - 1) * 45;
         let is_cur = ws == cur_ws;
