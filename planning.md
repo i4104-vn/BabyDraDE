@@ -1,5 +1,7 @@
 # BabyDraDE — Planning
 
+> **Trạng thái:** Code Rust đã được reset để bắt đầu lại bằng MVP compositor nested trên Winit. Các checkbox được đặt lại vì trạng thái hoàn thành cũ không còn phản ánh mã nguồn hiện tại.
+
 > **Mục tiêu:** Desktop Environment đơn giản trên Wayland bằng Rust. Canvas toàn màn hình làm nền, các app ngoài được render dưới dạng texture trong cửa sổ floating có titlebar đầy đủ.
 
 ---
@@ -293,12 +295,12 @@ BabyDraDE/
 
 **Mục tiêu:** Định nghĩa toàn bộ dữ liệu cốt lõi và contracts. Không phụ thuộc thư viện ngoài.
 
-- [x] Entities: `Window`, `Workspace`, `Output`, `Cursor`
-- [x] Value Objects: `Rect`, `Point`, `Size`, `Color`, `KeyCombo`
-- [x] Traits: `CompositorBackend`, `CanvasRenderer`, `InputSource`, `ConfigStore`, `AppRegistry`
-- [x] Placement rules: `CascadePlacement` (mở cửa sổ mới lệch xuống-phải 30px so với cửa sổ trước), `CenterPlacement` (giữa màn hình)
-- [x] Focus rules: MRU (Most Recently Used) — khi đóng cửa sổ, focus quay về cửa sổ gần nhất
-- [x] Unit tests cho placement & focus logic
+- [ ] Entities: `Window`, `Workspace`, `Output`, `Cursor`
+- [ ] Value Objects: `Rect`, `Point`, `Size`, `Color`, `KeyCombo`
+- [ ] Traits: `CompositorBackend`, `CanvasRenderer`, `InputSource`, `ConfigStore`, `AppRegistry`
+- [ ] Placement rules: `CascadePlacement` (mở cửa sổ mới lệch xuống-phải 30px so với cửa sổ trước), `CenterPlacement` (giữa màn hình)
+- [ ] Focus rules: MRU (Most Recently Used) — khi đóng cửa sổ, focus quay về cửa sổ gần nhất
+- [ ] Unit tests cho placement & focus logic
 
 **Milestone:** `cargo test -p domain` — tất cả pass. Logic thuần túy, không cần GPU.
 
@@ -308,12 +310,12 @@ BabyDraDE/
 
 **Mục tiêu:** App ngoài có thể kết nối vào compositor. Bắt được keyboard & pointer.
 
-- [x] Khởi tạo `wl_display`, bind globals (`wl_compositor`, `wl_shm`, `wl_seat`, `wl_output`)
-- [x] Implement `XdgShellHandler`: bắt `new_toplevel` → tạo `Window` entity, bắt `toplevel_destroyed`
-- [x] Implement `SeatHandler`: keyboard (xkbcommon) + pointer (motion, button, scroll)
-- [x] Bind Wayland socket tên `me.babydra.compositor`
-- [x] Winit backend hoạt động trơn tru cho dev
-- [x] DRM backend skeleton (chưa cần chạy thật)
+- [ ] Khởi tạo `wl_display`, bind globals (`wl_compositor`, `wl_shm`, `wl_seat`, `wl_output`)
+- [ ] Implement `XdgShellHandler`: bắt `new_toplevel` → tạo `Window` entity, bắt `toplevel_destroyed`
+- [ ] Implement `SeatHandler`: keyboard (xkbcommon) + pointer (motion, button, scroll)
+- [ ] Bind Wayland socket tên `me.babydra.compositor`
+- [ ] Winit backend hoạt động trơn tru cho dev
+- [ ] DRM backend skeleton (chưa cần chạy thật)
 
 **Milestone:** Chạy compositor, mở terminal gõ `WAYLAND_DISPLAY=me.babydra.compositor alacritty`. Log hiện "New toplevel: Alacritty". Chưa render lên màn hình.
 
@@ -324,30 +326,30 @@ BabyDraDE/
 **Mục tiêu:** Nhìn thấy desktop Canvas + app ngoài render lên canvas + titlebar đầy đủ.
 
 **Canvas nền:**
-- [x] Clear màn hình với solid color (từ config theme)
-- [x] Load ảnh wallpaper → GPU texture → vẽ full màn hình
+- [ ] Clear màn hình với solid color (từ config theme)
+- [ ] Load ảnh wallpaper → GPU texture → vẽ full màn hình
 
 **Render app ngoài:**
-- [x] Lấy `wl_buffer` từ client → import thành GPU texture
-- [x] Vẽ texture tại tọa độ `(window.x, window.y + titlebar_height)` với kích thước `(window.width, window.height)`
-- [x] Texture cache để không re-import mỗi frame
+- [ ] Lấy `wl_buffer` từ client → import thành GPU texture
+- [ ] Vẽ texture tại tọa độ `(window.x, window.y + titlebar_height)` với kích thước `(window.width, window.height)`
+- [ ] Texture cache để không re-import mỗi frame
 
 **Titlebar (Server-Side Decorations):**
-- [x] Vẽ thanh titlebar phía trên cửa sổ: màu nền + tên app (text rendering)
-- [x] 3 nút điều khiển bên phải: Minimize `[_]`, Maximize `[□]`, Close `[×]`
-- [x] Click nút → dispatch command tương ứng
-- [x] Kéo titlebar → di chuyển cửa sổ
+- [ ] Vẽ thanh titlebar phía trên cửa sổ: màu nền + tên app (text rendering)
+- [ ] 3 nút điều khiển bên phải: Minimize `[_]`, Maximize `[□]`, Close `[×]`
+- [ ] Click nút → dispatch command tương ứng
+- [ ] Kéo titlebar → di chuyển cửa sổ
 
 **Border & Focus:**
-- [x] Viền cửa sổ: màu sáng khi focused, màu tối khi unfocused
-- [x] Click vào cửa sổ → raise to top + focus
+- [ ] Viền cửa sổ: màu sáng khi focused, màu tối khi unfocused
+- [ ] Click vào cửa sổ → raise to top + focus
 
 **Resize:**
-- [x] Kéo 4 cạnh hoặc 4 góc → resize cửa sổ
-- [x] Gửi `configure` event với kích thước mới về cho app
+- [ ] Kéo 4 cạnh hoặc 4 góc → resize cửa sổ
+- [ ] Gửi `configure` event với kích thước mới về cho app
 
 **Scene Graph:**
-- [x] Render theo thứ tự: Background → Windows (z-order thấp → cao) → Cursor
+- [ ] Render theo thứ tự: Background → Windows (z-order thấp → cao) → Cursor
 
 **Milestone:** Chạy compositor, thấy nền desktop. Mở Alacritty → cửa sổ floating xuất hiện giữa màn hình với titlebar đầy đủ. Kéo thả, resize, đóng — tất cả hoạt động.
 
@@ -358,29 +360,29 @@ BabyDraDE/
 **Mục tiêu:** Quản lý cửa sổ hoàn chỉnh, phím tắt, workspace, app launcher cơ bản.
 
 **Keybinding System:**
-- [x] Đọc bảng keybinding từ config
-- [x] `InputDispatcher`: raw key event → tra bảng → dispatch command
-- [x] Implement tất cả phím tắt trong bảng ở mục 4
+- [ ] Đọc bảng keybinding từ config
+- [ ] `InputDispatcher`: raw key event → tra bảng → dispatch command
+- [ ] Implement tất cả phím tắt trong bảng ở mục 4
 
 **Window States:**
-- [x] Maximize: cửa sổ chiếm toàn màn hình (ẩn titlebar tuỳ chọn), bấm lại → phục hồi vị trí cũ
-- [x] Minimize: ẩn cửa sổ, vẫn giữ trong danh sách
-- [x] Fullscreen: app request fullscreen (video player) → cửa sổ chiếm toàn màn hình, ẩn mọi thứ
-- [x] Cascade placement: mở cửa sổ mới lệch xuống-phải 30px
+- [ ] Maximize: cửa sổ chiếm toàn màn hình (ẩn titlebar tuỳ chọn), bấm lại → phục hồi vị trí cũ
+- [ ] Minimize: ẩn cửa sổ, vẫn giữ trong danh sách
+- [ ] Fullscreen: app request fullscreen (video player) → cửa sổ chiếm toàn màn hình, ẩn mọi thứ
+- [ ] Cascade placement: mở cửa sổ mới lệch xuống-phải 30px
 
 **Workspace:**
-- [x] Tối thiểu 4 workspace
-- [x] `Super + 1..4`: chuyển workspace (ẩn/hiện nhóm cửa sổ)
-- [x] `Super + Shift + 1..4`: chuyển cửa sổ đang focus sang workspace khác
+- [ ] Tối thiểu 4 workspace
+- [ ] `Super + 1..4`: chuyển workspace (ẩn/hiện nhóm cửa sổ)
+- [ ] `Super + Shift + 1..4`: chuyển cửa sổ đang focus sang workspace khác
 
 **App Launcher (cơ bản):**
-- [x] Quét `.desktop` files từ `/usr/share/applications` và `~/.local/share/applications`
-- [x] `Super + D` → hiện overlay tìm kiếm đơn giản → chọn app → launch
-- [x] Spawn child process với `WAYLAND_DISPLAY=me.babydra.compositor`
+- [ ] Quét `.desktop` files từ `/usr/share/applications` và `~/.local/share/applications`
+- [ ] `Super + D` → hiện overlay tìm kiếm đơn giản → chọn app → launch
+- [ ] Spawn child process với `WAYLAND_DISPLAY=me.babydra.compositor`
 
 **XWayland (tuỳ chọn):**
-- [x] Khởi tạo XWayland subprocess
-- [x] Map cửa sổ X11 → floating window trên canvas
+- [ ] Khởi tạo XWayland subprocess
+- [ ] Map cửa sổ X11 → floating window trên canvas
 
 **Milestone:** Mở nhiều app cùng lúc, kéo thả tự do, chuyển workspace, phím tắt hoạt động. App launcher mở được Firefox, Terminal, File Manager.
 

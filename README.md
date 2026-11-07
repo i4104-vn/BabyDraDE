@@ -1,63 +1,29 @@
 # BabyDraDE
 
-> **A lightweight, modular floating Wayland Desktop Environment built in Rust.**
+BabyDraDE is a minimal Wayland compositor built on Smithay. The first milestone
+starts in a nested Winit window, clears it to black, provides keyboard and mouse
+input, and launches one Wayland app for a smoke run.
 
-BabyDraDE renders floating application windows with full server-side decorations (titlebar, control buttons, focused/unfocused borders, and resize handles) on top of a full-screen canvas background.
+## Requirements
 
----
+- Linux with a running graphical session (Wayland or X11)
+- Rust stable
+- Smithay's Linux build dependencies, including Wayland, XKB common, EGL, and GLES
+- A Wayland app to launch; foot is the default
 
-## Architecture
+## Run
 
-BabyDraDE is organized as a Cargo workspace adhering to Clean Architecture principles:
+    cargo run -- --app foot
 
-- **`crates/domain`**: Entities (`Window`, `Workspace`, `Output`, `Cursor`), Value Objects (`Rect`, `Point`, `Size`, `Color`, `KeyCombo`), Placement & MRU Focus rules, and Traits. Zero external runtime dependencies.
-- **`crates/application`**: Services (`WindowManager`, `WorkspaceManager`, `InputDispatcher`, `AppLauncherService`), Commands, and Events.
-- **`crates/presentation`**: Canvas background, Titlebar decorations (`[_]` Minimize, `[□]` Maximize, `[×]` Close), Borders, Resize handles, and multi-layer Scene Graph.
-- **`crates/infrastructure`**: Wayland display server, `me.babydra.compositor` socket, XDG shell & seat handlers, Winit/DRM backends, Texture Cache, and GL Renderer.
-- **`crates/drade-ctl`**: CLI control utility for IPC scripting.
+Choose another executable with --app or BABYDRADE_TEST_APP:
 
----
+    cargo run -- --app alacritty
+    BABYDRADE_TEST_APP=weston-terminal cargo run
 
-## Quick Start
+start.sh runs the same nested development compositor without installing system
+packages or changing user permissions.
 
-### Build & Run
-```bash
-# Build all crates
-cargo build
-
-# Run unit and integration tests
-cargo test --workspace
-
-# Start the compositor (dev mode)
-cargo run
-```
-
-### Launch Wayland Clients
-When BabyDraDE is running, launch apps pointing to its Wayland socket:
-```bash
-WAYLAND_DISPLAY=me.babydra.compositor alacritty
-```
-
----
-
-## Default Keybindings
-
-| Shortcut | Action |
-| :--- | :--- |
-| `Super + Return` | Launch default terminal (`alacritty`) |
-| `Super + Q` | Close focused window |
-| `Super + F` | Toggle fullscreen |
-| `Super + M` | Toggle maximize |
-| `Super + H` | Minimize window |
-| `Super + Tab` | Cycle window focus (MRU) |
-| `Super + 1..4` | Switch to workspace 1..4 |
-| `Super + Shift + 1..4` | Move focused window to workspace 1..4 |
-| `Super + D` | Launch application finder |
-| `Super + Shift + Q` | Quit compositor |
-
----
-
-## License
-
-MIT
-
+The compositor creates an automatic Wayland socket in XDG_RUNTIME_DIR and
+sets WAYLAND_DISPLAY for the launched test app. It currently focuses the
+single launched window and has no custom decorations, app menu, XWayland, or
+direct DRM/TTY backend.

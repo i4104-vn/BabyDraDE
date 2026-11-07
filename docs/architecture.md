@@ -1,54 +1,30 @@
-# BabyDraDE — Architecture Documentation
+# BabyDraDE — Current MVP Architecture
 
-## 1. Overview
+BabyDraDE is a small nested Wayland compositor built with Smithay 0.7.0. It
+runs as a Winit window inside an existing Linux graphical session.
 
-BabyDraDE is a lightweight floating Wayland Desktop Environment built in Rust using a clean 4-layer architecture.
+## Runtime
 
-```
-┌────────────────────────────────────────────────────────┐
-│                   BabyDraDE Compositor                 │
-│                                                        │
-│  Presentation Layer (Canvas + Titlebars + Borders)    │
-│            ▲                                           │
-│  Application Layer (WindowManager, Workspaces, Input)  │
-│            ▲                                           │
-│  Domain Layer (Entities, Value Objects, Rules, Traits) │
-│            ▲                                           │
-│  Infrastructure Layer (Smithay / Winit, DRM, GL)       │
-└────────────────────────────────────────────────────────┘
-```
+1. The root binary initializes logging and reads an optional app argument.
+2. The infrastructure crate creates the Wayland display, socket, seat, output,
+   and XDG shell handlers.
+3. The Winit backend renders the compositor space with a black background and
+   forwards keyboard and pointer events.
+4. The selected test app is launched with BabyDraDE's Wayland display.
 
-## 2. Dependency Inversion Rules
+## Code layout
 
-- `domain` contains zero external runtime dependencies.
-- `application` depends solely on `domain`.
-- `presentation` depends on `domain` and `application`.
-- `infrastructure` depends on `domain` and `application`.
-- `babydrade` (root binary) brings all crates together and handles bootstrap & injection.
+- src/main.rs: command-line entry point.
+- crates/infrastructure/src/compositor: Smithay state, Wayland handlers, and
+  input routing.
+- crates/infrastructure/src/backends/winit_backend.rs: nested output,
+  rendering, redraws, and window events.
+- crates/domain, crates/application, and crates/presentation: retained
+  workspace layers, currently placeholders for later work.
+- crates/drade-ctl: retained as a placeholder; IPC is not implemented.
 
-## 3. Layers Breakdown
-
-### Domain Layer (`crates/domain`)
-- **Entities:** `Window`, `Workspace`, `Output`, `Cursor`.
-- **Value Objects:** `Rect`, `Point`, `Size`, `Edges`, `Color`, `KeyCombo`.
-- **Business Rules:** `CascadePlacement`, `CenterPlacement`, `MruFocusHistory`, `SizeConstraints`.
-- **Traits:** `CompositorBackend`, `CanvasRenderer`, `InputSource`, `ConfigStore`, `AppRegistry`.
-
-### Application Layer (`crates/application`)
-- **Services:**
-  - `WindowManager`: Coordinates open, close, move, resize, minimize, maximize, and MRU focus tracking.
-  - `WorkspaceManager`: Multi-workspace routing (1..=4).
-  - `InputDispatcher`: Dispatches keyboard shortcuts to commands.
-  - `AppLauncherService`: Launches client apps with `WAYLAND_DISPLAY`.
-- **Commands & Events:** Strongly typed CQRS-style commands (`WindowCommand`, `WorkspaceCommand`, `SystemCommand`) and events (`DesktopEnvironmentEvent`).
-
-### Presentation Layer (`crates/presentation`)
-- **Window Frame:** Server-side decorations including titlebar with action buttons (`[_]`, `[□]`, `[×]`), 4-direction borders, and 8-zone resize handles.
-- **Canvas:** Desktop wallpaper and background surface rendering.
-- **Scene Graph:** Layer-ordered pipeline (`Background` → `Windows` in z-order → `Overlay` → `Cursor`).
-
-### Infrastructure Layer (`crates/infrastructure`)
-- **Compositor:** Wayland display server, socket binding (`me.babydra.compositor`), global registration, XDG shell and seat handlers.
-- **Backends:** `WinitBackend` (for development inside an OS window) and `DrmBackend` (bare-metal KMS).
-- **Rendering:** `TextureCache` for zero-redundancy GPU buffer uploads, and `GlRenderer`.
-
+Smithay supplies the Wayland protocol and renderer building blocks. BabyDraDE
+currently maps XDG toplevels into a Smithay Space, focuses the launched
+window, and routes input to its surface. Window decorations, a desktop web
+surface, app discovery, multiple-app controls, XWayland, and a DRM/TTY backend
+are outside this milestone.
