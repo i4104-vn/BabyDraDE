@@ -3,10 +3,7 @@ mod compositor;
 
 use std::{error::Error, ffi::OsString, process::Command};
 
-use smithay::reexports::{
-    calloop::EventLoop,
-    wayland_server::Display,
-};
+use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
 use tracing::{error, info};
 
 use compositor::{BabydraState, CalloopData};

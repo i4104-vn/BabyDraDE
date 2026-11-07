@@ -1,9 +1,7 @@
 use smithay::{
     delegate_xdg_shell,
     desktop::{PopupKind, PopupManager, Space, Window},
-    reexports::{
-        wayland_server::protocol::{wl_seat, wl_surface::WlSurface},
-    },
+    reexports::wayland_server::protocol::{wl_seat, wl_surface::WlSurface},
     utils::{Serial, SERIAL_COUNTER},
     wayland::{
         compositor::with_states,
@@ -51,11 +49,7 @@ impl XdgShellHandler for BabydraState {
     }
 }
 
-pub(super) fn handle_commit(
-    popups: &mut PopupManager,
-    space: &Space<Window>,
-    surface: &WlSurface,
-) {
+pub(super) fn handle_commit(popups: &mut PopupManager, space: &Space<Window>, surface: &WlSurface) {
     if let Some(window) = space
         .elements()
         .find(|window| window.toplevel().unwrap().wl_surface() == surface)

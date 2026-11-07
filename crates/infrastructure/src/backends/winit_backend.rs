@@ -9,10 +9,7 @@ use smithay::{
         winit::{self, WinitEvent},
     },
     output::{Mode, Output, PhysicalProperties, Subpixel},
-    reexports::{
-        calloop::EventLoop,
-        wayland_server::DisplayHandle,
-    },
+    reexports::calloop::EventLoop,
     utils::{Rectangle, Transform},
 };
 
@@ -40,7 +37,12 @@ pub(crate) fn init(
         refresh: 60_000,
     };
     let _output_global = output.create_global::<BabydraState>(&data.display_handle);
-    output.change_current_state(Some(mode), Some(Transform::Flipped180), None, Some((0, 0).into()));
+    output.change_current_state(
+        Some(mode),
+        Some(Transform::Flipped180),
+        None,
+        Some((0, 0).into()),
+    );
     output.set_preferred(mode);
 
     data.state.space.map_output(&output, (0, 0));
@@ -53,7 +55,7 @@ pub(crate) fn init(
         .handle()
         .insert_source(winit, move |event, _, data| {
             let state = &mut data.state;
-            let display_handle: &DisplayHandle = &data.display_handle;
+            let display_handle = &mut data.display_handle;
 
             match event {
                 WinitEvent::Resized { size, .. } => {

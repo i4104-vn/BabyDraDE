@@ -39,6 +39,7 @@ pub(crate) struct BabydraState {
     pub(crate) compositor_state: CompositorState,
     pub(crate) xdg_shell_state: XdgShellState,
     pub(crate) shm_state: ShmState,
+    #[allow(dead_code)]
     pub(crate) output_manager_state: OutputManagerState,
     pub(crate) seat_state: SeatState<BabydraState>,
     pub(crate) data_device_state: DataDeviceState,
