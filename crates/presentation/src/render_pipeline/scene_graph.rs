@@ -76,6 +76,16 @@ impl SceneGraph {
                 14.0,
                 node.titlebar_text_color,
             )?;
+
+            // Draw Server-Side titlebar action buttons: [_] [□] [×] (planning.md 1.3 & Phase 3)
+            if node.titlebar_rect.width() >= 100 {
+                renderer.draw_text(
+                    "[_] [□] [×]",
+                    Point::new(node.titlebar_rect.right() - 88, node.titlebar_rect.y() + 8),
+                    14.0,
+                    node.titlebar_text_color,
+                )?;
+            }
         }
 
         // 3. Layer: Overlay (Launcher, dialogs)
