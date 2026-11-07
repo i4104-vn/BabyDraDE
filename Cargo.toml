@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    ".",
     "crates/domain",
     "crates/application",
     "crates/infrastructure",
@@ -15,18 +16,8 @@ license = "MIT"
 authors = ["BabyDraDE Contributors"]
 
 [workspace.dependencies]
-# === Shared across workspace ===
-serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-anyhow = "1"
-thiserror = "2"
-
-# === Internal crates ===
-domain = { path = "crates/domain" }
-application = { path = "crates/application" }
-infrastructure = { path = "crates/infrastructure" }
-presentation = { path = "crates/presentation" }
 
 [package]
 name = "babydrade"
@@ -34,14 +25,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "A simple Wayland Desktop Environment built with Rust"
+description = "A minimal Wayland compositor built with Smithay"
 
 [dependencies]
-domain.workspace = true
-application.workspace = true
-infrastructure.workspace = true
-presentation.workspace = true
+infrastructure = { path = "crates/infrastructure" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
-anyhow.workspace = true
-
