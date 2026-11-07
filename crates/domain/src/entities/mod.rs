@@ -5,5 +5,5 @@ pub mod workspace;
 
 pub use cursor::{Cursor, CursorIcon};
 pub use output::{Output, OutputId};
-pub use window::{Window, WindowId, WindowState};
+pub use window::{SnapPosition, Window, WindowId, WindowState};
 pub use workspace::{Workspace, WorkspaceId};

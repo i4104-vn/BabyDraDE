@@ -1,4 +1,5 @@
-use crate::value_objects::{Rect, SnapPosition};
+use crate::value_objects::Rect;
+pub use crate::value_objects::SnapPosition;
 use serde::{Deserialize, Serialize};
 
 /// Unique identifier for a managed window.
