@@ -3,11 +3,7 @@ name = "application"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "BabyDraDE Application Layer — Use Cases, Services, Commands, Queries"
+authors.workspace = true
 
-[dependencies]
-domain.workspace = true
-tracing.workspace = true
-thiserror.workspace = true
-serde.workspace = true
-
+[lib]
+path = "src/lib.rs"

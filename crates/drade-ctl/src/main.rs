@@ -1,5 +1,3 @@
-//! CLI control tool for BabyDraDE
-
 fn main() {
-    println!("drade-ctl");
+    eprintln!("drade-ctl is not part of the first compositor milestone.");
 }

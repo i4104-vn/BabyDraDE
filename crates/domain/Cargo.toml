@@ -3,8 +3,7 @@ name = "domain"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "BabyDraDE Domain Layer — Entities, Value Objects, Business Rules, Traits"
+authors.workspace = true
 
-[dependencies]
-serde.workspace = true
-
+[lib]
+path = "src/lib.rs"

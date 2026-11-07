@@ -3,11 +3,7 @@ name = "presentation"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "BabyDraDE Presentation Layer — Canvas, Bar, Taskbar, Widgets, Window Frames"
+authors.workspace = true
 
-[dependencies]
-domain.workspace = true
-application.workspace = true
-tracing.workspace = true
-serde.workspace = true
-
+[lib]
+path = "src/lib.rs"
