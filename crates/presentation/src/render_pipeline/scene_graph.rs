@@ -51,6 +51,28 @@ impl SceneGraph {
         launcher: Option<&crate::launcher::LauncherOverlay>,
         cursor: Option<&Cursor>,
     ) -> Result<(), RenderError> {
+        Self::render_layers(
+            renderer,
+            screen_rect,
+            background,
+            windows_in_z_order,
+            launcher,
+            cursor,
+        )?;
+        renderer.render_frame()?;
+        Ok(())
+    }
+
+    /// Renders scene graph layers (Background -> Windows -> Overlay -> Cursor) into the canvas buffer
+    /// without flushing to physical display hardware.
+    pub fn render_layers<'a>(
+        renderer: &mut dyn CanvasRenderer,
+        screen_rect: Rect,
+        background: &CanvasBackground,
+        windows_in_z_order: impl Iterator<Item = WindowSceneNode<'a>>,
+        launcher: Option<&crate::launcher::LauncherOverlay>,
+        cursor: Option<&Cursor>,
+    ) -> Result<(), RenderError> {
         // 1. Layer: Background
         background.render(renderer, screen_rect)?;
 
@@ -96,13 +118,54 @@ impl SceneGraph {
         // 4. Layer: Cursor
         if let Some(c) = cursor {
             if c.visible {
-                // Draw cursor pointer indicator (12x12 white square with black border for dev)
-                let cur_rect = Rect::new(c.position.x, c.position.y, 10, 10);
-                renderer.draw_rect(cur_rect, Color::WHITE)?;
+                draw_cursor_pointer(renderer, c.position.x, c.position.y)?;
             }
         }
 
-        renderer.render_frame()?;
         Ok(())
     }
+}
+
+/// Draws an authentic 12x18 OS desktop arrow pointer (white body with black outline)
+pub fn draw_cursor_pointer(
+    renderer: &mut dyn CanvasRenderer,
+    x: i32,
+    y: i32,
+) -> Result<(), RenderError> {
+    // 0: transparent, 1: black border, 2: white body
+    #[rustfmt::skip]
+    const CURSOR_ARROW: [[u8; 12]; 18] = [
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0],
+        [1, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0],
+        [1, 2, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0],
+        [1, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0, 0],
+        [1, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0],
+        [1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0],
+        [1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 0],
+        [1, 2, 1, 2, 2, 1, 0, 0, 0, 0, 0, 0],
+        [1, 1, 0, 1, 2, 2, 1, 0, 0, 0, 0, 0],
+        [1, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+
+    for (row, line) in CURSOR_ARROW.iter().enumerate() {
+        for (col, &pixel) in line.iter().enumerate() {
+            let px = x + col as i32;
+            let py = y + row as i32;
+            match pixel {
+                1 => renderer.draw_rect(Rect::new(px, py, 1, 1), Color::BLACK)?,
+                2 => renderer.draw_rect(Rect::new(px, py, 1, 1), Color::WHITE)?,
+                _ => {}
+            }
+        }
+    }
+
+    Ok(())
 }

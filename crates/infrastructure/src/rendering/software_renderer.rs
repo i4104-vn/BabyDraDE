@@ -68,18 +68,30 @@ struct FbFixScreeninfo {
 #[cfg(unix)]
 extern "C" {
     fn ioctl(fd: std::os::raw::c_int, request: std::os::raw::c_ulong, ...) -> std::os::raw::c_int;
+    fn mmap(
+        addr: *mut std::ffi::c_void,
+        len: usize,
+        prot: std::os::raw::c_int,
+        flags: std::os::raw::c_int,
+        fd: std::os::raw::c_int,
+        offset: i64,
+    ) -> *mut std::ffi::c_void;
+    fn munmap(addr: *mut std::ffi::c_void, len: usize) -> std::os::raw::c_int;
 }
 
 /// Hardware / Software 2D Canvas Surface Renderer for BabyDraDE.
-/// Implements `CanvasRenderer` to compose and blit pixels directly to the physical
-/// display canvas (/dev/fb0) on bare-metal TTY with exact hardware stride alignment.
+/// Implements `CanvasRenderer` using mmap direct memory access and exact
+/// hardware stride alignment to eliminate tearing and flickering.
 pub struct SoftwareRenderer {
     pub width: u32,
     pub height: u32,
     pub line_length: u32,
     pub bits_per_pixel: u32,
     pub buffer: Vec<u32>,
+    pub staging_buffer: Vec<u8>,
     pub fb_file: Option<File>,
+    pub mmap_addr: usize,
+    pub mmap_len: usize,
     pub frame_count: u64,
 }
 
@@ -92,19 +104,23 @@ impl SoftwareRenderer {
             height,
             line_length: width * 4,
             bits_per_pixel: 32,
-            buffer: vec![0xFF1E1E2E; size], // Default #1e1e2e slate canvas color
+            buffer: vec![0xFF1E1E2E; size],
+            staging_buffer: Vec::new(),
             fb_file: None,
+            mmap_addr: 0,
+            mmap_len: 0,
             frame_count: 0,
         }
     }
 
     /// Automatically detects physical screen resolution and connects to /dev/fb0 on Linux TTY,
-    /// querying exact line_length (hardware stride) and bits_per_pixel to eliminate screen tearing/skew.
+    /// setting up mmap zero-copy memory access to prevent display flickering.
     pub fn auto_detect() -> Self {
         let mut width = 1280;
         let mut height = 720;
         let mut line_length = 0;
         let mut bits_per_pixel = 32;
+        let mut smem_len = 0usize;
 
         let fb_file = OpenOptions::new().read(true).write(true).open("/dev/fb0").ok();
 
@@ -137,9 +153,11 @@ impl SoftwareRenderer {
             if unsafe { ioctl(fd, 0x4602, &mut finfo) } == 0 {
                 if finfo.line_length > 0 {
                     line_length = finfo.line_length;
+                    smem_len = finfo.smem_len as usize;
                     tracing::info!(
-                        "ioctl(FBIOGET_FSCREENINFO): line_length (stride) = {} bytes",
-                        line_length
+                        "ioctl(FBIOGET_FSCREENINFO): stride={} bytes, smem_len={}",
+                        line_length,
+                        smem_len
                     );
                 }
             }
@@ -161,7 +179,6 @@ impl SoftwareRenderer {
             if parts.len() == 2 {
                 if let (Ok(w), Ok(h)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
                     if w > 0 && h > 0 {
-                        // Only override if ioctl didn't get valid values
                         if width == 1280 && height == 720 {
                             width = w;
                             height = h;
@@ -179,24 +196,62 @@ impl SoftwareRenderer {
             }
         }
 
-        // Ensure line_length is never 0
         if line_length == 0 {
             let bytes_per_px = (bits_per_pixel / 8).max(1);
             line_length = width * bytes_per_px;
         }
 
+        let needed_len = (height as usize) * (line_length as usize);
+        if smem_len < needed_len {
+            smem_len = needed_len;
+        }
+
+        // 3. Attempt mmap for direct zero-latency VRAM access (eliminates flickering)
+        let mut mmap_addr = 0usize;
+        let mut mmap_len = 0usize;
+
+        #[cfg(unix)]
+        if let Some(file) = &fb_file {
+            use std::os::unix::io::AsRawFd;
+            let fd = file.as_raw_fd();
+            // PROT_READ (1) | PROT_WRITE (2), MAP_SHARED (1)
+            let ptr = unsafe {
+                mmap(
+                    std::ptr::null_mut(),
+                    smem_len,
+                    1 | 2,
+                    1,
+                    fd,
+                    0,
+                )
+            };
+            // Check if mmap failed (MAP_FAILED = -1)
+            if ptr as isize != -1 && !ptr.is_null() {
+                mmap_addr = ptr as usize;
+                mmap_len = smem_len;
+                tracing::info!(
+                    "Direct mmap framebuffer enabled (address: 0x{:x}, len: {})",
+                    mmap_addr,
+                    mmap_len
+                );
+            }
+        }
+
         tracing::info!(
-            "Hardware Canvas Display: {}x{}, {} bpp, stride: {} bytes",
+            "Hardware Canvas Display: {}x{}, {} bpp, stride: {} bytes (mmap: {})",
             width,
             height,
             bits_per_pixel,
-            line_length
+            line_length,
+            mmap_addr != 0
         );
 
         let mut renderer = Self::new(width, height);
         renderer.line_length = line_length;
         renderer.bits_per_pixel = bits_per_pixel;
         renderer.fb_file = fb_file;
+        renderer.mmap_addr = mmap_addr;
+        renderer.mmap_len = mmap_len;
         renderer
     }
 
@@ -249,6 +304,19 @@ impl SoftwareRenderer {
         }
         file.write_all(&bytes)?;
         Ok(())
+    }
+}
+
+impl Drop for SoftwareRenderer {
+    fn drop(&mut self) {
+        #[cfg(unix)]
+        if self.mmap_addr != 0 && self.mmap_len != 0 {
+            unsafe {
+                munmap(self.mmap_addr as *mut std::ffi::c_void, self.mmap_len);
+            }
+            self.mmap_addr = 0;
+            self.mmap_len = 0;
+        }
     }
 }
 
@@ -324,42 +392,39 @@ impl CanvasRenderer for SoftwareRenderer {
     fn render_frame(&mut self) -> Result<(), RenderError> {
         self.frame_count += 1;
 
-        // Blit canvas buffer to physical display hardware with exact hardware stride alignment
-        if let Some(fb) = &mut self.fb_file {
-            let bytes_per_px = (self.bits_per_pixel / 8).max(1);
-            let row_bytes_to_copy = (self.width * bytes_per_px) as usize;
+        // 1. Direct mmap fast blit (smooth, zero-syscall, no flicker)
+        if self.mmap_addr != 0 {
+            let mmap_ptr = self.mmap_addr as *mut u8;
 
             if self.bits_per_pixel == 32 {
                 if self.line_length == self.width * 4 {
-                    // Contiguous buffer: single block write
-                    let _ = fb.seek(SeekFrom::Start(0));
-                    let all_bytes = unsafe {
-                        std::slice::from_raw_parts(
+                    // Contiguous single-shot memcpy
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
                             self.buffer.as_ptr() as *const u8,
-                            self.buffer.len() * 4,
-                        )
-                    };
-                    let _ = fb.write_all(all_bytes);
+                            mmap_ptr,
+                            (self.width * self.height * 4) as usize,
+                        );
+                    }
                 } else {
-                    // Padded stride: write row by row at exact line_length offset
+                    // Row-by-row stride memcpy
                     for y in 0..self.height {
-                        let dst_offset = (y as u64) * (self.line_length as u64);
+                        let dst_offset = (y as usize) * (self.line_length as usize);
                         let src_start = (y * self.width) as usize;
-                        let row_slice: &[u8] = unsafe {
-                            std::slice::from_raw_parts(
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
                                 self.buffer[src_start..].as_ptr() as *const u8,
-                                (self.width as usize) * 4,
-                            )
-                        };
-                        let _ = fb.seek(SeekFrom::Start(dst_offset));
-                        let _ = fb.write_all(row_slice);
+                                mmap_ptr.add(dst_offset),
+                                (self.width * 4) as usize,
+                            );
+                        }
                     }
                 }
             } else if self.bits_per_pixel == 16 {
-                // Hardware is 16-bit RGB565: convert row by row
+                // 16-bit RGB565 conversion
                 let mut row16 = vec![0u16; self.width as usize];
                 for y in 0..self.height {
-                    let dst_offset = (y as u64) * (self.line_length as u64);
+                    let dst_offset = (y as usize) * (self.line_length as usize);
                     let src_start = (y * self.width) as usize;
                     for x in 0..self.width as usize {
                         let px32 = self.buffer[src_start + x];
@@ -371,15 +436,75 @@ impl CanvasRenderer for SoftwareRenderer {
                         let b5 = (b >> 3) & 0x1F;
                         row16[x] = (r5 << 11) | (g6 << 5) | b5;
                     }
-                    let row_bytes: &[u8] = unsafe {
-                        std::slice::from_raw_parts(
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
                             row16.as_ptr() as *const u8,
-                            row16.len() * 2,
+                            mmap_ptr.add(dst_offset),
+                            (self.width * 2) as usize,
+                        );
+                    }
+                }
+            }
+            return Ok(());
+        }
+
+        // 2. Fallback to pwrite / write_all if mmap is unavailable
+        if let Some(fb) = &mut self.fb_file {
+            if self.bits_per_pixel == 32 {
+                if self.line_length == self.width * 4 {
+                    let _ = fb.seek(SeekFrom::Start(0));
+                    let all_bytes = unsafe {
+                        std::slice::from_raw_parts(
+                            self.buffer.as_ptr() as *const u8,
+                            self.buffer.len() * 4,
                         )
                     };
-                    let _ = fb.seek(SeekFrom::Start(dst_offset));
-                    let _ = fb.write_all(row_bytes);
+                    let _ = fb.write_all(all_bytes);
+                } else {
+                    let total_bytes = (self.height as usize) * (self.line_length as usize);
+                    if self.staging_buffer.len() != total_bytes {
+                        self.staging_buffer.resize(total_bytes, 0);
+                    }
+                    let row_bytes = (self.width as usize) * 4;
+                    for y in 0..self.height as usize {
+                        let dst_offset = y * (self.line_length as usize);
+                        let src_start = y * (self.width as usize);
+                        let src_slice: &[u8] = unsafe {
+                            std::slice::from_raw_parts(
+                                self.buffer[src_start..].as_ptr() as *const u8,
+                                row_bytes,
+                            )
+                        };
+                        self.staging_buffer[dst_offset..dst_offset + row_bytes]
+                            .copy_from_slice(src_slice);
+                    }
+                    let _ = fb.seek(SeekFrom::Start(0));
+                    let _ = fb.write_all(&self.staging_buffer);
                 }
+            } else if self.bits_per_pixel == 16 {
+                let total_bytes = (self.height as usize) * (self.line_length as usize);
+                if self.staging_buffer.len() != total_bytes {
+                    self.staging_buffer.resize(total_bytes, 0);
+                }
+                for y in 0..self.height as usize {
+                    let dst_offset = y * (self.line_length as usize);
+                    let src_start = y * (self.width as usize);
+                    for x in 0..self.width as usize {
+                        let px32 = self.buffer[src_start + x];
+                        let r = ((px32 >> 16) & 0xFF) as u16;
+                        let g = ((px32 >> 8) & 0xFF) as u16;
+                        let b = (px32 & 0xFF) as u16;
+                        let r5 = (r >> 3) & 0x1F;
+                        let g6 = (g >> 2) & 0x3F;
+                        let b5 = (b >> 3) & 0x1F;
+                        let rgb565 = (r5 << 11) | (g6 << 5) | b5;
+                        let bytes = rgb565.to_ne_bytes();
+                        self.staging_buffer[dst_offset + x * 2] = bytes[0];
+                        self.staging_buffer[dst_offset + x * 2 + 1] = bytes[1];
+                    }
+                }
+                let _ = fb.seek(SeekFrom::Start(0));
+                let _ = fb.write_all(&self.staging_buffer);
             }
             let _ = fb.flush();
         }
@@ -462,7 +587,7 @@ fn get_glyph_data(ch: char) -> [u8; 16] {
         'q' => [0, 0, 0, 0, 0x3E, 0x66, 0x66, 0x3E, 0x06, 0x06, 0, 0, 0, 0, 0, 0],
         'r' => [0, 0, 0, 0, 0x7C, 0x66, 0x60, 0x60, 0x60, 0, 0, 0, 0, 0, 0, 0],
         's' => [0, 0, 0, 0, 0x3E, 0x60, 0x3C, 0x06, 0x7C, 0, 0, 0, 0, 0, 0, 0],
-        't' => [0, 0, 0x30, 0x30, 0x7C, 0x30, 0x30, 0x32, 0x1C, 0, 0, 0, 0, 0, 0, 0],
+        't' => [0, 0, 0x30, 0x30, 0x7C, 0x30, 0x30, 0x32, 0x1C, 0, 0, 0, 0, 0, 0],
         'u' => [0, 0, 0, 0, 0x66, 0x66, 0x66, 0x66, 0x3E, 0, 0, 0, 0, 0, 0, 0],
         'v' => [0, 0, 0, 0, 0x66, 0x66, 0x66, 0x3C, 0x18, 0, 0, 0, 0, 0, 0, 0],
         'w' => [0, 0, 0, 0, 0x63, 0x6B, 0x7F, 0x3E, 0x36, 0, 0, 0, 0, 0, 0, 0],

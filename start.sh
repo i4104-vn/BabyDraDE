@@ -238,6 +238,10 @@ setup_tty_environment() {
         chmod 0700 "$XDG_RUNTIME_DIR"
     fi
 
+    # Kích hoạt module kernel cho chuột và uinput nếu có
+    run_sudo modprobe mousedev 2>/dev/null || true
+    run_sudo modprobe uinput 2>/dev/null || true
+
     # Cấp quyền truy cập video / input / framebuffer cho user
     if [ "$(id -u)" -ne 0 ]; then
         for grp in video input render; do
@@ -245,10 +249,17 @@ setup_tty_environment() {
                 run_sudo usermod -a -G "$grp" "$USER" 2>/dev/null || true
             fi
         done
-        # Cấp quyền đọc/ghi tạm thời cho framebuffer và DRM nếu có
+        # Cấp quyền đọc/ghi cho framebuffer, DRM và chuột /dev/input/mice
         run_sudo chmod 666 /dev/fb0 2>/dev/null || true
         run_sudo chmod 666 /dev/dri/card* /dev/dri/renderD* 2>/dev/null || true
+        run_sudo chmod 666 /dev/input/mice /dev/input/mouse* /dev/input/event* 2>/dev/null || true
     fi
+
+    # Tắt nhấp nháy con trỏ text của Linux fbcon để tránh xung đột khung hình
+    echo 0 | run_sudo tee /sys/class/graphics/fbcon/cursor_blink >/dev/null 2>&1 || true
+    echo 0 | run_sudo tee /sys/module/vt/parameters/cur_default >/dev/null 2>&1 || true
+    run_sudo setterm -cursor off -blank 0 -powerdown 0 -powersave off 2>/dev/null || true
+    printf "\033[?25l" 2>/dev/null || true
 
     # Cấu hình và hiển thị thông số framebuffer
     if [ -e /dev/fb0 ]; then
@@ -323,6 +334,9 @@ launch_de() {
         else
             stty sane 2>/dev/null || true
         fi
+        printf "\033[?25h" 2>/dev/null || true
+        run_sudo setterm -cursor on 2>/dev/null || true
+        echo 1 | run_sudo tee /sys/class/graphics/fbcon/cursor_blink >/dev/null 2>&1 || true
         tput cnorm 2>/dev/null || true
         clear 2>/dev/null || true
         echo "[✓] Đã thoát BabyDraDE và khôi phục TTY."
