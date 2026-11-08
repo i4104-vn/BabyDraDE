@@ -23,10 +23,11 @@ pub fn render_window(
     location: Point<i32, Logical>,
     scale: Scale<f64>,
 ) -> Vec<CustomRenderElements> {
+    let render_loc = location - window.geometry().loc;
     window
         .render_elements::<WaylandSurfaceRenderElement<GlowRenderer>>(
             renderer,
-            location.to_physical_precise_round(scale),
+            render_loc.to_physical_precise_round(scale),
             scale,
             1.0,
         )

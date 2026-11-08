@@ -135,32 +135,31 @@ impl BabydraState {
         &self,
         point: Point<f64, Logical>,
     ) -> Option<(Window, Point<i32, Logical>)> {
-        // Iterate windows from top to bottom (highest z-index first)
-        for window in self.space.elements().rev() {
+        // 1. First check via Smithay's element_under (handles exact input regions)
+        if let Some((window, _render_loc)) = self.space.element_under(point) {
             if let Some(loc) = self.space.element_location(window) {
-                let geo = window.geometry();
-                let size = if geo.size.w > 0 && geo.size.h > 0 {
-                    geo.size
-                } else {
-                    let bbox_size = window.bbox().size;
-                    if bbox_size.w > 0 && bbox_size.h > 0 {
-                        bbox_size
-                    } else {
-                        smithay::utils::Size::from((800, 600))
+                return Some((window.clone(), loc));
+            }
+        }
+
+        // 2. Fallback: check window bounding box and geometry in space
+        for window in self.space.elements().rev() {
+            if let Some(bbox) = self.space.element_bbox(window) {
+                if bbox.to_f64().contains(point) {
+                    if let Some(loc) = self.space.element_location(window) {
+                        return Some((window.clone(), loc));
                     }
-                };
-
-                // Visual bounds matching native window surface geometry
-                let min_x = loc.x as f64;
-                let max_x = (loc.x + size.w) as f64;
-                let min_y = loc.y as f64;
-                let max_y = (loc.y + size.h) as f64;
-
-                if point.x >= min_x && point.x <= max_x && point.y >= min_y && point.y <= max_y {
-                    return Some((window.clone(), loc));
+                }
+            }
+            if let Some(geo) = self.space.element_geometry(window) {
+                if geo.to_f64().contains(point) {
+                    if let Some(loc) = self.space.element_location(window) {
+                        return Some((window.clone(), loc));
+                    }
                 }
             }
         }
+
         None
     }
 

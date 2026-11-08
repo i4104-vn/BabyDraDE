@@ -127,6 +127,19 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 window.toplevel().unwrap().send_pending_configure();
             });
 
+            // Ensure pointer focus is updated to the raised window surface
+            let under = state.surface_under(state.pointer_location);
+            pointer.motion(
+                state,
+                under,
+                &MotionEvent {
+                    location: state.pointer_location,
+                    serial,
+                    time: event.time_msec(),
+                },
+            );
+            pointer.frame(state);
+
             // Drag window from anywhere if holding Super (Win) key
             let mods = keyboard.modifier_state();
             if mods.logo {
