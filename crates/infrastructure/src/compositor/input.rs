@@ -58,6 +58,9 @@ impl BabydraState {
 
                 let mut spawn_terminal = false;
                 let mut cycle_focus = false;
+                let mut quit_compositor = false;
+                let mut close_active_window = false;
+
                 keyboard.input::<(), _>(
                     self,
                     event.key_code(),
@@ -67,12 +70,29 @@ impl BabydraState {
                     |_state, modifiers, handle| {
                         if event.state() == KeyState::Pressed {
                             let sym = handle.modified_sym();
-                            // Check for Super (Win) + T key combination to spawn terminal
+
+                            // 1. Super + Escape OR Super + Shift + Q OR Ctrl + Alt + Backspace: Quit WM immediately
+                            if (modifiers.logo && sym == keysyms::KEY_Escape.into())
+                                || (modifiers.logo && modifiers.shift && (sym == keysyms::KEY_q.into() || sym == keysyms::KEY_Q.into()))
+                                || (modifiers.ctrl && modifiers.alt && sym == keysyms::KEY_BackSpace.into())
+                            {
+                                quit_compositor = true;
+                                return FilterResult::Intercept(());
+                            }
+
+                            // 2. Super + Q: Close active window
+                            if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_q.into() || sym == keysyms::KEY_Q.into()) {
+                                close_active_window = true;
+                                return FilterResult::Intercept(());
+                            }
+
+                            // 3. Super (Win) + T: Spawn new terminal window
                             if modifiers.logo && (sym == keysyms::KEY_t.into() || sym == keysyms::KEY_T.into()) {
                                 spawn_terminal = true;
                                 return FilterResult::Intercept(());
                             }
-                            // Check for Alt + Tab key combination to cycle windows
+
+                            // 4. Alt + Tab: Cycle windows and raise next to top
                             if modifiers.alt && (sym == keysyms::KEY_Tab.into() || sym == keysyms::KEY_ISO_Left_Tab.into()) {
                                 cycle_focus = true;
                                 return FilterResult::Intercept(());
@@ -81,6 +101,19 @@ impl BabydraState {
                         FilterResult::Forward
                     },
                 );
+
+                if quit_compositor {
+                    info!("Quit shortcut pressed: Stopping BabyDraDE compositor...");
+                    self.loop_signal.stop();
+                    return;
+                }
+
+                if close_active_window {
+                    if let Some(active_window) = self.space.elements().rev().next() {
+                        info!("Super+Q pressed: Closing active window");
+                        active_window.toplevel().unwrap().send_close();
+                    }
+                }
 
                 if spawn_terminal {
                     spawn_new_terminal(&self.socket_name);
