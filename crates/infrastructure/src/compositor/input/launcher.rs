@@ -49,3 +49,4 @@ pub fn spawn_new_terminal(socket_name: &std::ffi::OsStr) {
         warn!("Failed to spawn terminal '{:?}': {err}", term);
     }
 }
+

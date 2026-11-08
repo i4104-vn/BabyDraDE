@@ -599,6 +599,7 @@ dependencies = [
 name = "infrastructure"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "presentation",
  "smithay",
  "smithay-drm-extras",

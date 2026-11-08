@@ -59,3 +59,4 @@ pub(crate) fn init(
     info!("BabyDraDE Udev/DRM backend initialized successfully. Hardware scanout active.");
     Ok(())
 }
+

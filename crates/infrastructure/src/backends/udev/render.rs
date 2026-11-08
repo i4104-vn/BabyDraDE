@@ -188,3 +188,4 @@ pub fn setup_render_loop(
 
     Ok(())
 }
+

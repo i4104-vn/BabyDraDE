@@ -36,3 +36,4 @@ pub struct UdevState {
     pub _gbm_device: GbmDevice<DrmDeviceFd>,
     pub _session: LibSeatSession,
 }
+
