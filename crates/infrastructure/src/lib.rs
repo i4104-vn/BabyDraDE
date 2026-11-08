@@ -4,32 +4,75 @@ mod compositor;
 use std::{error::Error, ffi::OsString, process::Command};
 
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
-use tracing::{error, info};
+use tracing::{info, warn};
 
 use compositor::{BabydraState, CalloopData};
 
-pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
+fn ensure_runtime_dir() {
     if std::env::var_os("XDG_RUNTIME_DIR").is_none() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "XDG_RUNTIME_DIR is required; run BabyDraDE from a Linux desktop session",
-        )
-        .into());
+        let uid = std::env::var("UID")
+            .or_else(|_| std::env::var("USER"))
+            .unwrap_or_else(|_| "1000".into());
+        let fallback = std::env::temp_dir().join(format!("babydrade-runtime-{}", uid));
+        let _ = std::fs::create_dir_all(&fallback);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&fallback, std::fs::Permissions::from_mode(0o700));
+        }
+
+        std::env::set_var("XDG_RUNTIME_DIR", &fallback);
+        info!("XDG_RUNTIME_DIR not set; using fallback: {:?}", fallback);
     }
+}
+
+fn resolve_test_app(explicit: Option<OsString>) -> OsString {
+    if let Some(app) = explicit {
+        return app;
+    }
+    if let Some(app) = std::env::var_os("BABYDRADE_TEST_APP") {
+        return app;
+    }
+
+    let candidates = [
+        "foot",
+        "alacritty",
+        "kitty",
+        "weston-terminal",
+        "gnome-terminal",
+        "xfce4-terminal",
+        "konsole",
+        "xterm",
+        "urxvt",
+        "st",
+    ];
+
+    if let Some(paths) = std::env::var_os("PATH") {
+        for candidate in candidates {
+            for dir in std::env::split_paths(&paths) {
+                if dir.join(candidate).is_file() {
+                    return OsString::from(candidate);
+                }
+            }
+        }
+    }
+
+    OsString::from("foot")
+}
+
+pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
+    ensure_runtime_dir();
 
     if std::env::var_os("WAYLAND_DISPLAY").is_none()
         && std::env::var_os("WAYLAND_SOCKET").is_none()
         && std::env::var_os("DISPLAY").is_none()
     {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "No graphical display found: neither WAYLAND_DISPLAY, WAYLAND_SOCKET, nor DISPLAY is set.\n\
-             BabyDraDE currently runs as a nested compositor inside an existing Wayland or X11 desktop session.\n\
-             - If you are running from a bare TTY or headless terminal, direct DRM/KMS is not yet implemented.\n\
-             - If you ran with `sudo`, sudo strips display variables; run as a normal user without sudo.\n\
-             - If you are in a graphical desktop or WSLg, ensure $DISPLAY or $WAYLAND_DISPLAY is exported.",
-        )
-        .into());
+        warn!(
+            "No graphical display detected ($WAYLAND_DISPLAY or $DISPLAY is unset).\n\
+             If running on bare TTY / ARM console, launch using ./start.sh or:\n\
+               WLR_RENDERER=pixman cage -- cargo run"
+        );
     }
 
     let mut event_loop: EventLoop<CalloopData> = EventLoop::try_new()?;
@@ -44,13 +87,11 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
 
     backends::winit_backend::init(&mut event_loop, &mut data)?;
 
-    let app = test_app
-        .or_else(|| std::env::var_os("BABYDRADE_TEST_APP"))
-        .unwrap_or_else(|| OsString::from("foot"));
+    let app = resolve_test_app(test_app);
     match Command::new(&app).spawn() {
         Ok(_child) => info!("Started test app: {}", app.to_string_lossy()),
-        Err(err) => error!(
-            "Could not start test app '{}': {}. Set BABYDRADE_TEST_APP or pass --app.",
+        Err(err) => warn!(
+            "Could not start test app '{}': {}. Install a terminal (e.g. alacritty/foot) or set BABYDRADE_TEST_APP.",
             app.to_string_lossy(),
             err
         ),

@@ -19,7 +19,18 @@ pub(crate) fn init(
     event_loop: &mut EventLoop<CalloopData>,
     data: &mut CalloopData,
 ) -> Result<(), Box<dyn Error>> {
-    let (mut backend, winit) = winit::init::<GlesRenderer>()?;
+    let (mut backend, winit) = winit::init::<GlesRenderer>().map_err(|err| {
+        std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!(
+                "Failed to initialize graphical window (Winit backend): {}\n\
+                 Ensure a Wayland host is running, or if running directly on TTY, run via:\n\
+                   WLR_RENDERER=pixman cage -- cargo run\n\
+                 or run ./start.sh",
+                err
+            ),
+        )
+    })?;
     backend.window().set_title("BabyDraDE");
     backend.window().set_cursor_visible(true);
 
