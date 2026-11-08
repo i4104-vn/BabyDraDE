@@ -7,7 +7,7 @@ use std::{error::Error, ffi::OsString, process::Command};
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
 use tracing::{info, warn};
 
-use compositor::{BabydraState, CalloopData};
+use compositor::{input::launcher::resolve_test_app, BabydraState, CalloopData};
 
 fn ensure_runtime_dir() {
     if std::env::var_os("XDG_RUNTIME_DIR").is_none() {
@@ -26,40 +26,6 @@ fn ensure_runtime_dir() {
         std::env::set_var("XDG_RUNTIME_DIR", &fallback);
         info!("XDG_RUNTIME_DIR not set; using fallback: {:?}", fallback);
     }
-}
-
-fn resolve_test_app(explicit: Option<OsString>) -> OsString {
-    if let Some(app) = explicit {
-        return app;
-    }
-    if let Some(app) = std::env::var_os("BABYDRADE_TEST_APP") {
-        return app;
-    }
-
-    let candidates = [
-        "foot",
-        "alacritty",
-        "kitty",
-        "weston-terminal",
-        "gnome-terminal",
-        "xfce4-terminal",
-        "konsole",
-        "xterm",
-        "urxvt",
-        "st",
-    ];
-
-    if let Some(paths) = std::env::var_os("PATH") {
-        for candidate in candidates {
-            for dir in std::env::split_paths(&paths) {
-                if dir.join(candidate).is_file() {
-                    return OsString::from(candidate);
-                }
-            }
-        }
-    }
-
-    OsString::from("foot")
 }
 
 pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {

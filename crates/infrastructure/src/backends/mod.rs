@@ -1,5 +1,5 @@
-pub(crate) mod udev_backend;
-pub(crate) mod winit_backend;
+pub(crate) mod udev;
+pub(crate) mod winit;
 
 use std::error::Error;
 use smithay::reexports::calloop::EventLoop;
@@ -13,9 +13,9 @@ pub(crate) fn init(
 ) -> Result<(), Box<dyn Error>> {
     if std::env::var_os("WAYLAND_DISPLAY").is_some() || std::env::var_os("DISPLAY").is_some() {
         info!("Active graphical host display detected ($WAYLAND_DISPLAY or $DISPLAY is set). Initializing nested Winit backend.");
-        winit_backend::init(event_loop, data)
+        winit::init(event_loop, data)
     } else {
         info!("No host display detected. Initializing autonomous Udev/DRM hardware backend for direct TTY scanout.");
-        udev_backend::init(event_loop, data)
+        udev::init(event_loop, data)
     }
 }
