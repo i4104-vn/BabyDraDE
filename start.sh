@@ -30,9 +30,10 @@ if command -v cage >/dev/null 2>&1; then
         echo "    - Debian / Ubuntu / Raspberry Pi OS: sudo apt install xwayland"
         echo ""
     fi
-    echo "[*] Launching via Wayland 'cage' runner with software rasterizer (Pixman) for universal hardware/ARM support..."
+    echo "[*] Launching via Wayland 'cage' runner with software rasterizer (Pixman/llvmpipe) for universal hardware/ARM support..."
     export WLR_NO_HARDWARE_CURSORS=1
     export WLR_RENDERER=pixman
+    export LIBGL_ALWAYS_SOFTWARE=1
     exec cage -- cargo run "$@"
 fi
 
