@@ -3,7 +3,8 @@ use std::borrow::BorrowMut;
 use smithay::{
     backend::renderer::{
         element::{
-            render_elements, surface::WaylandSurfaceRenderElement, Element, Id, Kind, RenderElement,
+            memory::MemoryRenderBufferRenderElement, render_elements,
+            surface::WaylandSurfaceRenderElement, Element, Id, Kind, RenderElement,
         },
         gles::{element::PixelShaderElement, GlesError, GlesFrame, Uniform},
         glow::{GlowFrame, GlowRenderer},
@@ -111,4 +112,5 @@ render_elements! {
     Surface=WaylandSurfaceRenderElement<GlowRenderer>,
     Shader=PixelShaderElement,
     Window=WindowRenderElement<GlowRenderer>,
+    Cursor=MemoryRenderBufferRenderElement<GlowRenderer>,
 }

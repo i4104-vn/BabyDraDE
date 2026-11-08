@@ -13,7 +13,7 @@ use smithay::{
 
 use crate::{
     compositor::{BabydraState, CalloopData},
-    rendering::{render_window_with_borders, BorderShader, CornerShader, CustomRenderElements},
+    rendering::{render_window_with_borders, BorderShader, CornerShader, Cursor, CustomRenderElements},
 };
 
 pub(crate) fn init(
@@ -39,6 +39,7 @@ pub(crate) fn init(
     BorderShader::init(backend.renderer());
     CornerShader::init(backend.renderer());
 
+    let cursor = Cursor::new();
     let theme = DesktopTheme::magma_cyan();
 
     let output = Output::new(
@@ -106,6 +107,11 @@ pub(crate) fn init(
                                 &theme.border,
                             ));
                         }
+                    }
+
+                    // Render visible mouse cursor on top of all windows
+                    if let Some(cursor_elem) = cursor.element(backend.renderer(), state.pointer_location, scale) {
+                        render_elements.push(cursor_elem);
                     }
 
                     {

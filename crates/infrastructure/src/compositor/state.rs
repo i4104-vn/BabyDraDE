@@ -29,6 +29,13 @@ pub(crate) struct CalloopData {
     pub(crate) display_handle: DisplayHandle,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct MoveState {
+    pub(crate) window: Window,
+    pub(crate) initial_window_location: Point<i32, Logical>,
+    pub(crate) initial_pointer_location: Point<f64, Logical>,
+}
+
 pub(crate) struct BabydraState {
     pub(crate) start_time: Instant,
     pub(crate) socket_name: OsString,
@@ -45,6 +52,9 @@ pub(crate) struct BabydraState {
     pub(crate) data_device_state: DataDeviceState,
     pub(crate) popups: PopupManager,
     pub(crate) seat: Seat<BabydraState>,
+
+    pub(crate) move_state: Option<MoveState>,
+    pub(crate) pointer_location: Point<f64, Logical>,
 }
 
 impl BabydraState {
@@ -79,6 +89,8 @@ impl BabydraState {
             data_device_state,
             popups: PopupManager::default(),
             seat,
+            move_state: None,
+            pointer_location: Point::from((100.0, 100.0)),
         }
     }
 

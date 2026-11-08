@@ -1,5 +1,6 @@
 pub mod border;
 pub mod corners;
+pub mod cursor;
 pub mod elements;
 
 use presentation::BorderTheme;
@@ -14,6 +15,7 @@ use smithay::{
 
 pub use border::BorderShader;
 pub use corners::CornerShader;
+pub use cursor::Cursor;
 pub use elements::{CustomRenderElements, WindowRenderElement};
 
 pub fn render_window_with_borders(

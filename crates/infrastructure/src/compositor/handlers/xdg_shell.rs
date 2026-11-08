@@ -21,7 +21,10 @@ impl XdgShellHandler for BabydraState {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let window = Window::new_wayland_window(surface);
-        self.space.map_element(window.clone(), (32, 32), true);
+        let count = self.space.elements().count() as i32;
+        let offset = (count * 36) % 288;
+        let loc = (48 + offset, 48 + offset);
+        self.space.map_element(window.clone(), loc, true);
         self.seat.get_keyboard().unwrap().set_focus(
             self,
             Some(window.toplevel().unwrap().wl_surface().clone()),

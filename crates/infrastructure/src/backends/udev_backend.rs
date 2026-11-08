@@ -40,7 +40,7 @@ use tracing::{error, info, warn};
 
 use crate::{
     compositor::{BabydraState, CalloopData},
-    rendering::{render_window_with_borders, BorderShader, CornerShader, CustomRenderElements},
+    rendering::{render_window_with_borders, BorderShader, CornerShader, Cursor, CustomRenderElements},
 };
 
 type UdevDrmCompositor = DrmCompositor<
@@ -59,6 +59,7 @@ struct UdevState {
     surfaces: Vec<SurfaceData>,
     renderer: GlowRenderer,
     theme: DesktopTheme,
+    cursor: Cursor,
     active: bool,
     _drm_device: DrmDevice,
     _gbm_device: GbmDevice<DrmDeviceFd>,
@@ -312,6 +313,7 @@ pub(crate) fn init(
         surfaces,
         renderer,
         theme,
+        cursor: Cursor::new(),
         active: true,
         _drm_device: drm_device,
         _gbm_device: gbm_device,
@@ -405,6 +407,7 @@ pub(crate) fn init(
                     ref mut surfaces,
                     ref mut renderer,
                     theme,
+                    ref cursor,
                     ..
                 } = *s;
 
@@ -421,6 +424,11 @@ pub(crate) fn init(
                                 &theme.border,
                             ));
                         }
+                    }
+
+                    // Render visible mouse cursor on top of all windows
+                    if let Some(cursor_elem) = cursor.element(renderer, state.pointer_location, scale) {
+                        render_elements.push(cursor_elem);
                     }
 
                     match surface_data.compositor.render_frame::<GlowRenderer, CustomRenderElements>(
