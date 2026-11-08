@@ -115,51 +115,51 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
     let keyboard = state.seat.get_keyboard().unwrap();
     let serial = SERIAL_COUNTER.next_serial();
 
-    if event.state() == ButtonState::Pressed && !pointer.is_grabbed() {
-        if let Some((window, location)) = state.window_under(state.pointer_location) {
-            state.space.raise_element(&window, true);
-            keyboard.set_focus(
-                state,
-                Some(window.toplevel().unwrap().wl_surface().clone()),
-                serial,
-            );
-            state.space.elements().for_each(|window| {
-                window.toplevel().unwrap().send_pending_configure();
-            });
-
-            // Ensure pointer focus is updated to the raised window surface
-            let under = state.surface_under(state.pointer_location);
-            pointer.motion(
-                state,
-                under,
-                &MotionEvent {
-                    location: state.pointer_location,
+    match event.state() {
+        ButtonState::Pressed if !pointer.is_grabbed() => {
+            if let Some((window, location)) = state.window_under(state.pointer_location) {
+                state.space.raise_element(&window, true);
+                keyboard.set_focus(
+                    state,
+                    Some(window.toplevel().unwrap().wl_surface().clone()),
                     serial,
-                    time: event.time_msec(),
-                },
-            );
-            pointer.frame(state);
-
-            // Drag window from anywhere if holding Super (Win) key
-            let mods = keyboard.modifier_state();
-            if mods.logo {
-                state.move_state = Some(MoveState {
-                    window: window.clone(),
-                    initial_window_location: location,
-                    initial_pointer_location: state.pointer_location,
+                );
+                state.space.elements().for_each(|window| {
+                    window.toplevel().unwrap().send_pending_configure();
                 });
-                return;
+
+                // Ensure pointer focus is updated to the raised window surface
+                let under = state.surface_under(state.pointer_location);
+                pointer.motion(
+                    state,
+                    under,
+                    &MotionEvent {
+                        location: state.pointer_location,
+                        serial,
+                        time: event.time_msec(),
+                    },
+                );
+                pointer.frame(state);
+
+                // Drag window from anywhere if holding Super (Win) key
+                let mods = keyboard.modifier_state();
+                if mods.logo {
+                    state.move_state = Some(MoveState {
+                        window: window.clone(),
+                        initial_window_location: location,
+                        initial_pointer_location: state.pointer_location,
+                    });
+                    return;
+                }
+            } else {
+                state.space.elements().for_each(|window| {
+                    window.set_activated(false);
+                    window.toplevel().unwrap().send_pending_configure();
+                });
+                keyboard.set_focus(state, Option::<WlSurface>::None, serial);
             }
-        } else {
-            state.space.elements().for_each(|window| {
-                window.set_activated(false);
-                window.toplevel().unwrap().send_pending_configure();
-            });
-            keyboard.set_focus(state, Option::<WlSurface>::None, serial);
         }
-    } else if event.state() == ButtonState::Released {
-        // Release window dragging on any mouse button release
-        if state.move_state.take().is_some() {
+        ButtonState::Released if state.move_state.take().is_some() => {
             let under = state.surface_under(state.pointer_location);
             pointer.motion(
                 state,
@@ -173,6 +173,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
             pointer.frame(state);
             return;
         }
+        _ => {}
     }
 
     pointer.button(

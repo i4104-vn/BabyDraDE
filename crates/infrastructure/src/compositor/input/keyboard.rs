@@ -78,7 +78,7 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
     }
 
     if close_active_window {
-        if let Some(active_window) = state.space.elements().rev().next() {
+        if let Some(active_window) = state.space.elements().next_back() {
             info!("Super+Q pressed: Closing active window");
             active_window.toplevel().unwrap().send_close();
         }

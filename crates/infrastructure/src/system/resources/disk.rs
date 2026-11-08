@@ -61,16 +61,15 @@ impl DiskReader {
         }
 
         let stat = unsafe { stat.assume_init() };
-        let block_size = stat.f_frsize as u64;
-        let total_bytes = stat.f_blocks as u64 * block_size;
-        let free_bytes = stat.f_bfree as u64 * block_size;
-        let available_bytes = stat.f_bavail as u64 * block_size;
+        let block_size = stat.f_frsize;
+        let total_bytes = stat.f_blocks * block_size;
+        let free_bytes = stat.f_bfree * block_size;
+        let available_bytes = stat.f_bavail * block_size;
         let used_bytes = total_bytes.saturating_sub(free_bytes);
 
-        let used_percent = if total_bytes > 0 {
-            (used_bytes as f64 / total_bytes as f64 * 100.0) as f32
-        } else {
-            0.0
+        let used_percent = match total_bytes > 0 {
+            true => (used_bytes as f64 / total_bytes as f64 * 100.0) as f32,
+            false => 0.0,
         };
 
         Some(DiskInfo {

@@ -104,16 +104,17 @@ impl CpuReader {
         let mut per_core = Vec::new();
 
         for line in content.lines() {
-            if line.starts_with("cpu ") {
-                overall = Self::parse_cpu_line(line);
-            } else if line.starts_with("cpu") {
-                let first_word = line.split_whitespace().next().unwrap_or("");
-                // Check if it's "cpu0", "cpu1", etc.
-                if first_word[3..].chars().all(|c| c.is_ascii_digit()) {
+            let first_word = line.split_whitespace().next().unwrap_or("");
+            match first_word {
+                "cpu" => {
+                    overall = Self::parse_cpu_line(line);
+                }
+                word if word.starts_with("cpu") && word[3..].chars().all(|c| c.is_ascii_digit()) => {
                     if let Some(snapshot) = Self::parse_cpu_line(line) {
                         per_core.push(snapshot);
                     }
                 }
+                _ => {}
             }
         }
 

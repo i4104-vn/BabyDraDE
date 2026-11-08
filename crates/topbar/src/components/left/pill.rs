@@ -3,7 +3,6 @@ use gtk4::{Box, Button, Label, Orientation, Popover, Image};
 
 pub struct LeftPill {
     container: Box,
-    app_title: Label,
 }
 
 impl LeftPill {
@@ -95,18 +94,11 @@ impl LeftPill {
 
         container.append(&more_btn);
 
-        Self {
-            container,
-            app_title,
-        }
+        Self { container }
     }
 
     pub fn widget(&self) -> &Box {
         &self.container
     }
-
-    #[allow(dead_code)]
-    pub fn set_app_title(&self, title: &str) {
-        self.app_title.set_label(title);
-    }
 }
+

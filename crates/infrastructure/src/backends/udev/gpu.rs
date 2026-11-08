@@ -35,23 +35,30 @@ pub struct GpuInitResult {
     pub udev_backend: UdevBackend,
 }
 
+type GpuActivation = (
+    DrmDevice,
+    smithay::backend::drm::DrmDeviceNotifier,
+    Vec<SurfaceData>,
+    GlowRenderer,
+    GbmDevice<DrmDeviceFd>,
+);
+
 pub fn scan_and_init_gpu(
     session: &mut smithay::backend::session::libseat::LibSeatSession,
     seat_name: &str,
     data: &mut CalloopData,
 ) -> Result<GpuInitResult, Box<dyn Error>> {
     let udev_backend = UdevBackend::new(seat_name).map_err(|err| {
-        std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Failed to initialize udev scanner on seat '{seat_name}': {err}"),
-        )
+        std::io::Error::other(format!(
+            "Failed to initialize udev scanner on seat '{seat_name}': {err}"
+        ))
     })?;
 
     info!("Scanning DRM devices via udev...");
     let mut candidate_gpus = Vec::new();
     for (_dev_id, path) in udev_backend.device_list() {
         info!("Udev detected device: {:?}", path);
-        if let Ok(node) = DrmNode::from_path(&path) {
+        if let Ok(node) = DrmNode::from_path(path) {
             info!("  -> DrmNode type: {:?}", node.ty());
             if node.ty() == NodeType::Primary {
                 candidate_gpus.push(path.to_path_buf());
@@ -92,13 +99,7 @@ fn try_init_gpu(
     primary_gpu_path: &PathBuf,
     session: &mut smithay::backend::session::libseat::LibSeatSession,
     data: &mut CalloopData,
-) -> Option<(
-    DrmDevice,
-    smithay::backend::drm::DrmDeviceNotifier,
-    Vec<SurfaceData>,
-    GlowRenderer,
-    GbmDevice<DrmDeviceFd>,
-)> {
+) -> Option<GpuActivation> {
     let owned_fd = match session.open(
         primary_gpu_path,
         OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOCTTY,
@@ -243,20 +244,21 @@ fn try_init_gpu(
         }
     }
 
-    if !surfaces.is_empty() {
-        info!(
-            "GPU {:?} successfully activated with {} display surface(s).",
-            primary_gpu_path,
-            surfaces.len()
-        );
-        Some((
-            drm_device,
-            drm_notifier,
-            surfaces,
-            renderer,
-            gbm_device,
-        ))
-    } else {
-        None
+    match surfaces.is_empty() {
+        false => {
+            info!(
+                "GPU {:?} successfully activated with {} display surface(s).",
+                primary_gpu_path,
+                surfaces.len()
+            );
+            Some((
+                drm_device,
+                drm_notifier,
+                surfaces,
+                renderer,
+                gbm_device,
+            ))
+        }
+        true => None,
     }
 }

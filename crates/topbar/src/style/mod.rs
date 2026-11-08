@@ -17,3 +17,4 @@ pub fn load_topbar_style() {
         );
     }
 }
+

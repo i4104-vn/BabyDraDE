@@ -42,10 +42,7 @@ impl UdevSession {
         libinput_context
             .udev_assign_seat(&seat_name)
             .map_err(|_| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Failed to assign seat '{seat_name}' to Libinput"),
-                )
+                std::io::Error::other(format!("Failed to assign seat '{seat_name}' to Libinput"))
             })?;
 
         let libinput_backend = LibinputInputBackend::new(libinput_context);
@@ -56,10 +53,7 @@ impl UdevSession {
                 data.state.process_input_event(event);
             })
             .map_err(|err| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Failed to insert Libinput source: {err}"),
-                )
+                std::io::Error::other(format!("Failed to insert Libinput source: {err}"))
             })?;
 
         Ok(Self {

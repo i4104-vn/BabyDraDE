@@ -47,10 +47,7 @@ pub fn setup_render_loop(
             }
         })
         .map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to insert session notifier: {err}"),
-            )
+            std::io::Error::other(format!("Failed to insert session notifier: {err}"))
         })?;
 
     // 2. DRM event notifier (page-flip / vblank completion)
@@ -71,10 +68,7 @@ pub fn setup_render_loop(
             }
         })
         .map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to insert DRM notifier: {err}"),
-            )
+            std::io::Error::other(format!("Failed to insert DRM notifier: {err}"))
         })?;
 
     // 3. Udev event monitor for device hotplugging
@@ -94,10 +88,7 @@ pub fn setup_render_loop(
             }
         })
         .map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to insert udev event source: {err}"),
-            )
+            std::io::Error::other(format!("Failed to insert udev event source: {err}"))
         })?;
 
     // 4. Frame Render Loop — driven by 16ms timer (~60 FPS)
@@ -205,10 +196,7 @@ pub fn setup_render_loop(
             TimeoutAction::ToDuration(Duration::from_millis(16))
         })
         .map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to insert frame timer: {err}"),
-            )
+            std::io::Error::other(format!("Failed to insert frame timer: {err}"))
         })?;
 
     Ok(())

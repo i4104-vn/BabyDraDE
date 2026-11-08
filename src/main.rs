@@ -5,28 +5,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut app: Option<OsString> = None;
 
     while let Some(arg) = args.next() {
-        if arg == "--help" || arg == "-h" {
-            println!("BabyDraDE — minimal Smithay compositor");
-            println!("Usage: babydrade [--app EXECUTABLE]");
-            println!("BABYDRADE_TEST_APP may also select the test app.");
-            return Ok(());
-        }
-
-        if arg == "--app" {
-            app = args.next();
-            if app.is_none() {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "--app requires an executable name",
-                )
+        match arg.to_str() {
+            Some("--help" | "-h") => {
+                println!("BabyDraDE — minimal Smithay compositor");
+                println!("Usage: babydrade [--app EXECUTABLE]");
+                println!("BABYDRADE_TEST_APP may also select the test app.");
+                return Ok(());
+            }
+            Some("--app") => {
+                app = args.next();
+                if app.is_none() {
+                    return Err(std::io::Error::other("--app requires an executable name").into());
+                }
+            }
+            _ => {
+                return Err(std::io::Error::other(format!(
+                    "unknown argument: {}",
+                    arg.to_string_lossy()
+                ))
                 .into());
             }
-        } else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("unknown argument: {}", arg.to_string_lossy()),
-            )
-            .into());
         }
     }
 

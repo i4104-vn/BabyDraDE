@@ -47,8 +47,7 @@ pub(crate) struct BabydraState {
     pub(crate) xdg_shell_state: XdgShellState,
     pub(crate) wlr_layer_shell_state: WlrLayerShellState,
     pub(crate) shm_state: ShmState,
-    #[allow(dead_code)]
-    pub(crate) output_manager_state: OutputManagerState,
+    pub(crate) _output_manager_state: OutputManagerState,
     pub(crate) seat_state: SeatState<BabydraState>,
     pub(crate) data_device_state: DataDeviceState,
     pub(crate) popups: PopupManager,
@@ -87,7 +86,7 @@ impl BabydraState {
             xdg_shell_state,
             wlr_layer_shell_state,
             shm_state,
-            output_manager_state,
+            _output_manager_state: output_manager_state,
             seat_state,
             data_device_state,
             popups: PopupManager::default(),

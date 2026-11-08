@@ -3,8 +3,6 @@ use gtk4::{Box, Label, Orientation};
 
 pub struct DynamicIsland {
     container: Box,
-    title_label: Label,
-    badge_label: Label,
 }
 
 impl DynamicIsland {
@@ -37,24 +35,10 @@ impl DynamicIsland {
             .build();
         container.append(&badge_label);
 
-        Self {
-            container,
-            title_label,
-            badge_label,
-        }
+        Self { container }
     }
 
     pub fn widget(&self) -> &Box {
         &self.container
-    }
-
-    #[allow(dead_code)]
-    pub fn set_text(&self, text: &str) {
-        self.title_label.set_label(text);
-    }
-
-    #[allow(dead_code)]
-    pub fn set_percentage(&self, pct: u32) {
-        self.badge_label.set_label(&format!("{}%", pct));
     }
 }

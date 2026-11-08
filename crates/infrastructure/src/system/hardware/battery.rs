@@ -1,19 +1,14 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BatteryStatus {
     Charging,
     Discharging,
     Full,
     NotCharging,
+    #[default]
     Unknown,
-}
-
-impl Default for BatteryStatus {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 impl std::fmt::Display for BatteryStatus {

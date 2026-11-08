@@ -57,12 +57,10 @@ impl UptimeReader {
         let hours = (total_seconds % 86400) / 3600;
         let minutes = (total_seconds % 3600) / 60;
 
-        if days > 0 {
-            format!("{}d {}h {}m", days, hours, minutes)
-        } else if hours > 0 {
-            format!("{}h {}m", hours, minutes)
-        } else {
-            format!("{}m", minutes)
+        match (days, hours) {
+            (d, h) if d > 0 => format!("{d}d {h}h {minutes}m"),
+            (0, h) if h > 0 => format!("{h}h {minutes}m"),
+            _ => format!("{minutes}m"),
         }
     }
 }

@@ -5,12 +5,6 @@ use infrastructure::system::SystemService;
 
 pub struct StatusPill {
     container: Box,
-    clock_label: Label,
-    #[allow(dead_code)]
-    volume_label: Label,
-    #[allow(dead_code)]
-    wifi_label: Label,
-    battery_label: Label,
 }
 
 impl StatusPill {
@@ -61,16 +55,9 @@ impl StatusPill {
             .build();
         container.append(&clock_label);
 
-        let pill = Self {
-            container,
-            clock_label,
-            volume_label,
-            wifi_label,
-            battery_label,
-        };
+        Self::start_update_timer(clock_label, battery_label);
 
-        pill.start_update_timer();
-        pill
+        Self { container }
     }
 
     pub fn widget(&self) -> &Box {
@@ -84,9 +71,7 @@ impl StatusPill {
             .unwrap_or_else(|_| "00:00".to_string())
     }
 
-    fn start_update_timer(&self) {
-        let clock = self.clock_label.clone();
-        let battery = self.battery_label.clone();
+    fn start_update_timer(clock: Label, battery: Label) {
         let mut sys = SystemService::new();
 
         glib::timeout_add_seconds_local(1, move || {
@@ -97,14 +82,11 @@ impl StatusPill {
             // Periodically check battery status
             if let Some(bat_info) = sys.battery.read() {
                 let pct = bat_info.capacity;
-                let bat_icon = if pct > 80 {
-                    "󰁹"
-                } else if pct > 50 {
-                    "󰂀"
-                } else if pct > 20 {
-                    "󰁾"
-                } else {
-                    "󰂃"
+                let bat_icon = match pct {
+                    81..=100 => "󰁹",
+                    51..=80 => "󰂀",
+                    21..=50 => "󰁾",
+                    _ => "󰂃",
                 };
                 battery.set_label(bat_icon);
                 battery.set_tooltip_text(Some(&format!("Battery: {}% ({:?})", pct, bat_info.status)));
