@@ -6,7 +6,20 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
-smithay = { version = "=0.7.0", default-features = false, features = ["backend_winit", "wayland_frontend", "desktop", "renderer_glow"] }
+smithay = { version = "=0.7.0", default-features = false, features = [
+    "backend_winit",
+    "wayland_frontend",
+    "desktop",
+    "renderer_glow",
+    "backend_session_libseat",
+    "backend_udev",
+    "backend_drm",
+    "backend_gbm",
+    "backend_egl",
+    "backend_libinput",
+    "use_system_lib",
+] }
+smithay-drm-extras = { version = "0.1", optional = false }
 wayland-sys = { version = "0.31", features = ["dlopen"] }
 presentation = { path = "../presentation" }
 tracing.workspace = true

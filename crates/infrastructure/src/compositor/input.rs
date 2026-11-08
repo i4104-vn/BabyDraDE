@@ -1,7 +1,7 @@
 use smithay::{
     backend::input::{
         AbsolutePositionEvent, ButtonState, Event, InputBackend, InputEvent, KeyboardKeyEvent,
-        PointerButtonEvent,
+        PointerButtonEvent, PointerMotionEvent,
     },
     input::{
         keyboard::FilterResult,
@@ -27,6 +27,33 @@ impl BabydraState {
                     time,
                     |_, _, _| FilterResult::Forward,
                 );
+            }
+            InputEvent::PointerMotion { event, .. } => {
+                let pointer = self.seat.get_pointer().unwrap();
+                let delta = event.delta();
+                let current_pos = pointer.current_location();
+                let mut position = current_pos + delta;
+
+                if let Some(output) = self.space.outputs().next() {
+                    if let Some(geo) = self.space.output_geometry(output) {
+                        let max_x = (geo.loc.x + geo.size.w) as f64;
+                        let max_y = (geo.loc.y + geo.size.h) as f64;
+                        position.x = position.x.clamp(geo.loc.x as f64, max_x);
+                        position.y = position.y.clamp(geo.loc.y as f64, max_y);
+                    }
+                }
+
+                let under = self.surface_under(position);
+                pointer.motion(
+                    self,
+                    under,
+                    &MotionEvent {
+                        location: position,
+                        serial: SERIAL_COUNTER.next_serial(),
+                        time: event.time_msec(),
+                    },
+                );
+                pointer.frame(self);
             }
             InputEvent::PointerMotionAbsolute { event, .. } => {
                 let output = self.space.outputs().next().unwrap();

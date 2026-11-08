@@ -69,11 +69,7 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
         && std::env::var_os("WAYLAND_SOCKET").is_none()
         && std::env::var_os("DISPLAY").is_none()
     {
-        warn!(
-            "No graphical display detected ($WAYLAND_DISPLAY or $DISPLAY is unset).\n\
-             If running on bare TTY / ARM console, launch using ./start.sh or:\n\
-               WLR_RENDERER=pixman cage -- cargo run"
-        );
+        info!("No host display detected; starting autonomous Udev/DRM hardware backend for direct TTY scanout.");
     }
 
     let mut event_loop: EventLoop<CalloopData> = EventLoop::try_new()?;
@@ -86,7 +82,7 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
         display_handle,
     };
 
-    backends::winit_backend::init(&mut event_loop, &mut data)?;
+    backends::init(&mut event_loop, &mut data)?;
 
     let app = resolve_test_app(test_app);
     match Command::new(&app).spawn() {

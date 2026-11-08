@@ -22,3 +22,4 @@ void main() {
     
     gl_FragColor = mix_color;
 }
+
