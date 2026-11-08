@@ -3,72 +3,37 @@ pub mod gtk;
 pub mod icons;
 pub mod model;
 
-pub use cursor::{apply_cursor_theme, list_available_cursor_themes};
-pub use gtk::{apply_gtk4_css, apply_gtk_settings, read_current_gtk4_css, read_current_gtk4_settings, remove_gtk4_css, sync_gsettings};
-pub use icons::list_available_icon_themes;
-pub use model::{ColorScheme, ThemeConfig};
+pub use cursor::{
+    find_cursor_theme_path, list_available_cursor_themes, read_active_cursor_theme,
+    read_default_index_theme, CursorThemeInfo,
+};
+pub use gtk::{
+    find_gtk4_css_path, find_settings_ini_path, parse_settings_ini, read_gtk4_css,
+    read_gtk_settings,
+};
+pub use icons::{find_icon_theme_path, list_available_icon_themes};
+pub use model::GtkThemeConfig;
 
-use std::io;
-use tracing::info;
+#[derive(Debug, Clone, Default)]
+pub struct GtkThemeReader;
 
-pub struct ThemeService {
-    config: ThemeConfig,
-}
-
-impl Default for ThemeService {
-    fn default() -> Self {
-        Self::new(ThemeConfig::default())
-    }
-}
-
-impl ThemeService {
-    pub fn new(config: ThemeConfig) -> Self {
-        Self { config }
+impl GtkThemeReader {
+    pub fn new() -> Self {
+        Self
     }
 
-    pub fn config(&self) -> &ThemeConfig {
-        &self.config
+    /// Reads and parses the user's current GTK4 / GTK3 configuration (~/.config/gtk-4.0/settings.ini)
+    pub fn read(&self) -> GtkThemeConfig {
+        read_gtk_settings()
     }
 
-    pub fn set_config(&mut self, config: ThemeConfig) {
-        self.config = config;
+    /// Reads the currently configured cursor theme and size
+    pub fn read_cursor(&self) -> CursorThemeInfo {
+        read_active_cursor_theme()
     }
 
-    /// Synchronizes GTK4, GTK3, Cursor, Icons, and Environment across the desktop session
-    pub fn apply(&self) -> io::Result<()> {
-        info!(
-            "Applying GTK4 Theme: '{}', Icon: '{}', Cursor: '{}' ({})",
-            self.config.gtk_theme,
-            self.config.icon_theme,
-            self.config.cursor_theme,
-            self.config.cursor_size
-        );
-
-        // 1. Export session environment variables so child processes inherit them
-        std::env::set_var("GTK_THEME", &self.config.gtk_theme);
-
-        // 2. Apply GTK4 and GTK3 settings.ini files
-        apply_gtk_settings(&self.config)?;
-
-        // 3. Apply custom GTK4 CSS if configured
-        if let Some(ref css) = self.config.custom_css {
-            let _ = apply_gtk4_css(css);
-        }
-
-        // 4. Apply Cursor theme (~/.icons/default/index.theme + XCURSOR env vars)
-        let _ = apply_cursor_theme(&self.config.cursor_theme, self.config.cursor_size);
-
-        // 5. Trigger non-blocking gsettings sync for GNOME/GTK desktop interface
-        sync_gsettings(&self.config);
-
-        info!("GTK4 themes, icons, and cursor successfully synchronized.");
-        Ok(())
-    }
-
-    /// Convenience helper to initialize and apply the default Windows 11 Fluent dark theme
-    pub fn apply_default() -> io::Result<ThemeConfig> {
-        let service = Self::default();
-        service.apply()?;
-        Ok(service.config)
+    /// Reads custom GTK4 CSS (~/.config/gtk-4.0/gtk.css) if present
+    pub fn read_css(&self) -> Option<String> {
+        read_gtk4_css()
     }
 }

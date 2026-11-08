@@ -1,7 +1,5 @@
-pub mod config;
 pub mod css;
-pub mod gsettings;
+pub mod reader;
 
-pub use config::{apply_gtk_settings, get_config_dir, read_current_gtk4_settings};
-pub use css::{apply_gtk4_css, read_current_gtk4_css, remove_gtk4_css};
-pub use gsettings::sync_gsettings;
+pub use css::{find_gtk4_css_path, read_gtk4_css};
+pub use reader::{find_settings_ini_path, parse_settings_ini, read_gtk_settings};

@@ -1,3 +1,3 @@
-pub mod theme;
+pub mod reader;
 
-pub use theme::list_available_icon_themes;
+pub use reader::{find_icon_theme_path, list_available_icon_themes};

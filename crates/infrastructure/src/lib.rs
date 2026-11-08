@@ -33,11 +33,6 @@ fn ensure_runtime_dir() {
 pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
     ensure_runtime_dir();
 
-    // Synchronize GTK4, GTK3, icons, and cursor theme for the desktop session
-    if let Err(err) = theme::ThemeService::apply_default() {
-        warn!("Could not initialize GTK4 theme configuration: {err}");
-    }
-
     if std::env::var_os("WAYLAND_DISPLAY").is_none()
         && std::env::var_os("WAYLAND_SOCKET").is_none()
         && std::env::var_os("DISPLAY").is_none()
