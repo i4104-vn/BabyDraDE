@@ -57,6 +57,7 @@ impl BabydraState {
                 let keyboard = self.seat.get_keyboard().unwrap();
 
                 let mut spawn_terminal = false;
+                let mut cycle_focus = false;
                 keyboard.input::<(), _>(
                     self,
                     event.key_code(),
@@ -64,11 +65,16 @@ impl BabydraState {
                     serial,
                     time,
                     |_state, modifiers, handle| {
-                        // Check for Super (Win) + T key combination to spawn terminal
-                        if event.state() == KeyState::Pressed && modifiers.logo {
+                        if event.state() == KeyState::Pressed {
                             let sym = handle.modified_sym();
-                            if sym == keysyms::KEY_t.into() || sym == keysyms::KEY_T.into() {
+                            // Check for Super (Win) + T key combination to spawn terminal
+                            if modifiers.logo && (sym == keysyms::KEY_t.into() || sym == keysyms::KEY_T.into()) {
                                 spawn_terminal = true;
+                                return FilterResult::Intercept(());
+                            }
+                            // Check for Alt + Tab key combination to cycle windows
+                            if modifiers.alt && (sym == keysyms::KEY_Tab.into() || sym == keysyms::KEY_ISO_Left_Tab.into()) {
+                                cycle_focus = true;
                                 return FilterResult::Intercept(());
                             }
                         }
@@ -78,6 +84,21 @@ impl BabydraState {
 
                 if spawn_terminal {
                     spawn_new_terminal(&self.socket_name);
+                }
+
+                if cycle_focus {
+                    let next_window = self.space.elements().rev().nth(1).cloned();
+                    if let Some(next_window) = next_window {
+                        self.space.raise_element(&next_window, true);
+                        keyboard.set_focus(
+                            self,
+                            Some(next_window.toplevel().unwrap().wl_surface().clone()),
+                            serial,
+                        );
+                        self.space.elements().for_each(|window| {
+                            window.toplevel().unwrap().send_pending_configure();
+                        });
+                    }
                 }
             }
             InputEvent::PointerMotion { event, .. } => {
@@ -154,7 +175,7 @@ impl BabydraState {
                 if event.state() == ButtonState::Pressed && !pointer.is_grabbed() {
                     if let Some((window, location)) = self
                         .space
-                        .element_under(pointer.current_location())
+                        .element_under(self.pointer_location)
                         .map(|(window, location)| (window.clone(), location))
                     {
                         self.space.raise_element(&window, true);
@@ -169,12 +190,12 @@ impl BabydraState {
 
                         // Start dragging window if holding Super (Win) key OR clicking the top 36px header
                         let mods = keyboard.modifier_state();
-                        let click_rel_y = pointer.current_location().y - location.y as f64;
+                        let click_rel_y = self.pointer_location.y - location.y as f64;
                         if mods.logo || click_rel_y <= 36.0 {
                             self.move_state = Some(MoveState {
                                 window: window.clone(),
                                 initial_window_location: location,
-                                initial_pointer_location: pointer.current_location(),
+                                initial_pointer_location: self.pointer_location,
                             });
                         }
                     } else {

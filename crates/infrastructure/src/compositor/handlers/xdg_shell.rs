@@ -30,6 +30,9 @@ impl XdgShellHandler for BabydraState {
             Some(window.toplevel().unwrap().wl_surface().clone()),
             SERIAL_COUNTER.next_serial(),
         );
+        self.space.elements().for_each(|w| {
+            w.toplevel().unwrap().send_pending_configure();
+        });
     }
 
     fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {

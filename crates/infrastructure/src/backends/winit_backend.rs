@@ -96,8 +96,13 @@ pub(crate) fn init(
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();
                     let scale = Scale::from(1.0);
 
-                    // Render each mapped window with glowing rounded borders like MagmaWM
-                    for window in state.space.elements() {
+                    // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
+                    if let Some(cursor_elem) = cursor.element(backend.renderer(), state.pointer_location, scale) {
+                        render_elements.push(cursor_elem);
+                    }
+
+                    // 2. Render each mapped window in front-to-back order (highest z-index / focused window first)
+                    for window in state.space.elements().rev() {
                         if let Some(loc) = state.space.element_location(window) {
                             render_elements.extend(render_window_with_borders(
                                 backend.renderer(),
@@ -107,11 +112,6 @@ pub(crate) fn init(
                                 &theme.border,
                             ));
                         }
-                    }
-
-                    // Render visible mouse cursor on top of all windows
-                    if let Some(cursor_elem) = cursor.element(backend.renderer(), state.pointer_location, scale) {
-                        render_elements.push(cursor_elem);
                     }
 
                     {

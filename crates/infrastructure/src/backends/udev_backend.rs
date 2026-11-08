@@ -414,7 +414,13 @@ pub(crate) fn init(
                 for surface_data in surfaces.iter_mut() {
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();
 
-                    for window in state.space.elements() {
+                    // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
+                    if let Some(cursor_elem) = cursor.element(renderer, state.pointer_location, scale) {
+                        render_elements.push(cursor_elem);
+                    }
+
+                    // 2. Render each mapped window in front-to-back order (highest z-index / focused window first)
+                    for window in state.space.elements().rev() {
                         if let Some(loc) = state.space.element_location(window) {
                             render_elements.extend(render_window_with_borders(
                                 renderer,
@@ -424,11 +430,6 @@ pub(crate) fn init(
                                 &theme.border,
                             ));
                         }
-                    }
-
-                    // Render visible mouse cursor on top of all windows
-                    if let Some(cursor_elem) = cursor.element(renderer, state.pointer_location, scale) {
-                        render_elements.push(cursor_elem);
                     }
 
                     match surface_data.compositor.render_frame::<GlowRenderer, CustomRenderElements>(

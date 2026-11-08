@@ -27,11 +27,6 @@ pub fn render_window_with_borders(
 ) -> Vec<CustomRenderElements> {
     let mut elements = Vec::new();
 
-    if theme.thickness > 0.0 {
-        let border_elem = BorderShader::element(renderer, window, location, theme);
-        elements.push(CustomRenderElements::Shader(border_elem));
-    }
-
     let surface_elements = window.render_elements::<WaylandSurfaceRenderElement<GlowRenderer>>(
         renderer,
         location.to_physical_precise_round(scale),
@@ -52,6 +47,11 @@ pub fn render_window_with_borders(
     }
     for surface in iter {
         elements.push(CustomRenderElements::Surface(surface));
+    }
+
+    if theme.thickness > 0.0 {
+        let border_elem = BorderShader::element(renderer, window, location, theme);
+        elements.push(CustomRenderElements::Shader(border_elem));
     }
 
     elements
