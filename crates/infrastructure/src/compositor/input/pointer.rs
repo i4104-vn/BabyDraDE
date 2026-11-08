@@ -15,8 +15,7 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
 ) {
     let pointer = state.seat.get_pointer().unwrap();
     let delta = event.delta();
-    let current_pos = pointer.current_location();
-    let mut position = current_pos + delta;
+    let mut position = state.pointer_location + delta;
 
     if let Some(output) = state.space.outputs().next() {
         if let Some(geo) = state.space.output_geometry(output) {
@@ -31,10 +30,22 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
 
     // Handle window dragging/moving
     if let Some(ref move_state) = state.move_state {
-        let delta = position - move_state.initial_pointer_location;
+        let move_delta = position - move_state.initial_pointer_location;
         let new_loc = move_state.initial_window_location
-            + Point::from((delta.x as i32, delta.y as i32));
+            + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
         state.space.map_element(move_state.window.clone(), new_loc, false);
+
+        // Keep Smithay pointer location synchronized with unset focus during window move
+        pointer.motion(
+            state,
+            None,
+            &MotionEvent {
+                location: position,
+                serial: SERIAL_COUNTER.next_serial(),
+                time: event.time_msec(),
+            },
+        );
+        pointer.frame(state);
         return;
     }
 
@@ -65,10 +76,21 @@ pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositio
 
     // Handle window dragging/moving
     if let Some(ref move_state) = state.move_state {
-        let delta = position - move_state.initial_pointer_location;
+        let move_delta = position - move_state.initial_pointer_location;
         let new_loc = move_state.initial_window_location
-            + Point::from((delta.x as i32, delta.y as i32));
+            + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
         state.space.map_element(move_state.window.clone(), new_loc, false);
+
+        pointer.motion(
+            state,
+            None,
+            &MotionEvent {
+                location: position,
+                serial: SERIAL_COUNTER.next_serial(),
+                time: event.time_msec(),
+            },
+        );
+        pointer.frame(state);
         return;
     }
 
@@ -124,10 +146,9 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
             });
             keyboard.set_focus(state, Option::<WlSurface>::None, serial);
         }
-    } else if event.state() == ButtonState::Released && event.button_code() == 0x110 {
-        // Release window dragging on Left Mouse Button release
-        if state.move_state.is_some() {
-            state.move_state = None;
+    } else if event.state() == ButtonState::Released {
+        // Release window dragging on any mouse button release
+        if state.move_state.take().is_some() {
             let under = state.surface_under(state.pointer_location);
             pointer.motion(
                 state,
