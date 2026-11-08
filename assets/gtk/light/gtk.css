@@ -1,0 +1,190 @@
+/* ===================================================================
+ * BabyDraDE — Fluent Light Theme for GTK4
+ * =================================================================== */
+
+@define-color accent_color #0067b8;
+@define-color accent_bg_color #0067b8;
+@define-color accent_fg_color #ffffff;
+
+@define-color window_bg_color #f3f3f3;
+@define-color window_fg_color #1b1b1b;
+
+@define-color view_bg_color #ffffff;
+@define-color view_fg_color #1b1b1b;
+
+@define-color headerbar_bg_color #ffffff;
+@define-color headerbar_fg_color #1b1b1b;
+@define-color headerbar_border_color #e5e5e5;
+
+@define-color card_bg_color #ffffff;
+@define-color card_fg_color #1b1b1b;
+@define-color card_border_color #e5e5e5;
+
+@define-color popover_bg_color #ffffff;
+@define-color popover_fg_color #1b1b1b;
+
+@define-color dialog_bg_color #f9f9f9;
+@define-color dialog_fg_color #1b1b1b;
+
+/* Main Window */
+window.background {
+    background-color: @window_bg_color;
+    color: @window_fg_color;
+    border-radius: 8px;
+}
+
+window.csd {
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* Headerbar / Titlebar */
+headerbar {
+    background-color: @headerbar_bg_color;
+    color: @headerbar_fg_color;
+    border-bottom: 1px solid @headerbar_border_color;
+    border-radius: 8px 8px 0 0;
+    min-height: 40px;
+    padding: 0 8px;
+}
+
+headerbar:backdrop {
+    background-color: #f9f9f9;
+    color: #999999;
+}
+
+headerbar windowhandle {
+    padding: 0 4px;
+}
+
+/* Buttons */
+button {
+    background-color: #fbfbfb;
+    color: @window_fg_color;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 5px;
+    padding: 5px 12px;
+    transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+button:hover {
+    background-color: #f0f0f0;
+    border-color: rgba(0, 0, 0, 0.18);
+}
+
+button:active,
+button:checked {
+    background-color: #e5e5e5;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+button.suggested-action {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+    border-color: transparent;
+}
+
+button.suggested-action:hover {
+    background-color: #0f74c7;
+}
+
+button.destructive-action {
+    background-color: #c42b1c;
+    color: #ffffff;
+    border-color: transparent;
+}
+
+button.destructive-action:hover {
+    background-color: #d13425;
+}
+
+/* Window Control Buttons (Minimize, Maximize, Close) */
+headerbar button.titlebutton {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    min-width: 32px;
+    min-height: 28px;
+    padding: 0;
+    margin: 4px 2px;
+}
+
+headerbar button.titlebutton:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+headerbar button.titlebutton.close:hover {
+    background-color: #c42b1c;
+    color: #ffffff;
+}
+
+/* Text Entries & Inputs */
+entry {
+    background-color: #ffffff;
+    color: @window_fg_color;
+    border: 1px solid #d1d1d1;
+    border-bottom: 2px solid #8a8a8a;
+    border-radius: 4px;
+    padding: 6px 10px;
+    transition: border-bottom-color 150ms ease;
+}
+
+entry:focus {
+    border-bottom: 2px solid @accent_color;
+    background-color: #ffffff;
+}
+
+/* Cards & Lists */
+.card,
+listview,
+list {
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+    border-radius: 6px;
+    border: 1px solid @card_border_color;
+}
+
+row {
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+row:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+row:selected {
+    background-color: rgba(0, 103, 184, 0.15);
+    color: @window_fg_color;
+}
+
+/* Minimalist Scrollbar */
+scrollbar {
+    background-color: transparent;
+    transition: all 200ms ease;
+}
+
+scrollbar slider {
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 4px;
+    min-width: 6px;
+    min-height: 6px;
+    margin: 3px;
+    transition: background-color 150ms ease, min-width 150ms ease;
+}
+
+scrollbar:hover slider {
+    background-color: rgba(0, 0, 0, 0.45);
+    min-width: 10px;
+}
+
+/* Menus & Popovers */
+popover,
+menu {
+    background-color: @popover_bg_color;
+    color: @popover_fg_color;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+}
