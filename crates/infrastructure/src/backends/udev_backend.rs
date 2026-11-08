@@ -60,6 +60,9 @@ struct UdevState {
     renderer: GlowRenderer,
     theme: DesktopTheme,
     active: bool,
+    _drm_device: DrmDevice,
+    _gbm_device: GbmDevice<DrmDeviceFd>,
+    _session: LibSeatSession,
 }
 
 pub(crate) fn init(
@@ -116,124 +119,192 @@ pub(crate) fn init(
         )
     })?;
 
-    let mut primary_gpu_path = None;
+    info!("Scanning DRM devices via udev...");
+    let mut candidate_gpus = Vec::new();
     for (_dev_id, path) in udev_backend.device_list() {
+        info!("Udev detected device: {:?}", path);
         if let Ok(node) = DrmNode::from_path(&path) {
+            info!("  -> DrmNode type: {:?}", node.ty());
             if node.ty() == NodeType::Primary {
-                primary_gpu_path = Some(path);
-                break;
+                candidate_gpus.push(path.to_path_buf());
             }
         }
     }
 
-    let primary_gpu_path = primary_gpu_path.ok_or_else(|| {
+    info!("Found {} candidate primary DRM GPU(s): {:?}", candidate_gpus.len(), candidate_gpus);
+
+    // Try each candidate GPU (e.g. card1, card0) until one successfully initializes with connectors
+    let mut initialized_state: Option<(DrmDevice, smithay::backend::drm::DrmDeviceNotifier, Vec<SurfaceData>, GlowRenderer, GbmDevice<DrmDeviceFd>)> = None;
+
+    for primary_gpu_path in &candidate_gpus {
+        info!("Attempting initialization on GPU: {:?}", primary_gpu_path);
+
+        let owned_fd = match session.open(
+            primary_gpu_path,
+            OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOCTTY,
+        ) {
+            Ok(fd) => fd,
+            Err(err) => {
+                warn!("Failed to open GPU {:?} via LibSeat: {err}. Trying next GPU...", primary_gpu_path);
+                continue;
+            }
+        };
+
+        let device_fd = DeviceFd::from(owned_fd);
+        let drm_device_fd = DrmDeviceFd::new(device_fd);
+
+        let (mut drm_device, drm_notifier) = match DrmDevice::new(drm_device_fd.clone(), false) {
+            Ok(dev) => dev,
+            Err(err) => {
+                warn!("Failed to initialize DrmDevice on {:?}: {err}. Trying next GPU...", primary_gpu_path);
+                continue;
+            }
+        };
+
+        let gbm_device: GbmDevice<DrmDeviceFd> = match GbmDevice::new(drm_device_fd.clone()) {
+            Ok(gbm) => gbm,
+            Err(err) => {
+                warn!("Failed to create GbmDevice on {:?}: {err}. Trying next GPU...", primary_gpu_path);
+                continue;
+            }
+        };
+
+        let allocator = GbmAllocator::new(gbm_device.clone(), GbmBufferFlags::RENDERING);
+        let exporter = GbmFramebufferExporter::new(gbm_device.clone(), None);
+
+        let egl_display = match unsafe { EGLDisplay::new(gbm_device.clone()) } {
+            Ok(disp) => disp,
+            Err(err) => {
+                warn!("Failed to create EGLDisplay from GBM on {:?}: {err}. Trying next GPU...", primary_gpu_path);
+                continue;
+            }
+        };
+
+        let egl_context = match EGLContext::new(&egl_display) {
+            Ok(ctx) => ctx,
+            Err(err) => {
+                warn!("Failed to create EGLContext on {:?}: {err}. Trying next GPU...", primary_gpu_path);
+                continue;
+            }
+        };
+
+        let mut renderer = match unsafe { GlowRenderer::new(egl_context) } {
+            Ok(ren) => ren,
+            Err(err) => {
+                warn!("Failed to initialize GlowRenderer on {:?}: {err}. Trying next GPU...", primary_gpu_path);
+                continue;
+            }
+        };
+
+        BorderShader::init(&mut renderer);
+        CornerShader::init(&mut renderer);
+
+        let renderer_formats: Vec<Format> = <GlowRenderer as ImportDma>::dmabuf_formats(&renderer)
+            .into_iter()
+            .collect();
+
+        let mut scanner: DrmScanner<SimpleCrtcMapper> = DrmScanner::new();
+        let scan_result = match scanner.scan_connectors(&drm_device) {
+            Ok(res) => res,
+            Err(err) => {
+                warn!("Failed to scan connectors on {:?}: {err}. Trying next GPU...", primary_gpu_path);
+                continue;
+            }
+        };
+
+        let mut surfaces: Vec<SurfaceData> = Vec::new();
+        for event in scan_result {
+            if let DrmScanEvent::Connected { connector, crtc: Some(crtc) } = event {
+                let modes = connector.modes();
+                if let Some(preferred_mode) = modes
+                    .iter()
+                    .find(|m| m.mode_type().contains(ModeTypeFlags::PREFERRED))
+                    .or_else(|| modes.first())
+                {
+                    let drm_mode = *preferred_mode;
+                    let mode_size = drm_mode.size();
+                    let smithay_mode = Mode {
+                        size: (mode_size.0 as i32, mode_size.1 as i32).into(),
+                        refresh: (drm_mode.vrefresh() * 1000) as i32,
+                    };
+
+                    let conn_name = format!("{}-{}", connector.interface().as_str(), connector.interface_id());
+                    info!(
+                        "Successfully attached display output '{}' with mode {}x{}@{}Hz on GPU {:?}",
+                        conn_name,
+                        smithay_mode.size.w,
+                        smithay_mode.size.h,
+                        smithay_mode.refresh / 1000,
+                        primary_gpu_path
+                    );
+
+                    let output = Output::new(
+                        conn_name,
+                        PhysicalProperties {
+                            size: (0, 0).into(),
+                            subpixel: Subpixel::Unknown,
+                            make: "BabyDraDE".into(),
+                            model: "DRM-KMS".into(),
+                        },
+                    );
+
+                    let _global = output.create_global::<BabydraState>(&data.display_handle);
+                    output.change_current_state(
+                        Some(smithay_mode),
+                        Some(Transform::Normal),
+                        None,
+                        Some((0, 0).into()),
+                    );
+                    output.set_preferred(smithay_mode);
+                    data.state.space.map_output(&output, (0, 0));
+
+                    let planes = drm_device.planes(&crtc).ok();
+                    match drm_device.create_surface(crtc, drm_mode, &[connector.handle()]) {
+                        Ok(drm_surface) => {
+                            match DrmCompositor::new(
+                                &output,
+                                drm_surface,
+                                planes,
+                                allocator.clone(),
+                                exporter.clone(),
+                                [Fourcc::Argb8888, Fourcc::Xrgb8888],
+                                renderer_formats.clone(),
+                                (0, 0).into(),
+                                Some(gbm_device.clone()),
+                            ) {
+                                Ok(compositor) => {
+                                    surfaces.push(SurfaceData { compositor, output });
+                                }
+                                Err(err) => {
+                                    warn!("Failed to create DrmCompositor for connector on {:?}: {err}", primary_gpu_path);
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            warn!("Failed to create DRM surface for connector on {:?}: {err}", primary_gpu_path);
+                        }
+                    }
+                }
+            }
+        }
+
+        if !surfaces.is_empty() {
+            info!("GPU {:?} successfully activated with {} display surface(s).", primary_gpu_path, surfaces.len());
+            initialized_state = Some((drm_device, drm_notifier, surfaces, renderer, gbm_device));
+            break;
+        } else {
+            warn!("GPU {:?} has no active display surfaces. Checking other GPUs...", primary_gpu_path);
+        }
+    }
+
+    let (drm_device, drm_notifier, surfaces, renderer, gbm_device) = initialized_state.ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "No primary DRM GPU device node (/dev/dri/card*) found on this system.",
+            "Could not activate any DRM GPU with connected displays. Check GPU drivers and monitor cables.",
         )
     })?;
 
-    info!("Selected primary GPU for scanout: {:?}", primary_gpu_path);
-
-    // 4. Open DRM device via LibSeat session
-    let owned_fd = session.open(
-        &primary_gpu_path,
-        OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOCTTY,
-    )?;
-    let device_fd = DeviceFd::from(owned_fd);
-    let drm_device_fd = DrmDeviceFd::new(device_fd);
-
-    let (mut drm_device, drm_notifier) = DrmDevice::new(drm_device_fd.clone(), false)?;
-    let gbm_device: GbmDevice<DrmDeviceFd> = GbmDevice::new(drm_device_fd.clone())?;
-    let allocator = GbmAllocator::new(gbm_device.clone(), GbmBufferFlags::RENDERING);
-    let exporter = GbmFramebufferExporter::new(gbm_device.clone(), None);
-
-    // 5. Initialize EGL & GlowRenderer directly from GBM native platform
-    // This bypasses the nested EGL_EXT_platform_base requirement that crashed cage.
-    let egl_display = unsafe { EGLDisplay::new(gbm_device.clone()) }?;
-    let egl_context = EGLContext::new(&egl_display)?;
-    let mut renderer = unsafe { GlowRenderer::new(egl_context) }?;
-
-    // Compile MagmaWM-inspired GLSL shaders (neon glowing borders and rounded corners)
-    BorderShader::init(&mut renderer);
-    CornerShader::init(&mut renderer);
-
     let theme = DesktopTheme::magma_cyan();
-    let renderer_formats: Vec<Format> = <GlowRenderer as ImportDma>::dmabuf_formats(&renderer)
-        .into_iter()
-        .collect();
-
-    // 6. Scan connectors using DrmScanner & register Outputs
-    let mut scanner: DrmScanner<SimpleCrtcMapper> = DrmScanner::new();
-    let mut surfaces: Vec<SurfaceData> = Vec::new();
-
-    for event in scanner.scan_connectors(&drm_device)? {
-        if let DrmScanEvent::Connected { connector, crtc: Some(crtc) } = event {
-            let modes = connector.modes();
-            if let Some(preferred_mode) = modes
-                .iter()
-                .find(|m| m.mode_type().contains(ModeTypeFlags::PREFERRED))
-                .or_else(|| modes.first())
-            {
-                let drm_mode = *preferred_mode;
-                let mode_size = drm_mode.size();
-                let smithay_mode = Mode {
-                    size: (mode_size.0 as i32, mode_size.1 as i32).into(),
-                    refresh: (drm_mode.vrefresh() * 1000) as i32,
-                };
-
-                let conn_name = format!("{}-{}", connector.interface().as_str(), connector.interface_id());
-                info!(
-                    "Found active display output '{}' with mode {}x{}@{}Hz",
-                    conn_name,
-                    smithay_mode.size.w,
-                    smithay_mode.size.h,
-                    smithay_mode.refresh / 1000
-                );
-
-                let output = Output::new(
-                    conn_name,
-                    PhysicalProperties {
-                        size: (0, 0).into(),
-                        subpixel: Subpixel::Unknown,
-                        make: "BabyDraDE".into(),
-                        model: "DRM-KMS".into(),
-                    },
-                );
-
-                let _global = output.create_global::<BabydraState>(&data.display_handle);
-                output.change_current_state(
-                    Some(smithay_mode),
-                    Some(Transform::Normal),
-                    None,
-                    Some((0, 0).into()),
-                );
-                output.set_preferred(smithay_mode);
-                data.state.space.map_output(&output, (0, 0));
-
-                let planes = drm_device.planes(&crtc).ok();
-                let drm_surface = drm_device.create_surface(crtc, drm_mode, &[connector.handle()])?;
-
-                let compositor = DrmCompositor::new(
-                    &output,
-                    drm_surface,
-                    planes,
-                    allocator.clone(),
-                    exporter.clone(),
-                    [Fourcc::Argb8888, Fourcc::Xrgb8888],
-                    renderer_formats.clone(),
-                    (0, 0).into(),
-                    Some(gbm_device.clone()),
-                )?;
-
-                surfaces.push(SurfaceData { compositor, output });
-            }
-        }
-    }
-
-    if surfaces.is_empty() {
-        warn!("No active DRM connectors detected during initial scan. Running in headless mode until display connected.");
-    }
 
     std::env::set_var("WAYLAND_DISPLAY", &data.state.socket_name);
 
@@ -242,6 +313,9 @@ pub(crate) fn init(
         renderer,
         theme,
         active: true,
+        _drm_device: drm_device,
+        _gbm_device: gbm_device,
+        _session: session,
     }));
 
     // 7. Insert Session Notifier (pause/resume when switching VTs with Ctrl+Alt+Fn)

@@ -11,7 +11,12 @@ if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
     chmod 0700 "$XDG_RUNTIME_DIR"
 fi
 
-# 2. Check execution mode
+# 2. Set default diagnostic logging level
+if [ -z "${RUST_LOG:-}" ]; then
+    export RUST_LOG="info,infrastructure=debug,babydrade=debug"
+fi
+
+# 3. Check execution mode
 if [ -n "${WAYLAND_DISPLAY:-}" ] || [ -n "${DISPLAY:-}" ]; then
     echo "[*] Active graphical session detected (WAYLAND_DISPLAY='${WAYLAND_DISPLAY:-}' / DISPLAY='${DISPLAY:-}')."
     echo "[*] Launching BabyDraDE in nested mode (Winit backend with GlowRenderer)..."
@@ -20,5 +25,5 @@ else
     echo "[*] Launching autonomous BabyDraDE Udev/DRM hardware compositor with GlowRenderer (OpenGL ES via GBM)..."
 fi
 
-# 3. Direct execution — autonomous compositor, no cage, no xinit needed
+# 4. Direct execution — autonomous compositor, no cage, no xinit needed
 exec cargo run "$@"

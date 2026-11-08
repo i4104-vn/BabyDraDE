@@ -34,5 +34,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    infrastructure::run(app)
+    if let Err(err) = infrastructure::run(app) {
+        tracing::error!("BabyDraDE stopped with error: {err}");
+        std::process::exit(1);
+    }
+    Ok(())
 }
