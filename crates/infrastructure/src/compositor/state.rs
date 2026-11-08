@@ -131,10 +131,47 @@ impl BabydraState {
         socket_name
     }
 
+    pub(crate) fn window_under(
+        &self,
+        point: Point<f64, Logical>,
+    ) -> Option<(Window, Point<i32, Logical>)> {
+        // Iterate windows from top to bottom (highest z-index first)
+        for window in self.space.elements().rev() {
+            if let Some(loc) = self.space.element_location(window) {
+                let geo = window.geometry();
+                let size = if geo.size.w > 0 && geo.size.h > 0 {
+                    geo.size
+                } else {
+                    let bbox_size = window.bbox().size;
+                    if bbox_size.w > 0 && bbox_size.h > 0 {
+                        bbox_size
+                    } else {
+                        smithay::utils::Size::from((800, 600))
+                    }
+                };
+
+                // Visual bounds including outer border margin (8px)
+                let min_x = (loc.x - 8) as f64;
+                let max_x = (loc.x + size.w + 8) as f64;
+                let min_y = (loc.y - 8) as f64;
+                let max_y = (loc.y + size.h + 8) as f64;
+
+                if point.x >= min_x && point.x <= max_x && point.y >= min_y && point.y <= max_y {
+                    return Some((window.clone(), loc));
+                }
+            }
+        }
+        None
+    }
+
     pub(crate) fn surface_under(
         &self,
         position: Point<f64, Logical>,
     ) -> Option<(WlSurface, Point<f64, Logical>)> {
+        if self.move_state.is_some() {
+            return None;
+        }
+
         self.space
             .element_under(position)
             .and_then(|(window, location)| {

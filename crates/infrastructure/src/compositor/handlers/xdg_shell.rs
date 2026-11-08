@@ -41,6 +41,25 @@ impl XdgShellHandler for BabydraState {
 
     fn grab(&mut self, _surface: PopupSurface, _seat: wl_seat::WlSeat, _serial: Serial) {}
 
+    fn move_request(&mut self, surface: ToplevelSurface, _seat: wl_seat::WlSeat, _serial: Serial) {
+        let target_window = self
+            .space
+            .elements()
+            .find(|w| w.toplevel().map(|t| t == &surface).unwrap_or(false))
+            .cloned();
+
+        if let Some(window) = target_window {
+            if let Some(loc) = self.space.element_location(&window) {
+                self.space.raise_element(&window, true);
+                self.move_state = Some(crate::compositor::state::MoveState {
+                    window,
+                    initial_window_location: loc,
+                    initial_pointer_location: self.pointer_location,
+                });
+            }
+        }
+    }
+
     fn reposition_request(
         &mut self,
         surface: PopupSurface,

@@ -157,6 +157,7 @@ impl BabydraState {
                     let new_loc = move_state.initial_window_location
                         + Point::from((delta.x as i32, delta.y as i32));
                     self.space.map_element(move_state.window.clone(), new_loc, false);
+                    return;
                 }
 
                 let under = self.surface_under(position);
@@ -186,6 +187,7 @@ impl BabydraState {
                     let new_loc = move_state.initial_window_location
                         + Point::from((delta.x as i32, delta.y as i32));
                     self.space.map_element(move_state.window.clone(), new_loc, false);
+                    return;
                 }
 
                 let under = self.surface_under(position);
@@ -206,11 +208,7 @@ impl BabydraState {
                 let serial = SERIAL_COUNTER.next_serial();
 
                 if event.state() == ButtonState::Pressed && !pointer.is_grabbed() {
-                    if let Some((window, location)) = self
-                        .space
-                        .element_under(self.pointer_location)
-                        .map(|(window, location)| (window.clone(), location))
-                    {
+                    if let Some((window, location)) = self.window_under(self.pointer_location) {
                         self.space.raise_element(&window, true);
                         keyboard.set_focus(
                             self,
@@ -221,7 +219,7 @@ impl BabydraState {
                             window.toplevel().unwrap().send_pending_configure();
                         });
 
-                        // Start dragging window if holding Super (Win) key OR clicking the top 36px header
+                        // Start dragging window if holding Super (Win) key OR clicking the top 36px header / border
                         let mods = keyboard.modifier_state();
                         let click_rel_y = self.pointer_location.y - location.y as f64;
                         if mods.logo || click_rel_y <= 36.0 {
@@ -230,6 +228,8 @@ impl BabydraState {
                                 initial_window_location: location,
                                 initial_pointer_location: self.pointer_location,
                             });
+                            // Dragging started: consume the click in the compositor, do not forward to client
+                            return;
                         }
                     } else {
                         self.space.elements().for_each(|window| {
@@ -240,7 +240,21 @@ impl BabydraState {
                     }
                 } else if event.state() == ButtonState::Released && event.button_code() == 0x110 {
                     // Release window dragging on Left Mouse Button release
-                    self.move_state = None;
+                    if self.move_state.is_some() {
+                        self.move_state = None;
+                        let under = self.surface_under(self.pointer_location);
+                        pointer.motion(
+                            self,
+                            under,
+                            &MotionEvent {
+                                location: self.pointer_location,
+                                serial,
+                                time: event.time_msec(),
+                            },
+                        );
+                        pointer.frame(self);
+                        return;
+                    }
                 }
 
                 pointer.button(
