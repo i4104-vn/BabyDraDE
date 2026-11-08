@@ -23,6 +23,13 @@ echo "[*] No active Wayland display found. Running directly on TTY."
 
 # Use 'cage' Wayland kiosk runner with Pixman fallback (100% Wayland, no X11/xinit)
 if command -v cage >/dev/null 2>&1; then
+    if ! command -v Xwayland >/dev/null 2>&1; then
+        echo "[!] 'cage' on Arch/Debian requires the Xwayland binary to initialize."
+        echo "[!] Please install it with:"
+        echo "    - Arch Linux: sudo pacman -S xorg-xwayland"
+        echo "    - Debian / Ubuntu / Raspberry Pi OS: sudo apt install xwayland"
+        echo ""
+    fi
     echo "[*] Launching via Wayland 'cage' runner with software rasterizer (Pixman) for universal hardware/ARM support..."
     export WLR_NO_HARDWARE_CURSORS=1
     export WLR_RENDERER=pixman
