@@ -56,12 +56,26 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
     if std::env::var("BABYDRADE_NO_TOPBAR").is_err() {
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
-                let topbar_bin = exe_dir.join("topbar");
+                let topbar_bin = if cfg!(windows) {
+                    exe_dir.join("topbar.exe")
+                } else {
+                    exe_dir.join("topbar")
+                };
+
                 if topbar_bin.exists() {
-                    match Command::new(&topbar_bin).spawn() {
+                    match Command::new(&topbar_bin)
+                        .env("WAYLAND_DISPLAY", &data.state.socket_name)
+                        .env("GDK_BACKEND", "wayland")
+                        .spawn()
+                    {
                         Ok(_child) => info!("Started BabyDraDE TopBar: {:?}", topbar_bin),
                         Err(err) => warn!("Could not start TopBar {:?}: {}", topbar_bin, err),
                     }
+                } else {
+                    warn!(
+                        "TopBar binary not found at {:?}. Please compile all workspace targets with: cargo build --workspace",
+                        topbar_bin
+                    );
                 }
             }
         }

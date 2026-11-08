@@ -8,6 +8,11 @@ use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use style::load_topbar_style;
 
 fn main() {
+    // Ensure GDK connects via Wayland backend for Layer Shell support
+    if std::env::var_os("GDK_BACKEND").is_none() {
+        std::env::set_var("GDK_BACKEND", "wayland");
+    }
+
     let app = Application::builder()
         .application_id("org.babydrade.topbar")
         .build();
@@ -21,6 +26,7 @@ fn main() {
             .application(app)
             .title("BabyDraDE TopBar")
             .decorated(false)
+            .default_height(38)
             .build();
 
         // Layer Shell configuration for Wayland

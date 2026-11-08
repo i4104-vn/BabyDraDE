@@ -7,6 +7,7 @@ use smithay::{
         Layer, LayerSurface as WlrLayerSurface, WlrLayerShellHandler, WlrLayerShellState,
     },
 };
+use tracing::{info, warn};
 
 use crate::compositor::state::BabydraState;
 
@@ -27,9 +28,19 @@ impl WlrLayerShellHandler for BabydraState {
             .or_else(|| self.space.outputs().next().cloned());
 
         if let Some(output) = output {
+            info!(
+                "LayerShell: Mapping new layer surface '{}' onto output '{}'",
+                namespace,
+                output.name()
+            );
             let mut layer_map = layer_map_for_output(&output);
             let layer_surface = LayerSurface::new(surface, namespace);
             let _ = layer_map.map_layer(&layer_surface);
+        } else {
+            warn!(
+                "LayerShell: No output available to map layer surface '{}'!",
+                namespace
+            );
         }
     }
 }
@@ -40,8 +51,11 @@ delegate_layer_shell!(BabydraState);
 pub fn handle_commit(state: &BabydraState, surface: &WlSurface) {
     for output in state.space.outputs() {
         let mut layer_map = layer_map_for_output(output);
-        if layer_map.layer_for_surface(surface, WindowSurfaceType::ALL).is_some() {
+        if let Some(layer) = layer_map.layer_for_surface(surface, WindowSurfaceType::ALL).cloned() {
             layer_map.arrange();
+            if layer.layer_surface().has_pending_changes() {
+                layer.layer_surface().send_configure();
+            }
             return;
         }
     }

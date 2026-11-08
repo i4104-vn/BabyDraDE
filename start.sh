@@ -25,5 +25,9 @@ else
     echo "[*] Launching autonomous BabyDraDE Udev/DRM hardware compositor with GlowRenderer (OpenGL ES via GBM)..."
 fi
 
-# 4. Direct execution — autonomous compositor, no cage, no xinit needed
+# 4. Build workspace components (ensuring topbar binary is compiled alongside compositor)
+echo "[*] Building workspace components (compositor and topbar)..."
+cargo build --workspace
+
+# 5. Direct execution — autonomous compositor, no cage, no xinit needed
 exec cargo run "$@"
