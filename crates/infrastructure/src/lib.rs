@@ -1,5 +1,6 @@
 mod backends;
 mod compositor;
+pub mod rendering;
 
 use std::{error::Error, ffi::OsString, process::Command};
 

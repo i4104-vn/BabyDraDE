@@ -1,25 +1,26 @@
 use std::{error::Error, time::Duration};
 
+use presentation::DesktopTheme;
 use smithay::{
     backend::{
-        renderer::{
-            damage::OutputDamageTracker, element::surface::WaylandSurfaceRenderElement,
-            gles::GlesRenderer,
-        },
+        renderer::{damage::OutputDamageTracker, glow::GlowRenderer},
         winit::{self, WinitEvent},
     },
     output::{Mode, Output, PhysicalProperties, Subpixel},
     reexports::calloop::EventLoop,
-    utils::{Rectangle, Transform},
+    utils::{Rectangle, Scale, Transform},
 };
 
-use crate::compositor::{BabydraState, CalloopData};
+use crate::{
+    compositor::{BabydraState, CalloopData},
+    rendering::{render_window_with_borders, BorderShader, CornerShader, CustomRenderElements},
+};
 
 pub(crate) fn init(
     event_loop: &mut EventLoop<CalloopData>,
     data: &mut CalloopData,
 ) -> Result<(), Box<dyn Error>> {
-    let (mut backend, winit) = winit::init::<GlesRenderer>().map_err(|err| {
+    let (mut backend, winit) = winit::init::<GlowRenderer>().map_err(|err| {
         std::io::Error::new(
             std::io::ErrorKind::Other,
             format!(
@@ -33,6 +34,12 @@ pub(crate) fn init(
     })?;
     backend.window().set_title("BabyDraDE");
     backend.window().set_cursor_visible(true);
+
+    // Initialize custom GLSL shaders (borders, rounded corners) inspired by MagmaWM
+    BorderShader::init(backend.renderer());
+    CornerShader::init(backend.renderer());
+
+    let theme = DesktopTheme::magma_cyan();
 
     let output = Output::new(
         "babydrade-0".to_string(),
@@ -85,27 +92,37 @@ pub(crate) fn init(
                     let size = backend.window_size();
                     let damage = Rectangle::from_size(size);
 
+                    let mut render_elements: Vec<CustomRenderElements> = Vec::new();
+                    let scale = Scale::from(1.0);
+
+                    // Render each mapped window with glowing rounded borders like MagmaWM
+                    for window in state.space.elements() {
+                        if let Some(loc) = state.space.element_location(window) {
+                            render_elements.extend(render_window_with_borders(
+                                backend.renderer(),
+                                window,
+                                loc,
+                                scale,
+                                &theme.border,
+                            ));
+                        }
+                    }
+
                     {
                         let (renderer, mut framebuffer) =
                             backend.bind().expect("failed to bind Winit framebuffer");
-                        smithay::desktop::space::render_output::<
-                            _,
-                            WaylandSurfaceRenderElement<GlesRenderer>,
-                            _,
-                            _,
-                        >(
-                            &output,
-                            renderer,
-                            &mut framebuffer,
-                            1.0,
-                            0,
-                            [&state.space],
-                            &[],
-                            &mut damage_tracker,
-                            [0.0, 0.0, 0.0, 1.0],
-                        )
-                        .expect("failed to render desktop frame");
+                        damage_tracker
+                            .render_output(
+                                renderer,
+                                &mut framebuffer,
+                                0,
+                                &render_elements,
+                                theme.background_color,
+                            )
+                            .expect("failed to render desktop frame");
                     }
+
+                    BorderShader::cleanup(backend.renderer());
 
                     backend
                         .submit(Some(&[damage]))
