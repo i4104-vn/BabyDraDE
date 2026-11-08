@@ -34,6 +34,8 @@ if command -v cage >/dev/null 2>&1; then
     export WLR_NO_HARDWARE_CURSORS=1
     export WLR_RENDERER=pixman
     export LIBGL_ALWAYS_SOFTWARE=1
+    export EGL_LOG_LEVEL=debug
+    export LIBGL_DEBUG=verbose
     exec cage -- cargo run "$@"
 fi
 
