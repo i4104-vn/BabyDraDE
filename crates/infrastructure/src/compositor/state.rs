@@ -150,11 +150,11 @@ impl BabydraState {
                     }
                 };
 
-                // Visual bounds including outer border margin (8px)
-                let min_x = (loc.x - 8) as f64;
-                let max_x = (loc.x + size.w + 8) as f64;
-                let min_y = (loc.y - 8) as f64;
-                let max_y = (loc.y + size.h + 8) as f64;
+                // Visual bounds matching native window surface geometry
+                let min_x = loc.x as f64;
+                let max_x = (loc.x + size.w) as f64;
+                let min_y = loc.y as f64;
+                let max_y = (loc.y + size.h) as f64;
 
                 if point.x >= min_x && point.x <= max_x && point.y >= min_y && point.y <= max_y {
                     return Some((window.clone(), loc));

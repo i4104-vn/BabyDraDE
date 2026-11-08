@@ -13,7 +13,7 @@ use smithay::{
 
 use crate::{
     compositor::{BabydraState, CalloopData},
-    rendering::{render_window_with_borders, BorderShader, CornerShader, Cursor, CustomRenderElements},
+    rendering::{render_window, Cursor, CustomRenderElements},
 };
 
 pub(crate) fn init(
@@ -34,10 +34,6 @@ pub(crate) fn init(
     })?;
     backend.window().set_title("BabyDraDE");
     backend.window().set_cursor_visible(true);
-
-    // Initialize custom GLSL shaders (borders, rounded corners) inspired by MagmaWM
-    BorderShader::init(backend.renderer());
-    CornerShader::init(backend.renderer());
 
     let cursor = Cursor::new();
     let theme = DesktopTheme::magma_cyan();
@@ -104,12 +100,11 @@ pub(crate) fn init(
                     // 2. Render each mapped window in front-to-back order (highest z-index / focused window first)
                     for window in state.space.elements().rev() {
                         if let Some(loc) = state.space.element_location(window) {
-                            render_elements.extend(render_window_with_borders(
+                            render_elements.extend(render_window(
                                 backend.renderer(),
                                 window,
                                 loc,
                                 scale,
-                                &theme.border,
                             ));
                         }
                     }
@@ -127,8 +122,6 @@ pub(crate) fn init(
                             )
                             .expect("failed to render desktop frame");
                     }
-
-                    BorderShader::cleanup(backend.renderer());
 
                     backend
                         .submit(Some(&[damage]))

@@ -17,7 +17,7 @@ use tracing::{error, info, warn};
 
 use crate::{
     compositor::CalloopData,
-    rendering::{render_window_with_borders, BorderShader, CustomRenderElements},
+    rendering::{render_window, CustomRenderElements},
 };
 
 use super::surface::UdevState;
@@ -131,12 +131,11 @@ pub fn setup_render_loop(
                     // 2. Render each mapped window in front-to-back order (highest z-index / focused window first)
                     for window in state.space.elements().rev() {
                         if let Some(loc) = state.space.element_location(window) {
-                            render_elements.extend(render_window_with_borders(
+                            render_elements.extend(render_window(
                                 renderer,
                                 window,
                                 loc,
                                 scale,
-                                &theme.border,
                             ));
                         }
                     }
@@ -158,8 +157,6 @@ pub fn setup_render_loop(
                             warn!("Failed to render DRM frame: {err}");
                         }
                     }
-
-                    BorderShader::cleanup(renderer);
 
                     let output = &surface_data.output;
                     state.space.elements().for_each(|window| {

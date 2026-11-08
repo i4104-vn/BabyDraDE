@@ -127,16 +127,14 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 window.toplevel().unwrap().send_pending_configure();
             });
 
-            // Start dragging window if holding Super (Win) key OR clicking the top 36px header / border
+            // Drag window from anywhere if holding Super (Win) key
             let mods = keyboard.modifier_state();
-            let click_rel_y = state.pointer_location.y - location.y as f64;
-            if mods.logo || click_rel_y <= 36.0 {
+            if mods.logo {
                 state.move_state = Some(MoveState {
                     window: window.clone(),
                     initial_window_location: location,
                     initial_pointer_location: state.pointer_location,
                 });
-                // Dragging started: consume the click in the compositor, do not forward to client
                 return;
             }
         } else {

@@ -22,10 +22,7 @@ use smithay::{
 use smithay_drm_extras::drm_scanner::{DrmScanEvent, DrmScanner, SimpleCrtcMapper};
 use tracing::{info, warn};
 
-use crate::{
-    compositor::{BabydraState, CalloopData},
-    rendering::{BorderShader, CornerShader},
-};
+use crate::compositor::{BabydraState, CalloopData};
 
 use super::surface::SurfaceData;
 
@@ -151,16 +148,13 @@ fn try_init_gpu(
         }
     };
 
-    let mut renderer = match unsafe { GlowRenderer::new(egl_context) } {
+    let renderer = match unsafe { GlowRenderer::new(egl_context) } {
         Ok(ren) => ren,
         Err(err) => {
             warn!("Failed to initialize GlowRenderer on {:?}: {err}", primary_gpu_path);
             return None;
         }
     };
-
-    BorderShader::init(&mut renderer);
-    CornerShader::init(&mut renderer);
 
     let renderer_formats: Vec<Format> = <GlowRenderer as ImportDma>::dmabuf_formats(&renderer)
         .into_iter()
