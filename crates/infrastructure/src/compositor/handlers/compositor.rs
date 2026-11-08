@@ -16,7 +16,7 @@ use smithay::{
 };
 
 use super::super::state::{BabydraState, ClientState};
-use super::xdg_shell;
+use super::{layer_shell, xdg_shell};
 
 impl CompositorHandler for BabydraState {
     fn compositor_state(&mut self) -> &mut CompositorState {
@@ -49,6 +49,7 @@ impl CompositorHandler for BabydraState {
         }
 
         xdg_shell::handle_commit(&mut self.popups, &self.space, surface);
+        layer_shell::handle_commit(self, surface);
     }
 }
 

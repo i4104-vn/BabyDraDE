@@ -13,7 +13,7 @@ use smithay::{
 
 use crate::{
     compositor::{BabydraState, CalloopData},
-    rendering::{render_window, Cursor, CustomRenderElements},
+    rendering::{render_layer_surfaces, render_window, Cursor, CustomRenderElements},
 };
 
 pub(crate) fn init(
@@ -97,7 +97,15 @@ pub(crate) fn init(
                         render_elements.push(cursor_elem);
                     }
 
-                    // 2. Render each mapped window in front-to-back order (highest z-index / focused window first)
+                    // 2. Render Overlay & Top layer surfaces (topbar, dynamic island, notification popups)
+                    render_elements.extend(render_layer_surfaces(
+                        backend.renderer(),
+                        &output,
+                        scale,
+                        &[smithay::wayland::shell::wlr_layer::Layer::Overlay, smithay::wayland::shell::wlr_layer::Layer::Top],
+                    ));
+
+                    // 3. Render each mapped window in front-to-back order (highest z-index / focused window first)
                     for window in state.space.elements().rev() {
                         if let Some(loc) = state.space.element_location(window) {
                             render_elements.extend(render_window(
@@ -108,6 +116,14 @@ pub(crate) fn init(
                             ));
                         }
                     }
+
+                    // 4. Render Bottom & Background layer surfaces (wallpaper, desktop background)
+                    render_elements.extend(render_layer_surfaces(
+                        backend.renderer(),
+                        &output,
+                        scale,
+                        &[smithay::wayland::shell::wlr_layer::Layer::Bottom, smithay::wayland::shell::wlr_layer::Layer::Background],
+                    ));
 
                     {
                         let (renderer, mut framebuffer) =
@@ -134,6 +150,16 @@ pub(crate) fn init(
                             |_, _| Some(output.clone()),
                         );
                     });
+
+                    let layer_map = smithay::desktop::layer_map_for_output(&output);
+                    for layer in layer_map.layers() {
+                        layer.send_frame(
+                            &output,
+                            state.start_time.elapsed(),
+                            Some(Duration::ZERO),
+                            |_, _| Some(output.clone()),
+                        );
+                    }
 
                     state.space.refresh();
                     state.popups.cleanup();

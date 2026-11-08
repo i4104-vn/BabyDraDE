@@ -52,6 +52,21 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
 
     backends::init(&mut event_loop, &mut data)?;
 
+    // Autostart BabyDraDE TopBar if compiled alongside compositor
+    if std::env::var("BABYDRADE_NO_TOPBAR").is_err() {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let topbar_bin = exe_dir.join("topbar");
+                if topbar_bin.exists() {
+                    match Command::new(&topbar_bin).spawn() {
+                        Ok(_child) => info!("Started BabyDraDE TopBar: {:?}", topbar_bin),
+                        Err(err) => warn!("Could not start TopBar {:?}: {}", topbar_bin, err),
+                    }
+                }
+            }
+        }
+    }
+
     let app = resolve_test_app(test_app);
     match Command::new(&app).spawn() {
         Ok(_child) => info!("Started test app: {}", app.to_string_lossy()),

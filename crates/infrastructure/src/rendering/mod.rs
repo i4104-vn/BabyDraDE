@@ -2,4 +2,4 @@ pub mod cursor;
 pub mod elements;
 
 pub use cursor::Cursor;
-pub use elements::{render_window, CustomRenderElements};
+pub use elements::{render_layer_surfaces, render_window, CustomRenderElements};

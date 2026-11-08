@@ -18,7 +18,7 @@ use smithay::{
         compositor::{CompositorClientState, CompositorState},
         output::OutputManagerState,
         selection::data_device::DataDeviceState,
-        shell::xdg::XdgShellState,
+        shell::{wlr_layer::WlrLayerShellState, xdg::XdgShellState},
         shm::ShmState,
         socket::ListeningSocketSource,
     },
@@ -45,6 +45,7 @@ pub(crate) struct BabydraState {
 
     pub(crate) compositor_state: CompositorState,
     pub(crate) xdg_shell_state: XdgShellState,
+    pub(crate) wlr_layer_shell_state: WlrLayerShellState,
     pub(crate) shm_state: ShmState,
     #[allow(dead_code)]
     pub(crate) output_manager_state: OutputManagerState,
@@ -62,6 +63,7 @@ impl BabydraState {
         let display_handle = display.handle();
         let compositor_state = CompositorState::new::<Self>(&display_handle);
         let xdg_shell_state = XdgShellState::new::<Self>(&display_handle);
+        let wlr_layer_shell_state = WlrLayerShellState::new::<Self>(&display_handle);
         let shm_state = ShmState::new::<Self>(&display_handle, vec![]);
         let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&display_handle);
         let data_device_state = DataDeviceState::new::<Self>(&display_handle);
@@ -83,6 +85,7 @@ impl BabydraState {
             loop_signal: event_loop.get_signal(),
             compositor_state,
             xdg_shell_state,
+            wlr_layer_shell_state,
             shm_state,
             output_manager_state,
             seat_state,
@@ -171,13 +174,62 @@ impl BabydraState {
             return None;
         }
 
-        self.space
-            .element_under(position)
-            .and_then(|(window, location)| {
-                window
-                    .surface_under(position - location.to_f64(), WindowSurfaceType::ALL)
-                    .map(|(surface, point)| (surface, (point + location).to_f64()))
-            })
+        // 1. Check Overlay and Top layer surfaces (bars, overlays, dynamic islands)
+        for output in self.space.outputs() {
+            let layer_map = smithay::desktop::layer_map_for_output(output);
+            for layer in layer_map.layers().rev() {
+                if matches!(
+                    layer.layer(),
+                    smithay::wayland::shell::wlr_layer::Layer::Overlay
+                        | smithay::wayland::shell::wlr_layer::Layer::Top
+                ) {
+                    if let Some(geo) = layer_map.layer_geometry(layer) {
+                        if geo.to_f64().contains(position) {
+                            if let Some((surf, surf_loc)) = layer.surface_under(
+                                position - geo.loc.to_f64(),
+                                WindowSurfaceType::ALL,
+                            ) {
+                                return Some((surf, (surf_loc + geo.loc).to_f64()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Check normal desktop windows
+        if let Some((window, location)) = self.space.element_under(position) {
+            if let Some((surface, point)) = window
+                .surface_under(position - location.to_f64(), WindowSurfaceType::ALL)
+            {
+                return Some((surface, (point + location).to_f64()));
+            }
+        }
+
+        // 3. Check Bottom and Background layer surfaces (wallpapers, desktop widgets)
+        for output in self.space.outputs() {
+            let layer_map = smithay::desktop::layer_map_for_output(output);
+            for layer in layer_map.layers().rev() {
+                if matches!(
+                    layer.layer(),
+                    smithay::wayland::shell::wlr_layer::Layer::Bottom
+                        | smithay::wayland::shell::wlr_layer::Layer::Background
+                ) {
+                    if let Some(geo) = layer_map.layer_geometry(layer) {
+                        if geo.to_f64().contains(position) {
+                            if let Some((surf, surf_loc)) = layer.surface_under(
+                                position - geo.loc.to_f64(),
+                                WindowSurfaceType::ALL,
+                            ) {
+                                return Some((surf, (surf_loc + geo.loc).to_f64()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        None
     }
 }
 

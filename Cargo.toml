@@ -4,6 +4,7 @@ members = [
     ".",
     "crates/infrastructure",
     "crates/presentation",
+    "crates/topbar",
 ]
 
 [workspace.package]
