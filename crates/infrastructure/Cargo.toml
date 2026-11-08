@@ -19,7 +19,7 @@ smithay = { version = "=0.7.0", default-features = false, features = [
     "backend_libinput",
     "use_system_lib",
 ] }
-smithay-drm-extras = { version = "0.1", optional = false }
+smithay-drm-extras = { version = "0.1", default-features = false }
 wayland-sys = { version = "0.31", features = ["dlopen"] }
 presentation = { path = "../presentation" }
 tracing.workspace = true
