@@ -1,17 +1,14 @@
 use gtk4::prelude::*;
-use gtk4::{Box, Button, Label, Orientation, Popover, Image};
+use gtk4::{Box, Button, Label, Orientation, Popover};
+use ui_kit::{Icon, PillBox, VerticalSeparator};
 
 pub struct LeftPill {
-    container: Box,
+    pill: PillBox,
 }
 
 impl LeftPill {
     pub fn new() -> Self {
-        let container = Box::builder()
-            .orientation(Orientation::Horizontal)
-            .spacing(4)
-            .css_classes(["pill-container", "left-pill"])
-            .build();
+        let pill = PillBox::with_extra_class(4, "left-pill");
 
         // 1. Arch Linux icon button
         let arch_btn = Button::builder()
@@ -19,39 +16,28 @@ impl LeftPill {
             .tooltip_text("BabyDraDE Applications")
             .build();
 
-        // Try loading assets/icons/arch.svg or fallback to stylized icon
-        if std::path::Path::new("assets/icons/arch.svg").exists() {
-            let img = Image::from_file("assets/icons/arch.svg");
-            img.set_pixel_size(16);
-            arch_btn.set_child(Some(&img));
-        } else {
-            let arch_label = Label::new(Some("󰣇"));
-            arch_btn.set_child(Some(&arch_label));
-        }
-        container.append(&arch_btn);
+        let icon = Icon::from_file_or_glyph("assets/icons/arch.svg", "󰣇", 16);
+        arch_btn.set_child(Some(&icon));
+        pill.append(&arch_btn);
 
         // 2. Vertical separator
-        let sep = Label::builder()
-            .label("|")
-            .css_classes(["separator"])
-            .build();
-        container.append(&sep);
+        let sep = VerticalSeparator::new();
+        pill.append(sep.widget());
 
         // 3. Current active application name
         let app_title = Label::builder()
             .label("Code")
             .css_classes(["app-title"])
             .build();
-        container.append(&app_title);
+        pill.append(&app_title);
 
         // 4. Function buttons (first 3 visible as requested: File, Edit, Selection)
-        let primary_functions = ["File", "Edit", "Selection"];
-        for func in primary_functions {
+        for func in ["File", "Edit", "Selection"] {
             let btn = Button::builder()
                 .label(func)
                 .css_classes(["func-btn"])
                 .build();
-            container.append(&btn);
+            pill.append(&btn);
         }
 
         // 5. Overflow "More" button (...) with Popover menu containing remaining functions
@@ -71,8 +57,7 @@ impl LeftPill {
             .spacing(2)
             .build();
 
-        let overflow_functions = ["View", "Go", "Run", "Terminal", "Help"];
-        for func in overflow_functions {
+        for func in ["View", "Go", "Run", "Terminal", "Help"] {
             let item_btn = Button::builder()
                 .label(func)
                 .css_classes(["func-btn"])
@@ -92,13 +77,12 @@ impl LeftPill {
             popover_clone.popup();
         });
 
-        container.append(&more_btn);
+        pill.append(&more_btn);
 
-        Self { container }
+        Self { pill }
     }
 
     pub fn widget(&self) -> &Box {
-        &self.container
+        self.pill.widget()
     }
 }
-

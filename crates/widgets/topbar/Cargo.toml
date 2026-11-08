@@ -1,0 +1,13 @@
+[package]
+name = "topbar"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+gtk4 = { version = "0.11" }
+gtk4-layer-shell = "0.8"
+infrastructure = { path = "../../infrastructure" }
+ui-kit = { path = "../../ui-kit" }
+tracing.workspace = true

@@ -1,19 +1,16 @@
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{Box, Label, Orientation};
+use gtk4::{Box, Label};
 use infrastructure::system::SystemService;
+use ui_kit::{PillBox, VerticalSeparator};
 
 pub struct StatusPill {
-    container: Box,
+    pill: PillBox,
 }
 
 impl StatusPill {
     pub fn new() -> Self {
-        let container = Box::builder()
-            .orientation(Orientation::Horizontal)
-            .spacing(5)
-            .css_classes(["pill-container", "status-pill"])
-            .build();
+        let pill = PillBox::with_extra_class(5, "status-pill");
 
         // 1. Loa (Volume)
         let volume_label = Label::builder()
@@ -21,7 +18,7 @@ impl StatusPill {
             .css_classes(["status-icon"])
             .tooltip_text("Volume: 80%")
             .build();
-        container.append(&volume_label);
+        pill.append(&volume_label);
 
         // 2. Wi-Fi
         let wifi_label = Label::builder()
@@ -29,7 +26,7 @@ impl StatusPill {
             .css_classes(["status-icon"])
             .tooltip_text("Wi-Fi: Connected")
             .build();
-        container.append(&wifi_label);
+        pill.append(&wifi_label);
 
         // 3. Pin (Battery)
         let battery_label = Label::builder()
@@ -37,14 +34,11 @@ impl StatusPill {
             .css_classes(["status-icon"])
             .tooltip_text("Battery: 100% (Plugged In)")
             .build();
-        container.append(&battery_label);
+        pill.append(&battery_label);
 
         // 4. Vertical separator
-        let sep = Label::builder()
-            .label("|")
-            .css_classes(["separator"])
-            .build();
-        container.append(&sep);
+        let sep = VerticalSeparator::new();
+        pill.append(sep.widget());
 
         // 5. 24h Clock: HH:mm
         let initial_time = Self::format_current_time();
@@ -53,15 +47,15 @@ impl StatusPill {
             .css_classes(["clock-label"])
             .tooltip_text("Current Time (24h)")
             .build();
-        container.append(&clock_label);
+        pill.append(&clock_label);
 
         Self::start_update_timer(clock_label, battery_label);
 
-        Self { container }
+        Self { pill }
     }
 
     pub fn widget(&self) -> &Box {
-        &self.container
+        self.pill.widget()
     }
 
     fn format_current_time() -> String {

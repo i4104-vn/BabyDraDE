@@ -2171,6 +2171,7 @@ dependencies = [
  "gtk4-layer-shell",
  "infrastructure",
  "tracing",
+ "ui-kit",
 ]
 
 [[package]]
@@ -2251,6 +2252,14 @@ dependencies = [
  "libc",
  "libudev-sys",
  "pkg-config",
+]
+
+[[package]]
+name = "ui-kit"
+version = "0.1.0"
+dependencies = [
+ "gtk4",
+ "tracing",
 ]
 
 [[package]]

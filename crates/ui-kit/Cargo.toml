@@ -1,12 +1,12 @@
 [package]
-name = "topbar"
+name = "ui-kit"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "BabyDraDE Reusable UI Kit — Fluent GTK4 primitives, components, and stylesheets"
 
 [dependencies]
 gtk4 = { version = "0.11" }
-gtk4-layer-shell = "0.8"
-infrastructure = { path = "../infrastructure" }
 tracing.workspace = true
+

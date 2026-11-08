@@ -1,18 +1,14 @@
-use gtk4::prelude::*;
-use gtk4::{Box, Button, Orientation};
+use gtk4::{Box, Button};
+use ui_kit::PillBox;
 
 pub struct TrayPill {
-    container: Box,
+    pill: PillBox,
 }
 
 impl TrayPill {
     pub fn new() -> Self {
-        let container = Box::builder()
-            .orientation(Orientation::Horizontal)
-            .spacing(4)
-            .css_classes(["pill-container", "tray-pill"])
-            .tooltip_text("System Tray")
-            .build();
+        let pill = PillBox::with_extra_class(4, "tray-pill");
+        pill.set_tooltip("System Tray");
 
         // Tray icon: Notifications
         let notif_btn = Button::builder()
@@ -20,7 +16,7 @@ impl TrayPill {
             .css_classes(["tray-icon"])
             .tooltip_text("Notifications")
             .build();
-        container.append(&notif_btn);
+        pill.append(&notif_btn);
 
         // Tray icon: Clipboard
         let clip_btn = Button::builder()
@@ -28,7 +24,7 @@ impl TrayPill {
             .css_classes(["tray-icon"])
             .tooltip_text("Clipboard")
             .build();
-        container.append(&clip_btn);
+        pill.append(&clip_btn);
 
         // Tray icon: Input Method
         let im_btn = Button::builder()
@@ -36,13 +32,12 @@ impl TrayPill {
             .css_classes(["tray-icon"])
             .tooltip_text("Input Language: English (US)")
             .build();
-        container.append(&im_btn);
+        pill.append(&im_btn);
 
-        Self { container }
+        Self { pill }
     }
 
     pub fn widget(&self) -> &Box {
-        &self.container
+        self.pill.widget()
     }
 }
-
