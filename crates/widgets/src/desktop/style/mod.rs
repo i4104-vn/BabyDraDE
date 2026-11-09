@@ -1,13 +1,9 @@
 pub mod css;
 
 pub fn load_desktop_style() {
-    let provider = gtk4::CssProvider::new();
-    provider.load_from_data(css::DESKTOP_CSS);
-    if let Some(display) = gtk4::gdk::Display::default() {
-        gtk4::style_context_add_provider_for_display(
-            &display,
-            &provider,
-            gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
-    }
+    // 1. Load base reusable UI Kit styles
+    ui_kit::load_ui_kit_styles();
+
+    // 2. Load desktop-specific styles
+    ui_kit::style::append_custom_css(css::DESKTOP_CSS);
 }

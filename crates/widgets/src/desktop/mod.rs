@@ -20,7 +20,7 @@ pub fn build_desktop_window(app: &Application) -> (ApplicationWindow, Rc<dyn Fn(
     window.init_layer_shell();
     window.set_layer(Layer::Background);
     window.set_namespace(Some("babydra-desktop"));
-    window.set_keyboard_mode(KeyboardMode::OnDemand);
+    window.set_keyboard_mode(KeyboardMode::None);
     window.set_anchor(Edge::Top, true);
     window.set_anchor(Edge::Bottom, true);
     window.set_anchor(Edge::Left, true);

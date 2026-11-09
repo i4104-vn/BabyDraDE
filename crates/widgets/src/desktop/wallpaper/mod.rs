@@ -15,15 +15,13 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
     drawing_area.set_hexpand(true);
     drawing_area.set_vexpand(true);
 
-    let wp_path = get_wallpaper();
-    let wp_path_draw = wp_path.clone();
-
     drawing_area.set_draw_func(move |_, cr, width, height| {
+        let wp_path = get_wallpaper();
         renderer::render_wallpaper_background(
             cr,
             width as f64,
             height as f64,
-            wp_path_draw.as_deref(),
+            wp_path.as_deref(),
         );
     });
 
@@ -40,4 +38,3 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
 
     (container, set_frozen)
 }
-

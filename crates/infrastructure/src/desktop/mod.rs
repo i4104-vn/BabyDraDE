@@ -36,8 +36,9 @@ pub fn fetch_desktop_entries() -> Vec<DesktopEntry> {
     let desktop_dir = std::env::var("HOME")
         .map(|h| PathBuf::from(h).join("Desktop"))
         .unwrap_or_else(|_| PathBuf::from("/home"));
+    let _ = std::fs::create_dir_all(&desktop_dir);
 
-    if let Ok(dir_entries) = std::fs::read_dir(desktop_dir) {
+    if let Ok(dir_entries) = std::fs::read_dir(&desktop_dir) {
         for entry in dir_entries.flatten() {
             let path = entry.path();
             let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
