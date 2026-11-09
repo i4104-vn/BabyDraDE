@@ -1,0 +1,288 @@
+//! evdev keyboard listener for `babydra-keymap`.
+
+use super::daemon::SharedShortcuts;
+use super::mapping::{Mods, ResolvedShortcut};
+use evdev::uinput::{VirtualDevice, VirtualDeviceBuilder};
+use evdev::{enumerate, AttributeSet, Device, EventType, InputEvent, Key};
+use std::collections::HashSet;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+const RESCAN_INTERVAL: Duration = Duration::from_secs(5);
+const VIRTUAL_KEYBOARD_NAME: &str = "BabyDra Keyboard";
+
+/// Global modifier state tracked across all keyboards.
+#[derive(Default)]
+struct ModifierState {
+    shift: bool,
+    ctrl: bool,
+    alt: bool,
+    win: bool,
+}
+
+impl ModifierState {
+    fn snapshot(&self) -> Mods {
+        Mods {
+            shift: self.shift,
+            ctrl: self.ctrl,
+            alt: self.alt,
+            win: self.win,
+        }
+    }
+
+    /// Updates state for a modifier key. Returns `true` when handled.
+    fn update(&mut self, key: Key, pressed: bool) -> bool {
+        match key {
+            Key::KEY_LEFTSHIFT | Key::KEY_RIGHTSHIFT => self.shift = pressed,
+            Key::KEY_LEFTCTRL | Key::KEY_RIGHTCTRL => self.ctrl = pressed,
+            Key::KEY_LEFTALT | Key::KEY_RIGHTALT => self.alt = pressed,
+            Key::KEY_LEFTMETA | Key::KEY_RIGHTMETA => self.win = pressed,
+            _ => return false,
+        }
+        true
+    }
+}
+
+type KnownDevices = Arc<Mutex<HashSet<PathBuf>>>;
+
+/// Main loop: keeps scanning for keyboard devices and listens on each.
+pub async fn run(shortcuts: SharedShortcuts) {
+    let state = Arc::new(Mutex::new(ModifierState::default()));
+    let known: KnownDevices = Arc::new(Mutex::new(HashSet::new()));
+
+    loop {
+        scan_once(&state, &shortcuts, &known);
+        tokio::time::sleep(RESCAN_INTERVAL).await;
+    }
+}
+
+/// Scans `/dev/input` once and spawns listeners for new keyboard devices.
+fn scan_once(state: &Arc<Mutex<ModifierState>>, shortcuts: &SharedShortcuts, known: &KnownDevices) {
+    let devices = enumerate();
+    for (path, device) in devices {
+        if device.name() == Some(VIRTUAL_KEYBOARD_NAME) {
+            continue;
+        }
+        if !known.lock().unwrap().insert(path.clone()) {
+            continue;
+        }
+        if !looks_like_keyboard(&device) {
+            known.lock().unwrap().remove(&path);
+            continue;
+        }
+
+        tracing::info!(
+            "listening on {} ({})",
+            path.display(),
+            device.name().unwrap_or("unnamed")
+        );
+        tokio::spawn(listen_device(
+            path.clone(),
+            device,
+            state.clone(),
+            shortcuts.clone(),
+            known.clone(),
+        ));
+    }
+}
+
+/// True when the device exposes a typical typing keyset.
+fn looks_like_keyboard(device: &Device) -> bool {
+    if device.supported_relative_axes().is_some() || device.supported_absolute_axes().is_some() {
+        return false;
+    }
+
+    device
+        .supported_keys()
+        .map(|keys| {
+            ![
+                Key::BTN_LEFT,
+                Key::BTN_RIGHT,
+                Key::BTN_MIDDLE,
+                Key::BTN_SIDE,
+                Key::BTN_EXTRA,
+            ]
+            .iter()
+            .any(|button| keys.contains(*button))
+                && keys.contains(Key::KEY_A)
+                && keys.contains(Key::KEY_SPACE)
+        })
+        .unwrap_or(false)
+}
+
+/// Listens for events from a single keyboard until the device disappears.
+async fn listen_device(
+    path: PathBuf,
+    device: Device,
+    state: Arc<Mutex<ModifierState>>,
+    shortcuts: SharedShortcuts,
+    known: KnownDevices,
+) {
+    let keys = device
+        .supported_keys()
+        .map(|supported| supported.iter().collect::<AttributeSet<Key>>());
+    let Some(keys) = keys else {
+        known.lock().unwrap().remove(&path);
+        return;
+    };
+
+    let mut virtual_device = match VirtualDeviceBuilder::new()
+        .and_then(|builder| builder.name(VIRTUAL_KEYBOARD_NAME).with_keys(&keys))
+        .and_then(VirtualDeviceBuilder::build)
+    {
+        Ok(device) => Some(device),
+        Err(e) => {
+            tracing::error!(
+                "cannot create virtual keyboard for {}: {}; continuing without grab",
+                path.display(),
+                e
+            );
+            None
+        }
+    };
+
+    let mut device = device;
+    if virtual_device.is_some() {
+        if let Err(e) = device.grab() {
+            tracing::error!(
+                "cannot grab keyboard {}: {}; continuing without grab",
+                path.display(),
+                e
+            );
+            virtual_device = None;
+        }
+    }
+
+    let mut stream = match device.into_event_stream() {
+        Ok(stream) => stream,
+        Err(e) => {
+            tracing::warn!("cannot open event stream for {}: {}", path.display(), e);
+            known.lock().unwrap().remove(&path);
+            return;
+        }
+    };
+
+    let mut consumed = HashSet::new();
+    loop {
+        match stream.next_event().await {
+            Ok(event) => handle_event(
+                event,
+                &state,
+                &shortcuts,
+                virtual_device.as_mut(),
+                &mut consumed,
+            ),
+            Err(e) => {
+                tracing::info!("keyboard {} disconnected: {}", path.display(), e);
+                break;
+            }
+        }
+    }
+
+    known.lock().unwrap().remove(&path);
+}
+
+/// Processes one input event: updates modifier tracking and triggers
+/// shortcuts on matching non-modifier key presses.
+fn handle_event(
+    event: InputEvent,
+    state: &Arc<Mutex<ModifierState>>,
+    shortcuts: &SharedShortcuts,
+    virtual_device: Option<&mut VirtualDevice>,
+    consumed: &mut HashSet<Key>,
+) {
+    if event.event_type() != EventType::KEY {
+        return;
+    }
+
+    let key = Key::new(event.code());
+    let pressed = event.value() == 1;
+    let repeated = event.value() == 2; // auto-repeat
+
+    if state.lock().unwrap().update(key, pressed || repeated) {
+        emit_event(virtual_device, event);
+        return;
+    }
+
+    if repeated && consumed.contains(&key) {
+        return;
+    }
+
+    if pressed && try_trigger(key, state, shortcuts) {
+        consumed.insert(key);
+        return;
+    }
+
+    if !pressed && consumed.remove(&key) {
+        return;
+    }
+
+    emit_event(virtual_device, event);
+}
+
+fn emit_event(virtual_device: Option<&mut VirtualDevice>, event: InputEvent) {
+    if let Some(device) = virtual_device {
+        if let Err(e) = device.emit(&[event]) {
+            tracing::warn!("cannot replay keyboard event: {}", e);
+        }
+    }
+}
+
+/// Checks if shortcuts are paused by Settings key-capture dialog.
+fn is_paused() -> bool {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let path = PathBuf::from(home).join(".babydra").join("keymap.pause");
+    let Ok(raw) = std::fs::read_to_string(&path) else {
+        return false;
+    };
+    let Ok(created) = raw.trim().parse::<u64>() else {
+        let _ = std::fs::remove_file(&path);
+        return false;
+    };
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    now.saturating_sub(created) < 300
+}
+
+/// Fires the command of the first shortcut whose modifiers exactly match the
+/// currently held ones and whose key was just pressed.
+fn try_trigger(key: Key, state: &Arc<Mutex<ModifierState>>, shortcuts: &SharedShortcuts) -> bool {
+    if is_paused() {
+        return false;
+    }
+
+    let current = state.lock().unwrap().snapshot();
+
+    let matched = shortcuts
+        .read()
+        .unwrap()
+        .iter()
+        .filter_map(ResolvedShortcut::resolve)
+        .find(|s| s.key.code() == key.code() && s.mods == current)
+        .map(|s| s.command);
+
+    if let Some(command) = matched {
+        tracing::debug!("shortcut triggered: {:?}", command);
+        tokio::spawn(run_command(command));
+        return true;
+    }
+
+    false
+}
+
+/// Spawns a shortcut command via `sh -c` so shell syntax keeps working.
+async fn run_command(command: String) {
+    match tokio::process::Command::new("sh")
+        .arg("-c")
+        .arg(&command)
+        .status()
+        .await
+    {
+        Ok(status) if status.success() => {}
+        Ok(status) => tracing::warn!("command {:?} exited with {}", command, status),
+        Err(e) => tracing::error!("failed to run {:?}: {}", command, e),
+    }
+}

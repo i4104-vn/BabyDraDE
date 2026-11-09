@@ -278,5 +278,28 @@ scrollbar slider:hover,
 scrollbar slider:hover:active {
     background-color: rgba(0, 0, 0, 0.35);
 }
+
+box.screenshot-toolbar {
+    background-color: rgba(255, 255, 255, 0.90);
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+button.screenshot-toolbar-btn {
+    color: #111115;
+}
+
+button.screenshot-toolbar-btn:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+label.capsule-separator {
+    color: rgba(0, 0, 0, 0.35);
+}
+
+button.color-dot-btn.color-dot-white {
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+}
 "#;
 

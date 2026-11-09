@@ -632,5 +632,234 @@ scrollbar button {
     border: none;
     background: none;
 }
+
+/* ========================================================================= */
+/* Screenshot Editor Styles                                                  */
+/* ========================================================================= */
+window.screenshot-window,
+window.screenshot-window.background {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    border: none;
+}
+
+box.screenshot-toolbar {
+    background-image: none;
+    border-radius: 9999px;
+    padding: 4px 12px;
+    box-shadow: none;
+}
+
+button.screenshot-toolbar-btn {
+    background-image: none;
+    border-radius: 9999px;
+    padding: 5px 10px;
+    margin: 2px;
+    transition: all 200ms ease;
+    min-height: 24px;
+    box-shadow: none;
+}
+
+button.screenshot-toolbar-btn:hover {
+    background-image: none;
+    box-shadow: none;
+}
+
+button.screenshot-toolbar-btn:active {
+    background-color: rgba(255, 255, 255, 0.16);
+    background-image: none;
+    box-shadow: none;
+}
+
+button.screenshot-toolbar-btn.selected {
+    background-color: rgba(59, 130, 246, 0.70);
+    background-image: none;
+    border: 1px solid rgba(147, 197, 253, 0.25);
+    border-top: 1px solid rgba(147, 197, 253, 0.45);
+    box-shadow: none;
+}
+
+label.capsule-separator {
+    font-size: 9px;
+    margin: 0 2px;
+}
+
+box.color-dot-indicator {
+    border-radius: 9999px;
+    min-width: 14px;
+    min-height: 14px;
+    box-shadow: none;
+}
+
+popover.screenshot-color-popover > contents {
+    padding: 8px;
+}
+
+button.color-dot-btn {
+    border-radius: 9999px;
+    min-width: 16px;
+    min-height: 16px;
+    margin: 3px;
+    padding: 0;
+    background-image: none;
+    box-shadow: none;
+    transition: all 150ms ease;
+}
+
+button.color-dot-btn:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: none;
+}
+
+button.color-dot-btn.color-dot-red {
+    background-color: #ef4444;
+    background-image: none;
+}
+
+button.color-dot-btn.color-dot-orange {
+    background-color: #f97316;
+    background-image: none;
+}
+
+button.color-dot-btn.color-dot-yellow {
+    background-color: #eab308;
+    background-image: none;
+}
+
+button.color-dot-btn.color-dot-green {
+    background-color: #22c55e;
+    background-image: none;
+}
+
+button.color-dot-btn.color-dot-blue {
+    background-color: #3b82f6;
+    background-image: none;
+}
+
+button.color-dot-btn.color-dot-purple {
+    background-color: #a855f7;
+    background-image: none;
+}
+
+button.color-dot-btn.color-dot-white {
+    background-image: none;
+}
+
+button.color-dot-btn.color-dot-black {
+    background-color: #000000;
+    background-image: none;
+}
+
+/* ========================================================================= */
+/* Lock Screen Styles                                                        */
+/* ========================================================================= */
+@keyframes shake {
+    0% { margin-left: 0px; margin-right: 0px; }
+    15% { margin-left: -12px; margin-right: 12px; }
+    30% { margin-left: 12px; margin-right: -12px; }
+    45% { margin-left: -8px; margin-right: 8px; }
+    60% { margin-left: 8px; margin-right: -8px; }
+    75% { margin-left: -4px; margin-right: 4px; }
+    90% { margin-left: 4px; margin-right: -4px; }
+    100% { margin-left: 0px; margin-right: 0px; }
+}
+
+.lock-window {
+    opacity: 1;
+    font-family: 'Quicksand', 'Segoe UI Variable Static Text', 'Segoe UI', 'Inter', system-ui, sans-serif;
+}
+
+.lock-tint {
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+.lock-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 28px 40px;
+    min-width: 360px;
+    box-shadow: none;
+    font-family: 'Quicksand', 'Segoe UI Variable Static Text', 'Segoe UI', 'Inter', system-ui, sans-serif;
+}
+
+.lock-clock {
+    font-size: 72px;
+    font-weight: 800;
+    margin-bottom: 0px;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+}
+
+.lock-date {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.lock-avatar {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 9999px;
+    padding: 0px;
+    margin-top: 14px;
+    margin-bottom: 14px;
+    box-shadow: none;
+}
+
+.lock-username {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #ffffff;
+}
+
+.lock-input {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    padding: 10px 20px;
+    font-size: 14px;
+    transition: all 250ms ease;
+    min-width: 280px;
+    caret-color: #ffffff;
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.lock-input:focus {
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+}
+
+.lock-status {
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 16px;
+    transition: color 200ms ease;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.lock-status.error {
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+.shake-error .lock-input {
+    border-color: #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.05);
+}
+
+.shake-error {
+    animation-name: shake;
+    animation-duration: 350ms;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-in-out;
+}
 "#;
 
