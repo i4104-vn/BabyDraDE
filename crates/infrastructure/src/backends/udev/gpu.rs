@@ -215,9 +215,33 @@ fn try_init_gpu(
                 );
 
                 let _global = output.create_global::<BabydraState>(&data.display_handle);
+                let transform = match std::env::var("BABYDRADE_TRANSFORM").as_deref() {
+                    Ok("90") => Transform::_90,
+                    Ok("180") => Transform::_180,
+                    Ok("270") => Transform::_270,
+                    Ok("flipped") => Transform::Flipped,
+                    Ok("flipped-90") => Transform::Flipped90,
+                    Ok("flipped-180") => Transform::Flipped180,
+                    Ok("flipped-270") => Transform::Flipped270,
+                    Ok("normal") | Ok("0") => Transform::Normal,
+                    _ => {
+                        let orientation = std::env::var("BABYDRADE_ORIENTATION")
+                            .unwrap_or_else(|_| "landscape".to_string());
+                        if orientation == "landscape" && smithay_mode.size.w < smithay_mode.size.h {
+                            info!(
+                                "Portrait display detected ({}x{}). Auto-rotating to landscape (Transform::_90)",
+                                smithay_mode.size.w, smithay_mode.size.h
+                            );
+                            Transform::_90
+                        } else {
+                            Transform::Normal
+                        }
+                    }
+                };
+
                 output.change_current_state(
                     Some(smithay_mode),
-                    Some(Transform::Normal),
+                    Some(transform),
                     None,
                     Some((0, 0).into()),
                 );

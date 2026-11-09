@@ -49,9 +49,15 @@ pub(crate) fn init(
         refresh: 60_000,
     };
     let _output_global = output.create_global::<BabydraState>(&data.display_handle);
+    let transform = match std::env::var("BABYDRADE_TRANSFORM").as_deref() {
+        Ok("90") => Transform::Flipped90,
+        Ok("180") => Transform::Normal,
+        Ok("270") => Transform::Flipped270,
+        _ => Transform::Flipped180,
+    };
     output.change_current_state(
         Some(mode),
-        Some(Transform::Flipped180),
+        Some(transform),
         None,
         Some((0, 0).into()),
     );
