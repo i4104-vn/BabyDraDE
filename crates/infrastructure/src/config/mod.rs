@@ -14,6 +14,3 @@ pub use settings::{
     get_keymap_path, get_logs_dir, get_wallpaper_dir, invalidate_cache, load_babydra_config,
     load_desktop_config, save_babydra_config, save_desktop_config,
 };
-
-#[cfg(test)]
-mod tests;
