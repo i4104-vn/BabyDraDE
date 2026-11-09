@@ -5,7 +5,7 @@ pub mod surface;
 
 use std::{cell::RefCell, error::Error, rc::Rc};
 
-use presentation::DesktopTheme;
+use crate::theme::DesktopTheme;
 use smithay::reexports::calloop::EventLoop;
 use tracing::info;
 
@@ -33,7 +33,7 @@ pub(crate) fn init(
     // 2. Scan DRM GPU and setup displays & renderers
     let gpu_result = scan_and_init_gpu(&mut udev_session.session, &udev_session.seat_name, data)?;
 
-    let theme = DesktopTheme::magma_cyan();
+    let theme = DesktopTheme::default();
     std::env::set_var("WAYLAND_DISPLAY", &data.state.socket_name);
 
     let state = Rc::new(RefCell::new(UdevState {

@@ -8,7 +8,15 @@ authors.workspace = true
 [dependencies]
 gtk4 = { version = "0.11" }
 gtk4-layer-shell = "0.8"
+cairo-rs = { version = "0.22", features = ["png", "use_glib"] }
+gdk-pixbuf = "0.22"
+glib = "0.22"
+gio = "0.22"
+tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "time", "sync", "macros", "process", "fs", "io-util"] }
+evdev = { version = "0.12", features = ["tokio"] }
+dirs = "5.0"
+chrono = "0.4"
+libc = "0.2"
 infrastructure = { path = "../infrastructure" }
 ui-kit = { path = "../ui-kit" }
 tracing.workspace = true
-

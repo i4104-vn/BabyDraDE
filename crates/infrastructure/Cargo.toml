@@ -21,7 +21,6 @@ smithay = { version = "=0.7.0", default-features = false, features = [
 ] }
 smithay-drm-extras = { version = "0.1", default-features = false }
 wayland-sys = { version = "0.31", features = ["dlopen"] }
-presentation = { path = "../presentation" }
 tracing.workspace = true
 libc = "0.2"
 gio = { version = "0.22", default-features = false }

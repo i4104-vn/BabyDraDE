@@ -1,4 +1,4 @@
-use presentation::DesktopTheme;
+use crate::theme::DesktopTheme;
 use smithay::{
     backend::{
         allocator::gbm::{GbmAllocator, GbmDevice},

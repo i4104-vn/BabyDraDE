@@ -1,6 +1,6 @@
 use std::{error::Error, time::Duration};
 
-use presentation::DesktopTheme;
+use crate::theme::DesktopTheme;
 use smithay::{
     backend::{
         renderer::{damage::OutputDamageTracker, glow::GlowRenderer},
@@ -33,7 +33,7 @@ pub(crate) fn init(
     backend.window().set_cursor_visible(true);
 
     let cursor = Cursor::new();
-    let theme = DesktopTheme::magma_cyan();
+    let theme = DesktopTheme::default();
 
     let output = Output::new(
         "babydrade-0".to_string(),

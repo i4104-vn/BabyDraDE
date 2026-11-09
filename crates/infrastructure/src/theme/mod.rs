@@ -12,7 +12,7 @@ pub use gtk::{
     read_gtk_settings,
 };
 pub use icons::{find_icon_theme_path, list_available_icon_themes};
-pub use model::GtkThemeConfig;
+pub use model::{DesktopTheme, GtkThemeConfig};
 
 #[derive(Debug, Clone, Default)]
 pub struct GtkThemeReader;

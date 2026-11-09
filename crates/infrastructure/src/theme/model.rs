@@ -26,3 +26,19 @@ impl Default for GtkThemeConfig {
         }
     }
 }
+
+/// Canvas clear color theme for compositor backends.
+#[derive(Debug, Clone, Copy)]
+pub struct DesktopTheme {
+    /// Canvas clear color [R, G, B, A]
+    pub background_color: [f32; 4],
+}
+
+impl Default for DesktopTheme {
+    fn default() -> Self {
+        Self {
+            background_color: [0.05, 0.05, 0.07, 1.0],
+        }
+    }
+}
+
