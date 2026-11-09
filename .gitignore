@@ -6,6 +6,3 @@
 .vscode/
 *.log
 
-# Compiled widget and DE binaries in bin/
-bin/*
-!bin/.gitkeep

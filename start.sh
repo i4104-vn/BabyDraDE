@@ -481,42 +481,12 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 7. Build widgets and DE binary into ./bin
+# 7. Build workspace components (ensuring topbar binary is compiled alongside compositor)
 # ------------------------------------------------------------------------------
-echo "[*] Step 1: Building widgets and saving binaries into ./bin/..."
-mkdir -p bin
-
-# Dynamically find and build all widgets under crates/widgets/*
-for widget_dir in crates/widgets/*; do
-    if [ -d "$widget_dir" ] && [ -f "$widget_dir/Cargo.toml" ]; then
-        widget_name="$(basename "$widget_dir")"
-        echo "[*] Building widget crate: $widget_name..."
-        cargo build --package "$widget_name"
-        if [ -f "target/debug/$widget_name" ]; then
-            cp -f "target/debug/$widget_name" "bin/$widget_name"
-            chmod +x "bin/$widget_name"
-            echo "[✓] Widget binary ready: bin/$widget_name"
-        fi
-    fi
-done
-
-echo "[*] Step 2: Merging widgets and building unified BabyDraDE binary..."
-cargo build --bin babydrade
-if [ -f "target/debug/babydrade" ]; then
-    cp -f "target/debug/babydrade" "bin/babydrade"
-    chmod +x "bin/babydrade"
-fi
-
-echo "[✓] Binaries ready in ./bin/:"
-ls -la bin/
+echo "[*] Building workspace components (compositor and topbar)..."
+cargo build --workspace
 
 # ------------------------------------------------------------------------------
-# 8. Execution — autonomous compositor with unified DE binary
+# 8. Direct execution — autonomous compositor, no cage, no xinit needed
 # ------------------------------------------------------------------------------
-if [ -x "bin/babydrade" ]; then
-    echo "[*] Launching unified DE binary from bin/babydrade..."
-    exec ./bin/babydrade "${APP_ARGS[@]+"${APP_ARGS[@]}"}"
-else
-    echo "[*] Launching via cargo run..."
-    exec cargo run "${APP_ARGS[@]+"${APP_ARGS[@]}"}"
-fi
+exec cargo run "${APP_ARGS[@]+"${APP_ARGS[@]}"}"
