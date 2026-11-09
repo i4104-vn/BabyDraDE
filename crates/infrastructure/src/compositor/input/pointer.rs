@@ -34,18 +34,6 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
         let new_loc = move_state.initial_window_location
             + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
         state.space.map_element(move_state.window.clone(), new_loc, false);
-
-        // Keep Smithay pointer location synchronized with unset focus during window move
-        pointer.motion(
-            state,
-            None,
-            &MotionEvent {
-                location: position,
-                serial: SERIAL_COUNTER.next_serial(),
-                time: event.time_msec(),
-            },
-        );
-        pointer.frame(state);
         return;
     }
 
@@ -80,17 +68,6 @@ pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositio
         let new_loc = move_state.initial_window_location
             + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
         state.space.map_element(move_state.window.clone(), new_loc, false);
-
-        pointer.motion(
-            state,
-            None,
-            &MotionEvent {
-                location: position,
-                serial: SERIAL_COUNTER.next_serial(),
-                time: event.time_msec(),
-            },
-        );
-        pointer.frame(state);
         return;
     }
 
@@ -159,19 +136,20 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 keyboard.set_focus(state, Option::<WlSurface>::None, serial);
             }
         }
-        ButtonState::Released if state.move_state.take().is_some() => {
-            let under = state.surface_under(state.pointer_location);
-            pointer.motion(
-                state,
-                under,
-                &MotionEvent {
-                    location: state.pointer_location,
-                    serial,
-                    time: event.time_msec(),
-                },
-            );
-            pointer.frame(state);
-            return;
+        ButtonState::Released => {
+            if state.move_state.take().is_some() {
+                let under = state.surface_under(state.pointer_location);
+                pointer.motion(
+                    state,
+                    under,
+                    &MotionEvent {
+                        location: state.pointer_location,
+                        serial,
+                        time: event.time_msec(),
+                    },
+                );
+                pointer.frame(state);
+            }
         }
         _ => {}
     }

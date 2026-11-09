@@ -19,3 +19,4 @@ pub fn run_widget(name: &str) -> Result<(), Box<dyn std::error::Error>> {
         .into()),
     }
 }
+

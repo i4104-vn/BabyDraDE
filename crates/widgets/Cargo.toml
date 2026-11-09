@@ -11,3 +11,4 @@ gtk4-layer-shell = "0.8"
 infrastructure = { path = "../infrastructure" }
 ui-kit = { path = "../ui-kit" }
 tracing.workspace = true
+

@@ -16,6 +16,7 @@ pub fn run() {
 
     let app = Application::builder()
         .application_id("org.babydrade.topbar")
+        .flags(gtk4::gio::ApplicationFlags::NON_UNIQUE)
         .build();
 
     app.connect_startup(|_| {
@@ -74,5 +75,6 @@ pub fn run() {
         window.present();
     });
 
-    app.run();
+    app.run_with_args::<&str>(&[]);
 }
+

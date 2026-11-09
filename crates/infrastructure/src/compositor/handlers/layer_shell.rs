@@ -36,6 +36,8 @@ impl WlrLayerShellHandler for BabydraState {
             let mut layer_map = layer_map_for_output(&output);
             let layer_surface = LayerSurface::new(surface, namespace);
             let _ = layer_map.map_layer(&layer_surface);
+            layer_map.arrange();
+            layer_surface.layer_surface().send_configure();
         } else {
             warn!(
                 "LayerShell: No output available to map layer surface '{}'!",
