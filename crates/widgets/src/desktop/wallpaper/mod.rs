@@ -40,3 +40,4 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
 
     (container, set_frozen)
 }
+

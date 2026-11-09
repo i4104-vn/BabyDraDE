@@ -76,3 +76,4 @@ fn attach_tray_click_gesture(
 
     btn.add_controller(gesture);
 }
+

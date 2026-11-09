@@ -65,3 +65,4 @@ pub fn run() {
 
     app.run_with_args::<&str>(&[]);
 }
+

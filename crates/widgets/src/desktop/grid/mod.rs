@@ -92,3 +92,4 @@ pub fn create_desktop_grid(parent_window: &gtk4::ApplicationWindow) -> (Fixed, R
 
     (fixed, rebuild_fn)
 }
+

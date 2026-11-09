@@ -15,3 +15,4 @@ pub fn get_tray_items() -> Vec<TrayItem> {
 
 pub fn activate_item(_service: &str, _path: &str, _x: i32, _y: i32, _is_menu: bool) {
 }
+

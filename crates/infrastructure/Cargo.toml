@@ -24,3 +24,4 @@ wayland-sys = { version = "0.31", features = ["dlopen"] }
 presentation = { path = "../presentation" }
 tracing.workspace = true
 libc = "0.2"
+gio = { version = "0.22", default-features = false }

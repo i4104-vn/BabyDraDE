@@ -109,3 +109,4 @@ pub fn create_sys_monitor_w() -> gtk4::Box {
     capsule.add_controller(motion_controller);
     capsule
 }
+

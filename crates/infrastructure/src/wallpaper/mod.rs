@@ -36,3 +36,4 @@ pub fn is_gif_file(path: &Path) -> bool {
     let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
     ext.eq_ignore_ascii_case("gif")
 }
+

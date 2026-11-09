@@ -83,3 +83,4 @@ pub fn create_icon_widget(entry: &DesktopEntry) -> Box {
     icon_box.add_controller(click);
     icon_box
 }
+

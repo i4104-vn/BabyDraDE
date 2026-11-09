@@ -24,3 +24,4 @@ pub fn build_tray_button(icon_name: &str, title: &str) -> gtk4::Button {
 
     btn
 }
+

@@ -125,3 +125,4 @@ pub fn get_active_output_name() -> Option<String> {
     }
     None
 }
+

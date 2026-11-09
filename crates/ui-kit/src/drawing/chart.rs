@@ -72,3 +72,4 @@ pub fn draw_metric_chart(
     cr.set_line_width(2.0);
     let _ = cr.stroke();
 }
+

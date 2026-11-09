@@ -970,6 +970,7 @@ dependencies = [
 name = "infrastructure"
 version = "0.1.0"
 dependencies = [
+ "gio",
  "libc",
  "presentation",
  "smithay",

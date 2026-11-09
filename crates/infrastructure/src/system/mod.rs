@@ -1,3 +1,4 @@
+pub mod dbus_menu;
 pub mod hardware;
 pub mod host;
 pub mod monitor;
@@ -5,6 +6,8 @@ pub mod network;
 pub mod resources;
 pub mod volume;
 pub mod vpn;
+
+pub use dbus_menu::{activate_dbus_menu_item, fetch_dbus_menu, DbusMenuItem};
 
 pub use hardware::{BacklightInfo, BacklightReader, BatteryInfo, BatteryReader, BatteryStatus, ThermalInfo, ThermalReader, ThermalZone};
 pub use host::{UptimeInfo, UptimeReader};

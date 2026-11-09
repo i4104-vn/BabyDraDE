@@ -93,3 +93,4 @@ pub fn draw_cairo_battery(
         let _ = cr.fill();
     }
 }
+

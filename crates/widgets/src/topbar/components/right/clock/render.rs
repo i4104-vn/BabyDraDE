@@ -45,3 +45,4 @@ pub fn build_clock_ui() -> (gtk4::Button, gtk4::Label, gtk4::Widget, gtk4::Box) 
         bell_box,
     )
 }
+

@@ -38,3 +38,4 @@ pub fn build_volume_update(vol_icon: &gtk4::Image, vol_popover: &gtk4::Popover) 
         vol_popover_c.set_child(Some(&card));
     })
 }
+

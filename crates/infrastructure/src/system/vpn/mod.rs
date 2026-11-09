@@ -18,3 +18,4 @@ pub fn is_vpn_active() -> bool {
     }
     false
 }
+

@@ -102,3 +102,4 @@ pub fn setup_chart_draw(
         draw_metric_chart(cr, width as f64, height as f64, &slice, color_hex);
     });
 }
+

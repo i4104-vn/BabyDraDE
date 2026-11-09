@@ -26,3 +26,4 @@ pub fn create_status_icons() -> gtk4::Box {
     status_box.append(&separator);
     status_box
 }
+

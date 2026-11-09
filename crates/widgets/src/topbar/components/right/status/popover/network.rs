@@ -59,3 +59,4 @@ pub fn build_network_update(net_popover: &gtk4::Popover) -> Rc<dyn Fn()> {
         net_popover_c.set_child(Some(&card));
     })
 }
+

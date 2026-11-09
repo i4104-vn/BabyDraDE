@@ -72,3 +72,4 @@ pub fn fetch_desktop_entries() -> Vec<DesktopEntry> {
 
     entries
 }
+
