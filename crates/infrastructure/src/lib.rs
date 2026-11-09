@@ -57,7 +57,7 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
 
     // Autostart BabyDraDE widgets from unified binary (always runs by default, no env check)
     if let Ok(exe_path) = std::env::current_exe() {
-        let widgets = ["topbar"];
+        let widgets = ["desktop", "topbar"];
         for widget in widgets {
             match Command::new(&exe_path)
                 .arg("__widget")
