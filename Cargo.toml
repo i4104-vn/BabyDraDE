@@ -5,7 +5,7 @@ members = [
     "crates/infrastructure",
     "crates/presentation",
     "crates/ui-kit",
-    "crates/widgets/*",
+    "crates/widgets",
 ]
 
 [workspace.package]
@@ -28,5 +28,6 @@ description = "A minimal Wayland compositor built with Smithay"
 
 [dependencies]
 infrastructure = { path = "crates/infrastructure" }
+widgets = { path = "crates/widgets" }
 tracing.workspace = true
 tracing-subscriber.workspace = true

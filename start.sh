@@ -481,12 +481,12 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 7. Build workspace components (ensuring topbar binary is compiled alongside compositor)
+# 7. Build unified BabyDraDE Desktop Environment binary
 # ------------------------------------------------------------------------------
-echo "[*] Building workspace components (compositor and topbar)..."
-cargo build --workspace
+echo "[*] Building unified BabyDraDE Desktop Environment..."
+cargo build
 
 # ------------------------------------------------------------------------------
-# 8. Direct execution — autonomous compositor, no cage, no xinit needed
+# 8. Direct execution — autonomous compositor with built-in widgets
 # ------------------------------------------------------------------------------
 exec cargo run "${APP_ARGS[@]+"${APP_ARGS[@]}"}"

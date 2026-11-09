@@ -1,5 +1,5 @@
-mod components;
-mod style;
+pub mod components;
+pub mod style;
 
 use components::{DynamicIsland, LeftPill, StatusPill, TrayPill};
 use gtk4::prelude::*;
@@ -7,7 +7,8 @@ use gtk4::{Application, ApplicationWindow, Box, CenterBox, Orientation};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use style::load_topbar_style;
 
-fn main() {
+/// Launches the BabyDraDE TopBar GTK4 Layer-Shell widget
+pub fn run() {
     // Ensure GDK connects via Wayland backend for Layer Shell support
     if std::env::var_os("GDK_BACKEND").is_none() {
         std::env::set_var("GDK_BACKEND", "wayland");
