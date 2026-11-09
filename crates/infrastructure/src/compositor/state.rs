@@ -34,6 +34,8 @@ pub(crate) struct MoveState {
     pub(crate) window: Window,
     pub(crate) initial_window_location: Point<i32, Logical>,
     pub(crate) initial_pointer_location: Point<f64, Logical>,
+    pub(crate) has_dragged: bool,
+    pub(crate) button: u32,
 }
 
 pub(crate) struct BabydraState {
@@ -55,6 +57,7 @@ pub(crate) struct BabydraState {
 
     pub(crate) move_state: Option<MoveState>,
     pub(crate) pointer_location: Point<f64, Logical>,
+    pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
 }
 
 impl BabydraState {
@@ -93,6 +96,7 @@ impl BabydraState {
             seat,
             move_state: None,
             pointer_location: Point::from((100.0, 100.0)),
+            pointer_pressed_buttons: std::collections::HashSet::new(),
         }
     }
 
@@ -169,8 +173,10 @@ impl BabydraState {
         &self,
         position: Point<f64, Logical>,
     ) -> Option<(WlSurface, Point<f64, Logical>)> {
-        if self.move_state.is_some() {
-            return None;
+        if let Some(ref m) = self.move_state {
+            if m.has_dragged {
+                return None;
+            }
         }
 
         // 1. Check Overlay and Top layer surfaces (bars, overlays, dynamic islands)

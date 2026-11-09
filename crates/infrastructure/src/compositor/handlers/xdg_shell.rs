@@ -42,6 +42,13 @@ impl XdgShellHandler for BabydraState {
     fn grab(&mut self, _surface: PopupSurface, _seat: wl_seat::WlSeat, _serial: Serial) {}
 
     fn move_request(&mut self, surface: ToplevelSurface, _seat: wl_seat::WlSeat, _serial: Serial) {
+        // Only allow moving if a pointer button (such as left click) is actively held down.
+        // If the user already released the button (e.g. quick click or tap), ignore the request.
+        if self.pointer_pressed_buttons.is_empty() {
+            tracing::debug!("Ignoring xdg_toplevel.move_request: pointer button is not held down");
+            return;
+        }
+
         let target_window = self
             .space
             .elements()
@@ -51,10 +58,18 @@ impl XdgShellHandler for BabydraState {
         if let Some(window) = target_window {
             if let Some(loc) = self.space.element_location(&window) {
                 self.space.raise_element(&window, true);
+                let drag_button = self
+                    .pointer_pressed_buttons
+                    .iter()
+                    .copied()
+                    .next()
+                    .unwrap_or(272);
                 self.move_state = Some(crate::compositor::state::MoveState {
                     window,
                     initial_window_location: loc,
                     initial_pointer_location: self.pointer_location,
+                    has_dragged: false,
+                    button: drag_button,
                 });
             }
         }
