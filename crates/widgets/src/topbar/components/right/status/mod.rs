@@ -1,3 +1,4 @@
+pub mod indicators;
 pub mod popover;
 pub mod render;
 
