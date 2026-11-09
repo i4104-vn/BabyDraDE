@@ -35,7 +35,7 @@ impl RecordingFeature {
 
         let label = Label::builder()
             .label("REC")
-            .css_classes(["recording-title", "badge-title"])
+            .css_classes(["recording-title"])
             .build();
         container.append(&label);
 

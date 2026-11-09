@@ -116,22 +116,6 @@
     color: rgba(255, 255, 255, 0.85);
 }
 
-/* Feature: Notification */
-.notification-notch {
-    color: #f59e0b;
-}
-
-.badge-title {
-    font-size: 12px;
-    font-weight: 650;
-    color: #ffffff;
-}
-
-.badge-desc {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.70);
-}
-
 /* Feature: Media Controls in Popover */
 .media-control-btn {
     border-radius: 9999px;

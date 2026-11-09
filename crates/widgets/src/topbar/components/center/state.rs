@@ -1,6 +1,6 @@
 //! Dynamic Island State and Arbitration Manager
 
-use super::features::{DefaultFeature, IslandFeature, MediaFeature, NotificationFeature, RecordingFeature};
+use super::features::{DefaultFeature, IslandFeature, MediaFeature, RecordingFeature};
 
 pub struct IslandManager {
     features: Vec<Box<dyn IslandFeature>>,
@@ -19,7 +19,6 @@ impl IslandManager {
                 Box::new(DefaultFeature::new()),
                 Box::new(MediaFeature::new()),
                 Box::new(RecordingFeature::new()),
-                Box::new(NotificationFeature::new()),
             ],
         }
     }

@@ -2,12 +2,10 @@
 
 pub mod default;
 pub mod media;
-pub mod notification;
 pub mod recording;
 
 pub use default::DefaultFeature;
 pub use media::MediaFeature;
-pub use notification::NotificationFeature;
 pub use recording::RecordingFeature;
 
 /// Trait defining a pluggable feature for the Dynamic Island.
@@ -19,11 +17,6 @@ pub trait IslandFeature {
     fn id(&self) -> &'static str;
 
     /// Priority order (higher priority preempts lower priority when active)
-    /// e.g.:
-    /// - Default: 0
-    /// - Media Player: 10
-    /// - Recording: 50
-    /// - High-priority Notification: 100
     fn priority(&self) -> u32;
 
     /// Whether this feature is currently active and wants to be displayed
