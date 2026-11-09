@@ -8,7 +8,9 @@ window {
     background: transparent;
 }
 
-/* Reusable Pill Container */
+/* =============================================================================
+   Reusable Pill Container
+   ============================================================================= */
 .pill-container {
     background-color: rgba(24, 26, 32, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -110,28 +112,248 @@ window {
     box-shadow: 0 6px 22px rgba(0, 0, 0, 0.65), 0 0 16px rgba(56, 185, 240, 0.20);
 }
 
-/* Popovers & Flyouts */
-popover.menu {
-    background-color: rgba(24, 26, 32, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-    padding: 6px;
+/* =============================================================================
+   Context Menu Overlay (Matching babydra-core & explore)
+   ============================================================================= */
+@keyframes context-menu-pop {
+    0% {
+        opacity: 0;
+        margin-top: -6px;
+    }
+    100% {
+        opacity: 1;
+        margin-top: 0px;
+    }
 }
 
-popover button {
-    background: transparent;
+popover.context-menu-popover,
+popover.explore-popover,
+popover.tray-context-menu,
+popover.desktop-context-menu,
+popover.context-menu-popover>contents,
+popover.explore-popover>contents,
+popover.tray-context-menu>contents,
+popover.desktop-context-menu>contents {
+    background: none;
+    background-color: transparent;
+    background-image: none;
     border: none;
-    border-radius: 6px;
-    padding: 4px 10px;
-    color: #E5E7EB;
-    text-align: left;
-    font-size: 12.5px;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
 }
 
-popover button:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #FFFFFF;
+popover.context-menu-popover>arrow,
+popover.explore-popover>arrow,
+popover.tray-context-menu>arrow,
+popover.desktop-context-menu>arrow {
+    background: none;
+    border: none;
+}
+
+.context-menu-box {
+    background-color: rgb(14, 14, 18);
+    background-image: none;
+    opacity: 1.0;
+    color: #e8e8e8;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    padding: 4px;
+    animation: context-menu-pop 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button.context-menu-item {
+    background-image: none;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    min-height: 30px;
+    color: #e8e8e8;
+    transition: background-color 140ms ease, color 140ms ease, padding-left 140ms ease;
+}
+
+button.context-menu-item:focus,
+button.context-menu-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    background-image: none;
+    color: #ffffff;
+    outline: none;
+    box-shadow: none;
+    padding-left: 14px;
+}
+
+button.context-menu-item label {
+    color: #e8e8e8;
+}
+
+button.context-menu-item:focus label,
+button.context-menu-item:hover label {
+    color: #ffffff;
+}
+
+button.context-menu-item.destructive {
+    color: #ef4444;
+}
+
+button.context-menu-item.destructive label {
+    color: #ef4444;
+}
+
+button.context-menu-item.destructive:hover {
+    background-color: rgba(239, 68, 68, 0.15);
+}
+
+button.context-menu-item.destructive:hover label {
+    color: #ef4444;
+}
+
+.shortcut-label {
+    font-size: 12px;
+    opacity: 0.55;
+    margin-left: 12px;
+    transition: opacity 140ms ease;
+}
+
+button.context-menu-item:hover .shortcut-label {
+    opacity: 0.85;
+}
+
+.context-menu-separator,
+.menu-sep {
+    margin-top: 3px;
+    margin-bottom: 3px;
+    min-height: 1px;
+    background-color: rgba(255, 255, 255, 0.10);
+    opacity: 1;
+}
+
+.context-menu-header,
+.group-header-label {
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #60a5fa;
+    margin-top: 6px;
+    margin-bottom: 2px;
+    padding-left: 10px;
+    opacity: 0.85;
+}
+
+.context-menu-footer {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+button.context-menu-footer-btn {
+    background-image: none;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    border-radius: 6px;
+    padding: 4px;
+    margin: 2px;
+    min-width: 26px;
+    min-height: 26px;
+    color: #e8e8e8;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+button.context-menu-footer-btn:hover,
+button.context-menu-footer-btn:active {
+    background-color: rgba(255, 255, 255, 0.08);
+    background-image: none;
+    color: #ffffff;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+button.context-menu-footer-btn:focus {
+    background-image: none;
+    background-color: transparent;
+    color: #e8e8e8;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+/* =============================================================================
+   Popovers & Tooltip Popover Overlay (Matching babydra-core)
+   ============================================================================= */
+popover>contents,
+popover.menu>contents,
+popover.status-popover>contents,
+popover.tooltip-popover>contents {
+    background-color: rgb(14, 14, 18);
+    background-image: none;
+    opacity: 1.0;
+    color: #e8e8e8;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.50);
+}
+
+.status-popover-card,
+.tooltip-popover-card {
+    min-width: 200px;
+}
+
+.status-popover-card.tooltip-popover-simple,
+.tooltip-popover-card.tooltip-popover-simple {
+    min-width: unset;
+    padding: 2px 4px;
+}
+
+.status-popover-header,
+.tooltip-popover-header {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: #ffffff;
+}
+
+.status-popover-sep,
+.tooltip-popover-sep {
+    opacity: 0.15;
+    margin-bottom: 6px;
+    background-color: rgba(255, 255, 255, 0.20);
+}
+
+.status-popover-key,
+.tooltip-popover-key {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.70);
+}
+
+.status-popover-val,
+.tooltip-popover-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.status-popover-val.speed-low {
+    color: #ef4444;
+    font-weight: 700;
+}
+
+.status-popover-val.speed-medium {
+    color: #f59e0b;
+    font-weight: 700;
+}
+
+.status-popover-val.speed-high {
+    color: #22c55e;
+    font-weight: 700;
 }
 "#;
-

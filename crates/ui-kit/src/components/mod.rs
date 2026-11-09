@@ -1,14 +1,5 @@
-pub mod badge;
-pub mod button;
-pub mod disc;
-pub mod icon;
-pub mod pill;
-pub mod separator;
+pub mod misc;
+pub mod overlay;
 
-pub use badge::Badge;
-pub use button::FluentButton;
-pub use disc::CircularDisc;
-pub use icon::Icon;
-pub use pill::PillBox;
-pub use separator::VerticalSeparator;
-
+pub use misc::*;
+pub use overlay::*;
