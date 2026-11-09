@@ -11,7 +11,7 @@ pub fn create_popover(
     css_class: &str,
 ) -> Popover {
     let popover = Popover::builder()
-        .has_arrow(true)
+        .has_arrow(false)
         .autohide(true)
         .position(position)
         .build();

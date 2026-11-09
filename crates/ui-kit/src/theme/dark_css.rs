@@ -299,5 +299,348 @@ label.capsule-separator {
 button.color-dot-btn.color-dot-white {
     background-color: #ffffff;
 }
+
+/* ── Dynamic Island Media & Recorder (Dark) ──────────────────────── */
+popover.media-popover>contents,
+popover.recording-popover>contents {
+    background-color: rgba(14, 14, 18, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}
+
+.media-popover-app-name {
+    color: #ffffff;
+}
+
+.media-popover-title {
+    color: #ffffff;
+}
+
+.media-popover-artist {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.media-popover-progress-bar trough {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.media-popover-progress-bar progress {
+    background-color: #3b82f6;
+}
+
+.recording-header-title {
+    color: rgba(255, 255, 255, 0.50);
+}
+
+.recording-status-badge {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.70);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.recording-hero-timer {
+    color: #ffffff;
+}
+
+.recording-settings-card {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recording-setting-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.recording-setting-icon {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.recording-setting-label {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.recording-settings-card dropdown>button {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.recording-settings-card dropdown>button:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.recording-area-btn {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+}
+
+.recording-area-btn:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.recording-meta-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recording-meta-chip {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.recording-popover-btn {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recording-popover-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.recording-btn-icon-holder {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.recording-btn-title {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+label.recording-capsule-timer {
+    color: #ffffff;
+}
+
+/* ── Control Center (Dark) ───────────────────────────────────────── */
+.control-center-box,
+.calendar-box {
+    background-color: rgb(14, 14, 18);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+}
+
+.control-center-title,
+.calendar-top-date {
+    color: #ffffff;
+}
+
+.circle-btn {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.circle-btn:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.control-tile-container {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.control-tile-left-btn:hover,
+.control-tile-right-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.control-tile-left-btn.active {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+
+.control-tile-left-btn.active .tile-title,
+.control-tile-left-btn.active .tile-subtitle {
+    color: #ffffff;
+}
+
+.control-square-tile {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.control-square-tile:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.control-square-tile.active {
+    background-color: #3b82f6;
+    border-color: #60a5fa;
+    color: #ffffff;
+}
+
+.control-slider-card,
+.control-disk-card {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.control-slider-title {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.control-slider-val {
+    color: #ffffff;
+}
+
+scale.pill-slider trough {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+scale.pill-slider highlight {
+    background-color: rgba(255, 255, 255, 0.90);
+}
+
+.slider-overlay-mute-btn:hover,
+.slider-popover-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.control-disk-name {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.control-disk-usage {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.control-disk-card progressbar trough {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.control-disk-card progressbar progress {
+    background-color: #10b981;
+}
+
+/* Control Popovers (Dark) */
+popover.control-popover>contents,
+popover.wifi-popover>contents,
+popover.clean-popover>contents,
+popover.vpn-popover>contents,
+popover.audio-menu-popover>contents {
+    background-color: rgb(14, 14, 18);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.audio-menu-section-title {
+    color: #60a5fa;
+}
+
+.audio-menu-item-btn {
+    color: rgba(255, 255, 255, 0.90);
+}
+
+.audio-menu-item-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.audio-menu-item-btn.active {
+    background-color: rgba(59, 130, 246, 0.20);
+    border: 1px solid rgba(59, 130, 246, 0.50);
+    color: #60a5fa;
+}
+
+.audio-menu-item-check {
+    color: #3b82f6;
+}
+
+.clean-popover-percent {
+    color: #10b981;
+}
+
+.clean-popover-size {
+    color: #ffffff;
+}
+
+.clean-target-name {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.clean-target-size {
+    color: rgba(255, 255, 255, 0.50);
+}
+
+/* ── Calendar & Notifications (Dark) ─────────────────────────────── */
+.calendar-widget {
+    color: #ffffff;
+}
+
+.calendar-widget header {
+    color: #ffffff;
+}
+
+.calendar-widget header button:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.calendar-widget day-name {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.calendar-widget day {
+    color: rgba(255, 255, 255, 0.90);
+}
+
+.calendar-widget day:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.calendar-widget day.selected {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+
+.notif-panel-title {
+    color: #ffffff;
+}
+
+.clear-all-btn {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 0.80);
+}
+
+.clear-all-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.notif-empty-label {
+    color: rgba(255, 255, 255, 0.40);
+}
+
+.notif-group-header {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.notif-stack-item {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.notif-stack-item:hover {
+    background-color: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.notif-item-title {
+    color: #ffffff;
+}
+
+.notif-item-body {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.notif-item-sub-time {
+    color: rgba(255, 255, 255, 0.45);
+}
 "#;
 

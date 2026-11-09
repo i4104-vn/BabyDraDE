@@ -51,9 +51,11 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                     return FilterResult::Intercept(());
                 }
 
-                // 3. Super (Win) + T: Spawn new terminal window
+                // 3. Super (Win) + T OR Super + Return: Spawn new terminal window
                 if modifiers.logo
-                    && (sym == keysyms::KEY_t.into() || sym == keysyms::KEY_T.into())
+                    && (sym == keysyms::KEY_t.into()
+                        || sym == keysyms::KEY_T.into()
+                        || sym == keysyms::KEY_Return.into())
                 {
                     spawn_terminal = true;
                     return FilterResult::Intercept(());

@@ -16,6 +16,12 @@ pub const SHARED_CSS: &str = r#"
 .sys-monitor-val,
 .notch-system-value,
 .control-square-label,
+.control-slider-val,
+.control-disk-usage,
+.clean-popover-size,
+.clean-target-size,
+.notif-item-sub-time,
+.recording-hero-timer,
 .shortcut-label {
     font-feature-settings: "tnum";
     font-variant-numeric: tabular-nums;
@@ -860,6 +866,663 @@ button.color-dot-btn.color-dot-black {
     animation-duration: 350ms;
     animation-iteration-count: 1;
     animation-timing-function: ease-in-out;
+}
+
+/* ── Media Popover in Dynamic Island ────────────────────────────── */
+popover.media-popover>contents {
+    border-radius: 18px;
+    padding: 14px 18px;
+}
+
+.media-popover-box {
+    min-width: 240px;
+}
+
+.media-popover-header {
+    margin-bottom: 6px;
+}
+
+.media-popover-app-name {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.media-popover-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.media-popover-artist {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.media-popover-progress-bar trough {
+    min-height: 5px;
+    border-radius: 9999px;
+}
+
+.media-popover-progress-bar progress {
+    border-radius: 9999px;
+}
+
+.media-popover-controls {
+    margin-top: 6px;
+}
+
+.play-pause-btn {
+    min-width: 34px;
+    min-height: 34px;
+}
+
+/* ── Screen Recorder in Dynamic Island & Popover ─────────────────── */
+popover.recording-popover {
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+}
+
+popover.recording-popover>contents {
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.60);
+}
+
+.recording-popover-box {
+    min-width: 320px;
+}
+
+.recording-popover-header {
+    margin-bottom: 6px;
+}
+
+.recording-header-icon {
+    color: #ef4444;
+    opacity: 0.90;
+}
+
+.recording-header-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.recording-status-badge {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+}
+
+.recording-status-badge.badge-ready,
+.recording-status-badge.badge-idle {
+    background-color: rgba(16, 185, 129, 0.16);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.recording-status-badge.badge-recording {
+    background-color: rgba(239, 68, 68, 0.20);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.40);
+}
+
+.recording-status-badge.badge-paused {
+    background-color: rgba(234, 179, 8, 0.20);
+    color: #eab308;
+    border: 1px solid rgba(234, 179, 8, 0.40);
+}
+
+.recording-timer-container {
+    margin: 4px 0 12px 0;
+}
+
+.recording-hero-timer {
+    font-size: 32px;
+    font-weight: 800;
+    font-family: "JetBrains Mono", monospace;
+    letter-spacing: 2px;
+}
+
+.recording-settings-card {
+    border-radius: 14px;
+    padding: 6px 12px;
+}
+
+.recording-setting-row {
+    min-height: 38px;
+    padding: 3px 2px;
+}
+
+.recording-setting-icon {
+    opacity: 0.65;
+}
+
+.recording-setting-label {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.recording-settings-card dropdown {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.recording-settings-card dropdown>button {
+    border-radius: 9px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: none;
+    min-width: 130px;
+    transition: all 150ms ease;
+}
+
+.recording-area-btn {
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 150ms ease;
+}
+
+.recording-area-label {
+    font-size: 12px;
+    opacity: 0.65;
+    font-family: monospace;
+}
+
+.recording-action-row {
+    margin-top: 8px;
+}
+
+.recording-meta-card {
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin: 10px 0;
+}
+
+.recording-meta-chip {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.recording-popover-btn {
+    border-radius: 14px;
+    padding: 8px 4px;
+    transition: all 180ms ease;
+}
+
+.recording-btn-icon-holder {
+    border-radius: 9999px;
+    margin-bottom: 2px;
+}
+
+.recording-btn-title {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.recording-action-stop .recording-btn-icon-holder {
+    background-color: rgba(239, 68, 68, 0.20);
+    color: #ef4444;
+}
+
+.recording-action-stop:hover {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.recording-popover-btn.alert-active {
+    background-color: rgba(239, 68, 68, 0.16);
+    border-color: rgba(239, 68, 68, 0.40);
+}
+
+.recording-popover-btn.alert-active .recording-btn-icon-holder {
+    background-color: rgba(239, 68, 68, 0.30);
+    color: #fca5a5;
+}
+
+.recording-popover-btn.alert-active .recording-btn-title {
+    color: #fca5a5;
+}
+
+window.recorder-window {
+    border-radius: 18px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+button.active-mode {
+    background-color: #3b82f6;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 8px;
+}
+
+label.recorder-timer {
+    font-size: 24px;
+    font-weight: 700;
+    font-family: monospace;
+    letter-spacing: 2px;
+    margin: 8px 0;
+}
+
+button.recorder-action-btn {
+    font-weight: 700;
+    font-size: 14px;
+    min-height: 40px;
+    border-radius: 12px;
+}
+
+button.recorder-action-btn.destructive-action {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+button.recorder-action-btn.destructive-action:hover {
+    background-color: #dc2626;
+}
+
+label.dim-label {
+    opacity: 0.65;
+    font-size: 12px;
+}
+
+.recording-capsule-icon {
+    color: #ef4444;
+    opacity: 0.90;
+}
+
+label.recording-capsule-timer {
+    font-size: 12px;
+    font-weight: 700;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+    margin: 0 4px;
+}
+
+/* ── Control Center Window & Layout ─────────────────────────────── */
+window.control-center-window,
+window.calendar-window {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    border: none;
+}
+
+.control-center-blur-host,
+.calendar-blur-host {
+    border-radius: 20px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+    transition: opacity 250ms ease, transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.control-center-box,
+.calendar-box {
+    border-radius: 20px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.control-center-title {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.circle-btn {
+    border-radius: 9999px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 6px;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* Quick Toggle Tiles */
+.control-center-grid {
+    min-height: 120px;
+}
+
+.control-left-toggles-box {
+    min-width: 140px;
+}
+
+.control-tile-container {
+    border-radius: 14px;
+    min-height: 56px;
+    transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.control-tile-left-btn {
+    border-radius: 14px 0 0 14px;
+    padding: 8px 12px;
+    min-height: 56px;
+    transition: background-color 150ms ease;
+}
+
+.control-tile-right-btn {
+    border-radius: 0 14px 14px 0;
+    padding: 8px 10px;
+    min-height: 56px;
+    min-width: 32px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background-color 150ms ease;
+}
+
+.control-square-tile {
+    border-radius: 14px;
+    min-width: 56px;
+    min-height: 56px;
+    transition: all 180ms ease;
+}
+
+/* Control Sliders (PillSlider) */
+.control-slider-card {
+    border-radius: 16px;
+    padding: 10px 14px;
+}
+
+.control-slider-title {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.control-slider-val {
+    font-size: 13px;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+}
+
+.pill-slider-container {
+    min-height: 32px;
+}
+
+scale.pill-slider {
+    min-height: 32px;
+    margin: 0;
+    padding: 0;
+}
+
+scale.pill-slider trough {
+    min-height: 32px;
+    border-radius: 9999px;
+    border: none;
+}
+
+scale.pill-slider highlight {
+    min-height: 32px;
+    border-radius: 9999px;
+    border: none;
+}
+
+scale.pill-slider slider {
+    min-width: 0;
+    min-height: 0;
+    opacity: 0;
+    border: none;
+    box-shadow: none;
+}
+
+.slider-overlay-icon {
+    margin-left: 10px;
+}
+
+.slider-overlay-mute-btn {
+    border-radius: 9999px;
+    min-width: 28px;
+    min-height: 28px;
+    margin-left: 6px;
+    transition: background-color 150ms ease;
+}
+
+.slider-popover-btn {
+    border-radius: 9999px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 4px;
+    transition: background-color 150ms ease;
+}
+
+/* Storage Card */
+.control-disk-card {
+    border-radius: 16px;
+    padding: 10px 14px;
+}
+
+.control-disk-item {
+    margin-top: 4px;
+}
+
+.control-disk-title-box {
+    margin-bottom: 3px;
+}
+
+.control-disk-name {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.control-disk-usage {
+    font-size: 11.5px;
+    font-weight: 500;
+    font-feature-settings: "tnum";
+}
+
+.control-disk-card progressbar trough {
+    min-height: 6px;
+    border-radius: 9999px;
+    border: none;
+}
+
+.control-disk-card progressbar progress {
+    border-radius: 9999px;
+}
+
+/* Control Popovers */
+popover.control-popover>contents,
+popover.wifi-popover>contents,
+popover.clean-popover>contents,
+popover.vpn-popover>contents,
+popover.audio-menu-popover>contents {
+    border-radius: 18px;
+    padding: 14px 16px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+}
+
+.audio-menu-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.audio-menu-item-btn {
+    border-radius: 10px;
+    padding: 8px 12px;
+    min-height: 36px;
+    transition: background-color 150ms ease;
+}
+
+.audio-menu-item-check {
+    font-size: 13px;
+    font-weight: 700;
+    margin-left: 6px;
+}
+
+.clean-popover-percent {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.clean-popover-size {
+    font-size: 13px;
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+.clean-target-list {
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.clean-target-row {
+    padding: 3px 0;
+}
+
+.clean-target-bullet {
+    font-size: 14px;
+    margin-right: 4px;
+    color: #ef4444;
+}
+
+.clean-target-name {
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.clean-target-size {
+    font-size: 12.5px;
+    font-weight: 600;
+    font-feature-settings: "tnum";
+}
+
+.clean-popover-btn {
+    border-radius: 9999px;
+    min-height: 34px;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* ── Calendar & Notifications ───────────────────────────────────── */
+.calendar-top-row {
+    margin-bottom: 6px;
+}
+
+.calendar-top-date {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.calendar-widget {
+    border: none;
+    background: transparent;
+    font-size: 12px;
+}
+
+.calendar-widget header {
+    border: none;
+    background: transparent;
+    padding: 4px;
+}
+
+.calendar-widget header button {
+    border-radius: 9999px;
+    min-width: 28px;
+    min-height: 28px;
+    transition: background-color 150ms ease;
+}
+
+.calendar-widget grid {
+    border: none;
+}
+
+.calendar-widget day-name {
+    font-weight: 700;
+    font-size: 11px;
+    padding: 4px;
+}
+
+.calendar-widget day {
+    border-radius: 9999px;
+    min-width: 30px;
+    min-height: 30px;
+    margin: 2px;
+    transition: background-color 150ms ease;
+}
+
+.notif-panel-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.clear-all-btn {
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 3px 10px;
+    transition: background-color 150ms ease;
+}
+
+.notif-scroll {
+    border: none;
+    background: transparent;
+}
+
+.notif-stack-box {
+    padding: 2px 0;
+}
+
+.notif-empty-label {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 36px 0;
+}
+
+.notif-group-container {
+    margin-bottom: 8px;
+}
+
+.notif-group-header {
+    padding: 6px 8px;
+    border-radius: 10px;
+    margin-bottom: 4px;
+}
+
+.notif-sub-box {
+    margin-top: 4px;
+}
+
+.notif-stack-item {
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    transition: background-color 150ms ease;
+}
+
+.notif-item-icon {
+    margin-right: 6px;
+}
+
+.notif-item-title {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.notif-item-body {
+    font-size: 12px;
+    font-weight: 450;
+    line-height: 1.3;
+}
+
+.notif-item-sub-time {
+    font-size: 11px;
+    font-weight: 500;
+    font-feature-settings: "tnum";
+}
+
+.notif-count-badge {
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
 }
 "#;
 

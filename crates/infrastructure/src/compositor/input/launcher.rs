@@ -44,6 +44,13 @@ pub fn spawn_new_terminal(socket_name: &std::ffi::OsStr) {
 
     if let Err(err) = Command::new(&term)
         .env("WAYLAND_DISPLAY", socket_name)
+        .env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
+        .env("MOZ_ENABLE_WAYLAND", "1")
+        .env("QT_QPA_PLATFORM", "wayland;xcb")
+        .env("GDK_BACKEND", "wayland,x11,*")
+        .env("XDG_CURRENT_DESKTOP", "BabyDra")
+        .env("XDG_SESSION_DESKTOP", "BabyDra")
+        .env("XDG_SESSION_TYPE", "wayland")
         .spawn()
     {
         warn!("Failed to spawn terminal '{:?}': {err}", term);

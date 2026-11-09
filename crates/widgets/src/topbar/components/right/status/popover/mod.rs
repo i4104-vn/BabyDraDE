@@ -7,11 +7,23 @@ use gtk4::prelude::*;
 use infrastructure::system::is_vpn_active;
 use ui_kit::components::overlay::popover::tooltip::TooltipPopover;
 
+#[derive(Clone)]
 pub struct StatusPopovers {
     pub vpn_popover: gtk4::Popover,
     pub net_popover: gtk4::Popover,
     pub vol_popover: gtk4::Popover,
     pub bat_popover_opt: Option<gtk4::Popover>,
+}
+
+impl StatusPopovers {
+    pub fn popdown_all(&self) {
+        self.vpn_popover.popdown();
+        self.net_popover.popdown();
+        self.vol_popover.popdown();
+        if let Some(ref pop) = self.bat_popover_opt {
+            pop.popdown();
+        }
+    }
 }
 
 pub struct StatusPopoverContext<'a> {

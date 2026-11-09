@@ -42,7 +42,7 @@ impl CompositorHandler for BabydraState {
             if let Some(window) = self
                 .space
                 .elements()
-                .find(|window| window.toplevel().unwrap().wl_surface() == &root)
+                .find(|window| window.toplevel().map(|t| t.wl_surface() == &root).unwrap_or(false))
             {
                 window.on_commit();
             }

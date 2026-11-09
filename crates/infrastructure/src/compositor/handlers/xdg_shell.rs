@@ -20,18 +20,24 @@ impl XdgShellHandler for BabydraState {
     }
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
-        let window = Window::new_wayland_window(surface);
+        let window = Window::new_wayland_window(surface.clone());
         let count = self.space.elements().count() as i32;
         let offset = (count * 36) % 288;
         let loc = (48 + offset, 48 + offset);
         self.space.map_element(window.clone(), loc, true);
-        self.seat.get_keyboard().unwrap().set_focus(
-            self,
-            Some(window.toplevel().unwrap().wl_surface().clone()),
-            SERIAL_COUNTER.next_serial(),
-        );
+        if let Some(keyboard) = self.seat.get_keyboard() {
+            keyboard.set_focus(
+                self,
+                Some(surface.wl_surface().clone()),
+                SERIAL_COUNTER.next_serial(),
+            );
+        }
+        // Send initial configure to new toplevel surface so client can map buffers
+        surface.send_configure();
         self.space.elements().for_each(|w| {
-            w.toplevel().unwrap().send_pending_configure();
+            if let Some(toplevel) = w.toplevel() {
+                toplevel.send_pending_configure();
+            }
         });
         self.update_active_window(Some(&window));
     }
@@ -109,20 +115,20 @@ impl XdgShellHandler for BabydraState {
 pub(super) fn handle_commit(popups: &mut PopupManager, space: &Space<Window>, surface: &WlSurface) {
     if let Some(window) = space
         .elements()
-        .find(|window| window.toplevel().unwrap().wl_surface() == surface)
+        .find(|window| window.toplevel().map(|t| t.wl_surface() == surface).unwrap_or(false))
         .cloned()
     {
-        let initial_configure_sent = with_states(surface, |states| {
-            states
-                .data_map
-                .get::<XdgToplevelSurfaceData>()
-                .expect("xdg toplevel data missing")
-                .lock()
-                .expect("xdg toplevel state poisoned")
-                .initial_configure_sent
-        });
-        if !initial_configure_sent {
-            window.toplevel().unwrap().send_configure();
+        if let Some(toplevel) = window.toplevel() {
+            let initial_configure_sent = with_states(surface, |states| {
+                states
+                    .data_map
+                    .get::<XdgToplevelSurfaceData>()
+                    .map(|d| d.lock().unwrap().initial_configure_sent)
+                    .unwrap_or(true)
+            });
+            if !initial_configure_sent {
+                toplevel.send_configure();
+            }
         }
     }
 
