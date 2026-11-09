@@ -35,11 +35,6 @@ pub fn get_wallpaper_dir() -> PathBuf {
     get_babydra_dir().join("wallpaper")
 }
 
-/// Resolves the path to user-installed themes: `~/.babydra/themes/`.
-pub fn get_themes_dir() -> PathBuf {
-    get_babydra_dir().join("themes")
-}
-
 /// Resolves the path to user logs: `~/.babydra/logs/`.
 pub fn get_logs_dir() -> PathBuf {
     get_babydra_dir().join("logs")
@@ -55,10 +50,9 @@ pub fn ensure_babydra_dirs() {
     let babydra_dir = get_babydra_dir();
     let configs_dir = get_config_dir();
     let wallpaper_dir = get_wallpaper_dir();
-    let themes_dir = get_themes_dir();
     let logs_dir = get_logs_dir();
 
-    for dir in &[&babydra_dir, &configs_dir, &wallpaper_dir, &themes_dir, &logs_dir] {
+    for dir in &[&babydra_dir, &configs_dir, &wallpaper_dir, &logs_dir] {
         let _ = std::fs::create_dir_all(dir);
     }
 
@@ -172,3 +166,4 @@ pub fn save_desktop_config(desktop: &DesktopConfig) {
     config.desktop = desktop.clone();
     save_babydra_config(&config);
 }
+

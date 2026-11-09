@@ -16,9 +16,6 @@ fn test_babydra_paths() {
     let wp_dir = get_wallpaper_dir();
     assert_eq!(wp_dir, babydra_dir.join("wallpaper"));
 
-    let themes_dir = get_themes_dir();
-    assert_eq!(themes_dir, babydra_dir.join("themes"));
-
     let logs_dir = get_logs_dir();
     assert_eq!(logs_dir, babydra_dir.join("logs"));
 }
@@ -39,13 +36,6 @@ fn test_babydra_config_toml_roundtrip() {
             icon_size: 64,
             ..Default::default()
         },
-        theme: ThemeConfig {
-            selection: ThemeSelection {
-                id: "babydra-dark".to_string(),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
         ..Default::default()
     };
 
@@ -60,7 +50,6 @@ fn test_babydra_config_toml_roundtrip() {
     assert_eq!(deserialized.power.profile, "performance");
     assert_eq!(deserialized.wallpaper.current, config.wallpaper.current);
     assert_eq!(deserialized.desktop.icon_size, 64);
-    assert_eq!(deserialized.theme.selection.id, "babydra-dark");
 }
 
 #[test]

@@ -175,53 +175,6 @@ impl Default for DesktopConfig {
     }
 }
 
-fn default_blur_radius() -> u32 {
-    20
-}
-fn default_opacity() -> f64 {
-    0.75
-}
-fn default_border_color() -> String {
-    "#ffffff".to_string()
-}
-fn default_border_width() -> u32 {
-    1
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub struct ThemeSelection {
-    #[serde(default)]
-    pub id: String,
-    #[serde(default)]
-    pub dark: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ThemeConfig {
-    #[serde(default = "default_blur_radius")]
-    pub blur_radius: u32,
-    #[serde(default = "default_opacity")]
-    pub opacity: f64,
-    #[serde(default = "default_border_color")]
-    pub border_color: String,
-    #[serde(default = "default_border_width")]
-    pub border_width: u32,
-    #[serde(default)]
-    pub selection: ThemeSelection,
-}
-
-impl Default for ThemeConfig {
-    fn default() -> Self {
-        Self {
-            blur_radius: default_blur_radius(),
-            opacity: default_opacity(),
-            border_color: default_border_color(),
-            border_width: default_border_width(),
-            selection: ThemeSelection::default(),
-        }
-    }
-}
-
 fn default_clipboard_max_items() -> usize {
     20
 }
@@ -272,7 +225,6 @@ pub struct BabyDraConfig {
     #[serde(default)]
     pub desktop: DesktopConfig,
     #[serde(default)]
-    pub theme: ThemeConfig,
-    #[serde(default)]
     pub clipboard: ClipboardConfig,
 }
+
