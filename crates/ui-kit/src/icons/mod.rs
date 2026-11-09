@@ -10,15 +10,7 @@ use gtk4::gio::MemoryInputStream;
 use gtk4::glib;
 
 pub use resolver::resolve_icon_pair;
-
-/// Whether dark mode is currently active.
-pub fn is_dark_mode() -> bool {
-    if let Some(settings) = gtk4::Settings::default() {
-        settings.is_gtk_application_prefer_dark_theme()
-    } else {
-        true
-    }
-}
+pub use crate::theme::is_dark_mode;
 
 /// Converts SVG string content into a `gtk4::Image` at the requested pixel size.
 pub fn get_icon_from_svg(svg_content: &str, size: i32) -> gtk4::Image {

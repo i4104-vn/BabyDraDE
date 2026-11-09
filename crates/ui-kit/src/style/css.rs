@@ -1,10 +1,10 @@
-//! Reusable Fluent UI CSS Stylesheet
+//! Reusable Fluent & Obsidian UI CSS Stylesheet matching babydra-core design system
 
 pub const UI_KIT_BASE_CSS: &str = r#"
 /* BabyDraDE UI Kit Reusable Stylesheet */
 
 * {
-    font-family: 'Quicksand', 'Segoe UI Variable Static Text', 'Segoe UI', 'Inter', system-ui, sans-serif;
+    font-family: 'Quicksand', 'Segoe UI Variable Static Text', 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
     -gtk-icon-style: symbolic;
 }
 
@@ -12,6 +12,8 @@ pub const UI_KIT_BASE_CSS: &str = r#"
 window {
     background: transparent;
     background-color: transparent;
+    box-shadow: none;
+    border: none;
 }
 
 /* Global button reset to prevent Adwaita default borders/outlines/shadows from causing hover shifts */
@@ -40,7 +42,7 @@ button:checked {
 }
 
 /* =============================================================================
-   Reusable Pill Container
+   Reusable Pill Container (Capsule)
    ============================================================================= */
 .pill-container {
     background-color: rgb(14, 14, 18);
@@ -50,11 +52,13 @@ button:checked {
     box-shadow: none;
     padding: 2px 8px;
     min-height: 26px;
-    color: #F3F4F6;
+    color: rgba(255, 255, 255, 0.95);
     transition: background-color 200ms ease, border-color 200ms ease;
 }
 
 .pill-container:hover {
+    background-color: rgb(24, 24, 28);
+    border-color: rgba(255, 255, 255, 0.16);
     box-shadow: none;
 }
 
@@ -67,13 +71,13 @@ button:checked {
     font-size: 9px;
 }
 
-/* Reusable Circular Disc / Vinyl */
+/* Reusable Circular Disc */
 .circular-disc {
-    background-color: #1A1F2C;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    background-color: rgb(24, 25, 31);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 9999px;
     padding: 2px 6px;
-    color: #38B9F0;
+    color: #3b82f6;
     font-size: 11px;
     min-width: 20px;
     min-height: 20px;
@@ -81,8 +85,8 @@ button:checked {
 
 /* Reusable Badge / Tag */
 .badge {
-    background: rgba(56, 185, 240, 0.20);
-    color: #38B9F0;
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
     border-radius: 9999px;
     padding: 1px 7px;
     font-weight: 700;
@@ -91,7 +95,7 @@ button:checked {
 
 .badge-subtle {
     background: rgba(255, 255, 255, 0.10);
-    color: #E5E7EB;
+    color: rgba(255, 255, 255, 0.85);
 }
 
 /* Interactive Fluent Button */
@@ -103,23 +107,60 @@ button:checked {
     padding: 2px 6px;
     margin: 0;
     min-height: 20px;
-    color: #D1D5DB;
+    color: rgba(255, 255, 255, 0.90);
     font-size: 12.5px;
-    font-weight: 450;
-    transition: background-color 120ms ease, color 120ms ease;
+    font-weight: 500;
+    transition: background-color 150ms ease, color 150ms ease;
 }
 
 .fluent-btn:hover {
     background-color: rgba(255, 255, 255, 0.10);
     border: none;
     box-shadow: none;
-    color: #FFFFFF;
+    color: #ffffff;
 }
 
 .fluent-btn:active {
     background-color: rgba(255, 255, 255, 0.18);
     border: none;
     box-shadow: none;
+}
+
+/* Standard Button (.baby-button) & Primary Action (.btn-primary) */
+button.baby-button {
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    background-image: none;
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+
+button.baby-button:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.20);
+    color: #ffffff;
+}
+
+button.btn-primary {
+    border-radius: 9999px;
+    background-color: #3b82f6;
+    background-image: none;
+    border: none;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 18px;
+    box-shadow: none;
+    transition: background-color 150ms ease;
+}
+
+button.btn-primary:hover {
+    background-color: #2563eb;
 }
 
 /* Arch Logo Button */
@@ -133,6 +174,7 @@ button.panel-logo-btn {
     border-radius: 6px;
     min-height: 20px;
     min-width: 20px;
+    color: #ffffff;
     box-shadow: none;
     transition: background-color 150ms ease;
 }
@@ -144,17 +186,27 @@ button.panel-logo-btn:hover {
     box-shadow: none;
 }
 
+.arch-btn:active,
+button.panel-logo-btn:active {
+    background-color: rgba(255, 255, 255, 0.18);
+    border: none;
+    box-shadow: none;
+}
+
 /* Dynamic Island Capsule */
 .dynamic-island {
-    background-color: rgba(16, 18, 24, 0.92);
-    border: 1px solid rgba(56, 185, 240, 0.30);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55), 0 0 12px rgba(56, 185, 240, 0.10);
-    padding: 3px 14px;
+    background-color: rgb(14, 14, 18);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    box-shadow: none;
+    padding: 0 10px;
+    min-height: 26px;
+    transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dynamic-island:hover {
-    border-color: rgba(56, 185, 240, 0.55);
-    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.65), 0 0 16px rgba(56, 185, 240, 0.20);
+    background-color: rgb(24, 24, 28);
+    border-color: rgba(255, 255, 255, 0.16);
 }
 
 /* =============================================================================
@@ -193,6 +245,7 @@ popover.context-menu-popover>arrow,
 popover.explore-popover>arrow,
 popover.tray-context-menu>arrow,
 popover.desktop-context-menu>arrow {
+    display: none;
     background: none;
     border: none;
 }
@@ -203,8 +256,8 @@ popover.desktop-context-menu>arrow {
     opacity: 1.0;
     color: #e8e8e8;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
     padding: 4px;
     animation: context-menu-pop 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -215,11 +268,12 @@ button.context-menu-item {
     border: none;
     outline: none;
     box-shadow: none;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 6px 12px;
-    font-size: 14px;
-    min-height: 30px;
-    color: #e8e8e8;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 28px;
+    color: rgba(255, 255, 255, 0.90);
     transition: background-color 140ms ease, color 140ms ease, padding-left 140ms ease;
 }
 
@@ -234,7 +288,7 @@ button.context-menu-item:hover {
 }
 
 button.context-menu-item label {
-    color: #e8e8e8;
+    color: rgba(255, 255, 255, 0.90);
 }
 
 button.context-menu-item:focus label,
@@ -260,8 +314,9 @@ button.context-menu-item.destructive:hover label {
 
 .shortcut-label {
     font-size: 12px;
-    opacity: 0.55;
+    opacity: 0.50;
     margin-left: 12px;
+    font-feature-settings: "tnum";
     transition: opacity 140ms ease;
 }
 
@@ -271,8 +326,10 @@ button.context-menu-item:hover .shortcut-label {
 
 .context-menu-separator,
 .menu-sep {
-    margin-top: 3px;
-    margin-bottom: 3px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    margin-left: 6px;
+    margin-right: 6px;
     min-height: 1px;
     background-color: rgba(255, 255, 255, 0.10);
     opacity: 1;
@@ -281,7 +338,7 @@ button.context-menu-item:hover .shortcut-label {
 .context-menu-header,
 .group-header-label {
     font-weight: 700;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.8px;
     text-transform: uppercase;
     color: #60a5fa;
@@ -317,15 +374,6 @@ button.context-menu-footer-btn:active {
     background-color: rgba(255, 255, 255, 0.08);
     background-image: none;
     color: #ffffff;
-    border: none;
-    outline: none;
-    box-shadow: none;
-}
-
-button.context-menu-footer-btn:focus {
-    background-image: none;
-    background-color: transparent;
-    color: #e8e8e8;
     border: none;
     outline: none;
     box-shadow: none;
@@ -394,15 +442,15 @@ popover.tooltip-popover>contents {
 
 .status-popover-key,
 .tooltip-popover-key {
-    font-size: 12.5px;
-    font-weight: 450;
+    font-size: 12px;
+    font-weight: 500;
     color: rgba(255, 255, 255, 0.50);
 }
 
 .status-popover-val,
 .tooltip-popover-val {
-    font-size: 12.5px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
     color: #ffffff;
     font-feature-settings: "tnum";
 }
@@ -420,5 +468,42 @@ popover.tooltip-popover>contents {
 .status-popover-val.speed-high {
     color: #22c55e;
     font-weight: 700;
+}
+
+/* Scrollbars */
+scrollbar {
+    background: transparent;
+    border: none;
+}
+
+scrollbar trough {
+    background-color: transparent;
+    border: none;
+}
+
+scrollbar slider {
+    border: 4px solid transparent;
+    background-clip: padding-box;
+    border-radius: 10px;
+    min-width: 6px;
+    min-height: 6px;
+    background-color: rgba(255, 255, 255, 0.20);
+    transition: background-color 0.2s ease, border-width 0.2s ease;
+}
+
+scrollbar slider:hover,
+scrollbar slider:hover:active {
+    border-width: 2px;
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+scrollbar button {
+    min-width: 0;
+    min-height: 0;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
 }
 "#;
