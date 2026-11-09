@@ -4,7 +4,7 @@ pub mod style;
 use components::{create_right_section, DynamicIsland, LeftPill};
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, CenterBox};
-use gtk4_layer_shell::{Edge, Layer, LayerShell};
+use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use style::load_topbar_style;
 
 /// Launches the BabyDraDE TopBar GTK4 Layer-Shell widget
@@ -44,6 +44,7 @@ pub fn run() {
         window.set_margin(Edge::Left, 1);
         window.set_margin(Edge::Right, 1);
         window.set_exclusive_zone(38);
+        window.set_keyboard_mode(KeyboardMode::None);
 
         // Topbar Layout: Left Pill | Dynamic Island | Right Pills (Tray + System Monitor + Status/Clock)
         let center_box = CenterBox::builder()

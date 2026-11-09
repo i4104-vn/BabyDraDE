@@ -190,12 +190,22 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                         return;
                     }
                 } else {
-                    state.space.elements().for_each(|window| {
-                        window.set_activated(false);
-                        window.toplevel().unwrap().send_pending_configure();
-                    });
-                    keyboard.set_focus(state, Option::<WlSurface>::None, serial);
-                    state.update_active_window(None);
+                    let clicked_layer = state.layer_under(state.pointer_location);
+                    let is_top_or_overlay = matches!(
+                        clicked_layer,
+                        Some(smithay::wayland::shell::wlr_layer::Layer::Top)
+                            | Some(smithay::wayland::shell::wlr_layer::Layer::Overlay)
+                    );
+
+                    // When interacting with panels, topbar, or overlays, do NOT lose active app focus
+                    if !is_top_or_overlay {
+                        state.space.elements().for_each(|window| {
+                            window.set_activated(false);
+                            window.toplevel().unwrap().send_pending_configure();
+                        });
+                        keyboard.set_focus(state, Option::<WlSurface>::None, serial);
+                        state.update_active_window(None);
+                    }
                 }
             }
         }

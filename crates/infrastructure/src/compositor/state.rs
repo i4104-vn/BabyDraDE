@@ -237,6 +237,28 @@ impl BabydraState {
         None
     }
 
+    pub(crate) fn layer_under(
+        &self,
+        position: Point<f64, Logical>,
+    ) -> Option<smithay::wayland::shell::wlr_layer::Layer> {
+        for output in self.space.outputs() {
+            let layer_map = smithay::desktop::layer_map_for_output(output);
+            for layer in layer_map.layers().rev() {
+                if let Some(geo) = layer_map.layer_geometry(layer) {
+                    if geo.to_f64().contains(position) {
+                        if layer
+                            .surface_under(position - geo.loc.to_f64(), WindowSurfaceType::ALL)
+                            .is_some()
+                        {
+                            return Some(layer.layer());
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
     pub(crate) fn update_active_window(&self, window: Option<&Window>) {
         let info = if let Some(w) = window {
             if let Some(toplevel) = w.toplevel() {

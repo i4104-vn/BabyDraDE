@@ -2,7 +2,7 @@
 //!
 //! Queries and displays the active application's menu bar over D-Bus (`com.canonical.dbusmenu`).
 //! Dynamically builds menu buttons and context menus directly from D-Bus items and controls
-//! active window states (minimize, fullscreen, close) without mock data.
+//! active window states (minimize, fullscreen, close). Completely hidden when no window is active.
 
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -37,7 +37,14 @@ impl AppMenu {
 
         // 1. Initial active application query
         let initial_info = get_active_window().unwrap_or_default();
-        let initial_name = get_app_display_name(&initial_info.app_id, &initial_info.title);
+        let has_active_window = !initial_info.is_empty();
+        container.set_visible(has_active_window);
+
+        let initial_name = if has_active_window {
+            get_app_display_name(&initial_info.app_id, &initial_info.title)
+        } else {
+            String::new()
+        };
 
         let current_app_info = Rc::new(RefCell::new(initial_info));
         let current_service = Rc::new(RefCell::new(None::<String>));
@@ -63,38 +70,28 @@ impl AppMenu {
         let title_btn_ref = app_title_btn.clone();
         app_title_btn.connect_clicked(move |_| {
             let info = app_info_click.borrow().clone();
-            let is_desktop = info.app_id.is_empty() && info.title.is_empty();
-
-            if is_desktop {
-                let menu = ContextMenu::new(&title_btn_ref)
-                    .item_sensitive("BabyDraDE Desktop", "desktop", false, || {})
-                    .separator()
-                    .item("Open Terminal", "terminal", || {
-                        let _ = std::process::Command::new("foot")
-                            .spawn()
-                            .or_else(|_| std::process::Command::new("alacritty").spawn());
-                    });
-                menu.popup();
-            } else {
-                let display_title = get_app_display_name(&info.app_id, &info.title);
-                let app_id_close = info.app_id.clone();
-                let title_close = info.title.clone();
-
-                let menu = ContextMenu::new(&title_btn_ref)
-                    .item_sensitive(&display_title, "info", false, || {})
-                    .separator()
-                    .item("Minimize Window", "eye-off", || {
-                        minimize_active_window();
-                    })
-                    .item("Toggle Fullscreen", "display", || {
-                        toggle_fullscreen_active_window();
-                    })
-                    .separator()
-                    .item("Close Window", "close", move || {
-                        close_window_by_app(&app_id_close, &title_close);
-                    });
-                menu.popup();
+            if info.is_empty() {
+                return;
             }
+
+            let display_title = get_app_display_name(&info.app_id, &info.title);
+            let app_id_close = info.app_id.clone();
+            let title_close = info.title.clone();
+
+            let menu = ContextMenu::new(&title_btn_ref)
+                .item_sensitive(&display_title, "info", false, || {})
+                .separator()
+                .item("Minimize Window", "eye-off", || {
+                    minimize_active_window();
+                })
+                .item("Toggle Fullscreen", "display", || {
+                    toggle_fullscreen_active_window();
+                })
+                .separator()
+                .item("Close Window", "close", move || {
+                    close_window_by_app(&app_id_close, &title_close);
+                });
+            menu.popup();
         });
 
         // 4. Dynamic D-Bus Menubar Box (populated strictly via D-Bus GetLayout)
@@ -106,6 +103,7 @@ impl AppMenu {
         container.append(&menubar_box);
 
         // 5. Setup periodic polling for real-time active window detection
+        let container_poll = container.clone();
         let app_info_poll = current_app_info.clone();
         let label_poll = app_title_label.clone();
         let menubar_poll = menubar_box.clone();
@@ -116,7 +114,7 @@ impl AppMenu {
         // Initial D-Bus menu query if active window exists
         {
             let info = app_info_poll.borrow().clone();
-            if !info.app_id.is_empty() {
+            if !info.is_empty() {
                 trigger_dbus_menu_discovery(
                     &info.app_id,
                     0,
@@ -137,15 +135,15 @@ impl AppMenu {
 
             if changed {
                 *app_info_poll.borrow_mut() = latest.clone();
-                let display_name = get_app_display_name(&latest.app_id, &latest.title);
-                label_poll.set_label(&display_name);
+                let has_app = !latest.is_empty();
+                container_poll.set_visible(has_app);
 
                 let next_gen = *gen_poll.borrow() + 1;
                 *gen_poll.borrow_mut() = next_gen;
 
-                if latest.app_id.is_empty() && latest.title.is_empty() {
-                    clear_menubar(&menubar_poll, &service_poll, &path_poll);
-                } else {
+                if has_app {
+                    let display_name = get_app_display_name(&latest.app_id, &latest.title);
+                    label_poll.set_label(&display_name);
                     trigger_dbus_menu_discovery(
                         &latest.app_id,
                         next_gen,
@@ -154,6 +152,9 @@ impl AppMenu {
                         service_poll.clone(),
                         path_poll.clone(),
                     );
+                } else {
+                    label_poll.set_label("");
+                    clear_menubar(&menubar_poll, &service_poll, &path_poll);
                 }
             }
 
@@ -173,16 +174,19 @@ impl AppMenu {
 
     /// Dynamically update the active application title
     pub fn set_active_app(&self, app_name: &str) {
-        let display_name = if app_name.trim().is_empty() {
-            "Desktop"
+        let is_empty = app_name.trim().is_empty() || app_name.eq_ignore_ascii_case("desktop");
+        self.container.set_visible(!is_empty);
+        if !is_empty {
+            self.app_title_label.set_label(app_name);
+            *self.current_app_info.borrow_mut() = ActiveWindowInfo {
+                app_id: app_name.to_string(),
+                title: app_name.to_string(),
+            };
         } else {
-            app_name
-        };
-        self.app_title_label.set_label(display_name);
-        *self.current_app_info.borrow_mut() = ActiveWindowInfo {
-            app_id: app_name.to_string(),
-            title: app_name.to_string(),
-        };
+            self.app_title_label.set_label("");
+            *self.current_app_info.borrow_mut() = ActiveWindowInfo::default();
+            self.clear_menu();
+        }
         let next_gen = *self.generation.borrow() + 1;
         *self.generation.borrow_mut() = next_gen;
     }

@@ -14,6 +14,13 @@ pub struct ActiveWindowInfo {
     pub title: String,
 }
 
+impl ActiveWindowInfo {
+    /// Returns true if no window is currently focused
+    pub fn is_empty(&self) -> bool {
+        self.app_id.trim().is_empty() && self.title.trim().is_empty()
+    }
+}
+
 fn get_active_window_file_path() -> PathBuf {
     if let Ok(dir) = std::env::var("XDG_RUNTIME_DIR") {
         let path = PathBuf::from(dir);
@@ -104,7 +111,7 @@ pub fn get_app_display_name(app_id: &str, title: &str) -> String {
         return trimmed_title.to_string();
     }
 
-    "Desktop".to_string()
+    String::new()
 }
 
 /// Closes the specified window via wlrctl or target specifier
@@ -134,3 +141,4 @@ pub fn toggle_fullscreen_active_window() {
         .args(["window", "fullscreen", "state:focused"])
         .spawn();
 }
+

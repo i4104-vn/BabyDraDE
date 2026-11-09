@@ -1,3 +1,4 @@
+use gtk4::prelude::*;
 use ui_kit::{PillBox, VerticalSeparator};
 
 use super::app_menu::AppMenu;
@@ -5,6 +6,7 @@ use super::logo_btn::LogoButton;
 
 pub struct LeftPill {
     pill: PillBox,
+    _sep: VerticalSeparator,
     app_menu: AppMenu,
 }
 
@@ -24,7 +26,19 @@ impl LeftPill {
         let app_menu = AppMenu::new();
         pill.append(app_menu.widget());
 
-        Self { pill, app_menu }
+        // Bind separator visibility directly to app_menu visibility:
+        // When no app is focused, both AppMenu and separator are completely hidden!
+        app_menu
+            .widget()
+            .bind_property("visible", sep.widget(), "visible")
+            .sync_create()
+            .build();
+
+        Self {
+            pill,
+            _sep: sep,
+            app_menu,
+        }
     }
 
     pub fn set_active_app(&self, name: &str) {
