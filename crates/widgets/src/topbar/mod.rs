@@ -1,9 +1,9 @@
 pub mod components;
 pub mod style;
 
-use components::{DynamicIsland, LeftPill, StatusPill, TrayPill};
+use components::{create_right_section, DynamicIsland, LeftPill};
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Box, CenterBox, Orientation};
+use gtk4::{Application, ApplicationWindow, CenterBox};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use style::load_topbar_style;
 
@@ -57,19 +57,9 @@ pub fn run() {
         let dynamic_island = DynamicIsland::new();
         center_box.set_center_widget(Some(dynamic_island.widget()));
 
-        // 3. Right Section (2 separate pills: Tray Pill + Status Pill)
-        let right_container = Box::builder()
-            .orientation(Orientation::Horizontal)
-            .spacing(8)
-            .build();
-
-        let tray_pill = TrayPill::new();
-        let status_pill = StatusPill::new();
-
-        right_container.append(tray_pill.widget());
-        right_container.append(status_pill.widget());
-
-        center_box.set_end_widget(Some(&right_container));
+        // 3. Right Section (Tray + System Monitor + Status + Clock)
+        let right_section = create_right_section(&window);
+        center_box.set_end_widget(Some(&right_section));
 
         window.set_child(Some(&center_box));
         window.present();
