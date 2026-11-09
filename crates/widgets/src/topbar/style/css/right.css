@@ -175,45 +175,62 @@ popover {
     border: none;
 }
 
-popover>contents {
-    background-color: rgb(14, 14, 18);
-    opacity: 1.0;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.50);
-    padding: 10px 14px;
-}
-
 popover>arrow {
+    display: none;
     background: none;
     border: none;
 }
 
-.status-popover-card {
-    min-width: 200px;
+popover>contents,
+popover.status-popover>contents,
+popover.tooltip-popover>contents {
+    background-color: rgb(13, 13, 17);
+    background-image: none;
+    opacity: 1.0;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+    padding: 14px 18px;
+    color: #ffffff;
 }
 
-.status-popover-header {
+.status-popover-card,
+.tooltip-popover-card {
+    min-width: 220px;
+}
+
+.status-popover-header,
+.tooltip-popover-header {
     font-weight: 700;
     font-size: 14px;
-    margin-bottom: 4px;
-    color: rgba(255, 255, 255, 0.95);
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #ffffff;
 }
 
-.status-popover-sep {
-    opacity: 0.15;
+.status-popover-sep,
+.tooltip-popover-sep {
+    display: none;
+}
+
+.status-popover-row,
+.tooltip-popover-row {
     margin-bottom: 6px;
 }
 
-.status-popover-key {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.60);
+.status-popover-key,
+.tooltip-popover-key {
+    font-size: 12.5px;
+    font-weight: 450;
+    color: rgba(255, 255, 255, 0.50);
 }
 
-.status-popover-val {
-    font-size: 12px;
+.status-popover-val,
+.tooltip-popover-val {
+    font-size: 12.5px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
+    color: #ffffff;
+    font-feature-settings: "tnum";
 }
 
 .status-popover-val.speed-low {
@@ -232,7 +249,8 @@ popover>arrow {
 }
 
 popover.sys-monitor-popover>contents {
-    padding: 14px;
+    padding: 16px 18px;
+    border-radius: 18px;
 }
 
 popover.sys-monitor-popover progressbar trough {

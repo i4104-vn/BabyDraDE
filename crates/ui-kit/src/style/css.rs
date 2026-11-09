@@ -334,23 +334,37 @@ button.context-menu-footer-btn:focus {
 /* =============================================================================
    Popovers & Tooltip Popover Overlay (Matching babydra-core)
    ============================================================================= */
+popover {
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+}
+
+popover>arrow {
+    display: none;
+    background: none;
+    border: none;
+}
+
 popover>contents,
 popover.menu>contents,
 popover.status-popover>contents,
 popover.tooltip-popover>contents {
-    background-color: rgb(14, 14, 18);
+    background-color: rgb(13, 13, 17);
     background-image: none;
     opacity: 1.0;
-    color: #e8e8e8;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-    padding: 10px 14px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.50);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 18px;
+    padding: 14px 18px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
 }
 
 .status-popover-card,
 .tooltip-popover-card {
-    min-width: 200px;
+    min-width: 220px;
 }
 
 .status-popover-card.tooltip-popover-simple,
@@ -363,28 +377,34 @@ popover.tooltip-popover>contents {
 .tooltip-popover-header {
     font-weight: 700;
     font-size: 14px;
-    margin-bottom: 4px;
+    margin-top: 0;
+    margin-bottom: 12px;
     color: #ffffff;
 }
 
 .status-popover-sep,
 .tooltip-popover-sep {
-    opacity: 0.15;
+    display: none;
+}
+
+.status-popover-row,
+.tooltip-popover-row {
     margin-bottom: 6px;
-    background-color: rgba(255, 255, 255, 0.20);
 }
 
 .status-popover-key,
 .tooltip-popover-key {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.70);
+    font-size: 12.5px;
+    font-weight: 450;
+    color: rgba(255, 255, 255, 0.50);
 }
 
 .status-popover-val,
 .tooltip-popover-val {
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 600;
     color: #ffffff;
+    font-feature-settings: "tnum";
 }
 
 .status-popover-val.speed-low {

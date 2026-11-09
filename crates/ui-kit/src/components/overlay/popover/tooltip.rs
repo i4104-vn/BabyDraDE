@@ -1,7 +1,7 @@
 //! Rich Card-style Tooltip Popover component.
 
 use gtk4::prelude::*;
-use gtk4::{Box, Label, Orientation, Popover, PositionType, Separator, Widget};
+use gtk4::{Box, Label, Orientation, Popover, PositionType, Widget};
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -48,7 +48,7 @@ impl TooltipPopover {
     /// Creates a new `TooltipPopover` anchored to the specified parent widget.
     pub fn new(parent: &impl IsA<Widget>, position: PositionType) -> Self {
         let popover = Popover::builder()
-            .has_arrow(true)
+            .has_arrow(false)
             .autohide(false)
             .position(position)
             .css_classes(["status-popover", "tooltip-popover"])
@@ -109,15 +109,15 @@ impl TooltipPopover {
         &self.popover
     }
 
-    /// Builds a structured card widget with an optional title, separator, and key-value rows.
+    /// Builds a structured card widget with an optional title and key-value rows.
     pub fn build_card(title: &str, rows: &[TooltipRow]) -> Box {
         let card = Box::new(Orientation::Vertical, 6);
         card.add_css_class("status-popover-card");
         card.add_css_class("tooltip-popover-card");
-        card.set_margin_top(4);
-        card.set_margin_bottom(4);
-        card.set_margin_start(6);
-        card.set_margin_end(6);
+        card.set_margin_top(0);
+        card.set_margin_bottom(0);
+        card.set_margin_start(0);
+        card.set_margin_end(0);
 
         if !title.is_empty() {
             let title_lbl = Label::new(Some(title));
@@ -126,17 +126,10 @@ impl TooltipPopover {
             title_lbl.set_halign(gtk4::Align::Start);
             title_lbl.set_ellipsize(gtk4::pango::EllipsizeMode::End);
             card.append(&title_lbl);
-
-            if !rows.is_empty() {
-                let sep = Separator::new(Orientation::Horizontal);
-                sep.add_css_class("status-popover-sep");
-                sep.add_css_class("tooltip-popover-sep");
-                card.append(&sep);
-            }
         }
 
         for row in rows {
-            let row_box = Box::new(Orientation::Horizontal, 12);
+            let row_box = Box::new(Orientation::Horizontal, 16);
             row_box.add_css_class("status-popover-row");
             row_box.add_css_class("tooltip-popover-row");
 

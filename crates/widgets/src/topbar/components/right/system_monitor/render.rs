@@ -26,6 +26,7 @@ pub fn build_sys_monitor(
 
     let popover = gtk4::Popover::builder()
         .position(gtk4::PositionType::Bottom)
+        .has_arrow(false)
         .autohide(false)
         .css_classes(["sys-monitor-popover", "status-popover"])
         .build();

@@ -61,6 +61,7 @@ impl IslandCapsule {
         // Details Popover
         let popover = Popover::builder()
             .autohide(true)
+            .has_arrow(false)
             .css_classes(["media-popover", "island-popover"])
             .position(gtk4::PositionType::Bottom)
             .build();
