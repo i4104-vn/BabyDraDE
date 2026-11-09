@@ -32,3 +32,4 @@ pub fn show_window_action_menu(anchor: &Button, info: &ActiveWindowInfo) {
         });
     menu.popup();
 }
+

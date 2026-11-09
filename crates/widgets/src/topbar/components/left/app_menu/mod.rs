@@ -197,3 +197,4 @@ impl Default for AppMenu {
         Self::new()
     }
 }
+

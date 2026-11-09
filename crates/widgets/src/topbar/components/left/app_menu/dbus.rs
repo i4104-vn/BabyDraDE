@@ -170,3 +170,4 @@ fn attach_dbus_submenu(
         click_menu.popup();
     });
 }
+

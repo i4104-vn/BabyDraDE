@@ -9,3 +9,4 @@ pub const TOPBAR_CSS: &str = concat!(
     "\n",
     include_str!("right.css"),
 );
+

@@ -33,3 +33,4 @@ pub fn create_battery_w() -> Option<gtk4::DrawingArea> {
 
     Some(drawing_area)
 }
+

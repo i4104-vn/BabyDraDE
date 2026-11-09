@@ -68,3 +68,4 @@ pub fn create_network_widget() -> gtk4::Box {
 
     container
 }
+

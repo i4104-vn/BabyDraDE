@@ -4,7 +4,7 @@ use gtk4::prelude::*;
 use gtk4::{Box, Label, Orientation};
 use std::cell::Cell;
 use std::rc::Rc;
-use ui_kit::Icon;
+use ui_kit::icons::get_icon;
 
 use super::IslandFeature;
 
@@ -25,7 +25,7 @@ impl NotificationFeature {
             .css_classes(["notch-content", "notification-notch"])
             .build();
 
-        let icon = Icon::from_file_or_glyph("assets/icons/bell.svg", "󰂚", 14);
+        let icon = get_icon("bell", 14);
         container.append(&icon);
 
         let title_label = Label::builder()
@@ -82,4 +82,3 @@ impl IslandFeature for NotificationFeature {
         self.container.clone().upcast()
     }
 }
-
