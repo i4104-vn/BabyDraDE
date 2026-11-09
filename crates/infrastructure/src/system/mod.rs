@@ -1,12 +1,18 @@
 pub mod hardware;
 pub mod host;
+pub mod monitor;
 pub mod network;
 pub mod resources;
+pub mod volume;
+pub mod vpn;
 
 pub use hardware::{BacklightInfo, BacklightReader, BatteryInfo, BatteryReader, BatteryStatus, ThermalInfo, ThermalReader, ThermalZone};
 pub use host::{UptimeInfo, UptimeReader};
-pub use network::{InterfaceStats, NetworkInfo, NetworkReader};
+pub use monitor::{get_monitor_snapshot, MonitorSnapshot};
+pub use network::{format_speed, get_active_network_info, ActiveNetworkInfo, ActiveNetworkType, InterfaceStats, NetworkInfo, NetworkReader};
 pub use resources::{CpuInfo, CpuReader, DiskInfo, DiskReader, MemoryInfo, MemoryReader};
+pub use volume::{get_active_output_name, get_volume_state, set_muted, set_volume, AudioBackend};
+pub use vpn::is_vpn_active;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SystemSnapshot {

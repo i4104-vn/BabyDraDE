@@ -1,8 +1,11 @@
 mod backends;
 mod compositor;
+pub mod desktop;
 pub mod rendering;
 pub mod system;
 pub mod theme;
+pub mod tray;
+pub mod wallpaper;
 
 use std::{error::Error, ffi::OsString, process::Command};
 
