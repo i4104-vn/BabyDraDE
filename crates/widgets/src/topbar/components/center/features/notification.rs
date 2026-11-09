@@ -59,6 +59,12 @@ impl NotificationFeature {
     }
 }
 
+impl Default for NotificationFeature {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IslandFeature for NotificationFeature {
     fn id(&self) -> &'static str {
         "notification"

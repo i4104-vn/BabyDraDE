@@ -64,26 +64,16 @@ pub fn create_sys_monitor_w() -> gtk4::Box {
         ));
         gpu_label_clone.set_text(&format!("GPU Usage: {:.1}%", snapshot.gpu_percent));
 
-        {
-            let mut hist = cpu_history_loop.borrow_mut();
+        for (hist_rc, chart, val) in [
+            (&cpu_history_loop, &cpu_chart_loop, snapshot.cpu_percent),
+            (&ram_history_loop, &ram_chart_loop, snapshot.ram_percent),
+            (&gpu_history_loop, &gpu_chart_loop, snapshot.gpu_percent),
+        ] {
+            let mut hist = hist_rc.borrow_mut();
             hist.pop_front();
-            hist.push_back(snapshot.cpu_percent);
+            hist.push_back(val);
+            chart.queue_draw();
         }
-        cpu_chart_loop.queue_draw();
-
-        {
-            let mut hist = ram_history_loop.borrow_mut();
-            hist.pop_front();
-            hist.push_back(snapshot.ram_percent);
-        }
-        ram_chart_loop.queue_draw();
-
-        {
-            let mut hist = gpu_history_loop.borrow_mut();
-            hist.pop_front();
-            hist.push_back(snapshot.gpu_percent);
-        }
-        gpu_chart_loop.queue_draw();
 
         glib::ControlFlow::Continue
     });

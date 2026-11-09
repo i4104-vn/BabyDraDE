@@ -245,13 +245,12 @@ impl BabydraState {
             let layer_map = smithay::desktop::layer_map_for_output(output);
             for layer in layer_map.layers().rev() {
                 if let Some(geo) = layer_map.layer_geometry(layer) {
-                    if geo.to_f64().contains(position) {
-                        if layer
+                    if geo.to_f64().contains(position)
+                        && layer
                             .surface_under(position - geo.loc.to_f64(), WindowSurfaceType::ALL)
                             .is_some()
-                        {
-                            return Some(layer.layer());
-                        }
+                    {
+                        return Some(layer.layer());
                     }
                 }
             }

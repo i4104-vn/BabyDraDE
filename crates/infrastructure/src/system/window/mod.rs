@@ -89,7 +89,7 @@ pub fn get_app_display_name(app_id: &str, title: &str) -> String {
     let trimmed_id = app_id.trim().strip_suffix(".desktop").unwrap_or(app_id.trim());
     if !trimmed_id.is_empty() {
         // Reverse domain name handling: "org.gnome.TextEditor" -> "TextEditor"
-        let name = if let Some(last) = trimmed_id.split('.').last() {
+        let name = if let Some(last) = trimmed_id.split('.').next_back() {
             last
         } else {
             trimmed_id

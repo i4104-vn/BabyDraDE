@@ -49,3 +49,9 @@ impl LeftPill {
         self.pill.widget()
     }
 }
+
+impl Default for LeftPill {
+    fn default() -> Self {
+        Self::new()
+    }
+}

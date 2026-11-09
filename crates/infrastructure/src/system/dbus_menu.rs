@@ -146,9 +146,7 @@ pub fn find_app_menu_service(app_id: &str) -> Option<(String, String)> {
             let name_lower = name.to_lowercase();
             if name_lower == app_id_clean {
                 candidates.insert(0, name.to_string());
-            } else if name_lower.ends_with(&format!(".{}", app_id_clean)) {
-                candidates.push(name.to_string());
-            } else if name_lower.contains(&app_id_clean) {
+            } else if name_lower.ends_with(&format!(".{}", app_id_clean)) || name_lower.contains(&app_id_clean) {
                 candidates.push(name.to_string());
             }
         }

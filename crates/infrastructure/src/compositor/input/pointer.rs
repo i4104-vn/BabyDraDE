@@ -9,6 +9,48 @@ use smithay::{
 
 use super::super::state::{BabydraState, MoveState};
 
+fn handle_window_drag(
+    state: &mut BabydraState,
+    position: Point<f64, smithay::utils::Logical>,
+    time: u32,
+) -> bool {
+    let pointer = state.seat.get_pointer().unwrap();
+    if let Some(ref mut move_state) = state.move_state {
+        if !state.pointer_pressed_buttons.contains(&move_state.button)
+            && state.pointer_pressed_buttons.is_empty()
+        {
+            state.move_state = None;
+            let under = state.surface_under(position);
+            pointer.motion(
+                state,
+                under,
+                &MotionEvent {
+                    location: position,
+                    serial: SERIAL_COUNTER.next_serial(),
+                    time,
+                },
+            );
+            pointer.frame(state);
+            return true;
+        }
+
+        let move_delta = position - move_state.initial_pointer_location;
+        let dist_sq = move_delta.x * move_delta.x + move_delta.y * move_delta.y;
+
+        // Require at least a 4-pixel movement threshold before window dragging starts
+        if !move_state.has_dragged && dist_sq < 16.0 {
+            return true;
+        }
+        move_state.has_dragged = true;
+
+        let new_loc = move_state.initial_window_location
+            + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
+        state.space.map_element(move_state.window.clone(), new_loc, false);
+        return true;
+    }
+    false
+}
+
 pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
     state: &mut BabydraState,
     event: P,
@@ -28,39 +70,7 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
 
     state.pointer_location = position;
 
-    // Handle window dragging/moving
-    if let Some(ref mut move_state) = state.move_state {
-        if !state.pointer_pressed_buttons.contains(&move_state.button)
-            && state.pointer_pressed_buttons.is_empty()
-        {
-            state.move_state = None;
-            let under = state.surface_under(position);
-            pointer.motion(
-                state,
-                under,
-                &MotionEvent {
-                    location: position,
-                    serial: SERIAL_COUNTER.next_serial(),
-                    time: event.time_msec(),
-                },
-            );
-            pointer.frame(state);
-            return;
-        }
-
-        let move_delta = position - move_state.initial_pointer_location;
-        let dist_sq = move_delta.x * move_delta.x + move_delta.y * move_delta.y;
-
-        // Require at least a 4-pixel movement threshold before window dragging starts
-        // to prevent accidental moves on simple clicks
-        if !move_state.has_dragged && dist_sq < 16.0 {
-            return;
-        }
-        move_state.has_dragged = true;
-
-        let new_loc = move_state.initial_window_location
-            + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
-        state.space.map_element(move_state.window.clone(), new_loc, false);
+    if handle_window_drag(state, position, event.time_msec()) {
         return;
     }
 
@@ -89,39 +99,7 @@ pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositio
 
     state.pointer_location = position;
 
-    // Handle window dragging/moving
-    if let Some(ref mut move_state) = state.move_state {
-        if !state.pointer_pressed_buttons.contains(&move_state.button)
-            && state.pointer_pressed_buttons.is_empty()
-        {
-            state.move_state = None;
-            let under = state.surface_under(position);
-            pointer.motion(
-                state,
-                under,
-                &MotionEvent {
-                    location: position,
-                    serial: SERIAL_COUNTER.next_serial(),
-                    time: event.time_msec(),
-                },
-            );
-            pointer.frame(state);
-            return;
-        }
-
-        let move_delta = position - move_state.initial_pointer_location;
-        let dist_sq = move_delta.x * move_delta.x + move_delta.y * move_delta.y;
-
-        // Require at least a 4-pixel movement threshold before window dragging starts
-        // to prevent accidental moves on simple clicks
-        if !move_state.has_dragged && dist_sq < 16.0 {
-            return;
-        }
-        move_state.has_dragged = true;
-
-        let new_loc = move_state.initial_window_location
-            + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
-        state.space.map_element(move_state.window.clone(), new_loc, false);
+    if handle_window_drag(state, position, event.time_msec()) {
         return;
     }
 

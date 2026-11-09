@@ -37,17 +37,17 @@ impl XdgShellHandler for BabydraState {
     }
 
     fn title_changed(&mut self, surface: ToplevelSurface) {
-        if let Some(active_window) = self.space.elements().next_back() {
-            if active_window.toplevel().map(|t| t == &surface).unwrap_or(false) {
-                self.update_active_window(Some(active_window));
+        if let Some(active) = self.space.elements().next_back() {
+            if active.toplevel() == Some(&surface) {
+                self.update_active_window(Some(active));
             }
         }
     }
 
     fn app_id_changed(&mut self, surface: ToplevelSurface) {
-        if let Some(active_window) = self.space.elements().next_back() {
-            if active_window.toplevel().map(|t| t == &surface).unwrap_or(false) {
-                self.update_active_window(Some(active_window));
+        if let Some(active) = self.space.elements().next_back() {
+            if active.toplevel() == Some(&surface) {
+                self.update_active_window(Some(active));
             }
         }
     }

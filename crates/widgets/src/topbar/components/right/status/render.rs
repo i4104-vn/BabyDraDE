@@ -55,12 +55,7 @@ pub fn create_network_widget() -> gtk4::Box {
     container.append(&eth_area);
 
     let is_connected_cell = Rc::new(Cell::new(true));
-    let tx_lit_cell = Rc::new(Cell::new(true));
-    let rx_lit_cell = Rc::new(Cell::new(true));
-
     let conn_draw = is_connected_cell.clone();
-    let tx_draw = tx_lit_cell.clone();
-    let rx_draw = rx_lit_cell.clone();
 
     eth_area.set_draw_func(move |_, cr, width, height| {
         let dark = is_dark_mode();
@@ -70,8 +65,8 @@ pub fn create_network_widget() -> gtk4::Box {
             height as f64,
             dark,
             conn_draw.get(),
-            tx_draw.get(),
-            rx_draw.get(),
+            true,
+            true,
         );
     });
 

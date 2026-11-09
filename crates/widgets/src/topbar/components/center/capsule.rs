@@ -116,3 +116,9 @@ impl IslandCapsule {
     }
 }
 
+impl Default for IslandCapsule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+

@@ -56,3 +56,9 @@ impl LogoButton {
         &self.button
     }
 }
+
+impl Default for LogoButton {
+    fn default() -> Self {
+        Self::new()
+    }
+}

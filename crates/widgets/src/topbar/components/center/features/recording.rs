@@ -58,6 +58,12 @@ impl RecordingFeature {
     }
 }
 
+impl Default for RecordingFeature {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IslandFeature for RecordingFeature {
     fn id(&self) -> &'static str {
         "recording"

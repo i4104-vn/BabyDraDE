@@ -118,7 +118,7 @@ pub fn get_active_output_name() -> Option<String> {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines() {
             if line.contains('*') && (line.contains("Sink") || line.contains("Audio/Sink") || line.contains("Built-in") || line.contains("HDMI") || line.contains("Headset")) {
-                let trimmed = line.trim_start_matches(|c| c == ' ' || c == '*' || c == '.');
+                let trimmed = line.trim_start_matches([' ', '*', '.']);
                 return Some(trimmed.to_string());
             }
         }

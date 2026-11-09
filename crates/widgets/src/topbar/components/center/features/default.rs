@@ -32,6 +32,12 @@ impl DefaultFeature {
     }
 }
 
+impl Default for DefaultFeature {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IslandFeature for DefaultFeature {
     fn id(&self) -> &'static str {
         "default"

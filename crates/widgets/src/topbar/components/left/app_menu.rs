@@ -213,6 +213,18 @@ impl AppMenu {
     }
 }
 
+impl Default for AppMenu {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+fn clear_container(container: &Box) {
+    while let Some(child) = container.first_child() {
+        container.remove(&child);
+    }
+}
+
 fn clear_menubar(
     menubar_box: &Box,
     current_service: &Rc<RefCell<Option<String>>>,
@@ -220,9 +232,7 @@ fn clear_menubar(
 ) {
     *current_service.borrow_mut() = None;
     *current_menu_path.borrow_mut() = None;
-    while let Some(child) = menubar_box.first_child() {
-        menubar_box.remove(&child);
-    }
+    clear_container(menubar_box);
 }
 
 fn trigger_dbus_menu_discovery(
@@ -278,9 +288,7 @@ fn load_and_render_dbus_menu(menubar_box: &Box, service: &str, path: &str) {
     glib::timeout_add_local(Duration::from_millis(20), move || {
         match rx.try_recv() {
             Ok(items_opt) => {
-                while let Some(child) = menubar_box_c.first_child() {
-                    menubar_box_c.remove(&child);
-                }
+                clear_container(&menubar_box_c);
 
                 if let Some(items) = items_opt {
                     for top_item in items {

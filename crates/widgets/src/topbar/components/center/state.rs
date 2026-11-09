@@ -6,17 +6,22 @@ pub struct IslandManager {
     features: Vec<Box<dyn IslandFeature>>,
 }
 
+impl Default for IslandManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IslandManager {
     pub fn new() -> Self {
-        let mut features: Vec<Box<dyn IslandFeature>> = Vec::new();
-
-        // Register built-in extensible features
-        features.push(Box::new(DefaultFeature::new()));
-        features.push(Box::new(MediaFeature::new()));
-        features.push(Box::new(RecordingFeature::new()));
-        features.push(Box::new(NotificationFeature::new()));
-
-        Self { features }
+        Self {
+            features: vec![
+                Box::new(DefaultFeature::new()),
+                Box::new(MediaFeature::new()),
+                Box::new(RecordingFeature::new()),
+                Box::new(NotificationFeature::new()),
+            ],
+        }
     }
 
     /// Register an external custom feature
@@ -25,11 +30,11 @@ impl IslandManager {
     }
 
     /// Selects the highest priority active feature
-    pub fn active_feature(&self) -> Option<&Box<dyn IslandFeature>> {
+    pub fn active_feature(&self) -> Option<&dyn IslandFeature> {
         self.features
             .iter()
+            .map(|f| f.as_ref())
             .filter(|f| f.is_active())
             .max_by_key(|f| f.priority())
     }
 }
-

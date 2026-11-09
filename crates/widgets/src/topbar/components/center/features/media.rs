@@ -63,6 +63,12 @@ impl MediaFeature {
     }
 }
 
+impl Default for MediaFeature {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IslandFeature for MediaFeature {
     fn id(&self) -> &'static str {
         "media"
