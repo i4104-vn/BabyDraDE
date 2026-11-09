@@ -28,8 +28,10 @@ pub fn run() {
             .application(app)
             .title("BabyDraDE TopBar")
             .decorated(false)
-            .default_height(38)
+            .default_height(36)
             .build();
+
+        window.add_css_class("panel-window");
 
         // Layer Shell configuration for Wayland
         window.init_layer_shell();
@@ -38,14 +40,14 @@ pub fn run() {
         window.set_anchor(Edge::Top, true);
         window.set_anchor(Edge::Left, true);
         window.set_anchor(Edge::Right, true);
-        window.set_margin(Edge::Top, 4);
-        window.set_margin(Edge::Left, 8);
-        window.set_margin(Edge::Right, 8);
+        window.set_margin(Edge::Top, 8);
+        window.set_margin(Edge::Left, 1);
+        window.set_margin(Edge::Right, 1);
         window.set_exclusive_zone(38);
 
-        // Topbar Layout: Left Pill | Dynamic Island | Right Pills (Tray + Status)
+        // Topbar Layout: Left Pill | Dynamic Island | Right Pills (Tray + System Monitor + Status/Clock)
         let center_box = CenterBox::builder()
-            .css_classes(["topbar-box"])
+            .css_classes(["panel-box"])
             .hexpand(true)
             .build();
 

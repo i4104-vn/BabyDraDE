@@ -2,7 +2,7 @@ pub mod css;
 pub mod theme;
 
 use gtk4::gdk::Display;
-use gtk4::{CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
+use gtk4::{CssProvider, STYLE_PROVIDER_PRIORITY_USER};
 
 pub use css::UI_KIT_BASE_CSS;
 pub use theme::{ThemePalette, FLUENT_DARK, FLUENT_LIGHT};
@@ -16,7 +16,7 @@ pub fn load_ui_kit_styles() {
         gtk4::style_context_add_provider_for_display(
             &display,
             &provider,
-            STYLE_PROVIDER_PRIORITY_APPLICATION,
+            STYLE_PROVIDER_PRIORITY_USER,
         );
     }
 }
@@ -30,7 +30,7 @@ pub fn append_custom_css(custom_css: &str) {
         gtk4::style_context_add_provider_for_display(
             &display,
             &provider,
-            STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+            STYLE_PROVIDER_PRIORITY_USER,
         );
     }
 }

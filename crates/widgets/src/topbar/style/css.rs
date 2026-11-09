@@ -1,197 +1,358 @@
-//! TopBar-specific CSS styling matching babydra-panel Fluent glassmorphism
+//! TopBar-specific CSS styling matching babydra-panel and babydra-core 100%
 
 pub const TOPBAR_CSS: &str = r#"
-.topbar-box {
-    background: transparent;
-    padding: 4px 8px 0px 8px;
-}
-
-/* ── Left Pill & App Menu ────────────────────────────────────────── */
-.left-pill {
-    background: rgba(28, 28, 30, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    padding: 3px 8px;
-}
-
-.panel-logo-btn {
-    background: transparent;
+/* ── Window & Topbar Container ───────────────────────────────────── */
+window.panel-window {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
     border: none;
-    padding: 2px 4px;
-    border-radius: 8px;
-    transition: background 150ms ease;
 }
 
-.panel-logo-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
+.panel-box,
+.topbar-box {
+    background-color: transparent;
+    background-image: none;
+    margin: 0;
+    padding: 0px 4px;
+    min-height: 36px;
+    border: none;
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* ── Universal Reset for Topbar Buttons ──────────────────────────── */
+.panel-box button,
+.topbar-box button {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    margin: 0;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+.panel-box button:hover,
+.panel-box button:active,
+.panel-box button:focus,
+.topbar-box button:hover,
+.topbar-box button:active,
+.topbar-box button:focus {
+    background-image: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+/* ── Left Pill (Logo & App Menu) ─────────────────────────────────── */
+.left-pill,
+.workspace-box {
+    margin-left: 4px;
+    margin-right: 4px;
+    background-color: rgb(14, 14, 18);
+    background-image: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 2px 8px;
+    min-height: 26px;
+    box-shadow: none;
+}
+
+button.panel-logo-btn {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: 0;
+    box-shadow: none;
+    min-height: 20px;
+    min-width: 20px;
+    color: #ffffff;
+    transition: background-color 150ms ease;
+}
+
+button.panel-logo-btn:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border: none;
+    box-shadow: none;
+}
+
+button.panel-logo-btn:active {
+    background-color: rgba(255, 255, 255, 0.18);
+    border: none;
+    box-shadow: none;
+}
+
+.capsule-separator {
+    font-size: 9px;
+    margin: 0 4px;
+    color: rgba(255, 255, 255, 0.14);
 }
 
 .app-title {
     font-weight: 650;
-    color: #FFFFFF;
+    color: #ffffff;
     font-size: 13px;
-    margin-right: 6px;
+    margin-right: 4px;
 }
 
-.func-btn {
-    background: transparent;
+button.app-title-btn,
+button.func-btn {
+    background-color: transparent;
+    background-image: none;
     border: none;
     border-radius: 6px;
-    padding: 2px 7px;
-    color: #D1D5DB;
+    padding: 2px 6px;
+    margin: 0;
+    box-shadow: none;
+    min-height: 20px;
+    color: rgba(255, 255, 255, 0.90);
     font-size: 12.5px;
-    font-weight: 450;
-    transition: background 120ms ease, color 120ms ease;
+    font-weight: 500;
+    transition: background-color 150ms ease, color 150ms ease;
 }
 
-.func-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #FFFFFF;
+button.app-title-btn:hover,
+button.func-btn:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border: none;
+    box-shadow: none;
+    color: #ffffff;
 }
 
-.func-btn:active {
-    background: rgba(255, 255, 255, 0.20);
+button.app-title-btn:active,
+button.func-btn:active {
+    background-color: rgba(255, 255, 255, 0.18);
+    border: none;
+    box-shadow: none;
 }
 
-.more-btn {
-    font-weight: 700;
-    letter-spacing: 1px;
-}
-
-/* ── Dynamic Island ──────────────────────────────────────────────── */
+/* ── Dynamic Island (Center Notch) ───────────────────────────────── */
 .island-wrapper {
-    background: transparent;
-}
-
-.island-bracket {
-    font-weight: 300;
-    color: rgba(255, 255, 255, 0.35);
-    font-size: 16px;
-    margin: 0 2px;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
 }
 
 .panel-notch {
-    background: rgba(20, 20, 24, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 14px;
-    padding: 3px 14px;
-    min-height: 28px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-    transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    background-color: transparent;
+    border: none;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    box-shadow: none;
+    transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.panel-notch:hover {
-    background: rgba(28, 28, 34, 0.94);
-    border-color: rgba(255, 255, 255, 0.22);
+.panel-notch.active-music {
+    border-radius: 9999px;
+    min-width: 0;
+    min-height: 26px;
+    padding: 0 10px;
+    margin-top: 0;
+    background-color: rgb(14, 14, 18);
+    opacity: 1.0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.island-title {
+.panel-notch.active-music:not(.popover-open):hover {
+    background-color: rgb(24, 24, 28);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.island-bracket {
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif;
+    color: rgba(255, 255, 255, 0.40);
+    padding: 0;
+    margin: 0;
+    min-width: 8px;
+    min-height: 16px;
+    transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.island-bracket.left {
+    margin-right: 2px;
+    margin-left: -2px;
+}
+
+.island-bracket.right {
+    margin-left: 2px;
+    margin-right: -2px;
+}
+
+.island-wrapper:hover .island-bracket,
+.panel-notch:hover .island-bracket {
+    color: #60a5fa;
+    text-shadow: none;
+}
+
+.notch-content {
+    background-color: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+.notch-player-text {
+    font-size: 12px;
     font-weight: 600;
-    color: #F9FAFB;
-    margin: 0 8px;
-    font-size: 12.5px;
+    color: #ffffff;
+    margin: 0 6px;
+}
+
+.notch-system-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: #60a5fa;
+    font-feature-settings: "tnum";
 }
 
 /* ── Right Section ───────────────────────────────────────────────── */
-.capsule-separator {
-    color: rgba(255, 255, 255, 0.18);
-    font-size: 14px;
-    margin: 0 2px;
-}
-
+/* Tray */
 .panel-tray-box {
-    background: rgba(28, 28, 30, 0.72);
+    margin-right: 4px;
+    background-color: rgb(14, 14, 18);
+    background-image: none;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
+    border-radius: 9999px;
     padding: 2px 6px;
+    min-height: 26px;
+    box-shadow: none;
 }
 
-.panel-tray-item-btn {
-    background: transparent;
+button.panel-tray-item-btn {
+    background-color: transparent;
+    background-image: none;
     border: none;
-    border-radius: 6px;
     padding: 2px 4px;
-    color: #E5E7EB;
-    transition: background 120ms ease;
+    margin: 0;
+    border-radius: 6px;
+    box-shadow: none;
+    min-height: 20px;
+    min-width: 20px;
+    transition: all 150ms ease;
+    color: #ffffff;
 }
 
-.panel-tray-item-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
+button.panel-tray-item-btn:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border: none;
+    box-shadow: none;
 }
 
+button.panel-tray-item-btn:active {
+    background-color: rgba(255, 255, 255, 0.18);
+    border: none;
+    box-shadow: none;
+}
+
+/* System Monitor */
 .sys-monitor-box {
-    background: rgba(28, 28, 30, 0.72);
+    background-color: rgb(14, 14, 18);
+    background-image: none;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    padding: 3px 10px;
+    border-radius: 9999px;
+    padding: 2px 10px;
+    min-height: 26px;
+    box-shadow: none;
+    transition: all 200ms ease;
+}
+
+.sys-monitor-box:hover {
+    background-color: rgb(24, 24, 28);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Unified Status Indicators Capsule (Status + Clock) */
+.status-indicators-box {
+    background-color: rgb(14, 14, 18);
+    background-image: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 2px 8px;
+    min-height: 26px;
+    box-shadow: none;
 }
 
 .status-text {
     font-size: 12px;
-    font-weight: 550;
-    color: #E5E7EB;
+    font-weight: 600;
+    text-shadow: none;
+    margin-left: 2px;
+    margin-right: 2px;
+    color: rgba(255, 255, 255, 0.90);
     font-feature-settings: "tnum";
-}
-
-.sys-monitor-popover > contents {
-    background-color: rgba(18, 18, 22, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 16px;
-    padding: 14px;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
-}
-
-.sys-chart {
-    background-color: rgba(0, 0, 0, 0.35);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.status-indicators-box {
-    background: rgba(28, 28, 30, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    padding: 2px 6px;
-}
-
-.panel-status-btn {
-    background: transparent;
-    border: none;
-    padding: 2px 6px;
-    border-radius: 8px;
-    transition: background 120ms ease;
-}
-
-.panel-status-btn:hover {
-    background: rgba(255, 255, 255, 0.10);
 }
 
 .status-icon {
+    text-shadow: none;
     margin: 0 4px;
+    color: rgba(255, 255, 255, 0.90);
 }
 
-.panel-clock-btn {
-    background: rgba(28, 28, 30, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    padding: 3px 10px;
-    transition: background 120ms ease;
+button.panel-status-btn {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    padding: 2px 6px;
+    margin: 0;
+    box-shadow: none;
+    min-height: 20px;
+    border-radius: 9999px;
+    color: #ffffff;
+    transition: all 150ms ease;
 }
 
-.panel-clock-btn:hover {
-    background: rgba(255, 255, 255, 0.14);
+button.panel-status-btn:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border: none;
+    box-shadow: none;
+}
+
+button.panel-status-btn:active {
+    background-color: rgba(255, 255, 255, 0.18);
+    border: none;
+    box-shadow: none;
 }
 
 .panel-clock {
-    font-size: 12.5px;
     font-weight: 600;
-    color: #FFFFFF;
-    letter-spacing: 0.3px;
+    font-size: 12px;
+    text-shadow: none;
+    color: #ffffff;
     font-feature-settings: "tnum";
 }
 
-.clock-bell-box {
-    margin-left: 2px;
+button.panel-clock-btn {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    padding: 2px 10px;
+    margin: 0;
+    box-shadow: none;
+    min-height: 20px;
+    border-radius: 9999px;
+    transition: all 150ms ease;
+    color: #ffffff;
+}
+
+button.panel-clock-btn:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border: none;
+    box-shadow: none;
+}
+
+button.panel-clock-btn:active {
+    background-color: rgba(255, 255, 255, 0.18);
+    border: none;
+    box-shadow: none;
 }
 
 .clock-bell-icon {
@@ -199,12 +360,115 @@ pub const TOPBAR_CSS: &str = r#"
 }
 
 .clock-bell-dot {
-    background-color: #ef4444;
+    background-color: #f43f5e;
+    background-image: none;
+    border: none;
+    box-shadow: none;
     border-radius: 9999px;
-    min-width: 6px;
+    min-width: 7px;
+    min-height: 7px;
+    margin-top: -2px;
+    margin-right: -2px;
+}
+
+.clock-bell-box {
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: 0;
+    transition: background-color 150ms ease;
+}
+
+.clock-bell-box:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Popovers & Cards ────────────────────────────────────────────── */
+popover {
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+}
+
+popover>contents {
+    background-color: rgb(14, 14, 18);
+    opacity: 1.0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.50);
+    padding: 10px 14px;
+}
+
+popover>arrow {
+    background: none;
+    border: none;
+}
+
+.status-popover-card {
+    min-width: 200px;
+}
+
+.status-popover-header {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.status-popover-sep {
+    opacity: 0.15;
+    margin-bottom: 6px;
+}
+
+.status-popover-key {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.60);
+}
+
+.status-popover-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.status-popover-val.speed-low {
+    color: #ef4444;
+    font-weight: 700;
+}
+
+.status-popover-val.speed-medium {
+    color: #f59e0b;
+    font-weight: 700;
+}
+
+.status-popover-val.speed-high {
+    color: #22c55e;
+    font-weight: 700;
+}
+
+popover.sys-monitor-popover>contents {
+    padding: 14px;
+}
+
+popover.sys-monitor-popover progressbar trough {
     min-height: 6px;
-    margin-top: 1px;
-    margin-right: 1px;
+    border-radius: 9999px;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+popover.sys-monitor-popover progressbar progress {
+    border-radius: 9999px;
+    background-color: #3b82f6;
+}
+
+popover.sys-monitor-popover .sys-chart {
+    border: none;
+    border-radius: 10px;
+    margin-top: 6px;
+    margin-bottom: 10px;
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
 .tile-title {
@@ -223,17 +487,5 @@ pub const TOPBAR_CSS: &str = r#"
     font-size: 11px;
     color: rgba(255, 255, 255, 0.60);
     font-feature-settings: "tnum";
-}
-
-.speed-high {
-    color: #10b981;
-}
-
-.speed-medium {
-    color: #3b82f6;
-}
-
-.speed-low {
-    color: rgba(255, 255, 255, 0.75);
 }
 "#;

@@ -14,8 +14,8 @@ impl Default for VerticalSeparator {
 impl VerticalSeparator {
     pub fn new() -> Self {
         let label = Label::builder()
-            .label("|")
-            .css_classes(["separator"])
+            .label("│")
+            .css_classes(["capsule-separator"])
             .build();
 
         Self { label }

@@ -3,36 +3,68 @@
 pub const UI_KIT_BASE_CSS: &str = r#"
 /* BabyDraDE UI Kit Reusable Stylesheet */
 
+* {
+    font-family: 'Quicksand', 'Segoe UI Variable Static Text', 'Segoe UI', 'Inter', system-ui, sans-serif;
+    -gtk-icon-style: symbolic;
+}
+
 /* Window transparent background */
 window {
     background: transparent;
+    background-color: transparent;
+}
+
+/* Global button reset to prevent Adwaita default borders/outlines/shadows from causing hover shifts */
+button {
+    font-family: 'Quicksand', 'Segoe UI Variable Static Text', 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    min-width: 0;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+button:hover,
+button:active,
+button:focus,
+button:checked {
+    background-image: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
 }
 
 /* =============================================================================
    Reusable Pill Container
    ============================================================================= */
 .pill-container {
-    background-color: rgba(24, 26, 32, 0.85);
+    background-color: rgb(14, 14, 18);
+    background-image: none;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 9999px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-    padding: 4px 12px;
+    box-shadow: none;
+    padding: 2px 8px;
+    min-height: 26px;
     color: #F3F4F6;
-    font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    font-size: 13px;
-    transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background-color 200ms ease, border-color 200ms ease;
 }
 
 .pill-container:hover {
-    border-color: rgba(255, 255, 255, 0.22);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
 }
 
 /* Vertical Separator */
-.separator {
-    color: rgba(255, 255, 255, 0.22);
-    margin: 0 6px;
+.separator,
+.capsule-separator {
+    color: rgba(255, 255, 255, 0.14);
+    margin: 0 4px;
     font-weight: 300;
+    font-size: 9px;
 }
 
 /* Reusable Circular Disc / Vinyl */
@@ -64,39 +96,52 @@ window {
 
 /* Interactive Fluent Button */
 .fluent-btn {
-    background: transparent;
+    background-color: transparent;
+    background-image: none;
     border: none;
     border-radius: 6px;
-    padding: 2px 7px;
+    padding: 2px 6px;
+    margin: 0;
+    min-height: 20px;
     color: #D1D5DB;
     font-size: 12.5px;
     font-weight: 450;
-    transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+    transition: background-color 120ms ease, color 120ms ease;
 }
 
 .fluent-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.10);
+    border: none;
+    box-shadow: none;
     color: #FFFFFF;
 }
 
 .fluent-btn:active {
-    background: rgba(255, 255, 255, 0.20);
-    transform: scale(0.98);
+    background-color: rgba(255, 255, 255, 0.18);
+    border: none;
+    box-shadow: none;
 }
 
 /* Arch Logo Button */
-.arch-btn {
-    background: transparent;
+.arch-btn,
+button.panel-logo-btn {
+    background-color: transparent;
+    background-image: none;
     border: none;
-    padding: 0 4px;
+    padding: 2px 4px;
+    margin: 0;
     border-radius: 6px;
-    color: #1793D1;
-    font-weight: 700;
-    transition: transform 150ms ease;
+    min-height: 20px;
+    min-width: 20px;
+    box-shadow: none;
+    transition: background-color 150ms ease;
 }
 
-.arch-btn:hover {
-    transform: scale(1.1);
+.arch-btn:hover,
+button.panel-logo-btn:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border: none;
+    box-shadow: none;
 }
 
 /* Dynamic Island Capsule */

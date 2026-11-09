@@ -13,7 +13,7 @@ pub struct LogoButton {
 impl LogoButton {
     pub fn new() -> Self {
         let button = Button::builder()
-            .css_classes(["panel-logo-btn", "arch-btn"])
+            .css_classes(["panel-logo-btn"])
             .tooltip_text("BabyDraDE System Menu")
             .valign(gtk4::Align::Center)
             .halign(gtk4::Align::Center)

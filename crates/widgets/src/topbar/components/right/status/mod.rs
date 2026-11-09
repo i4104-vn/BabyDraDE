@@ -22,8 +22,11 @@ pub fn create_status_icons() -> gtk4::Box {
         battery: &bat_widget,
     });
 
+    let clock_button = super::clock::create_clock_widget();
+
     status_box.append(&status_button);
     status_box.append(&separator);
+    status_box.append(&clock_button);
     status_box
 }
 

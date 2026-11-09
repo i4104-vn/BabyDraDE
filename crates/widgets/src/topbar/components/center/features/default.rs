@@ -2,7 +2,6 @@
 
 use gtk4::prelude::*;
 use gtk4::{Box, Label, Orientation};
-use ui_kit::CircularDisc;
 
 use super::IslandFeature;
 
@@ -20,8 +19,8 @@ impl DefaultFeature {
             .css_classes(["notch-content", "default-notch"])
             .build();
 
-        let disc = CircularDisc::new("♫");
-        container.append(disc.widget());
+        let icon = ui_kit::icons::get_icon("logo", 14);
+        container.append(&icon);
 
         let label = Label::builder()
             .label("BabyDraDE")
