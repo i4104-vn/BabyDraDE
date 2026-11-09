@@ -236,6 +236,32 @@ impl BabydraState {
 
         None
     }
+
+    pub(crate) fn update_active_window(&self, window: Option<&Window>) {
+        let info = if let Some(w) = window {
+            if let Some(toplevel) = w.toplevel() {
+                let (app_id, title) = smithay::wayland::compositor::with_states(toplevel.wl_surface(), |states| {
+                    states
+                        .data_map
+                        .get::<smithay::wayland::shell::xdg::XdgToplevelSurfaceData>()
+                        .map(|data| {
+                            let guard = data.lock().unwrap();
+                            (
+                                guard.app_id.clone().unwrap_or_default(),
+                                guard.title.clone().unwrap_or_default(),
+                            )
+                        })
+                })
+                .unwrap_or_default();
+                crate::system::window::ActiveWindowInfo { app_id, title }
+            } else {
+                crate::system::window::ActiveWindowInfo::default()
+            }
+        } else {
+            crate::system::window::ActiveWindowInfo::default()
+        };
+        crate::system::window::save_active_window(&info);
+    }
 }
 
 #[derive(Default)]

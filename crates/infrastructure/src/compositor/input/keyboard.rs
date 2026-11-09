@@ -81,6 +81,8 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
         if let Some(active_window) = state.space.elements().next_back() {
             info!("Super+Q pressed: Closing active window");
             active_window.toplevel().unwrap().send_close();
+            let next_top = state.space.elements().rev().nth(1).cloned();
+            state.update_active_window(next_top.as_ref());
         }
     }
 
@@ -100,6 +102,7 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
             state.space.elements().for_each(|window| {
                 window.toplevel().unwrap().send_pending_configure();
             });
+            state.update_active_window(Some(&next_window));
         }
     }
 }

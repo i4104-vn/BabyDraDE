@@ -6,8 +6,13 @@ pub mod network;
 pub mod resources;
 pub mod volume;
 pub mod vpn;
+pub mod window;
 
-pub use dbus_menu::{activate_dbus_menu_item, fetch_dbus_menu, DbusMenuItem};
+pub use dbus_menu::{activate_dbus_menu_item, fetch_dbus_menu, find_app_menu_service, DbusMenuItem};
+pub use window::{
+    close_window_by_app, get_active_window, get_app_display_name, minimize_active_window,
+    save_active_window, toggle_fullscreen_active_window, ActiveWindowInfo,
+};
 
 pub use hardware::{BacklightInfo, BacklightReader, BatteryInfo, BatteryReader, BatteryStatus, ThermalInfo, ThermalReader, ThermalZone};
 pub use host::{UptimeInfo, UptimeReader};

@@ -162,6 +162,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     state.space.elements().for_each(|window| {
                         window.toplevel().unwrap().send_pending_configure();
                     });
+                    state.update_active_window(Some(&window));
 
                     // Ensure pointer focus is updated to the raised window surface
                     let under = state.surface_under(state.pointer_location);
@@ -194,6 +195,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                         window.toplevel().unwrap().send_pending_configure();
                     });
                     keyboard.set_focus(state, Option::<WlSurface>::None, serial);
+                    state.update_active_window(None);
                 }
             }
         }

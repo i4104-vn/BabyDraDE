@@ -33,6 +33,23 @@ impl XdgShellHandler for BabydraState {
         self.space.elements().for_each(|w| {
             w.toplevel().unwrap().send_pending_configure();
         });
+        self.update_active_window(Some(&window));
+    }
+
+    fn title_changed(&mut self, surface: ToplevelSurface) {
+        if let Some(active_window) = self.space.elements().next_back() {
+            if active_window.toplevel().map(|t| t == &surface).unwrap_or(false) {
+                self.update_active_window(Some(active_window));
+            }
+        }
+    }
+
+    fn app_id_changed(&mut self, surface: ToplevelSurface) {
+        if let Some(active_window) = self.space.elements().next_back() {
+            if active_window.toplevel().map(|t| t == &surface).unwrap_or(false) {
+                self.update_active_window(Some(active_window));
+            }
+        }
     }
 
     fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {

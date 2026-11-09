@@ -83,6 +83,91 @@ pub fn activate_dbus_menu_item(service: &str, path: &str, item_id: i32) {
     });
 }
 
+/// Discovers the D-Bus service and object path exporting `com.canonical.dbusmenu` for an application
+pub fn find_app_menu_service(app_id: &str) -> Option<(String, String)> {
+    if app_id.trim().is_empty() {
+        return None;
+    }
+
+    let conn = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
+
+    const CANDIDATE_PATHS: &[&str] = &[
+        "/MenuBar",
+        "/MenuBar/1",
+        "/com/canonical/menu",
+        "/org/gtk/Application/menus",
+        "/com/canonical/AppMenu/topbar",
+        "/org/ayatana/NotificationItem/menu",
+    ];
+
+    let app_id_trimmed = app_id.trim().strip_suffix(".desktop").unwrap_or(app_id.trim());
+
+    // 1. Direct check: If app_id looks like a valid bus name (e.g. "org.gnome.TextEditor"), try it directly
+    if app_id_trimmed.contains('.') && !app_id_trimmed.starts_with(':') {
+        for path in CANDIDATE_PATHS {
+            if let Some(items) = fetch_dbus_menu(app_id_trimmed, path) {
+                if !items.is_empty() {
+                    return Some((app_id_trimmed.to_string(), path.to_string()));
+                }
+            }
+        }
+    }
+
+    // 2. Query org.freedesktop.DBus ListNames to find matching bus names
+    let reply = conn
+        .call_sync(
+            Some("org.freedesktop.DBus"),
+            "/org/freedesktop/DBus",
+            "org.freedesktop.DBus",
+            "ListNames",
+            None,
+            None,
+            gio::DBusCallFlags::NONE,
+            400,
+            gio::Cancellable::NONE,
+        )
+        .ok()?;
+
+    if reply.n_children() == 0 {
+        return None;
+    }
+
+    let names_var = reply.child_value(0);
+    let n = names_var.n_children();
+    let mut candidates: Vec<String> = Vec::new();
+    let app_id_clean = app_id_trimmed.to_lowercase();
+
+    for i in 0..n {
+        let val = names_var.child_value(i);
+        if let Some(name) = val.str() {
+            if name.starts_with(':') {
+                continue;
+            }
+            let name_lower = name.to_lowercase();
+            if name_lower == app_id_clean {
+                candidates.insert(0, name.to_string());
+            } else if name_lower.ends_with(&format!(".{}", app_id_clean)) {
+                candidates.push(name.to_string());
+            } else if name_lower.contains(&app_id_clean) {
+                candidates.push(name.to_string());
+            }
+        }
+    }
+
+    // Test discovered candidate services across standard paths
+    for cand in candidates {
+        for path in CANDIDATE_PATHS {
+            if let Some(items) = fetch_dbus_menu(&cand, path) {
+                if !items.is_empty() {
+                    return Some((cand, path.to_string()));
+                }
+            }
+        }
+    }
+
+    None
+}
+
 fn parse_layout_variant(var: &Variant) -> Option<DbusMenuItem> {
     let actual_var = if var.is_container() && var.type_().as_str() == "v" {
         var.child_value(0)
