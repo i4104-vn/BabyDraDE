@@ -1,7 +1,6 @@
 //! Desktop Shell Window (Wayland Layer::Background)
 
 pub mod grid;
-pub mod style;
 pub mod wallpaper;
 
 use gtk4::prelude::*;
@@ -56,7 +55,7 @@ pub fn run() {
 
     app.connect_startup(|_| {
         infrastructure::config::ensure_babydra_dirs();
-        style::load_desktop_style();
+        ui_kit::init_theme();
     });
 
     app.connect_activate(|app| {

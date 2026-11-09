@@ -1,11 +1,9 @@
 pub mod components;
-pub mod style;
 
 use components::{create_right_section, DynamicIsland, LeftPill};
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, CenterBox};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
-use style::load_topbar_style;
 
 /// Launches the BabyDraDE TopBar GTK4 Layer-Shell widget
 pub fn run() {
@@ -21,7 +19,7 @@ pub fn run() {
 
     app.connect_startup(|_| {
         infrastructure::config::ensure_babydra_dirs();
-        load_topbar_style();
+        ui_kit::init_theme();
     });
 
     app.connect_activate(|app| {

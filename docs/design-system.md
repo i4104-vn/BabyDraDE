@@ -265,3 +265,4 @@ micro  : 4px - 6px   → Nút bấm thu nhỏ, app icon taskbar, thẻ tag
   * `~/.babydra/configs/desktop.json`: Tọa độ icon desktop debounced.
   * `~/.babydra/wallpaper/`: Thư mục chứa hình nền người dùng và vector `default.svg`.
   * `~/.babydra/logs/`: Thư mục log ứng dụng.
+

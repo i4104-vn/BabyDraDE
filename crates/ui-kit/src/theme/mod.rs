@@ -17,3 +17,4 @@ pub use shared_css::SHARED_CSS;
 pub fn load_ui_kit_styles() {
     init_theme();
 }
+

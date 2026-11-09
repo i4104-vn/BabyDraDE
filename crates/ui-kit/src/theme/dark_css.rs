@@ -278,3 +278,4 @@ scrollbar slider:hover:active {
     background-color: rgba(255, 255, 255, 0.35);
 }
 "#;
+
