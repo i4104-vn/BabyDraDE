@@ -1,27 +1,7 @@
 //! Desktop shell data and file manager backend
 
+pub use crate::config::{load_desktop_config, save_desktop_config, DesktopConfig};
 use std::path::PathBuf;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct DesktopConfig {
-    pub icon_size: i32,
-    pub grid_spacing: i32,
-    pub sort_by: String,
-}
-
-impl Default for DesktopConfig {
-    fn default() -> Self {
-        Self {
-            icon_size: 48,
-            grid_spacing: 16,
-            sort_by: "name".to_string(),
-        }
-    }
-}
-
-pub fn load_desktop_config() -> DesktopConfig {
-    DesktopConfig::default()
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DesktopEntry {
@@ -73,4 +53,3 @@ pub fn fetch_desktop_entries() -> Vec<DesktopEntry> {
 
     entries
 }
-

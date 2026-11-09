@@ -20,6 +20,7 @@ pub fn run() {
         .build();
 
     app.connect_startup(|_| {
+        infrastructure::config::ensure_babydra_dirs();
         load_topbar_style();
     });
 

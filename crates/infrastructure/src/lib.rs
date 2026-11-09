@@ -1,7 +1,11 @@
 mod backends;
 mod compositor;
+pub mod config;
 pub mod desktop;
 pub mod rendering;
+pub mod settings {
+    pub use crate::config::*;
+}
 pub mod system;
 pub mod theme;
 pub mod tray;
@@ -35,6 +39,7 @@ fn ensure_runtime_dir() {
 
 pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
     ensure_runtime_dir();
+    config::ensure_babydra_dirs();
 
     if std::env::var_os("WAYLAND_DISPLAY").is_none()
         && std::env::var_os("WAYLAND_SOCKET").is_none()

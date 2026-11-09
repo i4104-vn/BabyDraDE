@@ -39,12 +39,22 @@ pub fn create_desktop_grid(parent_window: &gtk4::ApplicationWindow) -> (Fixed, R
 
         let max_rows = ((win_h as f64 - pad_y - 20.0) / icon_h).max(1.0) as usize;
 
-        for (idx, entry) in entries.iter().enumerate() {
-            let col = idx / max_rows;
-            let row = idx % max_rows;
+        let names: Vec<String> = entries.iter().map(|e| e.name.clone()).collect();
+        infrastructure::config::desktop_layout::cleanup_stale(&names);
 
-            let x = pad_x + (col as f64) * (icon_w + 12.0);
-            let y = pad_y + (row as f64) * icon_h;
+        for (idx, entry) in entries.iter().enumerate() {
+            let (x, y) = if let Some(pos) =
+                infrastructure::config::desktop_layout::get_position(&entry.name)
+            {
+                (pos.0 as f64, pos.1 as f64)
+            } else {
+                let col = idx / max_rows;
+                let row = idx % max_rows;
+                (
+                    pad_x + (col as f64) * (icon_w + 12.0),
+                    pad_y + (row as f64) * icon_h,
+                )
+            };
 
             let holder_icon = holder_c.clone();
             let rebuild_self: Rc<dyn Fn()> = Rc::new(move || {
@@ -123,6 +133,8 @@ fn show_desktop_context_menu(
         })
         .separator()
         .item("Sort By Name", "view-grid", move || {
+            infrastructure::config::desktop_layout::clear();
+            infrastructure::config::desktop_layout::flush_if_dirty();
             rebuild_sort();
         })
         .item("Change Wallpaper...", "display", move || {

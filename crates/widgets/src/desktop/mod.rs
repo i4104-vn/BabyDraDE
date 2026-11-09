@@ -55,6 +55,7 @@ pub fn run() {
         .build();
 
     app.connect_startup(|_| {
+        infrastructure::config::ensure_babydra_dirs();
         style::load_desktop_style();
     });
 
