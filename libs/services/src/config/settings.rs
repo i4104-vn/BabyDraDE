@@ -1,6 +1,6 @@
 //! Configuration load/save logic for `~/.babydra/babydra.conf` matching babydra-core.
 
-use super::models::{BabyDraConfig, BlurConfig, DesktopConfig};
+use super::models::{BabyDraConfig, BlurConfig, DesktopConfig, TouchpadConfig};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
 use std::time::SystemTime;
@@ -176,5 +176,30 @@ pub fn load_blur_config() -> BlurConfig {
 pub fn save_blur_config(blur: &BlurConfig) {
     let mut config = load_babydra_config();
     config.blur = blur.clone();
+    save_babydra_config(&config);
+}
+
+/// Loads the touchpad / trackpad configuration from `~/.babydra/babydra.conf`.
+///
+/// Reads the `[touchpad]` section from the cached or on-disk configuration,
+/// falling back to defaults if not yet defined.
+///
+/// # Returns
+///
+/// Returns the current [`TouchpadConfig`] settings.
+pub fn load_touchpad_config() -> TouchpadConfig {
+    load_babydra_config().touchpad
+}
+
+/// Persists the touchpad / trackpad configuration into `~/.babydra/babydra.conf`.
+///
+/// Updates the `[touchpad]` section and flushes changes to disk.
+///
+/// # Arguments
+///
+/// * `touchpad` - Reference to the updated [`TouchpadConfig`] to persist.
+pub fn save_touchpad_config(touchpad: &TouchpadConfig) {
+    let mut config = load_babydra_config();
+    config.touchpad = touchpad.clone();
     save_babydra_config(&config);
 }
