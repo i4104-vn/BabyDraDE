@@ -5,7 +5,7 @@ use smithay::{
 };
 use tracing::{error, info};
 
-use super::{config, config::BlurParams, pipeline::BlurPipeline};
+use super::{config, config::BlurParams, gl::BlurPipeline};
 
 pub struct BlurEngine {
     pub params: BlurParams,

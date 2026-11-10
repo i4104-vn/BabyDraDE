@@ -66,13 +66,9 @@ impl Element for BlurRenderElement {
     fn damage_since(
         &self,
         scale: Scale<f64>,
-        commit: Option<CommitCounter>,
+        _commit: Option<CommitCounter>,
     ) -> DamageSet<i32, Physical> {
-        if commit != Some(self.current_commit()) {
-            DamageSet::from_slice(&[Rectangle::from_size(self.geometry(scale).size)])
-        } else {
-            DamageSet::default()
-        }
+        DamageSet::from_slice(&[Rectangle::from_size(self.geometry(scale).size)])
     }
 
     fn opaque_regions(&self, _scale: Scale<f64>) -> OpaqueRegions<i32, Physical> {
