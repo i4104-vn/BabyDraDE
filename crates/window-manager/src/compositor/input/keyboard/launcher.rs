@@ -1,6 +1,9 @@
+//! Terminal application launcher and executable resolution.
+
 use std::{ffi::OsString, process::Command};
 use tracing::{info, warn};
 
+/// List of preferred terminal emulator binaries to search for in system PATH.
 const TERMINAL_CANDIDATES: &[&str] = &[
     "foot",
     "alacritty",
@@ -14,6 +17,21 @@ const TERMINAL_CANDIDATES: &[&str] = &[
     "st",
 ];
 
+/// Resolves the terminal emulator executable to launch.
+///
+/// Priority order:
+/// 1. Explicit application name passed via CLI argument.
+/// 2. `BABYDRADE_TEST_APP` environment variable.
+/// 3. First existing candidate from [`TERMINAL_CANDIDATES`] located in the current `PATH`.
+/// 4. Fallback to `"foot"`.
+///
+/// # Arguments
+///
+/// * `explicit` - Optional explicitly specified binary name or path.
+///
+/// # Returns
+///
+/// Returns an [`OsString`] with the binary name or path to execute.
 pub fn resolve_test_app(explicit: Option<OsString>) -> OsString {
     if let Some(app) = explicit {
         return app;
@@ -35,6 +53,11 @@ pub fn resolve_test_app(explicit: Option<OsString>) -> OsString {
     OsString::from("foot")
 }
 
+/// Spawns a new terminal emulator window as a child process with Wayland environment variables set.
+///
+/// # Arguments
+///
+/// * `socket_name` - The active Wayland socket name (e.g. `"wayland-0"`) used to set `WAYLAND_DISPLAY`.
 pub fn spawn_new_terminal(socket_name: &std::ffi::OsStr) {
     let term = resolve_test_app(None);
     info!(

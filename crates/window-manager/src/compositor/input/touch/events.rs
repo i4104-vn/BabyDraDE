@@ -1,15 +1,27 @@
+//! Multi-touch input event handlers: touch down, motion, up, cancel, and frame.
+
 use smithay::{
     backend::input::{
         InputBackend, TouchCancelEvent, TouchDownEvent, TouchFrameEvent, TouchMotionEvent,
         TouchUpEvent,
     },
     input::touch::{DownEvent, MotionEvent, UpEvent},
-    utils::{Point, SERIAL_COUNTER},
+    utils::SERIAL_COUNTER,
 };
 
-use super::super::state::BabydraState;
-use super::transform_absolute_position;
+use crate::compositor::input::common::transform_absolute_position;
+use crate::compositor::state::BabydraState;
+use super::drag::handle_touch_drag;
 
+/// Handles a touchscreen contact press (touch down).
+///
+/// Hides the software cursor during direct finger manipulation, raises and focuses
+/// the touched window, tracks the touch slot, and sends `wl_touch.down` to clients.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The touch down event providing coordinates, slot index, and timestamp.
 pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
     state: &mut BabydraState,
     event: T,
@@ -61,6 +73,14 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
     }
 }
 
+/// Handles finger movement across the touchscreen surface.
+///
+/// Drives touch-based window dragging if active, or delivers motion frames to the client.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The touch motion event providing updated coordinates and slot index.
 pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
     state: &mut BabydraState,
     event: T,
@@ -72,17 +92,8 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
     state.pointer_location = position;
     state.cursor_visible = false;
 
-    // Handle touch-drag window movement if an active move request was started
-    if let Some(ref mut move_state) = state.move_state {
-        let move_delta = position - move_state.initial_pointer_location;
-        let dist_sq = move_delta.x * move_delta.x + move_delta.y * move_delta.y;
-        if move_state.has_dragged || dist_sq >= 16.0 {
-            move_state.has_dragged = true;
-            let new_loc = move_state.initial_window_location
-                + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
-            state.space.map_element(move_state.window.clone(), new_loc, false);
-            return;
-        }
+    if handle_touch_drag(state, position) {
+        return;
     }
 
     let under = state.surface_under(position);
@@ -100,6 +111,14 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
     }
 }
 
+/// Handles lifting of a finger from the touchscreen surface (touch up).
+///
+/// Cleans up tracked touch slots and move state, and sends `wl_touch.up` to the client.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The touch up event providing slot index and timestamp.
 pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
     state: &mut BabydraState,
     event: T,
@@ -123,6 +142,14 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
     }
 }
 
+/// Handles touchscreen contact cancellation (e.g. palm detection or gesture takeover).
+///
+/// Cancels active touch points and resets tracking state.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The touch cancel event providing slot index.
 pub(crate) fn handle_touch_cancel<B: InputBackend, T: TouchCancelEvent<B>>(
     state: &mut BabydraState,
     event: T,
@@ -138,6 +165,12 @@ pub(crate) fn handle_touch_cancel<B: InputBackend, T: TouchCancelEvent<B>>(
     }
 }
 
+/// Flushes and completes a group of simultaneous multi-touch events.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `_event` - The touch frame event marking end of current contact batch.
 pub(crate) fn handle_touch_frame<B: InputBackend, T: TouchFrameEvent<B>>(
     state: &mut BabydraState,
     _event: T,
@@ -175,3 +208,4 @@ mod tests {
         assert_eq!(oriented_tl.y, 0.0);
     }
 }
+

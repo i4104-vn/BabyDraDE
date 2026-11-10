@@ -1,122 +1,26 @@
+//! Pointer button press/release handling and window focus activation.
+
 use smithay::{
-    backend::input::{
-        AbsolutePositionEvent, ButtonState, InputBackend, PointerButtonEvent, PointerMotionEvent,
-    },
+    backend::input::{ButtonState, InputBackend, PointerButtonEvent},
     input::pointer::{ButtonEvent, MotionEvent},
     reexports::wayland_server::protocol::wl_surface::WlSurface,
-    utils::{Point, SERIAL_COUNTER},
+    utils::SERIAL_COUNTER,
 };
 
-use super::super::state::{BabydraState, MoveState};
+use crate::compositor::state::{BabydraState, MoveState};
 
-fn handle_window_drag(
-    state: &mut BabydraState,
-    position: Point<f64, smithay::utils::Logical>,
-    time: u32,
-) -> bool {
-    let pointer = state.seat.get_pointer().unwrap();
-    if let Some(ref mut move_state) = state.move_state {
-        if !state.pointer_pressed_buttons.contains(&move_state.button)
-            && state.pointer_pressed_buttons.is_empty()
-        {
-            state.move_state = None;
-            let under = state.surface_under(position);
-            pointer.motion(
-                state,
-                under,
-                &MotionEvent {
-                    location: position,
-                    serial: SERIAL_COUNTER.next_serial(),
-                    time,
-                },
-            );
-            pointer.frame(state);
-            return true;
-        }
-
-        let move_delta = position - move_state.initial_pointer_location;
-        let dist_sq = move_delta.x * move_delta.x + move_delta.y * move_delta.y;
-
-        // Require at least a 4-pixel movement threshold before window dragging starts
-        if !move_state.has_dragged && dist_sq < 16.0 {
-            return true;
-        }
-        move_state.has_dragged = true;
-
-        let new_loc = move_state.initial_window_location
-            + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
-        state.space.map_element(move_state.window.clone(), new_loc, false);
-        return true;
-    }
-    false
-}
-
-pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
-    state: &mut BabydraState,
-    event: P,
-) {
-    state.cursor_visible = true;
-    let pointer = state.seat.get_pointer().unwrap();
-    let delta = event.delta();
-    let mut position = state.pointer_location + delta;
-
-    if let Some(output) = state.space.outputs().next() {
-        if let Some(geo) = state.space.output_geometry(output) {
-            let max_x = (geo.loc.x + geo.size.w) as f64;
-            let max_y = (geo.loc.y + geo.size.h) as f64;
-            position.x = position.x.clamp(geo.loc.x as f64, max_x);
-            position.y = position.y.clamp(geo.loc.y as f64, max_y);
-        }
-    }
-
-    state.pointer_location = position;
-
-    if handle_window_drag(state, position, event.time_msec()) {
-        return;
-    }
-
-    let under = state.surface_under(position);
-    pointer.motion(
-        state,
-        under,
-        &MotionEvent {
-            location: position,
-            serial: SERIAL_COUNTER.next_serial(),
-            time: event.time_msec(),
-        },
-    );
-    pointer.frame(state);
-}
-
-pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositionEvent<B>>(
-    state: &mut BabydraState,
-    event: P,
-) {
-    state.cursor_visible = true;
-    let Some(position) = super::transform_absolute_position(state, &event, false) else {
-        return;
-    };
-    let pointer = state.seat.get_pointer().unwrap();
-
-    state.pointer_location = position;
-
-    if handle_window_drag(state, position, event.time_msec()) {
-        return;
-    }
-
-    let under = state.surface_under(position);
-    pointer.motion(
-        state,
-        under,
-        &MotionEvent {
-            location: position,
-            serial: SERIAL_COUNTER.next_serial(),
-            time: event.time_msec(),
-        },
-    );
-    pointer.frame(state);
-}
-
+/// Handles pointer button clicks, focus switching, window raising, and Super+Drag initiation.
+///
+/// When a mouse button is pressed:
+/// - Raises the clicked window and assigns keyboard focus.
+/// - If the Super (Logo/Win) key is held down, begins interactive window dragging.
+/// - Preserves application focus when clicking desktop panels or overlays.
+/// - Dispatches the button event and frame to Wayland client surfaces.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The pointer button event containing button code, press/release state, and timestamp.
 pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
     state: &mut BabydraState,
     event: P,
@@ -229,3 +133,4 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
     );
     pointer.frame(state);
 }
+
