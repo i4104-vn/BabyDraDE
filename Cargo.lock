@@ -2891,8 +2891,6 @@ dependencies = [
  "cairo-rs",
  "glow",
  "libc",
- "serde",
- "serde_json",
  "services",
  "smithay",
  "smithay-drm-extras",

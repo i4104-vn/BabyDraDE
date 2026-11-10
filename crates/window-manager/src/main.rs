@@ -185,9 +185,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                     println!();
                     println!("Environment variables:");
                     println!("    BABYDRADE_BLUR_APPS    Comma-separated list of app IDs to blur");
+                    println!("    BABYDRADE_BLUR_ENABLED Set to 0/false to disable blur");
                     println!("    BABYDRADE_BLUR_ALL     Set to 1 or true to blur all windows");
                     println!("    BABYDRADE_BLUR_RADIUS  Blur radius (default 18.0)");
                     println!("    BABYDRADE_BLUR_OPACITY Window opacity (default 0.68)");
+                    println!("    Persistent config      ~/.babydra/babydra.conf ([blur] section)");
                     return Ok(());
                 }
                 Some("--app") => {
@@ -204,9 +206,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                     }
                 }
                 Some("--blur-all") => {
+                    std::env::set_var("BABYDRADE_BLUR_ENABLED", "1");
                     std::env::set_var("BABYDRADE_BLUR_ALL", "1");
                 }
                 Some("--no-blur") => {
+                    std::env::set_var("BABYDRADE_BLUR_ENABLED", "0");
                     std::env::set_var("BABYDRADE_BLUR_ALL", "0");
                     std::env::set_var("BABYDRADE_BLUR_APPS", "");
                 }

@@ -3,7 +3,7 @@ use gtk4::gdk::prelude::GdkCairoContextExt;
 use gtk4::gdk_pixbuf::Pixbuf;
 use gtk4::gio::MemoryInputStream;
 use gtk4::glib;
-use services::wallpaper::get_default_wallpaper_svg;
+use services::wallpaper::get_default_wallpaper_bytes;
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
@@ -85,18 +85,12 @@ fn load_wallpaper_pixbuf(path: Option<&Path>, target_w: i32, target_h: i32) -> O
         }
     }
 
-    // 2. Fallback to embedded default SVG wallpaper
-    let svg_content = get_default_wallpaper_svg();
-    let bytes = glib::Bytes::from(svg_content.as_bytes());
+    // 2. Fallback to embedded default wallpaper (wallpaper.jpeg)
+    let wallpaper_bytes = get_default_wallpaper_bytes();
+    let bytes = glib::Bytes::from(wallpaper_bytes);
     let stream = MemoryInputStream::from_bytes(&bytes);
-    if let Ok(pb) = Pixbuf::from_stream_at_scale(
-        &stream,
-        target_w,
-        target_h,
-        false,
-        gtk4::gio::Cancellable::NONE,
-    ) {
-        return Some(pb);
+    if let Ok(pb) = Pixbuf::from_stream(&stream, gtk4::gio::Cancellable::NONE) {
+        return scale_aspect_fill(&pb, target_w, target_h);
     }
 
     None

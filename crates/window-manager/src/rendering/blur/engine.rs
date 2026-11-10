@@ -5,7 +5,7 @@ use smithay::{
 };
 use tracing::{error, info};
 
-use super::{config::BlurParams, pipeline::BlurPipeline};
+use super::{config, config::BlurParams, pipeline::BlurPipeline};
 
 pub struct BlurEngine {
     pub params: BlurParams,
@@ -29,7 +29,7 @@ impl Default for BlurEngine {
 
 impl BlurEngine {
     pub fn new() -> Self {
-        let params = BlurParams::load();
+        let params = config::load();
         Self {
             params,
             pipeline: None,
@@ -130,7 +130,7 @@ impl BlurEngine {
         {
             info!("BabyDraDE BlurEngine: adding app rule '{}'", trimmed);
             self.params.app_rules.push(trimmed.to_string());
-            let _ = self.params.save();
+            config::save(&self.params);
         }
     }
 
@@ -145,7 +145,7 @@ impl BlurEngine {
         {
             info!("BabyDraDE BlurEngine: removing app rule '{}'", trimmed);
             self.params.app_rules.remove(pos);
-            let _ = self.params.save();
+            config::save(&self.params);
         }
     }
 
@@ -164,7 +164,7 @@ impl BlurEngine {
     /// Toggle blur on all windows globally
     pub fn set_blur_all(&mut self, blur_all: bool) {
         self.params.blur_all = blur_all;
-        let _ = self.params.save();
+        config::save(&self.params);
         info!("BabyDraDE BlurEngine: blur_all set to {}", blur_all);
     }
 

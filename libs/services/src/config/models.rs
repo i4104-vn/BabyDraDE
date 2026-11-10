@@ -185,6 +185,91 @@ fn default_clipboard_key() -> String {
     "v".to_string()
 }
 
+fn default_blur_radius() -> f32 {
+    18.0
+}
+fn default_blur_passes() -> usize {
+    3
+}
+fn default_blur_corner_radius() -> f32 {
+    14.0
+}
+fn default_blur_window_opacity() -> f32 {
+    0.68
+}
+fn default_blur_tint() -> [f32; 4] {
+    [0.10, 0.12, 0.16, 0.18]
+}
+fn default_blur_noise() -> f32 {
+    0.012
+}
+fn default_blur_brightness() -> f32 {
+    1.0
+}
+fn default_blur_contrast() -> f32 {
+    1.0
+}
+fn default_blur_app_rules() -> Vec<String> {
+    vec![
+        "foot".to_string(),
+        "alacritty".to_string(),
+        "kitty".to_string(),
+        "wezterm".to_string(),
+        "org.gnome.Terminal".to_string(),
+        "terminal".to_string(),
+        "babydra-panel".to_string(),
+        "babydra-topbar".to_string(),
+        "code".to_string(),
+        "nautilus".to_string(),
+        "thunar".to_string(),
+    ]
+}
+
+/// Shared compositor blur configuration persisted in `~/.babydra/babydra.conf`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BlurConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub blur_all: bool,
+    #[serde(default = "default_blur_radius")]
+    pub radius: f32,
+    #[serde(default = "default_blur_passes")]
+    pub passes: usize,
+    #[serde(default = "default_blur_corner_radius")]
+    pub corner_radius: f32,
+    #[serde(default = "default_blur_window_opacity")]
+    pub window_opacity: f32,
+    #[serde(default = "default_blur_tint")]
+    pub tint: [f32; 4],
+    #[serde(default = "default_blur_noise")]
+    pub noise: f32,
+    #[serde(default = "default_blur_brightness")]
+    pub brightness: f32,
+    #[serde(default = "default_blur_contrast")]
+    pub contrast: f32,
+    #[serde(default = "default_blur_app_rules")]
+    pub app_rules: Vec<String>,
+}
+
+impl Default for BlurConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            blur_all: false,
+            radius: default_blur_radius(),
+            passes: default_blur_passes(),
+            corner_radius: default_blur_corner_radius(),
+            window_opacity: default_blur_window_opacity(),
+            tint: default_blur_tint(),
+            noise: default_blur_noise(),
+            brightness: default_blur_brightness(),
+            contrast: default_blur_contrast(),
+            app_rules: default_blur_app_rules(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClipboardConfig {
     #[serde(default = "default_true")]
@@ -226,5 +311,6 @@ pub struct BabyDraConfig {
     pub desktop: DesktopConfig,
     #[serde(default)]
     pub clipboard: ClipboardConfig,
+    #[serde(default)]
+    pub blur: BlurConfig,
 }
-

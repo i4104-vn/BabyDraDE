@@ -1,6 +1,6 @@
 //! Configuration load/save logic for `~/.babydra/babydra.conf` matching babydra-core.
 
-use super::models::{BabyDraConfig, DesktopConfig};
+use super::models::{BabyDraConfig, BlurConfig, DesktopConfig};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
 use std::time::SystemTime;
@@ -57,9 +57,9 @@ pub fn ensure_babydra_dirs() {
     }
 
     // Write default wallpaper if missing
-    let default_wp = wallpaper_dir.join("default.svg");
+    let default_wp = wallpaper_dir.join("wallpaper.jpeg");
     if !default_wp.exists() {
-        let _ = std::fs::write(&default_wp, crate::wallpaper::DEFAULT_WALLPAPER_SVG);
+        let _ = std::fs::write(&default_wp, crate::wallpaper::DEFAULT_WALLPAPER_BYTES);
     }
 
     // Initialize babydra.conf if missing
@@ -97,7 +97,7 @@ fn load_from_disk() -> BabyDraConfig {
     let mut config = BabyDraConfig::default();
 
     // Default wallpaper if present
-    let default_wp = get_wallpaper_dir().join("default.svg");
+    let default_wp = get_wallpaper_dir().join("wallpaper.jpeg");
     if default_wp.exists() {
         config.wallpaper.current = default_wp.to_string_lossy().to_string();
     }
@@ -167,3 +167,14 @@ pub fn save_desktop_config(desktop: &DesktopConfig) {
     save_babydra_config(&config);
 }
 
+/// Loads the shared compositor blur configuration.
+pub fn load_blur_config() -> BlurConfig {
+    load_babydra_config().blur
+}
+
+/// Persists the compositor blur configuration in `babydra.conf`.
+pub fn save_blur_config(blur: &BlurConfig) {
+    let mut config = load_babydra_config();
+    config.blur = blur.clone();
+    save_babydra_config(&config);
+}
