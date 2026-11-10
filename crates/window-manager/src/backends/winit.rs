@@ -8,7 +8,7 @@ use smithay::{
     },
     output::{Mode, Output, PhysicalProperties, Subpixel},
     reexports::calloop::EventLoop,
-    utils::{Scale, Transform},
+    utils::{Rectangle, Scale, Transform},
 };
 
 use crate::{
@@ -88,6 +88,7 @@ pub(crate) fn init(
                 WinitEvent::Input(event) => state.process_input_event(event),
                 WinitEvent::Redraw => {
                     let size = backend.window_size();
+                    let damage = Rectangle::from_size(size);
 
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();
                     let scale = Scale::from(1.0);
@@ -146,24 +147,22 @@ pub(crate) fn init(
                         blur_engine,
                     ));
 
-                    let render_damage = {
-                        let age = backend.buffer_age().unwrap_or(0);
+                    {
                         let (renderer, mut framebuffer) =
                             backend.bind().expect("failed to bind Winit framebuffer");
-                        let render_result = damage_tracker
+                        damage_tracker
                             .render_output(
                                 renderer,
                                 &mut framebuffer,
-                                age,
+                                0,
                                 &render_elements,
                                 theme.background_color,
                             )
                             .expect("failed to render desktop frame");
-                        render_result.damage.cloned()
-                    };
+                    }
 
                     backend
-                        .submit(render_damage.as_deref())
+                        .submit(Some(&[damage]))
                         .expect("failed to submit Winit frame");
                     state.space.elements().for_each(|window| {
                         window.send_frame(
