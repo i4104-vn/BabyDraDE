@@ -198,7 +198,16 @@ pub(crate) fn configure_touchpad(
 
         // 7. Natural scrolling
         if device.config_scroll_has_natural_scroll() {
-            let _ = device.config_scroll_set_natural_scroll_enabled(config.natural_scroll);
+            match device.config_scroll_set_natural_scroll_enabled(config.natural_scroll) {
+                Ok(()) => info!(
+                    "Touchpad '{}': natural scroll set to {}",
+                    name, config.natural_scroll
+                ),
+                Err(err) => warn!(
+                    "Failed to set natural scroll on touchpad '{}': {:?}",
+                    name, err
+                ),
+            }
         }
 
         // 8. Middle click emulation

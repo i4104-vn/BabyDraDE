@@ -33,6 +33,7 @@ impl BabydraState {
         match event {
             InputEvent::DeviceAdded { mut device } => {
                 touchpad::handle_device_added(&mut device);
+                self.reload_input_config();
             }
             InputEvent::DeviceRemoved { device } => {
                 touchpad::handle_device_removed(&device);

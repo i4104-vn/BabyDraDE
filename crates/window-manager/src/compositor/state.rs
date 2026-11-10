@@ -136,6 +136,12 @@ pub(crate) struct BabydraState {
     pub(crate) windows: Vec<Window>,
     /// Accumulated per-slot data for multi-touch gesture detection on touchscreens.
     pub(crate) touch_gesture: TouchGestureBuffer,
+
+    /// Cached touchpad configuration loaded from `~/.babydra/babydra.conf`.
+    /// Updated when a device is added/configured; avoids per-event disk reads.
+    pub(crate) touchpad_natural_scroll: bool,
+    /// Cached mouse/pointer configuration natural scroll setting.
+    pub(crate) mouse_natural_scroll: bool,
 }
 
 impl BabydraState {
@@ -187,7 +193,19 @@ impl BabydraState {
             touch_slots: std::collections::HashSet::new(),
             windows: Vec::new(),
             touch_gesture: TouchGestureBuffer::default(),
+            touchpad_natural_scroll: services::config::load_touchpad_config().natural_scroll,
+            mouse_natural_scroll: services::config::load_mouse_config().natural_scroll,
         }
+    }
+
+    /// Reloads input device configuration from `~/.babydra/babydra.conf`.
+    ///
+    /// Flushes the shared configuration cache and refreshes cached touchpad
+    /// and mouse settings including natural scroll toggles.
+    pub(crate) fn reload_input_config(&mut self) {
+        services::config::invalidate_cache();
+        self.touchpad_natural_scroll = services::config::load_touchpad_config().natural_scroll;
+        self.mouse_natural_scroll = services::config::load_mouse_config().natural_scroll;
     }
 
     fn init_wayland_listener(
