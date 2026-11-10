@@ -75,6 +75,12 @@ impl ContextMenu {
         self
     }
 
+    /// Sets the side on which this context menu opens relative to its parent.
+    pub fn with_position(self, position: PositionType) -> Self {
+        self.popover.set_position(position);
+        self
+    }
+
     /// Appends a standard clickable item.
     pub fn item(self, label: &str, icon: &str, on_click: impl Fn() + 'static) -> Self {
         self.append_item(create_menu_item(label, icon), on_click)
@@ -336,4 +342,3 @@ impl ContextMenu {
         fb
     }
 }
-

@@ -10,7 +10,7 @@ pub mod menu;
 use dbus::{clear_menubar, load_and_render_dbus_menu, trigger_dbus_menu_discovery};
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{Box, Button, Label, Orientation};
+use gtk4::{Box, Button, GestureClick, Label, Orientation};
 use menu::show_window_action_menu;
 use services::system::{get_active_window, get_app_display_name, ActiveWindowInfo};
 use std::cell::RefCell;
@@ -71,10 +71,13 @@ impl AppMenu {
         // 3. Dynamic Application Title Context Menu (Real Window Operations)
         let app_info_click = current_app_info.clone();
         let title_btn_ref = app_title_btn.clone();
-        app_title_btn.connect_clicked(move |_| {
+        let title_context_click = GestureClick::new();
+        title_context_click.set_button(3);
+        title_context_click.connect_pressed(move |_, _, _, _| {
             let info = app_info_click.borrow().clone();
             show_window_action_menu(&title_btn_ref, &info);
         });
+        app_title_btn.add_controller(title_context_click);
 
         // 4. Dynamic D-Bus Menubar Box (populated strictly via D-Bus GetLayout)
         let menubar_box = Box::builder()
@@ -99,6 +102,7 @@ impl AppMenu {
             if !info.is_empty() {
                 trigger_dbus_menu_discovery(
                     &info.app_id,
+                    info.process_id,
                     0,
                     gen_poll.clone(),
                     menubar_poll.clone(),
@@ -112,7 +116,9 @@ impl AppMenu {
             let latest = get_active_window().unwrap_or_default();
             let changed = {
                 let cur = app_info_poll.borrow();
-                cur.app_id != latest.app_id || cur.title != latest.title
+                cur.app_id != latest.app_id
+                    || cur.title != latest.title
+                    || cur.process_id != latest.process_id
             };
 
             if changed {
@@ -128,6 +134,7 @@ impl AppMenu {
                     label_poll.set_label(&display_name);
                     trigger_dbus_menu_discovery(
                         &latest.app_id,
+                        latest.process_id,
                         next_gen,
                         gen_poll.clone(),
                         menubar_poll.clone(),
@@ -163,6 +170,7 @@ impl AppMenu {
             *self.current_app_info.borrow_mut() = ActiveWindowInfo {
                 app_id: app_name.to_string(),
                 title: app_name.to_string(),
+                process_id: None,
             };
         } else {
             self.app_title_label.set_label("");

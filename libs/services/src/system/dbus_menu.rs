@@ -19,10 +19,10 @@ pub struct DbusMenuItem {
 pub fn fetch_dbus_menu(service: &str, path: &str) -> Option<Vec<DbusMenuItem>> {
     let conn = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
 
-    // Call GetLayout(0, 3, ["label", "enabled", "visible", "type", "toggle-type", "toggle-state"])
+    // Read the complete tree so overflow menus and nested submenus have all entries available.
     let params = Variant::from((
         0i32,
-        3i32,
+        -1i32,
         &[
             "label",
             "enabled",
@@ -43,7 +43,7 @@ pub fn fetch_dbus_menu(service: &str, path: &str) -> Option<Vec<DbusMenuItem>> {
             Some(&params),
             None,
             gio::DBusCallFlags::NONE,
-            800,
+            400,
             gio::Cancellable::NONE,
         )
         .ok()?;
@@ -83,9 +83,9 @@ pub fn activate_dbus_menu_item(service: &str, path: &str, item_id: i32) {
     });
 }
 
-/// Discovers the D-Bus service and object path exporting `com.canonical.dbusmenu` for an application
-pub fn find_app_menu_service(app_id: &str) -> Option<(String, String)> {
-    if app_id.trim().is_empty() {
+/// Discovers the active application's D-Bus menu, preferring the window client's bus connection.
+pub fn find_app_menu_service(app_id: &str, process_id: Option<u32>) -> Option<(String, String)> {
+    if app_id.trim().is_empty() && process_id.is_none() {
         return None;
     }
 
@@ -95,25 +95,17 @@ pub fn find_app_menu_service(app_id: &str) -> Option<(String, String)> {
         "/MenuBar",
         "/MenuBar/1",
         "/com/canonical/menu",
-        "/org/gtk/Application/menus",
+        "/com/canonical/menu/1",
         "/com/canonical/AppMenu/topbar",
-        "/org/ayatana/NotificationItem/menu",
+        "/org/chromium/DbusMenu",
+        "/org/chromium/DbusMenu/1",
     ];
 
-    let app_id_trimmed = app_id.trim().strip_suffix(".desktop").unwrap_or(app_id.trim());
+    let app_id_trimmed = app_id
+        .trim()
+        .strip_suffix(".desktop")
+        .unwrap_or(app_id.trim());
 
-    // 1. Direct check: If app_id looks like a valid bus name (e.g. "org.gnome.TextEditor"), try it directly
-    if app_id_trimmed.contains('.') && !app_id_trimmed.starts_with(':') {
-        for path in CANDIDATE_PATHS {
-            if let Some(items) = fetch_dbus_menu(app_id_trimmed, path) {
-                if !items.is_empty() {
-                    return Some((app_id_trimmed.to_string(), path.to_string()));
-                }
-            }
-        }
-    }
-
-    // 2. Query org.freedesktop.DBus ListNames to find matching bus names
     let reply = conn
         .call_sync(
             Some("org.freedesktop.DBus"),
@@ -134,30 +126,192 @@ pub fn find_app_menu_service(app_id: &str) -> Option<(String, String)> {
 
     let names_var = reply.child_value(0);
     let n = names_var.n_children();
-    let mut candidates: Vec<String> = Vec::new();
-    let app_id_clean = app_id_trimmed.to_lowercase();
+    let app_id_clean = app_id_trimmed.to_ascii_lowercase();
+    let mut exact_name_candidates = Vec::new();
+    let mut suffix_candidates = Vec::new();
+    let mut process_candidates = Vec::new();
+    let mut unique_names = Vec::new();
 
     for i in 0..n {
         let val = names_var.child_value(i);
         if let Some(name) = val.str() {
             if name.starts_with(':') {
+                unique_names.push(name.to_string());
                 continue;
             }
-            let name_lower = name.to_lowercase();
+            let name_lower = name.to_ascii_lowercase();
             if name_lower == app_id_clean {
-                candidates.insert(0, name.to_string());
-            } else if name_lower.ends_with(&format!(".{}", app_id_clean)) || name_lower.contains(&app_id_clean) {
-                candidates.push(name.to_string());
+                exact_name_candidates.push(name.to_string());
+            } else if name_lower.ends_with(&format!(".{app_id_clean}")) {
+                suffix_candidates.push(name.to_string());
             }
         }
     }
 
-    // Test discovered candidate services across standard paths
-    for cand in candidates {
+    if let Some(process_id) = process_id {
+        process_candidates.extend(find_registered_appmenus(&conn, process_id));
+
+        // The focused Wayland client's PID is the strongest available association
+        // between an xdg_toplevel and a D-Bus connection.
+        for unique_name in unique_names {
+            if get_connection_process_id(&conn, &unique_name) == Some(process_id) {
+                process_candidates.push((unique_name, String::new()));
+            }
+        }
+    }
+
+    let mut candidates = process_candidates;
+    candidates.extend(
+        exact_name_candidates
+            .into_iter()
+            .map(|service| (service, String::new())),
+    );
+    if process_id.is_none() {
+        candidates.extend(
+            suffix_candidates
+                .into_iter()
+                .map(|service| (service, String::new())),
+        );
+    }
+    let mut seen = std::collections::HashSet::new();
+
+    for (service, registered_path) in candidates {
+        if !seen.insert(service.clone()) {
+            if registered_path.is_empty() {
+                continue;
+            }
+        }
+
+        if !registered_path.is_empty()
+            && fetch_dbus_menu(&service, &registered_path).is_some_and(|items| !items.is_empty())
+        {
+            return Some((service, registered_path));
+        }
+
         for path in CANDIDATE_PATHS {
-            if let Some(items) = fetch_dbus_menu(&cand, path) {
-                if !items.is_empty() {
-                    return Some((cand, path.to_string()));
+            if fetch_dbus_menu(&service, path).is_some_and(|items| !items.is_empty()) {
+                return Some((service, path.to_string()));
+            }
+        }
+
+        if let Some(path) = find_dbusmenu_path(&conn, &service) {
+            if fetch_dbus_menu(&service, &path).is_some_and(|items| !items.is_empty()) {
+                return Some((service, path));
+            }
+        }
+    }
+
+    None
+}
+
+fn find_registered_appmenus(conn: &gio::DBusConnection, process_id: u32) -> Vec<(String, String)> {
+    let reply = match conn.call_sync(
+        Some("com.canonical.AppMenu.Registrar"),
+        "/com/canonical/AppMenu/Registrar",
+        "com.canonical.AppMenu.Registrar",
+        "GetMenus",
+        None,
+        None,
+        gio::DBusCallFlags::NONE,
+        250,
+        gio::Cancellable::NONE,
+    ) {
+        Ok(reply) => reply,
+        Err(_) => return Vec::new(),
+    };
+
+    let menus = reply.child_value(0);
+    let mut matches = Vec::new();
+
+    for i in 0..menus.n_children() {
+        let menu = menus.child_value(i);
+        if menu.n_children() < 3 {
+            continue;
+        }
+
+        let service = menu.child_value(1).get::<String>();
+        let path = menu.child_value(2).get::<String>();
+        if let (Some(service), Some(path)) = (service, path) {
+            if get_connection_process_id(conn, &service) == Some(process_id) {
+                matches.push((service, path));
+            }
+        }
+    }
+
+    matches
+}
+
+fn get_connection_process_id(conn: &gio::DBusConnection, name: &str) -> Option<u32> {
+    let params = Variant::from((name,));
+    conn.call_sync(
+        Some("org.freedesktop.DBus"),
+        "/org/freedesktop/DBus",
+        "org.freedesktop.DBus",
+        "GetConnectionUnixProcessID",
+        Some(&params),
+        None,
+        gio::DBusCallFlags::NONE,
+        100,
+        gio::Cancellable::NONE,
+    )
+    .ok()?
+    .child_value(0)
+    .get::<u32>()
+}
+
+fn find_dbusmenu_path(conn: &gio::DBusConnection, service: &str) -> Option<String> {
+    const MAX_NODES: usize = 64;
+    const MAX_DEPTH: usize = 8;
+
+    let mut pending = vec![("/".to_string(), 0usize)];
+    let mut visited = 0;
+
+    while let Some((path, depth)) = pending.pop() {
+        if visited >= MAX_NODES {
+            break;
+        }
+        visited += 1;
+
+        let reply = match conn.call_sync(
+            Some(service),
+            &path,
+            "org.freedesktop.DBus.Introspectable",
+            "Introspect",
+            None,
+            None,
+            gio::DBusCallFlags::NONE,
+            200,
+            gio::Cancellable::NONE,
+        ) {
+            Ok(reply) => reply,
+            Err(_) => continue,
+        };
+        let Some(xml) = reply.child_value(0).get::<String>() else {
+            continue;
+        };
+        let Ok(node) = gio::DBusNodeInfo::for_xml(&xml) else {
+            continue;
+        };
+
+        if node
+            .interfaces()
+            .iter()
+            .any(|interface| interface.name() == "com.canonical.dbusmenu")
+        {
+            return Some(path);
+        }
+
+        if depth < MAX_DEPTH {
+            for child in node.nodes() {
+                if let Some(child_path) = child.path() {
+                    let child_path = if child_path.starts_with('/') {
+                        child_path.to_string()
+                    } else if path == "/" {
+                        format!("/{child_path}")
+                    } else {
+                        format!("{path}/{child_path}")
+                    };
+                    pending.push((child_path, depth + 1));
                 }
             }
         }

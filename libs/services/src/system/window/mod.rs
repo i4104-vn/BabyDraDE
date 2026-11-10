@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub struct ActiveWindowInfo {
     pub app_id: String,
     pub title: String,
+    pub process_id: Option<u32>,
 }
 
 impl ActiveWindowInfo {
@@ -77,7 +78,11 @@ fn query_wlrctl_active_window() -> Option<ActiveWindowInfo> {
             let app_id = line[..pos].trim().to_string();
             let title = line[pos + 1..].trim().to_string();
             if !app_id.is_empty() || !title.is_empty() {
-                return Some(ActiveWindowInfo { app_id, title });
+                return Some(ActiveWindowInfo {
+                    app_id,
+                    title,
+                    process_id: None,
+                });
             }
         }
     }
@@ -141,4 +146,3 @@ pub fn toggle_fullscreen_active_window() {
         .args(["window", "fullscreen", "state:focused"])
         .spawn();
 }
-

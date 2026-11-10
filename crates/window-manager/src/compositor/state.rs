@@ -10,7 +10,7 @@ use smithay::{
         wayland_server::{
             backend::{ClientData, ClientId, DisconnectReason},
             protocol::wl_surface::WlSurface,
-            Display, DisplayHandle,
+            Display, DisplayHandle, Resource,
         },
     },
     utils::{Logical, Point},
@@ -274,7 +274,17 @@ impl BabydraState {
                         })
                 })
                 .unwrap_or_default();
-                services::system::window::ActiveWindowInfo { app_id, title }
+                let process_id = self
+                    .display_handle
+                    .get_client(toplevel.wl_surface().id())
+                    .ok()
+                    .and_then(|client| client.get_credentials(&self.display_handle).ok())
+                    .and_then(|credentials| u32::try_from(credentials.pid).ok());
+                services::system::window::ActiveWindowInfo {
+                    app_id,
+                    title,
+                    process_id,
+                }
             } else {
                 services::system::window::ActiveWindowInfo::default()
             }
