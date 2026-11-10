@@ -1,4 +1,4 @@
-use std::{ffi::OsString, sync::Arc, time::Instant};
+use std::{collections::HashMap, ffi::OsString, sync::Arc, time::Instant};
 
 use smithay::{
     desktop::{PopupManager, Space, Window},
@@ -54,6 +54,59 @@ pub(crate) struct TrackpadSwipeBuffer {
     pub(crate) updates: Vec<(Point<f64, Logical>, u32)>,
 }
 
+/// Direction resolved from an accumulated gesture delta.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SwipeDirection {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+impl SwipeDirection {
+    /// Resolves the dominant direction from a 2-D accumulated delta.
+    ///
+    /// Returns `None` when neither axis exceeds `threshold`.
+    ///
+    /// # Arguments
+    ///
+    /// * `dx` - Total horizontal displacement (positive = right).
+    /// * `dy` - Total vertical displacement (positive = down).
+    /// * `threshold` - Minimum absolute displacement to consider a direction.
+    pub(crate) fn from_delta(dx: f64, dy: f64, threshold: f64) -> Option<Self> {
+        let ax = dx.abs();
+        let ay = dy.abs();
+        if ax < threshold && ay < threshold {
+            return None;
+        }
+        if ax >= ay {
+            Some(if dx < 0.0 { Self::Left } else { Self::Right })
+        } else {
+            Some(if dy < 0.0 { Self::Up } else { Self::Down })
+        }
+    }
+}
+
+/// Per-slot data accumulated while tracking a multi-touch gesture on a touchscreen.
+#[derive(Debug, Clone)]
+pub(crate) struct TouchSlotData {
+    /// Starting position when the finger first touched down.
+    pub(crate) start: Point<f64, Logical>,
+    /// Most recent position of this finger.
+    pub(crate) current: Point<f64, Logical>,
+    /// Wall-clock millisecond timestamp at first contact.
+    pub(crate) start_time_ms: u64,
+}
+
+/// In-progress multi-touch gesture being accumulated for touchscreen swipe/tap detection.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct TouchGestureBuffer {
+    /// Live per-slot tracking data keyed by slot index.
+    pub(crate) slots: HashMap<smithay::backend::input::TouchSlot, TouchSlotData>,
+    /// Whether the gesture has already been consumed (action was fired).
+    pub(crate) consumed: bool,
+}
+
 pub(crate) struct BabydraState {
     pub(crate) start_time: Instant,
     pub(crate) socket_name: OsString,
@@ -81,6 +134,8 @@ pub(crate) struct BabydraState {
     pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
     pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
     pub(crate) windows: Vec<Window>,
+    /// Accumulated per-slot data for multi-touch gesture detection on touchscreens.
+    pub(crate) touch_gesture: TouchGestureBuffer,
 }
 
 impl BabydraState {
@@ -131,6 +186,7 @@ impl BabydraState {
             pointer_pressed_buttons: std::collections::HashSet::new(),
             touch_slots: std::collections::HashSet::new(),
             windows: Vec::new(),
+            touch_gesture: TouchGestureBuffer::default(),
         }
     }
 
