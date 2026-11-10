@@ -23,6 +23,9 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
     let mut quit_compositor = false;
     let mut close_active_window = false;
     let mut toggle_blur = false;
+    let mut toggle_maximize_active = false;
+    let mut minimize_active = false;
+    let mut toggle_fullscreen_active = false;
 
     keyboard.input::<(), _>(
         state,
@@ -105,6 +108,33 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                     toggle_blur = true;
                     return FilterResult::Intercept(());
                 }
+
+                // 6. Super + M: Maximize/Restore active window
+                if modifiers.logo
+                    && !modifiers.shift
+                    && (sym == keysyms::KEY_m.into() || sym == keysyms::KEY_M.into())
+                {
+                    toggle_maximize_active = true;
+                    return FilterResult::Intercept(());
+                }
+
+                // 7. Super + H: Minimize active window
+                if modifiers.logo
+                    && !modifiers.shift
+                    && (sym == keysyms::KEY_h.into() || sym == keysyms::KEY_H.into())
+                {
+                    minimize_active = true;
+                    return FilterResult::Intercept(());
+                }
+
+                // 8. Super + F: Toggle fullscreen on the active window
+                if modifiers.logo
+                    && !modifiers.shift
+                    && (sym == keysyms::KEY_f.into() || sym == keysyms::KEY_F.into())
+                {
+                    toggle_fullscreen_active = true;
+                    return FilterResult::Intercept(());
+                }
             }
             FilterResult::Forward
         },
@@ -140,6 +170,30 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
         }
     }
 
+    if toggle_maximize_active {
+        let active = state.space.elements().next_back().cloned();
+        if let Some(active_window) = active {
+            info!("Super+M pressed: Toggling maximize on active window");
+            state.toggle_maximize(&active_window);
+        }
+    }
+
+    if minimize_active {
+        let active = state.space.elements().next_back().cloned();
+        if let Some(active_window) = active {
+            info!("Super+H pressed: Minimizing active window");
+            state.minimize_window(&active_window);
+        }
+    }
+
+    if toggle_fullscreen_active {
+        let active = state.space.elements().next_back().cloned();
+        if let Some(active_window) = active {
+            info!("Super+F pressed: Toggling fullscreen on active window");
+            state.toggle_fullscreen(&active_window);
+        }
+    }
+
     if cancel_switcher {
         state.alt_tab_switcher = None;
     } else if let Some(backwards) = switcher_step {
@@ -151,9 +205,8 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                 .get(switcher.selected_index)
                 .map(|entry| &entry.window)
             {
-                if state.space.elements().any(|mapped| mapped == window) {
-                    focus_window(state, window.clone(), serial);
-                }
+                state.unminimize_window(window);
+                focus_window(state, window.clone(), serial);
             }
         }
     }

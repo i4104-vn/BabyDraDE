@@ -101,6 +101,9 @@ pub fn setup_render_loop(
             let mut s = state_render.borrow_mut();
             if s.active {
                 let state = &mut data.state;
+                if let Some(action) = services::system::window::read_and_clear_window_action() {
+                    state.handle_window_action(&action);
+                }
                 let display_handle = &mut data.display_handle;
                 let scale = Scale::from(1.0);
 

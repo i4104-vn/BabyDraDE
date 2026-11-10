@@ -23,10 +23,11 @@ impl BabydraState {
                 .entries
                 .get(switcher.selected_index)
                 .map(|entry| entry.window.clone());
-            let mapped_windows = self.space.elements().cloned().collect::<Vec<_>>();
+            self.cleanup_windows();
+            let all_windows = self.windows.clone();
             switcher
                 .entries
-                .retain(|entry| mapped_windows.iter().any(|window| window == &entry.window));
+                .retain(|entry| all_windows.iter().any(|window| window == &entry.window));
 
             if switcher.entries.len() < 2 {
                 return;
@@ -50,9 +51,10 @@ impl BabydraState {
             return;
         }
 
+        self.cleanup_windows();
         let entries = self
-            .space
-            .elements()
+            .windows
+            .iter()
             .rev()
             .filter_map(|window| {
                 let toplevel = window.toplevel()?;

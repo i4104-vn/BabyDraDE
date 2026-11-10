@@ -119,8 +119,38 @@ pub fn get_app_display_name(app_id: &str, title: &str) -> String {
     String::new()
 }
 
-/// Closes the specified window via wlrctl or target specifier
+fn get_window_action_file_path() -> PathBuf {
+    if let Ok(dir) = std::env::var("XDG_RUNTIME_DIR") {
+        let path = PathBuf::from(dir);
+        if path.is_dir() {
+            return path.join("babydra-window-action.txt");
+        }
+    }
+    PathBuf::from("/tmp/babydra-window-action.txt")
+}
+
+/// Sends a window lifecycle action (minimize, maximize, fullscreen, close) to the compositor
+pub fn send_window_action(action: &str) {
+    let path = get_window_action_file_path();
+    let _ = fs::write(path, action);
+}
+
+/// Reads and clears any pending window lifecycle action requested by widgets/services
+pub fn read_and_clear_window_action() -> Option<String> {
+    let path = get_window_action_file_path();
+    if let Ok(action) = fs::read_to_string(&path) {
+        let _ = fs::remove_file(&path);
+        let trimmed = action.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
+}
+
+/// Closes the specified window
 pub fn close_window_by_app(app_id: &str, title: &str) {
+    send_window_action("close");
     let target = if !app_id.is_empty() {
         format!("app_id:{}", app_id)
     } else if !title.is_empty() {
@@ -135,13 +165,20 @@ pub fn close_window_by_app(app_id: &str, title: &str) {
 
 /// Minimizes the currently focused window
 pub fn minimize_active_window() {
+    send_window_action("minimize");
     let _ = Command::new("wlrctl")
         .args(["window", "minimize", "state:focused"])
         .spawn();
 }
 
+/// Maximizes the currently focused window
+pub fn maximize_active_window() {
+    send_window_action("maximize");
+}
+
 /// Toggles fullscreen for the currently focused window
 pub fn toggle_fullscreen_active_window() {
+    send_window_action("fullscreen");
     let _ = Command::new("wlrctl")
         .args(["window", "fullscreen", "state:focused"])
         .spawn();

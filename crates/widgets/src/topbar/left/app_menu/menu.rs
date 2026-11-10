@@ -2,7 +2,7 @@
 
 use gtk4::Button;
 use services::system::{
-    close_window_by_app, get_app_display_name, minimize_active_window,
+    close_window_by_app, get_app_display_name, maximize_active_window, minimize_active_window,
     toggle_fullscreen_active_window, ActiveWindowInfo,
 };
 use ui_kit::overlay::context_menu::ContextMenu;
@@ -22,6 +22,9 @@ pub fn show_window_action_menu(anchor: &Button, info: &ActiveWindowInfo) {
         .separator()
         .item("Minimize Window", "eye-off", || {
             minimize_active_window();
+        })
+        .item("Maximize Window", "square", || {
+            maximize_active_window();
         })
         .item("Toggle Fullscreen", "display", || {
             toggle_fullscreen_active_window();

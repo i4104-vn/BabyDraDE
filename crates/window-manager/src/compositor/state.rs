@@ -28,6 +28,7 @@ mod active_window;
 mod blur;
 mod hit_test;
 mod switcher;
+mod window_ops;
 
 pub(crate) use switcher::{AltTabEntry, AltTabSwitcher};
 
@@ -79,6 +80,7 @@ pub(crate) struct BabydraState {
     pub(crate) cursor_visible: bool,
     pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
     pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
+    pub(crate) windows: Vec<Window>,
 }
 
 impl BabydraState {
@@ -128,6 +130,7 @@ impl BabydraState {
             cursor_visible: true,
             pointer_pressed_buttons: std::collections::HashSet::new(),
             touch_slots: std::collections::HashSet::new(),
+            windows: Vec::new(),
         }
     }
 

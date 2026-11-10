@@ -87,6 +87,9 @@ pub(crate) fn init(
                 }
                 WinitEvent::Input(event) => state.process_input_event(event),
                 WinitEvent::Redraw => {
+                    if let Some(action) = services::system::window::read_and_clear_window_action() {
+                        state.handle_window_action(&action);
+                    }
                     let size = backend.window_size();
 
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();

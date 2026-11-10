@@ -25,6 +25,8 @@ impl XdgShellHandler for BabydraState {
         let offset = (count * 36) % 288;
         let loc = (48 + offset, 48 + offset);
         self.space.map_element(window.clone(), loc, true);
+        self.cleanup_windows();
+        self.windows.push(window.clone());
         if let Some(keyboard) = self.seat.get_keyboard() {
             keyboard.set_focus(
                 self,
@@ -70,13 +72,17 @@ impl XdgShellHandler for BabydraState {
             return;
         }
 
-        let target_window = self
-            .space
-            .elements()
-            .find(|w| w.toplevel().map(|t| t == &surface).unwrap_or(false))
-            .cloned();
+        let target_window = self.find_window_for_surface(&surface);
 
         if let Some(window) = target_window {
+            if let Some(toplevel) = window.toplevel() {
+                if toplevel.current_state().states.contains(
+                    smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
+                ) {
+                    self.unmaximize_window(&window);
+                }
+            }
+
             if let Some(loc) = self.space.element_location(&window) {
                 self.space.raise_element(&window, true);
                 let drag_button = self
@@ -93,6 +99,75 @@ impl XdgShellHandler for BabydraState {
                     button: drag_button,
                 });
             }
+        }
+    }
+
+    fn maximize_request(&mut self, surface: ToplevelSurface) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.maximize_window(&window);
+        }
+    }
+
+    fn unmaximize_request(&mut self, surface: ToplevelSurface) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.unmaximize_window(&window);
+        }
+    }
+
+    fn minimize_request(&mut self, surface: ToplevelSurface) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.minimize_window(&window);
+        }
+    }
+
+    fn fullscreen_request(
+        &mut self,
+        surface: ToplevelSurface,
+        output: Option<smithay::reexports::wayland_server::protocol::wl_output::WlOutput>,
+    ) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.fullscreen_window(&window, output);
+        }
+    }
+
+    fn unfullscreen_request(&mut self, surface: ToplevelSurface) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.unfullscreen_window(&window);
+        }
+    }
+    }
+
+    fn maximize_request(&mut self, surface: ToplevelSurface) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.maximize_window(&window);
+        }
+    }
+
+    fn unmaximize_request(&mut self, surface: ToplevelSurface) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.unmaximize_window(&window);
+        }
+    }
+
+    fn minimize_request(&mut self, surface: ToplevelSurface) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.minimize_window(&window);
+        }
+    }
+
+    fn fullscreen_request(
+        &mut self,
+        surface: ToplevelSurface,
+        output: Option<smithay::reexports::wayland_server::protocol::wl_output::WlOutput>,
+    ) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.fullscreen_window(&window, output);
+        }
+    }
+
+    fn unfullscreen_request(&mut self, surface: ToplevelSurface) {
+        if let Some(window) = self.find_window_for_surface(&surface) {
+            self.unfullscreen_window(&window);
         }
     }
 
@@ -116,6 +191,7 @@ pub(super) fn handle_commit(popups: &mut PopupManager, space: &Space<Window>, su
         .find(|window| window.toplevel().map(|t| t.wl_surface() == surface).unwrap_or(false))
         .cloned()
     {
+        window.on_commit();
         if let Some(toplevel) = window.toplevel() {
             let initial_configure_sent = with_states(surface, |states| {
                 states
