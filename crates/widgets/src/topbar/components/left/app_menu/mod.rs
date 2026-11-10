@@ -11,7 +11,7 @@ use dbus::{clear_menubar, load_and_render_dbus_menu, trigger_dbus_menu_discovery
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Box, Button, Label, Orientation};
-use infrastructure::system::{get_active_window, get_app_display_name, ActiveWindowInfo};
+use services::system::{get_active_window, get_app_display_name, ActiveWindowInfo};
 use menu::show_window_action_menu;
 use std::cell::RefCell;
 use std::rc::Rc;

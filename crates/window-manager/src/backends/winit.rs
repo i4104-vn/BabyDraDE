@@ -1,6 +1,6 @@
 use std::{error::Error, time::Duration};
 
-use crate::theme::DesktopTheme;
+use services::theme::DesktopTheme;
 use smithay::{
     backend::{
         renderer::{damage::OutputDamageTracker, glow::GlowRenderer},

@@ -1,7 +1,7 @@
 //! Clean My Linux Quick Tile & Popover UI for Control Center
 
 use gtk4::prelude::*;
-use infrastructure::i18n::trans;
+use services::i18n::trans;
 use std::rc::Rc;
 use ui_kit::components::{create_color_btn, create_popover};
 use ui_kit::icons::get_icon_colored;

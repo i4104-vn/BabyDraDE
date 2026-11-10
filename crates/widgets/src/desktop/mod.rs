@@ -54,7 +54,7 @@ pub fn run() {
         .build();
 
     app.connect_startup(|_| {
-        infrastructure::config::ensure_babydra_dirs();
+        services::config::ensure_babydra_dirs();
         ui_kit::init_theme();
     });
 

@@ -30,7 +30,7 @@ pub async fn run() {
 
 /// Loads all valid global shortcuts, merging custom keymap with active feature shortcuts.
 fn load() -> Vec<Shortcut> {
-    let path = infrastructure::config::get_keymap_path();
+    let path = services::config::get_keymap_path();
     let mut shortcuts = Vec::new();
 
     if path.exists() {
@@ -81,7 +81,7 @@ fn load() -> Vec<Shortcut> {
 
 /// Watches configuration files (~/.babydra/keymap.toml), hot-reloading on change.
 async fn watch(shared: SharedShortcuts) {
-    let path = infrastructure::config::get_keymap_path();
+    let path = services::config::get_keymap_path();
     let mut last_mtime = file_mtime(&path);
 
     loop {

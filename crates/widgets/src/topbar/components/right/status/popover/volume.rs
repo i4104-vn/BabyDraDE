@@ -1,5 +1,5 @@
 use gtk4::prelude::*;
-use infrastructure::system::{get_active_output_name, get_volume_state};
+use services::system::{get_active_output_name, get_volume_state};
 use std::rc::Rc;
 use ui_kit::components::overlay::popover::tooltip::{TooltipPopover, TooltipRow};
 use ui_kit::icons::set_image_from_icon;

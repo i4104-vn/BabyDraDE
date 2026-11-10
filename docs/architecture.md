@@ -1,30 +1,16 @@
-# BabyDraDE — Current MVP Architecture
+# BabyDraDE — Architecture
 
-BabyDraDE is a small nested Wayland compositor built with Smithay 0.7.0. It
-runs as a Winit window inside an existing Linux graphical session.
+BabyDraDE is a modern Wayland Desktop Environment built with Smithay 0.7.0 and GTK4.
+It supports both direct TTY scanout (Udev/DRM backend) and nested execution (Winit backend).
 
-## Runtime
+## Workspace Layout
 
-1. The root binary initializes logging and reads an optional app argument.
-2. The infrastructure crate creates the Wayland display, socket, seat, output,
-   and XDG shell handlers.
-3. The Winit backend renders the compositor space with a black background and
-   forwards keyboard and pointer events.
-4. The selected test app is launched with BabyDraDE's Wayland display.
+The workspace is cleanly divided into executables (`crates/`) and libraries (`libs/`):
 
-## Code layout
+### Executables (`crates/` with `src/main.rs`)
+- `crates/window-manager`: Smithay Wayland compositor and window manager. Manages the Wayland display, socket, seat, outputs, rendering loop, and layer/XDG shell handlers, and autostarts widgets.
+- `crates/widgets`: Unified GUI widgets binary. Dispatches `desktop`, `topbar`, `screenshot`, `lock`, and `keymap`.
 
-- src/main.rs: command-line entry point.
-- crates/infrastructure/src/compositor: Smithay state, Wayland handlers, and
-  input routing.
-- crates/infrastructure/src/backends/winit_backend.rs: nested output,
-  rendering, redraws, and window events.
-- crates/domain, crates/application, and crates/presentation: retained
-  workspace layers, currently placeholders for later work.
-- crates/drade-ctl: retained as a placeholder; IPC is not implemented.
-
-Smithay supplies the Wayland protocol and renderer building blocks. BabyDraDE
-currently maps XDG toplevels into a Smithay Space, focuses the launched
-window, and routes input to its surface. Window decorations, a desktop web
-surface, app discovery, multiple-app controls, XWayland, and a DRM/TTY backend
-are outside this milestone.
+### Libraries (`libs/` with `src/lib.rs`)
+- `libs/services`: Core OS integration, hardware readers (battery, disk, CPU, RAM, network, volume, VPN), desktop configuration, themes, tray, and i18n localization.
+- `libs/ui-kit`: Reusable GTK4 design system, components, icons, theme engine, and stylesheets.

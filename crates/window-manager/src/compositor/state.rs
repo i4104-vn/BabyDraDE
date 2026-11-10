@@ -274,14 +274,14 @@ impl BabydraState {
                         })
                 })
                 .unwrap_or_default();
-                crate::system::window::ActiveWindowInfo { app_id, title }
+                services::system::window::ActiveWindowInfo { app_id, title }
             } else {
-                crate::system::window::ActiveWindowInfo::default()
+                services::system::window::ActiveWindowInfo::default()
             }
         } else {
-            crate::system::window::ActiveWindowInfo::default()
+            services::system::window::ActiveWindowInfo::default()
         };
-        crate::system::window::save_active_window(&info);
+        services::system::window::save_active_window(&info);
     }
 }
 

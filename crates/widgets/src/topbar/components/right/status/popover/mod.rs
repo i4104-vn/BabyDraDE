@@ -4,7 +4,7 @@ pub mod volume;
 
 use gtk4::glib;
 use gtk4::prelude::*;
-use infrastructure::system::is_vpn_active;
+use services::system::is_vpn_active;
 use ui_kit::components::overlay::popover::tooltip::TooltipPopover;
 
 #[derive(Clone)]

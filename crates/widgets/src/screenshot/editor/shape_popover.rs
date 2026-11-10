@@ -48,7 +48,7 @@ pub fn create_shape_popover(
         };
         let btn = gtk4::Button::builder()
             .child(&ui_kit::icons::get_icon(icon, 16))
-            .tooltip_text(infrastructure::trans(key))
+            .tooltip_text(services::trans(key))
             .build();
         btn.add_css_class("flat");
         btn.add_css_class("screenshot-toolbar-btn");

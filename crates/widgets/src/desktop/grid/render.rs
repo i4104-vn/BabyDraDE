@@ -1,7 +1,7 @@
 use gtk4::gio;
 use gtk4::prelude::*;
 use gtk4::{Box, GestureClick, Label, Orientation};
-use infrastructure::desktop::DesktopEntry;
+use services::desktop::DesktopEntry;
 use std::process::Command;
 use std::rc::Rc;
 use ui_kit::icons::get_theme_or_svg_icon;

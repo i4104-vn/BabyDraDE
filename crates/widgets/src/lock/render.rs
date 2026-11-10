@@ -145,7 +145,7 @@ pub fn build_wallpaper_img(custom_path: Option<&str>) -> gtk4::Picture {
         return bg_picture;
     }
 
-    if let Some(path) = infrastructure::wallpaper::get_wallpaper() {
+    if let Some(path) = services::wallpaper::get_wallpaper() {
         bg_picture.set_filename(Some(&path));
         return bg_picture;
     }
@@ -164,7 +164,7 @@ pub fn build_clock_labels() -> (gtk4::Label, gtk4::Label) {
 }
 
 pub fn build_avatar_widget(size: i32) -> gtk4::Widget {
-    let avatar_path = infrastructure::config::get_babydra_dir().join("avatar.png");
+    let avatar_path = services::config::get_babydra_dir().join("avatar.png");
     if avatar_path.exists() {
         let pic = gtk4::Picture::for_filename(&avatar_path);
         pic.set_size_request(size, size);
@@ -193,11 +193,11 @@ pub fn build_primary_card(clock_label: &gtk4::Label, date_label: &gtk4::Label) -
     user_label.add_css_class("lock-username");
 
     let entry = gtk4::PasswordEntry::new();
-    entry.set_placeholder_text(Some(&infrastructure::trans("lock.placeholder")));
+    entry.set_placeholder_text(Some(&services::trans("lock.placeholder")));
     entry.add_css_class("lock-input");
     entry.set_halign(gtk4::Align::Center);
 
-    let status_label = gtk4::Label::new(Some(&infrastructure::trans("lock.status")));
+    let status_label = gtk4::Label::new(Some(&services::trans("lock.status")));
     status_label.add_css_class("lock-status");
 
     card_box.append(clock_label);
@@ -395,14 +395,14 @@ fn setup_auth_handler(
         if verify_password(&username, &password) {
             on_unlock();
         } else {
-            status_label_clone.set_text(&infrastructure::trans("lock.status_incorrect"));
+            status_label_clone.set_text(&services::trans("lock.status_incorrect"));
             status_label_clone.add_css_class("error");
             card_clone.add_css_class("shake-error");
 
             let status_lbl = status_label_clone.clone();
             let card_box_ref = card_clone.clone();
             glib::timeout_add_local_once(Duration::from_millis(1600), move || {
-                status_lbl.set_text(&infrastructure::trans("lock.status"));
+                status_lbl.set_text(&services::trans("lock.status"));
                 status_lbl.remove_css_class("error");
                 card_box_ref.remove_css_class("shake-error");
             });

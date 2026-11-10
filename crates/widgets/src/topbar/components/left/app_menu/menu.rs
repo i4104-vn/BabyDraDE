@@ -1,7 +1,7 @@
 //! Context menu for active window lifecycle actions
 
 use gtk4::Button;
-use infrastructure::system::{
+use services::system::{
     close_window_by_app, get_app_display_name, minimize_active_window,
     toggle_fullscreen_active_window, ActiveWindowInfo,
 };

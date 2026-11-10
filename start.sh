@@ -466,7 +466,7 @@ fi
 # 5. Set default diagnostic logging level
 # ------------------------------------------------------------------------------
 if [ -z "${RUST_LOG:-}" ]; then
-    export RUST_LOG="info,infrastructure=debug,babydrade=debug"
+    export RUST_LOG="info,window_manager=debug,services=debug,babydrade=debug"
 fi
 
 # ------------------------------------------------------------------------------

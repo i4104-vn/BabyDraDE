@@ -4,7 +4,7 @@ pub mod render;
 
 use chrono::Local;
 use gtk4::prelude::*;
-use infrastructure::i18n::trans;
+use services::i18n::trans;
 use std::cell::RefCell;
 use std::rc::Rc;
 use crate::topbar::components::right::control_center::setup_click_outside_dismiss;

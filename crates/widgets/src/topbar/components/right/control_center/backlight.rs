@@ -1,8 +1,8 @@
 //! Brightness Slider UI item for Control Center
 
 use gtk4::prelude::*;
-use infrastructure::i18n::trans;
-use infrastructure::system::hardware::backlight::BacklightReader;
+use services::i18n::trans;
+use services::system::hardware::backlight::BacklightReader;
 use std::cell::RefCell;
 use std::rc::Rc;
 use ui_kit::components::{create_slider_header, PillSlider};

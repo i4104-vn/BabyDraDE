@@ -1,7 +1,7 @@
 //! Bluetooth Tile UI for Control Center
 
 use gtk4::glib;
-use infrastructure::i18n::trans;
+use services::i18n::trans;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;

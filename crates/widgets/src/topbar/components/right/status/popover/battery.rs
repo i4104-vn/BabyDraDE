@@ -1,5 +1,5 @@
 use gtk4::prelude::*;
-use infrastructure::system::BatteryReader;
+use services::system::BatteryReader;
 use std::rc::Rc;
 use ui_kit::components::overlay::popover::tooltip::{TooltipPopover, TooltipRow};
 

@@ -6,7 +6,7 @@
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Box, Button};
-use infrastructure::system::{
+use services::system::{
     activate_dbus_menu_item, fetch_dbus_menu, find_app_menu_service, DbusMenuItem,
 };
 use std::cell::RefCell;

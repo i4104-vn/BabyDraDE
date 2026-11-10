@@ -1,8 +1,8 @@
 //! Volume Slider UI item for Control Center
 
 use gtk4::prelude::*;
-use infrastructure::i18n::trans;
-use infrastructure::system::volume::{get_active_output_name, get_volume_state, set_muted, set_volume};
+use services::i18n::trans;
+use services::system::volume::{get_active_output_name, get_volume_state, set_muted, set_volume};
 use std::cell::Cell;
 use std::rc::Rc;
 use ui_kit::components::{create_popover, create_slider_header, PillSlider};

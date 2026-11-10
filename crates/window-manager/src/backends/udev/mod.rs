@@ -5,7 +5,7 @@ pub mod surface;
 
 use std::{cell::RefCell, error::Error, rc::Rc};
 
-use crate::theme::DesktopTheme;
+use services::theme::DesktopTheme;
 use smithay::reexports::calloop::EventLoop;
 use tracing::info;
 

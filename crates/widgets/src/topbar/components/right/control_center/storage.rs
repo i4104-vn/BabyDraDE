@@ -1,8 +1,8 @@
 //! Disk Storage UI item for Control Center
 
 use gtk4::prelude::*;
-use infrastructure::i18n::trans;
-use infrastructure::system::resources::disk::DiskReader;
+use services::i18n::trans;
+use services::system::resources::disk::DiskReader;
 use ui_kit::icons::get_icon_colored;
 
 /// Formats bytes into human-readable string (e.g. "120.5 GB")

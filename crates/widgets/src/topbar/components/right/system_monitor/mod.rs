@@ -4,7 +4,7 @@ mod render;
 
 use gtk4::glib;
 use gtk4::prelude::*;
-use infrastructure::system::{get_monitor_snapshot, SystemService};
+use services::system::{get_monitor_snapshot, SystemService};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;

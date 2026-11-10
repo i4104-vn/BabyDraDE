@@ -2,7 +2,7 @@ pub mod render;
 
 use gtk4::prelude::*;
 use gtk4::{Fixed, GestureClick};
-use infrastructure::desktop::fetch_desktop_entries;
+use services::desktop::fetch_desktop_entries;
 use std::path::PathBuf;
 use std::process::Command;
 use std::rc::Rc;
@@ -40,11 +40,11 @@ pub fn create_desktop_grid(parent_window: &gtk4::ApplicationWindow) -> (Fixed, R
         let max_rows = ((win_h as f64 - pad_y - 20.0) / icon_h).max(1.0) as usize;
 
         let names: Vec<String> = entries.iter().map(|e| e.name.clone()).collect();
-        infrastructure::config::desktop_layout::cleanup_stale(&names);
+        services::config::desktop_layout::cleanup_stale(&names);
 
         for (idx, entry) in entries.iter().enumerate() {
             let (x, y) = if let Some(pos) =
-                infrastructure::config::desktop_layout::get_position(&entry.name)
+                services::config::desktop_layout::get_position(&entry.name)
             {
                 (pos.0 as f64, pos.1 as f64)
             } else {
@@ -133,8 +133,8 @@ fn show_desktop_context_menu(
         })
         .separator()
         .item("Sort By Name", "view-grid", move || {
-            infrastructure::config::desktop_layout::clear();
-            infrastructure::config::desktop_layout::flush_if_dirty();
+            services::config::desktop_layout::clear();
+            services::config::desktop_layout::flush_if_dirty();
             rebuild_sort();
         })
         .item("Change Wallpaper...", "display", move || {
@@ -214,7 +214,7 @@ fn open_wallpaper_picker(parent_win: &gtk4::ApplicationWindow) {
         if response == gtk4::ResponseType::Accept {
             if let Some(file) = d.file() {
                 if let Some(path) = file.path() {
-                    if let Ok(_dest) = infrastructure::wallpaper::set_wallpaper(&path) {
+                    if let Ok(_dest) = services::wallpaper::set_wallpaper(&path) {
                         win_c.queue_draw();
                     }
                 }

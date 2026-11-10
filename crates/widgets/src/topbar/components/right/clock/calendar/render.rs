@@ -2,7 +2,7 @@
 
 use gtk4::prelude::*;
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
-use infrastructure::i18n::trans;
+use services::i18n::trans;
 
 /// Builds the calendar popup window anchored to the top-right.
 pub fn build_calendar(

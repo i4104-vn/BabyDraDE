@@ -1,18 +1,6 @@
 mod backends;
 mod compositor;
-pub mod config;
-pub mod desktop;
-pub mod i18n;
 pub mod rendering;
-pub mod settings {
-    pub use crate::config::*;
-}
-pub mod system;
-pub mod theme;
-pub mod tray;
-pub mod wallpaper;
-
-pub use i18n::trans;
 
 use std::{error::Error, ffi::OsString, process::Command};
 
@@ -42,7 +30,7 @@ fn ensure_runtime_dir() {
 
 pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
     ensure_runtime_dir();
-    config::ensure_babydra_dirs();
+    services::config::ensure_babydra_dirs();
 
     if std::env::var_os("WAYLAND_DISPLAY").is_none()
         && std::env::var_os("WAYLAND_SOCKET").is_none()
@@ -87,16 +75,22 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
         .arg("XDG_SESSION_TYPE=wayland")
         .spawn();
 
-    // Autostart BabyDraDE widgets from unified binary (always runs by default, no env check)
+    // Autostart BabyDraDE widgets binary
     let exe_path = std::env::current_exe()
         .ok()
         .or_else(|| std::env::args_os().next().map(std::path::PathBuf::from))
-        .unwrap_or_else(|| std::path::PathBuf::from("babydrade"));
+        .unwrap_or_else(|| std::path::PathBuf::from("window-manager"));
+
+    let widgets_exe = exe_path.with_file_name("widgets");
+    let cmd = if widgets_exe.exists() {
+        widgets_exe
+    } else {
+        std::path::PathBuf::from("widgets")
+    };
 
     let widgets = ["desktop", "topbar"];
     for widget in widgets {
-        match Command::new(&exe_path)
-            .arg("__widget")
+        match Command::new(&cmd)
             .arg(widget)
             .env("WAYLAND_DISPLAY", &data.state.socket_name)
             .env("GDK_BACKEND", "wayland")
@@ -106,7 +100,7 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
             .env("XDG_CURRENT_DESKTOP", "BabyDra")
             .spawn()
         {
-            Ok(_child) => info!("Started BabyDraDE widget '{widget}' from unified binary"),
+            Ok(_child) => info!("Started BabyDraDE widget '{widget}'"),
             Err(err) => warn!("Could not start BabyDraDE widget '{widget}': {err}"),
         }
     }
@@ -137,4 +131,62 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
     );
     event_loop.run(None, &mut data, |_| {})?;
     Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
+    let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
+
+    let mut args = std::env::args_os().skip(1);
+
+    // Multi-call dispatch: if invoked with __widget, forward to widgets executable
+    if let Some(first_arg) = args.next() {
+        if first_arg == "__widget" {
+            let widget_name = args
+                .next()
+                .ok_or_else(|| std::io::Error::other("Missing widget name for __widget"))?;
+            let exe_path = std::env::current_exe().unwrap_or_default();
+            let widgets_exe = exe_path.with_file_name("widgets");
+            let cmd = if widgets_exe.exists() {
+                widgets_exe
+            } else {
+                std::path::PathBuf::from("widgets")
+            };
+            let status = Command::new(cmd).arg(widget_name).status()?;
+            std::process::exit(status.code().unwrap_or(0));
+        }
+
+        // CLI parsing for window manager
+        let mut app: Option<OsString> = None;
+        let mut current = Some(first_arg);
+
+        while let Some(arg) = current.take().or_else(|| args.next()) {
+            match arg.to_str() {
+                Some("--help" | "-h") => {
+                    println!("BabyDraDE Window Manager");
+                    println!("Usage: window-manager [--app EXECUTABLE]");
+                    println!("BABYDRADE_TEST_APP may also select the test app.");
+                    return Ok(());
+                }
+                Some("--app") => {
+                    app = args.next();
+                    if app.is_none() {
+                        return Err(std::io::Error::other("--app requires an executable name").into());
+                    }
+                }
+                _ => {
+                    return Err(std::io::Error::other(format!(
+                        "unknown argument: {}",
+                        arg.to_string_lossy()
+                    ))
+                    .into());
+                }
+            }
+        }
+
+        run(app)
+    } else {
+        run(None)
+    }
 }

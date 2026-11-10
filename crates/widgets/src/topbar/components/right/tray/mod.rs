@@ -2,7 +2,7 @@ mod render;
 
 use gtk4::glib;
 use gtk4::prelude::*;
-use infrastructure::tray::{activate_item, get_tray_items, TrayItem};
+use services::tray::{activate_item, get_tray_items, TrayItem};
 use std::cell::RefCell;
 use std::rc::Rc;
 

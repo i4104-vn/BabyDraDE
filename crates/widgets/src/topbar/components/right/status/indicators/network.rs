@@ -2,7 +2,7 @@
 
 use gtk4::glib;
 use gtk4::prelude::*;
-use infrastructure::system::{get_active_network_info, ActiveNetworkType};
+use services::system::{get_active_network_info, ActiveNetworkType};
 use std::cell::Cell;
 use std::rc::Rc;
 use ui_kit::drawing::draw_cairo_ethernet_desktop;

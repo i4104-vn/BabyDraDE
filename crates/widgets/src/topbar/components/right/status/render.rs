@@ -1,7 +1,7 @@
 //! Layout assembly for the status indicators row
 
 use gtk4::prelude::*;
-use infrastructure::system::{get_volume_state, is_vpn_active};
+use services::system::{get_volume_state, is_vpn_active};
 use ui_kit::icons::get_icon;
 
 use super::indicators::{create_battery_w, create_network_widget};

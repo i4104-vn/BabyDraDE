@@ -1,5 +1,5 @@
 use gtk4::prelude::*;
-use infrastructure::system::{format_speed, get_active_network_info, ActiveNetworkType, NetworkReader};
+use services::system::{format_speed, get_active_network_info, ActiveNetworkType, NetworkReader};
 use std::cell::RefCell;
 use std::rc::Rc;
 use ui_kit::components::overlay::popover::tooltip::{TooltipPopover, TooltipRow};

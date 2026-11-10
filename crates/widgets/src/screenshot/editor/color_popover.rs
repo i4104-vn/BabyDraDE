@@ -31,42 +31,42 @@ pub fn create_color_popover(
 
     let colors = vec![
         (
-            infrastructure::trans("color.red"),
+            services::trans("color.red"),
             "red",
             (0.93, 0.15, 0.15),
         ),
         (
-            infrastructure::trans("color.orange"),
+            services::trans("color.orange"),
             "orange",
             (0.98, 0.45, 0.09),
         ),
         (
-            infrastructure::trans("color.yellow"),
+            services::trans("color.yellow"),
             "yellow",
             (0.92, 0.70, 0.15),
         ),
         (
-            infrastructure::trans("color.green"),
+            services::trans("color.green"),
             "green",
             (0.13, 0.77, 0.36),
         ),
         (
-            infrastructure::trans("color.blue"),
+            services::trans("color.blue"),
             "blue",
             (0.23, 0.51, 0.96),
         ),
         (
-            infrastructure::trans("color.purple"),
+            services::trans("color.purple"),
             "purple",
             (0.66, 0.33, 0.97),
         ),
         (
-            infrastructure::trans("color.white"),
+            services::trans("color.white"),
             "white",
             (1.0, 1.0, 1.0),
         ),
         (
-            infrastructure::trans("color.black"),
+            services::trans("color.black"),
             "black",
             (0.0, 0.0, 0.0),
         ),
@@ -147,7 +147,7 @@ pub fn create_color_popover(
     let delete_btn = gtk4::Button::builder()
         .child(&ui_kit::icons::get_icon("trash", 16))
         .build();
-    delete_btn.set_tooltip_text(Some(&infrastructure::trans(
+    delete_btn.set_tooltip_text(Some(&services::trans(
         "screenshot.delete_tooltip",
     )));
     delete_btn.add_css_class("flat");

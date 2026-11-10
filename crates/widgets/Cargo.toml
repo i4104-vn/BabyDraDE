@@ -19,6 +19,7 @@ chrono = "0.4"
 libc = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.2"
-infrastructure = { path = "../infrastructure" }
-ui-kit = { path = "../ui-kit" }
+services = { path = "../../libs/services" }
+ui-kit = { path = "../../libs/ui-kit" }
 tracing.workspace = true
+tracing-subscriber.workspace = true

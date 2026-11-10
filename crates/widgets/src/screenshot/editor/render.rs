@@ -102,24 +102,24 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
     // Tool buttons
     let btn_reset = toolbar_button(
         "refresh",
-        &infrastructure::trans("screenshot.reset_tooltip"),
+        &services::trans("screenshot.reset_tooltip"),
     );
-    let btn_pen = toolbar_button("edit", &infrastructure::trans("screenshot.pen_tooltip"));
+    let btn_pen = toolbar_button("edit", &services::trans("screenshot.pen_tooltip"));
     let btn_shape = toolbar_button(
         "rect",
-        &infrastructure::trans("screenshot.shape_tooltip"),
+        &services::trans("screenshot.shape_tooltip"),
     );
     let btn_blur = toolbar_button(
         "blur",
-        &infrastructure::trans("screenshot.blur_tooltip"),
+        &services::trans("screenshot.blur_tooltip"),
     );
     let btn_eraser = toolbar_button(
         "eraser",
-        &infrastructure::trans("screenshot.eraser_tooltip"),
+        &services::trans("screenshot.eraser_tooltip"),
     );
 
     let color_btn = gtk4::Button::new();
-    color_btn.set_tooltip_text(Some(&infrastructure::trans("screenshot.color_tooltip")));
+    color_btn.set_tooltip_text(Some(&services::trans("screenshot.color_tooltip")));
     color_btn.add_css_class("flat");
     color_btn.add_css_class("screenshot-toolbar-btn");
 
@@ -223,7 +223,7 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
     // Action buttons
     let btn_copy = toolbar_button(
         "copy",
-        &infrastructure::trans("screenshot.copy_tooltip"),
+        &services::trans("screenshot.copy_tooltip"),
     );
 
     let state_copy = state.clone();
@@ -236,7 +236,7 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
 
     let btn_save = toolbar_button(
         "download",
-        &infrastructure::trans("screenshot.save_tooltip"),
+        &services::trans("screenshot.save_tooltip"),
     );
 
     let state_save = state.clone();
@@ -249,7 +249,7 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
 
     let btn_cancel = toolbar_button(
         "close",
-        &infrastructure::trans("screenshot.cancel_tooltip"),
+        &services::trans("screenshot.cancel_tooltip"),
     );
 
     let win_cancel = window.clone();

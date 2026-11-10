@@ -1,7 +1,7 @@
 //! Control Center Header Row UI
 
 use gtk4::prelude::*;
-use infrastructure::i18n::trans;
+use services::i18n::trans;
 use ui_kit::components::create_icon_button;
 use ui_kit::icons::get_icon;
 use ui_kit::theme::{is_dark_mode, set_dark_mode};

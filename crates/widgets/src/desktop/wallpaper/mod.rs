@@ -1,7 +1,7 @@
 pub mod renderer;
 
 use gtk4::prelude::*;
-use infrastructure::wallpaper::get_wallpaper;
+use services::wallpaper::get_wallpaper;
 use std::cell::Cell;
 use std::rc::Rc;
 

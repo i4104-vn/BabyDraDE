@@ -61,7 +61,7 @@ pub fn copy_to_clipboard(state: &EditorState, window: &gtk4::ApplicationWindow) 
 }
 
 fn notify_copied() {
-    let notif_title = infrastructure::trans("screenshot.copied_title");
-    let notif_msg = infrastructure::trans("screenshot.copied_msg");
+    let notif_title = services::trans("screenshot.copied_title");
+    let notif_msg = services::trans("screenshot.copied_msg");
     send_notification(&notif_title, &notif_msg);
 }

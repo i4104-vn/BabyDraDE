@@ -16,8 +16,8 @@ pub fn trigger_save(state: &EditorState) -> bool {
     if surface.write_to_png(&mut file).is_err() {
         return false;
     }
-    let title = infrastructure::trans("screenshot.saved_title");
-    let message = infrastructure::trans("screenshot.saved_msg")
+    let title = services::trans("screenshot.saved_title");
+    let message = services::trans("screenshot.saved_msg")
         .replace("{}", &format!("{:?}", save_path));
     send_notification(&title, &message);
     true

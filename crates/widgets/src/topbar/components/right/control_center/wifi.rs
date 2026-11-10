@@ -1,8 +1,8 @@
 //! Wi-Fi Tile and Popover UI for Control Center
 
 use gtk4::prelude::*;
-use infrastructure::i18n::trans;
-use infrastructure::system::network::{get_active_network_info, ActiveNetworkType};
+use services::i18n::trans;
+use services::system::network::{get_active_network_info, ActiveNetworkType};
 use std::rc::Rc;
 use ui_kit::components::{create_color_btn, create_popover, create_toggle_tile, update_toggle_state};
 use ui_kit::icons::get_icon_colored;

@@ -1,7 +1,7 @@
 //! Battery status indicator drawing area
 
 use gtk4::prelude::*;
-use infrastructure::system::BatteryReader;
+use services::system::BatteryReader;
 use ui_kit::drawing::draw_cairo_battery;
 use ui_kit::icons::is_dark_mode;
 
@@ -18,7 +18,7 @@ pub fn create_battery_w() -> Option<gtk4::DrawingArea> {
     drawing_area.set_draw_func(move |_area, cr, width, height| {
         let mut r = BatteryReader::new();
         if let Some(info) = r.read() {
-            let is_charging = matches!(info.status, infrastructure::system::BatteryStatus::Charging);
+            let is_charging = matches!(info.status, services::system::BatteryStatus::Charging);
             let dark = is_dark_mode();
             draw_cairo_battery(
                 cr,

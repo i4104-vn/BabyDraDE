@@ -4,7 +4,7 @@ use gtk4::glib::{self, ControlFlow};
 use std::time::Duration;
 
 pub fn watch_locale_change<F: Fn(&str) + 'static>(callback: F) {
-    let receiver = infrastructure::i18n::watch_locale_changes();
+    let receiver = services::i18n::watch_locale_changes();
     glib::timeout_add_local(Duration::from_millis(300), move || {
         loop {
             match receiver.try_recv() {

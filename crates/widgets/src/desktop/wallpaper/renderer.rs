@@ -3,7 +3,7 @@ use gtk4::gdk::prelude::GdkCairoContextExt;
 use gtk4::gdk_pixbuf::Pixbuf;
 use gtk4::gio::MemoryInputStream;
 use gtk4::glib;
-use infrastructure::wallpaper::get_default_wallpaper_svg;
+use services::wallpaper::get_default_wallpaper_svg;
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
