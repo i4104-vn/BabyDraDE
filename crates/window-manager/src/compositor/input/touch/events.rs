@@ -10,6 +10,7 @@ use smithay::{
 };
 
 use crate::compositor::input::common::transform_absolute_position;
+use crate::compositor::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
 use crate::compositor::state::BabydraState;
 use super::drag::handle_touch_drag;
 
@@ -33,6 +34,9 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
     state.pointer_location = position;
     state.cursor_visible = false;
     state.touch_slots.insert(event.slot());
+
+    // Begin tracking this finger for multi-touch gesture detection.
+    on_touch_down(state, event.slot(), position, event.time_msec() as u64);
 
     let serial = SERIAL_COUNTER.next_serial();
     let keyboard = state.seat.get_keyboard().unwrap();
@@ -92,6 +96,9 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
     state.pointer_location = position;
     state.cursor_visible = false;
 
+    // Update gesture tracking position for this slot.
+    on_touch_motion(state, event.slot(), position);
+
     if handle_touch_drag(state, position) {
         return;
     }
@@ -123,6 +130,9 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
     state: &mut BabydraState,
     event: T,
 ) {
+    // Evaluate multi-touch gesture before removing the slot.
+    on_touch_up(state, event.slot(), event.time_msec() as u64);
+
     state.touch_slots.remove(&event.slot());
     if state.touch_slots.is_empty() {
         state.move_state = None;
