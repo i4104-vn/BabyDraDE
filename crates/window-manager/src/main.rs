@@ -171,8 +171,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             match arg.to_str() {
                 Some("--help" | "-h") => {
                     println!("BabyDraDE Window Manager");
-                    println!("Usage: window-manager [--app EXECUTABLE]");
-                    println!("BABYDRADE_TEST_APP may also select the test app.");
+                    println!("Usage: babydra-window-manager [OPTIONS]");
+                    println!();
+                    println!("Options:");
+                    println!("    --app EXECUTABLE       Launch a test application on startup");
+                    println!("    --blur-apps APPS       Comma-separated list of app IDs to blur (e.g. 'foot,kitty')");
+                    println!("    --blur-all             Enable background blur on all windows");
+                    println!("    --no-blur              Disable background blur engine");
+                    println!("    -h, --help             Show this help message");
+                    println!();
+                    println!("Shortcuts:");
+                    println!("    Super + B              Toggle blur on the currently active window");
+                    println!();
+                    println!("Environment variables:");
+                    println!("    BABYDRADE_BLUR_APPS    Comma-separated list of app IDs to blur");
+                    println!("    BABYDRADE_BLUR_ALL     Set to 1 or true to blur all windows");
+                    println!("    BABYDRADE_BLUR_RADIUS  Blur radius (default 12.0)");
+                    println!("    BABYDRADE_BLUR_OPACITY Window opacity (default 0.88)");
                     return Ok(());
                 }
                 Some("--app") => {
@@ -180,6 +195,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                     if app.is_none() {
                         return Err(std::io::Error::other("--app requires an executable name").into());
                     }
+                }
+                Some("--blur-apps") => {
+                    if let Some(apps) = args.next() {
+                        std::env::set_var("BABYDRADE_BLUR_APPS", apps);
+                    } else {
+                        return Err(std::io::Error::other("--blur-apps requires a comma-separated list of apps").into());
+                    }
+                }
+                Some("--blur-all") => {
+                    std::env::set_var("BABYDRADE_BLUR_ALL", "1");
+                }
+                Some("--no-blur") => {
+                    std::env::set_var("BABYDRADE_BLUR_ALL", "0");
+                    std::env::set_var("BABYDRADE_BLUR_APPS", "");
                 }
                 _ => {
                     return Err(std::io::Error::other(format!(

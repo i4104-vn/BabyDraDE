@@ -17,9 +17,12 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
     let keyboard = state.seat.get_keyboard().unwrap();
 
     let mut spawn_terminal = false;
-    let mut cycle_focus = false;
+    let mut switcher_step = None;
+    let mut cancel_switcher = false;
+    let mut commit_switcher = false;
     let mut quit_compositor = false;
     let mut close_active_window = false;
+    let mut toggle_blur = false;
 
     keyboard.input::<(), _>(
         state,
@@ -27,10 +30,35 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
         event.state(),
         serial,
         time,
-        |_state, modifiers, handle| {
-            if event.state() == KeyState::Pressed {
-                let sym = handle.modified_sym();
+        |state, modifiers, handle| {
+            let sym = handle.modified_sym();
+            let switcher_active = state.alt_tab_switcher.is_some();
 
+            if switcher_active
+                && event.state() == KeyState::Released
+                && (sym == keysyms::KEY_Tab.into() || sym == keysyms::KEY_ISO_Left_Tab.into())
+            {
+                return FilterResult::Intercept(());
+            }
+
+            if switcher_active
+                && event.state() == KeyState::Pressed
+                && sym == keysyms::KEY_Escape.into()
+                && !modifiers.logo
+            {
+                cancel_switcher = true;
+                return FilterResult::Intercept(());
+            }
+
+            if switcher_active
+                && event.state() == KeyState::Released
+                && (sym == keysyms::KEY_Alt_L.into() || sym == keysyms::KEY_Alt_R.into())
+                && !modifiers.alt
+            {
+                commit_switcher = true;
+            }
+
+            if event.state() == KeyState::Pressed {
                 // 1. Super + Escape OR Super + Shift + Q OR Ctrl + Alt + Backspace: Quit WM immediately
                 if (modifiers.logo && sym == keysyms::KEY_Escape.into())
                     || (modifiers.logo
@@ -61,11 +89,20 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                     return FilterResult::Intercept(());
                 }
 
-                // 4. Alt + Tab: Cycle windows and raise next to top
+                // 4. Alt + Tab: choose a window, then focus it when Alt is released
                 if modifiers.alt
                     && (sym == keysyms::KEY_Tab.into() || sym == keysyms::KEY_ISO_Left_Tab.into())
                 {
-                    cycle_focus = true;
+                    switcher_step =
+                        Some(modifiers.shift || sym == keysyms::KEY_ISO_Left_Tab.into());
+                    return FilterResult::Intercept(());
+                }
+
+                // 5. Super + B: Toggle blur on the active window
+                if modifiers.logo
+                    && (sym == keysyms::KEY_b.into() || sym == keysyms::KEY_B.into())
+                {
+                    toggle_blur = true;
                     return FilterResult::Intercept(());
                 }
             }
@@ -92,8 +129,33 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
         spawn_new_terminal(&state.socket_name);
     }
 
-    if cycle_focus {
-        cycle_window_focus(state, true, serial);
+    if toggle_blur {
+        if let Some((app_id, is_now_blurred)) = state.toggle_blur_active_window() {
+            info!(
+                "Super+B pressed: Toggled blur on active app '{}': blur_enabled={}",
+                app_id, is_now_blurred
+            );
+        } else {
+            info!("Super+B pressed: No active window found to toggle blur on");
+        }
+    }
+
+    if cancel_switcher {
+        state.alt_tab_switcher = None;
+    } else if let Some(backwards) = switcher_step {
+        state.cycle_alt_tab(backwards);
+    } else if commit_switcher {
+        if let Some(switcher) = state.alt_tab_switcher.take() {
+            if let Some(window) = switcher
+                .entries
+                .get(switcher.selected_index)
+                .map(|entry| &entry.window)
+            {
+                if state.space.elements().any(|mapped| mapped == window) {
+                    focus_window(state, window.clone(), serial);
+                }
+            }
+        }
     }
 }
 
@@ -113,19 +175,24 @@ pub(crate) fn cycle_window_focus(state: &mut BabydraState, forward: bool, serial
         return false;
     };
 
+    focus_window(state, next_window, serial);
+    true
+}
+
+fn focus_window(state: &mut BabydraState, window: smithay::desktop::Window, serial: Serial) {
+    let Some(toplevel) = window.toplevel() else {
+        return;
+    };
     let Some(keyboard) = state.seat.get_keyboard() else {
-        return false;
+        return;
     };
 
-    state.space.raise_element(&next_window, true);
-    keyboard.set_focus(
-        state,
-        Some(next_window.toplevel().unwrap().wl_surface().clone()),
-        serial,
-    );
+    state.space.raise_element(&window, true);
+    keyboard.set_focus(state, Some(toplevel.wl_surface().clone()), serial);
     state.space.elements().for_each(|window| {
-        window.toplevel().unwrap().send_pending_configure();
+        if let Some(toplevel) = window.toplevel() {
+            toplevel.send_pending_configure();
+        }
     });
-    state.update_active_window(Some(&next_window));
-    true
+    state.update_active_window(Some(&window));
 }

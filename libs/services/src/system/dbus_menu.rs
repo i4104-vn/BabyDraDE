@@ -176,10 +176,8 @@ pub fn find_app_menu_service(app_id: &str, process_id: Option<u32>) -> Option<(S
     let mut seen = std::collections::HashSet::new();
 
     for (service, registered_path) in candidates {
-        if !seen.insert(service.clone()) {
-            if registered_path.is_empty() {
-                continue;
-            }
+        if !seen.insert(service.clone()) && registered_path.is_empty() {
+            continue;
         }
 
         if !registered_path.is_empty()

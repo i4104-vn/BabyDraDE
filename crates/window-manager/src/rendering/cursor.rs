@@ -97,6 +97,6 @@ impl Cursor {
             Kind::Cursor,
         )
         .ok()
-        .map(CustomRenderElements::Cursor)
+        .map(CustomRenderElements::Memory)
     }
 }

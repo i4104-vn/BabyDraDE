@@ -13,7 +13,9 @@ use smithay::{
 
 use crate::{
     compositor::{BabydraState, CalloopData},
-    rendering::{render_layer_surfaces, render_window, Cursor, CustomRenderElements},
+    rendering::{
+        render_layer_surfaces, render_window, Cursor, CustomRenderElements, SwitcherOverlay,
+    },
 };
 
 pub(crate) fn init(
@@ -55,18 +57,14 @@ pub(crate) fn init(
         Ok("270") => Transform::Flipped270,
         _ => Transform::Flipped180,
     };
-    output.change_current_state(
-        Some(mode),
-        Some(transform),
-        None,
-        Some((0, 0).into()),
-    );
+    output.change_current_state(Some(mode), Some(transform), None, Some((0, 0).into()));
     output.set_preferred(mode);
 
     data.state.space.map_output(&output, (0, 0));
     std::env::set_var("WAYLAND_DISPLAY", &data.state.socket_name);
 
     let mut damage_tracker = OutputDamageTracker::from_output(&output);
+    let mut switcher_overlay = SwitcherOverlay::default();
     backend.window().request_redraw();
 
     event_loop
@@ -94,10 +92,21 @@ pub(crate) fn init(
 
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();
                     let scale = Scale::from(1.0);
+                    let blur_engine = Some(&state.blur_engine);
 
                     // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
-                    if let Some(cursor_elem) = cursor.element(backend.renderer(), state.pointer_location, scale) {
+                    if let Some(cursor_elem) =
+                        cursor.element(backend.renderer(), state.pointer_location, scale)
+                    {
                         render_elements.push(cursor_elem);
+                    }
+
+                    if let Some(element) = switcher_overlay.element(
+                        backend.renderer(),
+                        state.alt_tab_switcher.as_ref(),
+                        (size.w, size.h),
+                    ) {
+                        render_elements.push(element);
                     }
 
                     // 2. Render Overlay & Top layer surfaces (topbar, dynamic island, notification popups)
@@ -105,7 +114,11 @@ pub(crate) fn init(
                         backend.renderer(),
                         &output,
                         scale,
-                        &[smithay::wayland::shell::wlr_layer::Layer::Overlay, smithay::wayland::shell::wlr_layer::Layer::Top],
+                        &[
+                            smithay::wayland::shell::wlr_layer::Layer::Overlay,
+                            smithay::wayland::shell::wlr_layer::Layer::Top,
+                        ],
+                        blur_engine,
                     ));
 
                     // 3. Render each mapped window in front-to-back order (highest z-index / focused window first)
@@ -116,6 +129,7 @@ pub(crate) fn init(
                                 window,
                                 loc,
                                 scale,
+                                blur_engine,
                             ));
                         }
                     }
@@ -125,7 +139,11 @@ pub(crate) fn init(
                         backend.renderer(),
                         &output,
                         scale,
-                        &[smithay::wayland::shell::wlr_layer::Layer::Bottom, smithay::wayland::shell::wlr_layer::Layer::Background],
+                        &[
+                            smithay::wayland::shell::wlr_layer::Layer::Bottom,
+                            smithay::wayland::shell::wlr_layer::Layer::Background,
+                        ],
+                        blur_engine,
                     ));
 
                     {

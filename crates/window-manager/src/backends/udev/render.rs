@@ -17,7 +17,7 @@ use tracing::{error, info, warn};
 
 use crate::{
     compositor::CalloopData,
-    rendering::{render_layer_surfaces, render_window, CustomRenderElements},
+    rendering::{render_layer_surfaces, render_window, CustomRenderElements, SwitcherOverlay},
 };
 
 use super::surface::UdevState;
@@ -71,24 +71,20 @@ pub fn setup_render_loop(
                 }
             }
         })
-        .map_err(|err| {
-            std::io::Error::other(format!("Failed to insert DRM notifier: {err}"))
-        })?;
+        .map_err(|err| std::io::Error::other(format!("Failed to insert DRM notifier: {err}")))?;
 
     // 3. Udev event monitor for device hotplugging
     event_loop
         .handle()
-        .insert_source(udev_backend, move |event, _, _data| {
-            match event {
-                UdevEvent::Added { device_id, path } => {
-                    info!("GPU device added: dev_id={device_id}, path={path:?}");
-                }
-                UdevEvent::Changed { device_id } => {
-                    info!("DRM device changed (possible monitor hotplug): dev_id={device_id}");
-                }
-                UdevEvent::Removed { device_id } => {
-                    warn!("GPU device removed: dev_id={device_id}");
-                }
+        .insert_source(udev_backend, move |event, _, _data| match event {
+            UdevEvent::Added { device_id, path } => {
+                info!("GPU device added: dev_id={device_id}, path={path:?}");
+            }
+            UdevEvent::Changed { device_id } => {
+                info!("DRM device changed (possible monitor hotplug): dev_id={device_id}");
+            }
+            UdevEvent::Removed { device_id } => {
+                warn!("GPU device removed: dev_id={device_id}");
             }
         })
         .map_err(|err| {
@@ -97,6 +93,7 @@ pub fn setup_render_loop(
 
     // 4. Frame Render Loop — driven by 16ms timer (~60 FPS)
     let state_render = state;
+    let mut switcher_overlay = SwitcherOverlay::default();
     let timer = Timer::immediate();
     event_loop
         .handle()
@@ -119,18 +116,35 @@ pub fn setup_render_loop(
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();
 
                     // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
-                    if let Some(cursor_elem) = cursor.element(renderer, state.pointer_location, scale) {
+                    if let Some(cursor_elem) =
+                        cursor.element(renderer, state.pointer_location, scale)
+                    {
                         render_elements.push(cursor_elem);
                     }
 
                     let output = &surface_data.output;
+                    let blur_engine = Some(&state.blur_engine);
+
+                    if let Some(size) = output.current_mode().map(|mode| mode.size) {
+                        if let Some(element) = switcher_overlay.element(
+                            renderer,
+                            state.alt_tab_switcher.as_ref(),
+                            (size.w, size.h),
+                        ) {
+                            render_elements.push(element);
+                        }
+                    }
 
                     // 2. Render Overlay & Top layer surfaces (topbar, dynamic island, notification popups)
                     render_elements.extend(render_layer_surfaces(
                         renderer,
                         output,
                         scale,
-                        &[smithay::wayland::shell::wlr_layer::Layer::Overlay, smithay::wayland::shell::wlr_layer::Layer::Top],
+                        &[
+                            smithay::wayland::shell::wlr_layer::Layer::Overlay,
+                            smithay::wayland::shell::wlr_layer::Layer::Top,
+                        ],
+                        blur_engine,
                     ));
 
                     // 3. Render each mapped window in front-to-back order (highest z-index / focused window first)
@@ -141,6 +155,7 @@ pub fn setup_render_loop(
                                 window,
                                 loc,
                                 scale,
+                                blur_engine,
                             ));
                         }
                     }
@@ -150,15 +165,21 @@ pub fn setup_render_loop(
                         renderer,
                         output,
                         scale,
-                        &[smithay::wayland::shell::wlr_layer::Layer::Bottom, smithay::wayland::shell::wlr_layer::Layer::Background],
+                        &[
+                            smithay::wayland::shell::wlr_layer::Layer::Bottom,
+                            smithay::wayland::shell::wlr_layer::Layer::Background,
+                        ],
+                        blur_engine,
                     ));
 
-                    match surface_data.compositor.render_frame::<GlowRenderer, CustomRenderElements>(
-                        renderer,
-                        &render_elements,
-                        theme.background_color,
-                        FrameFlags::DEFAULT,
-                    ) {
+                    match surface_data
+                        .compositor
+                        .render_frame::<GlowRenderer, CustomRenderElements>(
+                            renderer,
+                            &render_elements,
+                            theme.background_color,
+                            FrameFlags::DEFAULT,
+                        ) {
                         Ok(render_result) => {
                             if !render_result.is_empty {
                                 if let Err(err) = surface_data.compositor.queue_frame(()) {
@@ -199,10 +220,7 @@ pub fn setup_render_loop(
 
             TimeoutAction::ToDuration(Duration::from_millis(16))
         })
-        .map_err(|err| {
-            std::io::Error::other(format!("Failed to insert frame timer: {err}"))
-        })?;
+        .map_err(|err| std::io::Error::other(format!("Failed to insert frame timer: {err}")))?;
 
     Ok(())
 }
-

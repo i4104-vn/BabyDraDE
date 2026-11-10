@@ -1,7 +1,7 @@
 use std::{ffi::OsString, sync::Arc, time::Instant};
 
 use smithay::{
-    desktop::{PopupManager, Space, Window, WindowSurfaceType},
+    desktop::{PopupManager, Space, Window},
     input::{Seat, SeatState},
     reexports::{
         calloop::{
@@ -9,8 +9,7 @@ use smithay::{
         },
         wayland_server::{
             backend::{ClientData, ClientId, DisconnectReason},
-            protocol::wl_surface::WlSurface,
-            Display, DisplayHandle, Resource,
+            Display, DisplayHandle,
         },
     },
     utils::{Logical, Point},
@@ -19,14 +18,18 @@ use smithay::{
         output::OutputManagerState,
         pointer_gestures::PointerGesturesState,
         selection::data_device::DataDeviceState,
-        shell::{
-            wlr_layer::{Layer, WlrLayerShellState},
-            xdg::XdgShellState,
-        },
+        shell::{wlr_layer::WlrLayerShellState, xdg::XdgShellState},
         shm::ShmState,
         socket::ListeningSocketSource,
     },
 };
+
+mod active_window;
+mod blur;
+mod hit_test;
+mod switcher;
+
+pub(crate) use switcher::{AltTabEntry, AltTabSwitcher};
 
 pub(crate) struct CalloopData {
     pub(crate) state: BabydraState,
@@ -70,6 +73,8 @@ pub(crate) struct BabydraState {
 
     pub(crate) move_state: Option<MoveState>,
     pub(crate) trackpad_swipe: Option<TrackpadSwipeBuffer>,
+    pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
+    pub(crate) blur_engine: std::sync::Arc<std::sync::Mutex<crate::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
 }
@@ -112,6 +117,10 @@ impl BabydraState {
             seat,
             move_state: None,
             trackpad_swipe: None,
+            alt_tab_switcher: None,
+            blur_engine: std::sync::Arc::new(std::sync::Mutex::new(
+                crate::rendering::blur::BlurEngine::new(),
+            )),
             pointer_location: Point::from((100.0, 100.0)),
             pointer_pressed_buttons: std::collections::HashSet::new(),
         }
@@ -152,149 +161,6 @@ impl BabydraState {
             .expect("failed to register Wayland display with event loop");
 
         socket_name
-    }
-
-    pub(crate) fn window_under(
-        &self,
-        point: Point<f64, Logical>,
-    ) -> Option<(Window, Point<i32, Logical>)> {
-        // 1. First check via Smithay's element_under (handles exact input regions)
-        if let Some((window, _render_loc)) = self.space.element_under(point) {
-            if let Some(loc) = self.space.element_location(window) {
-                return Some((window.clone(), loc));
-            }
-        }
-
-        // 2. Fallback: check window bounding box and geometry in space
-        for window in self.space.elements().rev() {
-            if let Some(bbox) = self.space.element_bbox(window) {
-                if bbox.to_f64().contains(point) {
-                    if let Some(loc) = self.space.element_location(window) {
-                        return Some((window.clone(), loc));
-                    }
-                }
-            }
-            if let Some(geo) = self.space.element_geometry(window) {
-                if geo.to_f64().contains(point) {
-                    if let Some(loc) = self.space.element_location(window) {
-                        return Some((window.clone(), loc));
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
-    pub(crate) fn surface_under(
-        &self,
-        position: Point<f64, Logical>,
-    ) -> Option<(WlSurface, Point<f64, Logical>)> {
-        if let Some(ref m) = self.move_state {
-            if m.has_dragged {
-                return None;
-            }
-        }
-
-        // 1. Check Overlay and Top layer surfaces (bars, overlays, dynamic islands)
-        if let Some(surface) = self.surface_under_layers(position, &[Layer::Overlay, Layer::Top]) {
-            return Some(surface);
-        }
-
-        // 2. Check normal desktop windows
-        if let Some((window, location)) = self.space.element_under(position) {
-            if let Some((surface, point)) = window
-                .surface_under(position - location.to_f64(), WindowSurfaceType::ALL)
-            {
-                return Some((surface, (point + location).to_f64()));
-            }
-        }
-
-        // 3. Check Bottom and Background layer surfaces (wallpapers, desktop widgets)
-        self.surface_under_layers(position, &[Layer::Bottom, Layer::Background])
-    }
-
-    fn surface_under_layers(
-        &self,
-        position: Point<f64, Logical>,
-        layers: &[Layer],
-    ) -> Option<(WlSurface, Point<f64, Logical>)> {
-        for output in self.space.outputs() {
-            let layer_map = smithay::desktop::layer_map_for_output(output);
-            for layer in layer_map.layers().rev() {
-                if layers.contains(&layer.layer()) {
-                    if let Some(geo) = layer_map.layer_geometry(layer) {
-                        if geo.to_f64().contains(position) {
-                            if let Some((surf, surf_loc)) = layer.surface_under(
-                                position - geo.loc.to_f64(),
-                                WindowSurfaceType::ALL,
-                            ) {
-                                return Some((surf, (surf_loc + geo.loc).to_f64()));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
-    pub(crate) fn layer_under(
-        &self,
-        position: Point<f64, Logical>,
-    ) -> Option<smithay::wayland::shell::wlr_layer::Layer> {
-        for output in self.space.outputs() {
-            let layer_map = smithay::desktop::layer_map_for_output(output);
-            for layer in layer_map.layers().rev() {
-                if let Some(geo) = layer_map.layer_geometry(layer) {
-                    if geo.to_f64().contains(position)
-                        && layer
-                            .surface_under(position - geo.loc.to_f64(), WindowSurfaceType::ALL)
-                            .is_some()
-                    {
-                        return Some(layer.layer());
-                    }
-                }
-            }
-        }
-        None
-    }
-
-    pub(crate) fn update_active_window(&self, window: Option<&Window>) {
-        let info = if let Some(w) = window {
-            if let Some(toplevel) = w.toplevel() {
-                let (app_id, title) = smithay::wayland::compositor::with_states(toplevel.wl_surface(), |states| {
-                    states
-                        .data_map
-                        .get::<smithay::wayland::shell::xdg::XdgToplevelSurfaceData>()
-                        .map(|data| {
-                            let guard = data.lock().unwrap();
-                            (
-                                guard.app_id.clone().unwrap_or_default(),
-                                guard.title.clone().unwrap_or_default(),
-                            )
-                        })
-                })
-                .unwrap_or_default();
-                let process_id = self
-                    .display_handle
-                    .get_client(toplevel.wl_surface().id())
-                    .ok()
-                    .and_then(|client| client.get_credentials(&self.display_handle).ok())
-                    .and_then(|credentials| u32::try_from(credentials.pid).ok());
-                services::system::window::ActiveWindowInfo {
-                    app_id,
-                    title,
-                    process_id,
-                }
-            } else {
-                services::system::window::ActiveWindowInfo::default()
-            }
-        } else {
-            services::system::window::ActiveWindowInfo::default()
-        };
-        services::system::window::save_active_window(&info);
     }
 }
 
