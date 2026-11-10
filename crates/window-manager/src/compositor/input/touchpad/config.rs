@@ -1,6 +1,8 @@
 //! Touchpad device configuration, tap-to-click settings, and hotplug management.
 
-/// Touchpad configuration options loaded from environment or defaults.
+//! Touchpad device configuration, tap-to-click settings, and hotplug management.
+
+/// Touchpad configuration options loaded from `~/.babydra/babydra.conf`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TouchpadConfig {
     /// Whether tap-to-click is enabled (1-finger left click, 2-finger right click).
@@ -43,62 +45,44 @@ impl Default for TouchpadConfig {
     }
 }
 
-impl TouchpadConfig {
-    /// Loads touchpad configuration overrides from environment variables, falling back to defaults.
+impl From<services::config::TouchpadConfig> for TouchpadConfig {
+    /// Converts a persistent [`services::config::TouchpadConfig`] from `babydra.conf`
+    /// into compositor runtime [`TouchpadConfig`] with Smithay input types.
     ///
-    /// Supported environment variables:
-    /// - `BABYDRADE_TAP_TO_CLICK`: Set to `"0"` or `"false"` to disable tap-to-click.
-    /// - `BABYDRADE_TAP_DRAG`: Set to `"0"` or `"false"` to disable tap-and-drag.
-    /// - `BABYDRADE_TAP_DRAG_LOCK`: Set to `"1"` or `"true"` to enable tap drag lock.
-    /// - `BABYDRADE_TAP_BUTTON_MAP`: Set to `"lmr"` for Left-Middle-Right (default `"lrm"`).
-    /// - `BABYDRADE_TOUCHPAD_DWT`: Set to `"0"` or `"false"` to disable "disable while typing".
-    /// - `BABYDRADE_NATURAL_SCROLL`: Set to `"1"` or `"true"` for natural scrolling.
-    /// - `BABYDRADE_TOUCHPAD_SPEED` / `BABYDRADE_POINTER_SPEED`: Float between `-1.0` and `1.0`.
+    /// # Arguments
+    ///
+    /// * `cfg` - The deserialized touchpad configuration from `babydra.conf`.
     ///
     /// # Returns
     ///
-    /// Returns a resolved [`TouchpadConfig`] instance.
-    pub fn from_env() -> Self {
-        let tap_to_click = std::env::var("BABYDRADE_TAP_TO_CLICK")
-            .map(|v| v != "0" && v != "false" && v != "no")
-            .unwrap_or(true);
-
-        let tap_drag = std::env::var("BABYDRADE_TAP_DRAG")
-            .map(|v| v != "0" && v != "false" && v != "no")
-            .unwrap_or(true);
-
-        let tap_drag_lock = std::env::var("BABYDRADE_TAP_DRAG_LOCK")
-            .map(|v| v == "1" || v == "true" || v == "yes")
-            .unwrap_or(false);
-
-        let button_map = match std::env::var("BABYDRADE_TAP_BUTTON_MAP").as_deref() {
-            Ok("lmr") => smithay::reexports::input::TapButtonMap::LeftMiddleRight,
+    /// Returns the converted [`TouchpadConfig`].
+    fn from(cfg: services::config::TouchpadConfig) -> Self {
+        let button_map = match cfg.button_map.as_str() {
+            "lmr" => smithay::reexports::input::TapButtonMap::LeftMiddleRight,
             _ => smithay::reexports::input::TapButtonMap::LeftRightMiddle,
         };
 
-        let dwt = std::env::var("BABYDRADE_TOUCHPAD_DWT")
-            .map(|v| v != "0" && v != "false" && v != "no")
-            .unwrap_or(true);
-
-        let natural_scroll = std::env::var("BABYDRADE_NATURAL_SCROLL")
-            .map(|v| v == "1" || v == "true" || v == "yes")
-            .unwrap_or(false);
-
-        let speed = std::env::var("BABYDRADE_TOUCHPAD_SPEED")
-            .or_else(|_| std::env::var("BABYDRADE_POINTER_SPEED"))
-            .ok()
-            .and_then(|v| v.parse::<f64>().ok())
-            .map(|s| s.clamp(-1.0, 1.0));
-
         Self {
-            tap_to_click,
-            tap_drag,
-            tap_drag_lock,
+            tap_to_click: cfg.tap_to_click,
+            tap_drag: cfg.tap_drag,
+            tap_drag_lock: cfg.tap_drag_lock,
             button_map,
-            dwt,
-            natural_scroll,
-            speed,
+            dwt: cfg.dwt,
+            natural_scroll: cfg.natural_scroll,
+            speed: cfg.speed.map(|s| s.clamp(-1.0, 1.0)),
         }
+    }
+}
+
+impl TouchpadConfig {
+    /// Loads the touchpad configuration directly from `~/.babydra/babydra.conf` under `[touchpad]`.
+    ///
+    /// # Returns
+    ///
+    /// Returns a resolved [`TouchpadConfig`] mapped from the shared [`services::config::TouchpadConfig`].
+    pub fn load() -> Self {
+        let shared_cfg = services::config::load_touchpad_config();
+        Self::from(shared_cfg)
     }
 }
 
@@ -114,7 +98,7 @@ pub(crate) fn handle_device_added<D: std::any::Any>(device: &mut D) {
     if let Some(libinput_device) = (device as &mut dyn std::any::Any)
         .downcast_mut::<smithay::reexports::input::Device>()
     {
-        let config = TouchpadConfig::from_env();
+        let config = TouchpadConfig::load();
         configure_touchpad(libinput_device, &config);
     }
 }
@@ -252,6 +236,27 @@ mod tests {
         assert!(config.dwt);
         assert!(!config.natural_scroll);
         assert_eq!(config.speed, None);
+    }
+
+    #[test]
+    fn test_touchpad_config_from_shared_config() {
+        let shared = services::config::TouchpadConfig {
+            tap_to_click: true,
+            tap_drag: false,
+            tap_drag_lock: true,
+            button_map: "lmr".to_string(),
+            dwt: false,
+            natural_scroll: true,
+            speed: Some(0.75),
+        };
+        let config = TouchpadConfig::from(shared);
+        assert!(config.tap_to_click);
+        assert!(!config.tap_drag);
+        assert!(config.tap_drag_lock);
+        assert_eq!(config.button_map, TapButtonMap::LeftMiddleRight);
+        assert!(!config.dwt);
+        assert!(config.natural_scroll);
+        assert_eq!(config.speed, Some(0.75));
     }
 
     #[test]
