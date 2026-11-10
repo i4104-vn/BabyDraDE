@@ -101,10 +101,11 @@ pub(crate) fn init(
                         render_elements.push(cursor_elem);
                     }
 
+                    let oriented_size = output.current_transform().transform_size(size);
                     if let Some(element) = switcher_overlay.element(
                         backend.renderer(),
                         state.alt_tab_switcher.as_ref(),
-                        (size.w, size.h),
+                        (oriented_size.w, oriented_size.h),
                     ) {
                         render_elements.push(element);
                     }

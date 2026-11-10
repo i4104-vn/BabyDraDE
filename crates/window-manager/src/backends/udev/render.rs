@@ -126,10 +126,11 @@ pub fn setup_render_loop(
                     let blur_engine = Some(&state.blur_engine);
 
                     if let Some(size) = output.current_mode().map(|mode| mode.size) {
+                        let oriented_size = output.current_transform().transform_size(size);
                         if let Some(element) = switcher_overlay.element(
                             renderer,
                             state.alt_tab_switcher.as_ref(),
-                            (size.w, size.h),
+                            (oriented_size.w, oriented_size.h),
                         ) {
                             render_elements.push(element);
                         }
