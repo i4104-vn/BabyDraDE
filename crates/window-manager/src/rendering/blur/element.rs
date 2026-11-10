@@ -66,14 +66,13 @@ impl Element for BlurRenderElement {
     fn damage_since(
         &self,
         scale: Scale<f64>,
-        _commit: Option<CommitCounter>,
+        commit: Option<CommitCounter>,
     ) -> DamageSet<i32, Physical> {
-        // The blur source is the framebuffer underneath this element. It is not
-        // stable like a normal surface: a hover/animation can change the pixels
-        // behind it without changing this element's commit counter. Always
-        // damaging the backdrop makes Smithay redraw the underlying scene before
-        // we copy it, preventing recursive blur/tint feedback on partial damage.
-        DamageSet::from_slice(&[Rectangle::from_size(self.geometry(scale).size)])
+        if commit != Some(self.current_commit()) {
+            DamageSet::from_slice(&[Rectangle::from_size(self.geometry(scale).size)])
+        } else {
+            DamageSet::default()
+        }
     }
 
     fn opaque_regions(&self, _scale: Scale<f64>) -> OpaqueRegions<i32, Physical> {

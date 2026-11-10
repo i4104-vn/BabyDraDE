@@ -58,12 +58,11 @@ impl BlurEngine {
             return false;
         }
 
-        // `blur_all` is documented as applying to application windows. A
-        // layer-shell overlay may legitimately be sized to the whole output
-        // while only painting a small transparent card; blurring its geometry
-        // would therefore put an opaque backdrop over the entire desktop.
-        // Layer-shell blur remains opt-in through an explicit namespace rule.
         let ns_lower = namespace.to_lowercase();
+        if ns_lower.contains("topbar") || ns_lower.contains("desktop") || ns_lower.contains("wallpaper") {
+            return false;
+        }
+
         self.params.app_rules.iter().any(|rule| {
             let rule_lower = rule.to_lowercase();
             ns_lower == rule_lower || ns_lower.contains(&rule_lower)
@@ -242,8 +241,10 @@ mod tests {
         // Blur all toggle
         engine.set_blur_all(true);
         assert!(!engine.matches_layer("random-layer"));
+        assert!(!engine.matches_layer("babydra-topbar"));
         engine.set_blur_all(false);
         assert!(engine.matches_layer("babydra-panel"));
+        assert!(!engine.matches_layer("babydra-topbar"));
         assert!(!engine.matches_layer("random-layer"));
     }
 }

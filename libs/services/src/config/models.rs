@@ -218,7 +218,6 @@ fn default_blur_app_rules() -> Vec<String> {
         "org.gnome.Terminal".to_string(),
         "terminal".to_string(),
         "babydra-panel".to_string(),
-        "babydra-topbar".to_string(),
         "code".to_string(),
         "nautilus".to_string(),
         "thunar".to_string(),

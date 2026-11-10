@@ -120,8 +120,8 @@ pub fn render_layer_surfaces(
             if let Some(geo) = layer_map.layer_geometry(layer) {
                 let render_loc = geo.loc.to_physical_precise_round(scale);
 
-                // The desktop background is the source image for window blur, never a blur target.
-                let should_blur = if layer.layer() == Layer::Background {
+                // The desktop background and topbar are never blur targets.
+                let should_blur = if layer.layer() == Layer::Background || layer.namespace().contains("topbar") {
                     false
                 } else if let Some(engine_lock) = blur_engine {
                     if let Ok(engine) = engine_lock.lock() {
@@ -146,11 +146,7 @@ pub fn render_layer_surfaces(
                 if should_blur {
                     if let Some(engine_lock) = blur_engine {
                         let corner_radius = if let Ok(engine) = engine_lock.lock() {
-                            if layer.namespace().contains("topbar") {
-                                0.0
-                            } else {
-                                engine.params.corner_radius
-                            }
+                            engine.params.corner_radius
                         } else {
                             0.0
                         };
