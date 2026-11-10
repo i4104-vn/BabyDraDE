@@ -1,6 +1,6 @@
 //! Configuration load/save logic for `~/.babydra/babydra.conf` matching babydra-core.
 
-use super::models::{BabyDraConfig, BlurConfig, DesktopConfig, TouchpadConfig};
+use super::models::{BabyDraConfig, BlurConfig, DesktopConfig, GestureConfig, TouchpadConfig};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
 use std::time::SystemTime;
@@ -201,5 +201,30 @@ pub fn load_touchpad_config() -> TouchpadConfig {
 pub fn save_touchpad_config(touchpad: &TouchpadConfig) {
     let mut config = load_babydra_config();
     config.touchpad = touchpad.clone();
+    save_babydra_config(&config);
+}
+
+/// Loads gesture configuration from `~/.babydra/babydra.conf`.
+///
+/// Reads the `[gestures]` section from the cached or on-disk configuration,
+/// falling back to defaults if the section is absent.
+///
+/// # Returns
+///
+/// Returns the current [`GestureConfig`] settings.
+pub fn load_gesture_config() -> GestureConfig {
+    load_babydra_config().gestures
+}
+
+/// Persists gesture configuration into `~/.babydra/babydra.conf`.
+///
+/// Updates the `[gestures]` section and flushes the full config to disk.
+///
+/// # Arguments
+///
+/// * `gestures` - Reference to the updated [`GestureConfig`] to persist.
+pub fn save_gesture_config(gestures: &GestureConfig) {
+    let mut config = load_babydra_config();
+    config.gestures = gestures.clone();
     save_babydra_config(&config);
 }
