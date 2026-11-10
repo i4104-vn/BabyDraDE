@@ -48,9 +48,7 @@ impl LogoButton {
         let menu_handle = menu.clone();
         click.connect_pressed(move |gesture, _, _, _| {
             let btn_num = gesture.current_button();
-            if btn_num == 1 {
-                menu_handle.popup();
-            } else if btn_num == 3 {
+            if btn_num == 1 || btn_num == 3 {
                 menu_handle.popup();
             }
         });

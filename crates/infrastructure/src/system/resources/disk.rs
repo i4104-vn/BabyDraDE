@@ -47,6 +47,7 @@ impl DiskReader {
     }
 
     #[cfg(unix)]
+    #[allow(clippy::unnecessary_cast)]
     pub fn read_path(path: &Path) -> Option<DiskInfo> {
         use std::ffi::CString;
         use std::mem::MaybeUninit;

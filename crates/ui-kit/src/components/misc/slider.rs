@@ -25,13 +25,15 @@ pub fn create_slider_header(title: &str, initial_val: f64) -> (gtk4::Box, gtk4::
     (header_box, val_label)
 }
 
+pub type SliderCallbacks = Rc<RefCell<Vec<Rc<dyn Fn(f64)>>>>;
+
 /// A smooth, rounded pill slider for volume and brightness control.
 #[derive(Clone)]
 pub struct PillSlider {
     pub container: gtk4::Box,
     pub scale: gtk4::Scale,
     silent: Rc<Cell<bool>>,
-    change_callbacks: Rc<RefCell<Vec<Rc<dyn Fn(f64)>>>>,
+    change_callbacks: SliderCallbacks,
 }
 
 impl PillSlider {
@@ -62,7 +64,7 @@ impl PillSlider {
         container.append(&scale);
 
         let silent = Rc::new(Cell::new(false));
-        let change_callbacks: Rc<RefCell<Vec<Rc<dyn Fn(f64)>>>> =
+        let change_callbacks: SliderCallbacks =
             Rc::new(RefCell::new(vec![Rc::new(on_change)]));
 
         let silent_c = silent.clone();
