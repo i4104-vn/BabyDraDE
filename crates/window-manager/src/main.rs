@@ -186,8 +186,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                     println!("Environment variables:");
                     println!("    BABYDRADE_BLUR_APPS    Comma-separated list of app IDs to blur");
                     println!("    BABYDRADE_BLUR_ALL     Set to 1 or true to blur all windows");
-                    println!("    BABYDRADE_BLUR_RADIUS  Blur radius (default 12.0)");
-                    println!("    BABYDRADE_BLUR_OPACITY Window opacity (default 0.88)");
+                    println!("    BABYDRADE_BLUR_RADIUS  Blur radius (default 18.0)");
+                    println!("    BABYDRADE_BLUR_OPACITY Window opacity (default 0.68)");
                     return Ok(());
                 }
                 Some("--app") => {

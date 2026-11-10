@@ -15,16 +15,17 @@ pub struct BlurParams {
     pub passes: usize,
     /// Window corner radius for SDF rounded clipping (default 14.0px)
     pub corner_radius: f32,
-    /// Default surface opacity for windows matching blur (0.0 to 1.0, default 0.88)
-    /// Allows apps without native transparency to have frosted glass transparency
+    /// Surface opacity for windows matching blur (0.0 to 1.0, default 0.68).
+    /// A lower value is intentional: the backdrop is rendered behind the client
+    /// surface, so an almost opaque client would make the blur imperceptible.
     pub window_opacity: f32,
-    /// Acrylic tint color [R, G, B, A] (default dark frosted tint [0.08, 0.08, 0.12, 0.35])
+    /// Acrylic tint color [R, G, B, A] (default neutral frosted tint [0.10, 0.12, 0.16, 0.18])
     pub tint: [f32; 4],
-    /// Subtle dithering noise amount to eliminate 8-bit color banding (default 0.02)
+    /// Subtle dithering noise amount to eliminate 8-bit color banding (default 0.012)
     pub noise: f32,
-    /// Backlight exposure / brightness adjustment (default 0.95)
+    /// Backlight exposure / brightness adjustment (default 1.0)
     pub brightness: f32,
-    /// Contrast adjustment (default 1.05)
+    /// Contrast adjustment (default 1.0)
     pub contrast: f32,
     /// List of target app IDs, process names, or window titles to blur
     pub app_rules: Vec<String>,
@@ -35,14 +36,14 @@ impl Default for BlurParams {
         Self {
             enabled: true,
             blur_all: false,
-            radius: 12.0,
-            passes: 2,
+            radius: 18.0,
+            passes: 3,
             corner_radius: 14.0,
-            window_opacity: 0.88,
-            tint: [0.08, 0.08, 0.12, 0.35],
-            noise: 0.02,
-            brightness: 0.95,
-            contrast: 1.05,
+            window_opacity: 0.68,
+            tint: [0.10, 0.12, 0.16, 0.18],
+            noise: 0.012,
+            brightness: 1.0,
+            contrast: 1.0,
             app_rules: vec![
                 // Popular terminal emulators
                 "foot".to_string(),
