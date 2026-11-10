@@ -115,24 +115,45 @@ configure_screen_orientation() {
     echo "[*] Setting screen orientation to $BABYDRADE_ORIENTATION (transform: $BABYDRADE_TRANSFORM)..."
 
     # 1. Hardware Framebuffer Console (TTY) rotation:
-    # On tablet devices with native portrait screens, rotating fbcon switches console to landscape.
-    # Rotation values for fbcon: 0 = 0°, 1 = 90° clockwise, 2 = 180°, 3 = 270° counter-clockwise.
-    local fb_rotate=1
-    if [ "$BABYDRADE_ORIENTATION" = "portrait" ]; then
-        fb_rotate=0
-    elif [ "$BABYDRADE_TRANSFORM" = "270" ]; then
-        fb_rotate=3
-    elif [ "$BABYDRADE_TRANSFORM" = "180" ]; then
-        fb_rotate=2
-    fi
+    # On tablet/touch devices with native portrait screens, rotating fbcon aligns the Linux TTY console.
+    # Linux kernel fbcon rotate mapping (include/linux/fb.h):
+    #   0 = FB_ROTATE_UR  (0° normal / upright)
+    #   1 = FB_ROTATE_CW  (90° clockwise = 270° counter-clockwise)
+    #   2 = FB_ROTATE_UD  (180° upside-down)
+    #   3 = FB_ROTATE_CCW (270° clockwise = 90° counter-clockwise)
+    # Wayland wl_output::transform specifies counter-clockwise (CCW) rotation:
+    #   Transform::_90    (90° CCW)  <-> fbcon 3 (90° CCW / FB_ROTATE_CCW)
+    #   Transform::_180   (180°)     <-> fbcon 2 (180° / FB_ROTATE_UD)
+    #   Transform::_270   (270° CCW) <-> fbcon 1 (90° CW / FB_ROTATE_CW)
+    #   Transform::Normal (0°)       <-> fbcon 0 (0° / FB_ROTATE_UR)
+    local fb_rotate=0
+    case "$BABYDRADE_TRANSFORM" in
+        90|flipped-90)
+            fb_rotate=3
+            ;;
+        180|flipped-180)
+            fb_rotate=2
+            ;;
+        270|flipped-270)
+            fb_rotate=1
+            ;;
+        0|normal|flipped)
+            fb_rotate=0
+            ;;
+        *)
+            if [ "$BABYDRADE_ORIENTATION" = "landscape" ]; then
+                fb_rotate=3
+            else
+                fb_rotate=0
+            fi
+            ;;
+    esac
 
-    for fb_node in /sys/class/graphics/fbcon/rotate_all /sys/class/graphics/fbcon/rotate; do
+    for fb_node in /sys/class/graphics/fbcon/rotate_all /sys/class/graphics/fbcon/rotate /sys/class/graphics/fb0/rotate; do
         if [ -w "$fb_node" ]; then
             echo "$fb_rotate" > "$fb_node" 2>/dev/null || true
-            break
         elif [ -f "$fb_node" ]; then
             run_privileged sh -c "echo '$fb_rotate' > '$fb_node'" 2>/dev/null || true
-            break
         fi
     done
 
