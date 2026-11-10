@@ -26,6 +26,24 @@ impl BabydraState {
         self.windows.retain(|w| w.alive());
     }
 
+    /// Returns the topmost (most recently raised / focused) window, if any.
+    ///
+    /// The window list is maintained in Z-order: the last entry is the front-most
+    /// window.  Falls back to iterating `space.elements()` in reverse when the
+    /// internal list is empty.
+    ///
+    /// # Returns
+    ///
+    /// The front-most [`Window`], or `None` when no windows are open.
+    pub(crate) fn active_window(&self) -> Option<Window> {
+        self.windows
+            .iter()
+            .rev()
+            .find(|w| w.alive())
+            .cloned()
+            .or_else(|| self.space.elements().next_back().cloned())
+    }
+
     pub(crate) fn raise_window(&mut self, window: &Window) {
         if let Some(pos) = self.windows.iter().position(|w| w == window) {
             let win = self.windows.remove(pos);
