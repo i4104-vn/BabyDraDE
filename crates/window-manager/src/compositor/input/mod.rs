@@ -53,8 +53,17 @@ pub(crate) fn transform_absolute_position<B: InputBackend, T: AbsolutePositionEv
 }
 
 impl BabydraState {
-    pub(crate) fn process_input_event<I: InputBackend>(&mut self, event: InputEvent<I>) {
+    pub(crate) fn process_input_event<I: InputBackend>(&mut self, event: InputEvent<I>)
+    where
+        I::Device: 'static,
+    {
         match event {
+            InputEvent::DeviceAdded { mut device } => {
+                touchpad::handle_device_added(&mut device);
+            }
+            InputEvent::DeviceRemoved { device } => {
+                touchpad::handle_device_removed(&device);
+            }
             InputEvent::Keyboard { event, .. } => {
                 keyboard::handle_keyboard(self, event);
             }
