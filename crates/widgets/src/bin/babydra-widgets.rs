@@ -13,3 +13,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let clean_name = widget_name.strip_prefix("babydra-").unwrap_or(&widget_name);
     widgets::run_widget(clean_name)
 }
+

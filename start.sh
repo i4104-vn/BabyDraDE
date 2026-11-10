@@ -114,18 +114,6 @@ configure_system_english
 configure_screen_orientation() {
     echo "[*] Setting screen orientation to $BABYDRADE_ORIENTATION (transform: $BABYDRADE_TRANSFORM)..."
 
-    # 1. Hardware Framebuffer Console (TTY) rotation:
-    # On tablet/touch devices with native portrait screens, rotating fbcon aligns the Linux TTY console.
-    # Linux kernel fbcon rotate mapping (include/linux/fb.h):
-    #   0 = FB_ROTATE_UR  (0° normal / upright)
-    #   1 = FB_ROTATE_CW  (90° clockwise = 270° counter-clockwise)
-    #   2 = FB_ROTATE_UD  (180° upside-down)
-    #   3 = FB_ROTATE_CCW (270° clockwise = 90° counter-clockwise)
-    # Wayland wl_output::transform specifies counter-clockwise (CCW) rotation:
-    #   Transform::_90    (90° CCW)  <-> fbcon 3 (90° CCW / FB_ROTATE_CCW)
-    #   Transform::_180   (180°)     <-> fbcon 2 (180° / FB_ROTATE_UD)
-    #   Transform::_270   (270° CCW) <-> fbcon 1 (90° CW / FB_ROTATE_CW)
-    #   Transform::Normal (0°)       <-> fbcon 0 (0° / FB_ROTATE_UR)
     local fb_rotate=0
     case "$BABYDRADE_TRANSFORM" in
         90|flipped-90)

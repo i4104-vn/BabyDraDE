@@ -8,3 +8,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     widgets::lock::run();
     Ok(())
 }
+
