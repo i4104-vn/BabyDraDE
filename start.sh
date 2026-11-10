@@ -12,6 +12,9 @@ BABYDRADE_ORIENTATION="landscape"
 BABYDRADE_TRANSFORM="90"
 APP_ARGS=()
 
+git stash
+git pull
+
 while [ $# -gt 0 ]; do
     case "$1" in
         --install-deps|-i)

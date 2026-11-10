@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use tracing::info;
 
 /// Configuration parameters for the BabyDraDE Blur Engine
@@ -54,7 +54,6 @@ impl Default for BlurParams {
                 // BabyDraDE UI widgets
                 "babydra-panel".to_string(),
                 "babydra-topbar".to_string(),
-                "babydra-desktop".to_string(),
                 // Editors & file managers
                 "code".to_string(),
                 "nautilus".to_string(),
@@ -68,7 +67,12 @@ impl BlurParams {
     /// Path to user configuration file: ~/.config/babydra/blur.json
     pub fn config_path() -> Option<PathBuf> {
         let home = std::env::var_os("HOME")?;
-        Some(PathBuf::from(home).join(".config").join("babydra").join("blur.json"))
+        Some(
+            PathBuf::from(home)
+                .join(".config")
+                .join("babydra")
+                .join("blur.json"),
+        )
     }
 
     /// Load configuration from environment variables and JSON file
@@ -134,4 +138,3 @@ impl BlurParams {
         Ok(())
     }
 }
-

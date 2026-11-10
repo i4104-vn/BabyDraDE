@@ -3,12 +3,8 @@ use smithay::utils::{Physical, Rectangle, Size, Transform};
 
 use super::config::BlurParams;
 
-const QUAD_VERTICES: [f32; 8] = [
-    -1.0, -1.0,
-     1.0, -1.0,
-    -1.0,  1.0,
-     1.0,  1.0,
-];
+const QUAD_VERTICES: [f32; 8] = [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0];
+const MAX_BLUR_PASSES: usize = 4;
 
 const VERTEX_SHADER_SRC: &str = r#"
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -176,6 +172,11 @@ struct CompositeProgram {
     a_position: u32,
 }
 
+struct BlurPassTarget {
+    texture: glow::Texture,
+    framebuffer: glow::Framebuffer,
+}
+
 pub struct BlurPipeline {
     downsample_prog: DownsampleProgram,
     upsample_prog: UpsampleProgram,
@@ -183,10 +184,7 @@ pub struct BlurPipeline {
     vbo: glow::Buffer,
 
     capture_tex: glow::Texture,
-    tex1: glow::Texture,
-    fbo1: glow::Framebuffer,
-    tex2: glow::Texture,
-    fbo2: glow::Framebuffer,
+    pass_targets: Vec<BlurPassTarget>,
 
     allocated_w: i32,
     allocated_h: i32,
@@ -213,10 +211,13 @@ impl BlurPipeline {
         gl.bind_buffer(glow::ARRAY_BUFFER, None);
 
         let capture_tex = gl.create_texture()?;
-        let tex1 = gl.create_texture()?;
-        let fbo1 = gl.create_framebuffer()?;
-        let tex2 = gl.create_texture()?;
-        let fbo2 = gl.create_framebuffer()?;
+        let mut pass_targets = Vec::with_capacity(MAX_BLUR_PASSES);
+        for _ in 0..MAX_BLUR_PASSES {
+            pass_targets.push(BlurPassTarget {
+                texture: gl.create_texture()?,
+                framebuffer: gl.create_framebuffer()?,
+            });
+        }
 
         Ok(Self {
             downsample_prog,
@@ -224,10 +225,7 @@ impl BlurPipeline {
             composite_prog,
             vbo,
             capture_tex,
-            tex1,
-            fbo1,
-            tex2,
-            fbo2,
+            pass_targets,
             allocated_w: 0,
             allocated_h: 0,
         })
@@ -237,6 +235,10 @@ impl BlurPipeline {
         if self.allocated_w >= w && self.allocated_h >= h {
             return;
         }
+
+        let previous_framebuffer =
+            std::num::NonZeroU32::new(gl.get_parameter_i32(glow::FRAMEBUFFER_BINDING) as u32)
+                .map(glow::NativeFramebuffer);
 
         let new_w = w.max(self.allocated_w).max(256);
         let new_h = h.max(self.allocated_h).max(256);
@@ -256,58 +258,35 @@ impl BlurPipeline {
         );
         setup_tex_params(gl);
 
-        // 2. Pass 1 texture (half size)
-        let w_half = (new_w / 2).max(1);
-        let h_half = (new_h / 2).max(1);
-        gl.bind_texture(glow::TEXTURE_2D, Some(self.tex1));
-        gl.tex_image_2d(
-            glow::TEXTURE_2D,
-            0,
-            glow::RGBA as i32,
-            w_half,
-            h_half,
-            0,
-            glow::RGBA,
-            glow::UNSIGNED_BYTE,
-            glow::PixelUnpackData::Slice(None),
-        );
-        setup_tex_params(gl);
-        gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo1));
-        gl.framebuffer_texture_2d(
-            glow::FRAMEBUFFER,
-            glow::COLOR_ATTACHMENT0,
-            glow::TEXTURE_2D,
-            Some(self.tex1),
-            0,
-        );
-
-        // 3. Pass 2 texture (quarter size)
-        let w_quarter = (new_w / 4).max(1);
-        let h_quarter = (new_h / 4).max(1);
-        gl.bind_texture(glow::TEXTURE_2D, Some(self.tex2));
-        gl.tex_image_2d(
-            glow::TEXTURE_2D,
-            0,
-            glow::RGBA as i32,
-            w_quarter,
-            h_quarter,
-            0,
-            glow::RGBA,
-            glow::UNSIGNED_BYTE,
-            glow::PixelUnpackData::Slice(None),
-        );
-        setup_tex_params(gl);
-        gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo2));
-        gl.framebuffer_texture_2d(
-            glow::FRAMEBUFFER,
-            glow::COLOR_ATTACHMENT0,
-            glow::TEXTURE_2D,
-            Some(self.tex2),
-            0,
-        );
+        for (index, target) in self.pass_targets.iter().enumerate() {
+            let divisor = 1_i32 << (index + 1);
+            let width = (new_w / divisor).max(1);
+            let height = (new_h / divisor).max(1);
+            gl.bind_texture(glow::TEXTURE_2D, Some(target.texture));
+            gl.tex_image_2d(
+                glow::TEXTURE_2D,
+                0,
+                glow::RGBA as i32,
+                width,
+                height,
+                0,
+                glow::RGBA,
+                glow::UNSIGNED_BYTE,
+                glow::PixelUnpackData::Slice(None),
+            );
+            setup_tex_params(gl);
+            gl.bind_framebuffer(glow::FRAMEBUFFER, Some(target.framebuffer));
+            gl.framebuffer_texture_2d(
+                glow::FRAMEBUFFER,
+                glow::COLOR_ATTACHMENT0,
+                glow::TEXTURE_2D,
+                Some(target.texture),
+                0,
+            );
+        }
 
         gl.bind_texture(glow::TEXTURE_2D, None);
-        gl.bind_framebuffer(glow::FRAMEBUFFER, None);
+        gl.bind_framebuffer(glow::FRAMEBUFFER, previous_framebuffer);
 
         self.allocated_w = new_w;
         self.allocated_h = new_h;
@@ -331,10 +310,16 @@ impl BlurPipeline {
             return;
         }
 
-        // Save current GL state
-        let saved_fbo = gl.get_parameter_i32(glow::FRAMEBUFFER_BINDING) as u32;
-        let mut saved_viewport = [0i32; 4];
-        gl.get_parameter_i32_slice(glow::VIEWPORT, &mut saved_viewport);
+        let gl_state = GlStateSnapshot::capture(
+            gl,
+            [
+                self.downsample_prog.a_position,
+                self.upsample_prog.a_position,
+                self.composite_prog.a_position,
+            ],
+        );
+        let saved_fbo = gl_state.framebuffer;
+        let saved_viewport = gl_state.viewport;
 
         let screen_w = saved_viewport[2];
         let screen_h = saved_viewport[3];
@@ -343,10 +328,7 @@ impl BlurPipeline {
             return;
         }
 
-        // Save and disable scissor test so FBO offscreen passes are not clipped
-        let scissor_was_enabled = gl.is_enabled(glow::SCISSOR_TEST);
-        let mut saved_scissor = [0i32; 4];
-        gl.get_parameter_i32_slice(glow::SCISSOR_BOX, &mut saved_scissor);
+        // Offscreen passes must not inherit the compositor's output damage scissor.
         gl.disable(glow::SCISSOR_TEST);
 
         // Derive oriented display size from physical framebuffer dimensions
@@ -364,14 +346,7 @@ impl BlurPipeline {
         let screen_rect = Rectangle::from_size(Size::from((screen_w, screen_h)));
         let visible_rect = match phys_rect.intersection(screen_rect) {
             Some(rect) => rect,
-            None => {
-                // Completely offscreen, restore scissor and return
-                if scissor_was_enabled {
-                    gl.enable(glow::SCISSOR_TEST);
-                    gl.scissor(saved_scissor[0], saved_scissor[1], saved_scissor[2], saved_scissor[3]);
-                }
-                return;
-            }
+            None => return,
         };
 
         // Convert physical Wayland top-left coords to GL bottom-left coords
@@ -381,13 +356,10 @@ impl BlurPipeline {
         let gl_h = visible_rect.size.h;
 
         if gl_w <= 8 || gl_h <= 8 {
-            if scissor_was_enabled {
-                gl.enable(glow::SCISSOR_TEST);
-                gl.scissor(saved_scissor[0], saved_scissor[1], saved_scissor[2], saved_scissor[3]);
-            }
             return;
         }
 
+        gl.active_texture(glow::TEXTURE0);
         self.ensure_texture_sizes(gl, gl_w, gl_h);
 
         let scale_u = gl_w as f32 / self.allocated_w as f32;
@@ -395,92 +367,108 @@ impl BlurPipeline {
 
         // 1. Capture the background behind the window from the active framebuffer into capture_tex
         gl.bind_texture(glow::TEXTURE_2D, Some(self.capture_tex));
-        gl.copy_tex_sub_image_2d(
-            glow::TEXTURE_2D,
-            0,
-            0,
-            0,
-            gl_x,
-            gl_y,
-            gl_w,
-            gl_h,
-        );
+        gl.copy_tex_sub_image_2d(glow::TEXTURE_2D, 0, 0, 0, gl_x, gl_y, gl_w, gl_h);
 
         gl.disable(glow::BLEND);
         gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
 
-        let half_w = (gl_w / 2).max(1);
-        let half_h = (gl_h / 2).max(1);
-        let quarter_w = (gl_w / 4).max(1);
-        let quarter_h = (gl_h / 4).max(1);
+        let passes = params.passes.clamp(1, MAX_BLUR_PASSES);
 
-        // 2. Downsample Pass 1: capture_tex -> fbo1 (tex1, half-size)
-        gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo1));
-        gl.viewport(0, 0, half_w, half_h);
+        // 2. Downsample into progressively smaller cached targets.
         gl.use_program(Some(self.downsample_prog.program));
-
         gl.active_texture(glow::TEXTURE0);
-        gl.bind_texture(glow::TEXTURE_2D, Some(self.capture_tex));
         gl.uniform_1_i32(Some(&self.downsample_prog.u_texture), 0);
-        gl.uniform_2_f32(
-            Some(&self.downsample_prog.u_halfpixel),
-            0.5 / self.allocated_w as f32,
-            0.5 / self.allocated_h as f32,
-        );
-        gl.uniform_1_f32(Some(&self.downsample_prog.u_offset), params.radius * 0.5);
-        gl.uniform_2_f32(Some(&self.downsample_prog.u_scale_uv), scale_u, scale_v);
-
         gl.enable_vertex_attrib_array(self.downsample_prog.a_position);
         gl.vertex_attrib_pointer_f32(self.downsample_prog.a_position, 2, glow::FLOAT, false, 8, 0);
-        gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
 
-        // 3. Downsample Pass 2: tex1 -> fbo2 (tex2, quarter-size)
-        gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo2));
-        gl.viewport(0, 0, quarter_w, quarter_h);
+        let mut input_width = self.allocated_w;
+        let mut input_height = self.allocated_h;
+        for index in 0..passes {
+            let target = &self.pass_targets[index];
+            let divisor = 1_i32 << (index + 1);
+            let target_width = (gl_w / divisor).max(1);
+            let target_height = (gl_h / divisor).max(1);
+            let input_texture = if index == 0 {
+                self.capture_tex
+            } else {
+                self.pass_targets[index - 1].texture
+            };
 
-        gl.bind_texture(glow::TEXTURE_2D, Some(self.tex1));
-        gl.uniform_2_f32(
-            Some(&self.downsample_prog.u_halfpixel),
-            1.0 / self.allocated_w as f32,
-            1.0 / self.allocated_h as f32,
-        );
-        gl.uniform_1_f32(Some(&self.downsample_prog.u_offset), params.radius * 1.0);
-        gl.uniform_2_f32(Some(&self.downsample_prog.u_scale_uv), scale_u, scale_v);
-        gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
+            gl.bind_framebuffer(glow::FRAMEBUFFER, Some(target.framebuffer));
+            gl.viewport(0, 0, target_width, target_height);
+            gl.bind_texture(glow::TEXTURE_2D, Some(input_texture));
+            gl.uniform_2_f32(
+                Some(&self.downsample_prog.u_halfpixel),
+                0.5 / input_width as f32,
+                0.5 / input_height as f32,
+            );
+            gl.uniform_1_f32(
+                Some(&self.downsample_prog.u_offset),
+                params.radius * (1_i32 << index) as f32 * 0.5,
+            );
+            gl.uniform_2_f32(Some(&self.downsample_prog.u_scale_uv), scale_u, scale_v);
+            gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
+
+            input_width = (input_width / 2).max(1);
+            input_height = (input_height / 2).max(1);
+        }
         gl.disable_vertex_attrib_array(self.downsample_prog.a_position);
 
-        // 4. Upsample Pass: tex2 -> fbo1 (tex1, half-size)
-        gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo1));
-        gl.viewport(0, 0, half_w, half_h);
+        // 3. Upsample back to the first target. Each pass reuses the next target.
         gl.use_program(Some(self.upsample_prog.program));
-
-        gl.bind_texture(glow::TEXTURE_2D, Some(self.tex2));
         gl.uniform_1_i32(Some(&self.upsample_prog.u_texture), 0);
-        gl.uniform_2_f32(
-            Some(&self.upsample_prog.u_halfpixel),
-            2.0 / self.allocated_w as f32,
-            2.0 / self.allocated_h as f32,
-        );
-        gl.uniform_1_f32(Some(&self.upsample_prog.u_offset), params.radius * 1.0);
-        gl.uniform_2_f32(Some(&self.upsample_prog.u_scale_uv), scale_u, scale_v);
+        for index in (0..passes.saturating_sub(1)).rev() {
+            let target = &self.pass_targets[index];
+            let source = &self.pass_targets[index + 1];
+            let divisor = 1_i32 << (index + 1);
+            let target_width = (gl_w / divisor).max(1);
+            let target_height = (gl_h / divisor).max(1);
+            let input_divisor = 1_i32 << (index + 2);
+            let input_width = (self.allocated_w / input_divisor).max(1);
+            let input_height = (self.allocated_h / input_divisor).max(1);
 
-        gl.enable_vertex_attrib_array(self.upsample_prog.a_position);
-        gl.vertex_attrib_pointer_f32(self.upsample_prog.a_position, 2, glow::FLOAT, false, 8, 0);
-        gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
-        gl.disable_vertex_attrib_array(self.upsample_prog.a_position);
+            gl.bind_framebuffer(glow::FRAMEBUFFER, Some(target.framebuffer));
+            gl.viewport(0, 0, target_width, target_height);
+            gl.bind_texture(glow::TEXTURE_2D, Some(source.texture));
+            gl.uniform_2_f32(
+                Some(&self.upsample_prog.u_halfpixel),
+                0.5 / input_width as f32,
+                0.5 / input_height as f32,
+            );
+            gl.uniform_1_f32(
+                Some(&self.upsample_prog.u_offset),
+                params.radius * (1_i32 << index) as f32,
+            );
+            gl.uniform_2_f32(Some(&self.upsample_prog.u_scale_uv), scale_u, scale_v);
+
+            gl.enable_vertex_attrib_array(self.upsample_prog.a_position);
+            gl.vertex_attrib_pointer_f32(
+                self.upsample_prog.a_position,
+                2,
+                glow::FLOAT,
+                false,
+                8,
+                0,
+            );
+            gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
+            gl.disable_vertex_attrib_array(self.upsample_prog.a_position);
+        }
 
         // 5. Final Composite Pass: blurred tex1 -> screen framebuffer (within gl_x, gl_y, gl_w, gl_h)
-        let target_fbo = std::num::NonZeroU32::new(saved_fbo).map(glow::NativeFramebuffer);
-        gl.bind_framebuffer(glow::FRAMEBUFFER, target_fbo);
+        gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
         gl.viewport(gl_x, gl_y, gl_w, gl_h);
 
         gl.enable(glow::BLEND);
         gl.blend_func(glow::ONE, glow::ONE_MINUS_SRC_ALPHA);
 
         gl.use_program(Some(self.composite_prog.program));
-        gl.bind_texture(glow::TEXTURE_2D, Some(self.tex1));
+        gl.bind_texture(glow::TEXTURE_2D, Some(self.pass_targets[0].texture));
         gl.uniform_1_i32(Some(&self.composite_prog.u_texture), 0);
-        gl.uniform_2_f32(Some(&self.composite_prog.u_rect_size), gl_w as f32, gl_h as f32);
+        gl.uniform_2_f32(
+            Some(&self.composite_prog.u_rect_size),
+            gl_w as f32,
+            gl_h as f32,
+        );
         gl.uniform_1_f32(Some(&self.composite_prog.u_radius), corner_radius);
         gl.uniform_1_f32(Some(&self.composite_prog.u_opacity), 1.0);
         gl.uniform_4_f32(
@@ -500,29 +488,187 @@ impl BlurPipeline {
         gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
         gl.disable_vertex_attrib_array(self.composite_prog.a_position);
 
-        // Restore saved GL states
-        gl.bind_buffer(glow::ARRAY_BUFFER, None);
-        gl.bind_texture(glow::TEXTURE_2D, None);
-        gl.use_program(None);
-        gl.viewport(saved_viewport[0], saved_viewport[1], saved_viewport[2], saved_viewport[3]);
-        gl.enable(glow::BLEND);
-        gl.blend_func(glow::ONE, glow::ONE_MINUS_SRC_ALPHA);
+        drop(gl_state);
+    }
+}
 
-        if scissor_was_enabled {
-            gl.enable(glow::SCISSOR_TEST);
-            gl.scissor(saved_scissor[0], saved_scissor[1], saved_scissor[2], saved_scissor[3]);
+struct GlStateSnapshot<'a> {
+    gl: &'a glow::Context,
+    framebuffer: Option<glow::NativeFramebuffer>,
+    viewport: [i32; 4],
+    scissor_enabled: bool,
+    scissor_box: [i32; 4],
+    blend_enabled: bool,
+    blend_src_rgb: u32,
+    blend_dst_rgb: u32,
+    blend_src_alpha: u32,
+    blend_dst_alpha: u32,
+    blend_equation_rgb: u32,
+    blend_equation_alpha: u32,
+    active_texture: u32,
+    active_texture_binding: Option<glow::NativeTexture>,
+    texture0_binding: Option<glow::NativeTexture>,
+    array_buffer: Option<glow::NativeBuffer>,
+    program: Option<glow::NativeProgram>,
+    vertex_attribs: Vec<(u32, bool)>,
+}
+
+impl GlStateSnapshot<'_> {
+    unsafe fn capture(gl: &glow::Context, locations: [u32; 3]) -> GlStateSnapshot<'_> {
+        let mut viewport = [0; 4];
+        gl.get_parameter_i32_slice(glow::VIEWPORT, &mut viewport);
+        let mut scissor_box = [0; 4];
+        gl.get_parameter_i32_slice(glow::SCISSOR_BOX, &mut scissor_box);
+
+        let active_texture = gl.get_parameter_i32(glow::ACTIVE_TEXTURE) as u32;
+        let active_texture_binding = gl_object(
+            gl.get_parameter_i32(glow::TEXTURE_BINDING_2D),
+            glow::NativeTexture,
+        );
+        gl.active_texture(glow::TEXTURE0);
+        let texture0_binding = gl_object(
+            gl.get_parameter_i32(glow::TEXTURE_BINDING_2D),
+            glow::NativeTexture,
+        );
+        gl.active_texture(active_texture);
+
+        let mut vertex_attribs = Vec::with_capacity(locations.len());
+        for location in locations {
+            if vertex_attribs
+                .iter()
+                .any(|(existing, _)| *existing == location)
+            {
+                continue;
+            }
+            let mut enabled = [0.0];
+            gl.get_vertex_attrib_parameter_f32_slice(
+                location,
+                glow::VERTEX_ATTRIB_ARRAY_ENABLED,
+                &mut enabled,
+            );
+            vertex_attribs.push((location, enabled[0] != 0.0));
+        }
+
+        GlStateSnapshot {
+            gl,
+            framebuffer: gl_object(
+                gl.get_parameter_i32(glow::FRAMEBUFFER_BINDING),
+                glow::NativeFramebuffer,
+            ),
+            viewport,
+            scissor_enabled: gl.is_enabled(glow::SCISSOR_TEST),
+            scissor_box,
+            blend_enabled: gl.is_enabled(glow::BLEND),
+            blend_src_rgb: gl.get_parameter_i32(glow::BLEND_SRC_RGB) as u32,
+            blend_dst_rgb: gl.get_parameter_i32(glow::BLEND_DST_RGB) as u32,
+            blend_src_alpha: gl.get_parameter_i32(glow::BLEND_SRC_ALPHA) as u32,
+            blend_dst_alpha: gl.get_parameter_i32(glow::BLEND_DST_ALPHA) as u32,
+            blend_equation_rgb: gl.get_parameter_i32(glow::BLEND_EQUATION_RGB) as u32,
+            blend_equation_alpha: gl.get_parameter_i32(glow::BLEND_EQUATION_ALPHA) as u32,
+            active_texture,
+            active_texture_binding,
+            texture0_binding,
+            array_buffer: gl_object(
+                gl.get_parameter_i32(glow::ARRAY_BUFFER_BINDING),
+                glow::NativeBuffer,
+            ),
+            program: gl_object(
+                gl.get_parameter_i32(glow::CURRENT_PROGRAM),
+                glow::NativeProgram,
+            ),
+            vertex_attribs,
         }
     }
 }
 
-unsafe fn setup_tex_params(gl: &glow::Context) {
-    gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MIN_FILTER, glow::LINEAR as i32);
-    gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MAG_FILTER, glow::LINEAR as i32);
-    gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_S, glow::CLAMP_TO_EDGE as i32);
-    gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_T, glow::CLAMP_TO_EDGE as i32);
+impl Drop for GlStateSnapshot<'_> {
+    fn drop(&mut self) {
+        unsafe {
+            let gl = self.gl;
+            gl.bind_framebuffer(glow::FRAMEBUFFER, self.framebuffer);
+            gl.viewport(
+                self.viewport[0],
+                self.viewport[1],
+                self.viewport[2],
+                self.viewport[3],
+            );
+            gl.scissor(
+                self.scissor_box[0],
+                self.scissor_box[1],
+                self.scissor_box[2],
+                self.scissor_box[3],
+            );
+            if self.scissor_enabled {
+                gl.enable(glow::SCISSOR_TEST);
+            } else {
+                gl.disable(glow::SCISSOR_TEST);
+            }
+
+            gl.bind_buffer(glow::ARRAY_BUFFER, self.array_buffer);
+            gl.use_program(self.program);
+            gl.blend_func_separate(
+                self.blend_src_rgb,
+                self.blend_dst_rgb,
+                self.blend_src_alpha,
+                self.blend_dst_alpha,
+            );
+            gl.blend_equation_separate(self.blend_equation_rgb, self.blend_equation_alpha);
+            if self.blend_enabled {
+                gl.enable(glow::BLEND);
+            } else {
+                gl.disable(glow::BLEND);
+            }
+
+            gl.active_texture(glow::TEXTURE0);
+            gl.bind_texture(glow::TEXTURE_2D, self.texture0_binding);
+            if self.active_texture != glow::TEXTURE0 {
+                gl.active_texture(self.active_texture);
+                gl.bind_texture(glow::TEXTURE_2D, self.active_texture_binding);
+            }
+
+            for (location, enabled) in &self.vertex_attribs {
+                if *enabled {
+                    gl.enable_vertex_attrib_array(*location);
+                } else {
+                    gl.disable_vertex_attrib_array(*location);
+                }
+            }
+        }
+    }
 }
 
-unsafe fn compile_shader(gl: &glow::Context, shader_type: u32, source: &str) -> Result<glow::Shader, String> {
+fn gl_object<T>(value: i32, create: impl FnOnce(std::num::NonZeroU32) -> T) -> Option<T> {
+    std::num::NonZeroU32::new(value as u32).map(create)
+}
+
+unsafe fn setup_tex_params(gl: &glow::Context) {
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_MIN_FILTER,
+        glow::LINEAR as i32,
+    );
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_MAG_FILTER,
+        glow::LINEAR as i32,
+    );
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_WRAP_S,
+        glow::CLAMP_TO_EDGE as i32,
+    );
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_WRAP_T,
+        glow::CLAMP_TO_EDGE as i32,
+    );
+}
+
+unsafe fn compile_shader(
+    gl: &glow::Context,
+    shader_type: u32,
+    source: &str,
+) -> Result<glow::Shader, String> {
     let shader = gl.create_shader(shader_type)?;
     gl.shader_source(shader, source);
     gl.compile_shader(shader);
@@ -534,12 +680,18 @@ unsafe fn compile_shader(gl: &glow::Context, shader_type: u32, source: &str) -> 
     Ok(shader)
 }
 
-unsafe fn link_program(gl: &glow::Context, vs_src: &str, fs_src: &str) -> Result<glow::Program, String> {
+unsafe fn link_program(
+    gl: &glow::Context,
+    vs_src: &str,
+    fs_src: &str,
+) -> Result<glow::Program, String> {
     let vs = compile_shader(gl, glow::VERTEX_SHADER, vs_src)?;
     let fs = compile_shader(gl, glow::FRAGMENT_SHADER, fs_src)?;
     let prog = gl.create_program()?;
     gl.attach_shader(prog, vs);
     gl.attach_shader(prog, fs);
+    let position_location = (gl.get_parameter_i32(glow::MAX_VERTEX_ATTRIBS).max(1) - 1) as u32;
+    gl.bind_attrib_location(prog, position_location, "a_position");
     gl.link_program(prog);
 
     gl.delete_shader(vs);
@@ -555,11 +707,21 @@ unsafe fn link_program(gl: &glow::Context, vs_src: &str, fs_src: &str) -> Result
 
 unsafe fn compile_downsample(gl: &glow::Context) -> Result<DownsampleProgram, String> {
     let prog = link_program(gl, VERTEX_SHADER_SRC, DOWNSAMPLE_SHADER_SRC)?;
-    let u_texture = gl.get_uniform_location(prog, "u_texture").ok_or("u_texture not found")?;
-    let u_halfpixel = gl.get_uniform_location(prog, "u_halfpixel").ok_or("u_halfpixel not found")?;
-    let u_offset = gl.get_uniform_location(prog, "u_offset").ok_or("u_offset not found")?;
-    let u_scale_uv = gl.get_uniform_location(prog, "u_scale_uv").ok_or("u_scale_uv not found")?;
-    let a_position = gl.get_attrib_location(prog, "a_position").ok_or("a_position not found")?;
+    let u_texture = gl
+        .get_uniform_location(prog, "u_texture")
+        .ok_or("u_texture not found")?;
+    let u_halfpixel = gl
+        .get_uniform_location(prog, "u_halfpixel")
+        .ok_or("u_halfpixel not found")?;
+    let u_offset = gl
+        .get_uniform_location(prog, "u_offset")
+        .ok_or("u_offset not found")?;
+    let u_scale_uv = gl
+        .get_uniform_location(prog, "u_scale_uv")
+        .ok_or("u_scale_uv not found")?;
+    let a_position = gl
+        .get_attrib_location(prog, "a_position")
+        .ok_or("a_position not found")?;
 
     Ok(DownsampleProgram {
         program: prog,
@@ -573,11 +735,21 @@ unsafe fn compile_downsample(gl: &glow::Context) -> Result<DownsampleProgram, St
 
 unsafe fn compile_upsample(gl: &glow::Context) -> Result<UpsampleProgram, String> {
     let prog = link_program(gl, VERTEX_SHADER_SRC, UPSAMPLE_SHADER_SRC)?;
-    let u_texture = gl.get_uniform_location(prog, "u_texture").ok_or("u_texture not found")?;
-    let u_halfpixel = gl.get_uniform_location(prog, "u_halfpixel").ok_or("u_halfpixel not found")?;
-    let u_offset = gl.get_uniform_location(prog, "u_offset").ok_or("u_offset not found")?;
-    let u_scale_uv = gl.get_uniform_location(prog, "u_scale_uv").ok_or("u_scale_uv not found")?;
-    let a_position = gl.get_attrib_location(prog, "a_position").ok_or("a_position not found")?;
+    let u_texture = gl
+        .get_uniform_location(prog, "u_texture")
+        .ok_or("u_texture not found")?;
+    let u_halfpixel = gl
+        .get_uniform_location(prog, "u_halfpixel")
+        .ok_or("u_halfpixel not found")?;
+    let u_offset = gl
+        .get_uniform_location(prog, "u_offset")
+        .ok_or("u_offset not found")?;
+    let u_scale_uv = gl
+        .get_uniform_location(prog, "u_scale_uv")
+        .ok_or("u_scale_uv not found")?;
+    let a_position = gl
+        .get_attrib_location(prog, "a_position")
+        .ok_or("a_position not found")?;
 
     Ok(UpsampleProgram {
         program: prog,
@@ -591,16 +763,36 @@ unsafe fn compile_upsample(gl: &glow::Context) -> Result<UpsampleProgram, String
 
 unsafe fn compile_composite(gl: &glow::Context) -> Result<CompositeProgram, String> {
     let prog = link_program(gl, VERTEX_SHADER_SRC, COMPOSITE_SHADER_SRC)?;
-    let u_texture = gl.get_uniform_location(prog, "u_texture").ok_or("u_texture not found")?;
-    let u_rect_size = gl.get_uniform_location(prog, "u_rect_size").ok_or("u_rect_size not found")?;
-    let u_radius = gl.get_uniform_location(prog, "u_radius").ok_or("u_radius not found")?;
-    let u_opacity = gl.get_uniform_location(prog, "u_opacity").ok_or("u_opacity not found")?;
-    let u_tint = gl.get_uniform_location(prog, "u_tint").ok_or("u_tint not found")?;
-    let u_noise = gl.get_uniform_location(prog, "u_noise").ok_or("u_noise not found")?;
-    let u_brightness = gl.get_uniform_location(prog, "u_brightness").ok_or("u_brightness not found")?;
-    let u_contrast = gl.get_uniform_location(prog, "u_contrast").ok_or("u_contrast not found")?;
-    let u_scale_uv = gl.get_uniform_location(prog, "u_scale_uv").ok_or("u_scale_uv not found")?;
-    let a_position = gl.get_attrib_location(prog, "a_position").ok_or("a_position not found")?;
+    let u_texture = gl
+        .get_uniform_location(prog, "u_texture")
+        .ok_or("u_texture not found")?;
+    let u_rect_size = gl
+        .get_uniform_location(prog, "u_rect_size")
+        .ok_or("u_rect_size not found")?;
+    let u_radius = gl
+        .get_uniform_location(prog, "u_radius")
+        .ok_or("u_radius not found")?;
+    let u_opacity = gl
+        .get_uniform_location(prog, "u_opacity")
+        .ok_or("u_opacity not found")?;
+    let u_tint = gl
+        .get_uniform_location(prog, "u_tint")
+        .ok_or("u_tint not found")?;
+    let u_noise = gl
+        .get_uniform_location(prog, "u_noise")
+        .ok_or("u_noise not found")?;
+    let u_brightness = gl
+        .get_uniform_location(prog, "u_brightness")
+        .ok_or("u_brightness not found")?;
+    let u_contrast = gl
+        .get_uniform_location(prog, "u_contrast")
+        .ok_or("u_contrast not found")?;
+    let u_scale_uv = gl
+        .get_uniform_location(prog, "u_scale_uv")
+        .ok_or("u_scale_uv not found")?;
+    let a_position = gl
+        .get_attrib_location(prog, "a_position")
+        .ok_or("a_position not found")?;
 
     Ok(CompositeProgram {
         program: prog,

@@ -44,7 +44,11 @@ pub fn render_window(
     let (should_blur, opacity, corner_radius) = if let Some(engine_lock) = blur_engine {
         if let Ok(engine) = engine_lock.lock() {
             if engine.matches_window(window) {
-                (true, engine.params.window_opacity, engine.params.corner_radius)
+                (
+                    true,
+                    engine.params.window_opacity,
+                    engine.params.corner_radius,
+                )
             } else {
                 (false, 1.0, 0.0)
             }
@@ -72,25 +76,16 @@ pub fn render_window(
     // 2. Blur backdrop element (placed behind window surfaces)
     if should_blur {
         if let Some(engine_lock) = blur_engine {
-            let geo = window.geometry();
-            let blur_area = Rectangle::new(location, geo.size);
+            let bbox = window.bbox();
+            let blur_area = Rectangle::new(location + bbox.loc, bbox.size);
 
             window
                 .user_data()
                 .insert_if_missing(|| WindowBlurId(Id::new()));
-            let blur_id = window
-                .user_data()
-                .get::<WindowBlurId>()
-                .unwrap()
-                .0
-                .clone();
+            let blur_id = window.user_data().get::<WindowBlurId>().unwrap().0.clone();
 
-            let blur_elem = BlurRenderElement::new(
-                blur_id,
-                blur_area,
-                corner_radius,
-                engine_lock.clone(),
-            );
+            let blur_elem =
+                BlurRenderElement::new(blur_id, blur_area, corner_radius, engine_lock.clone());
             elements.push(CustomRenderElements::Blur(blur_elem));
         }
     }
@@ -114,7 +109,10 @@ pub fn render_layer_surfaces(
             if let Some(geo) = layer_map.layer_geometry(layer) {
                 let render_loc = geo.loc.to_physical_precise_round(scale);
 
-                let should_blur = if let Some(engine_lock) = blur_engine {
+                // The desktop background is the source image for window blur, never a blur target.
+                let should_blur = if layer.layer() == Layer::Background {
+                    false
+                } else if let Some(engine_lock) = blur_engine {
                     if let Ok(engine) = engine_lock.lock() {
                         engine.matches_layer(layer.namespace())
                     } else {
@@ -150,12 +148,7 @@ pub fn render_layer_surfaces(
                         layer
                             .user_data()
                             .insert_if_missing_threadsafe(|| LayerBlurId(Id::new()));
-                        let blur_id = layer
-                            .user_data()
-                            .get::<LayerBlurId>()
-                            .unwrap()
-                            .0
-                            .clone();
+                        let blur_id = layer.user_data().get::<LayerBlurId>().unwrap().0.clone();
 
                         let blur_elem = BlurRenderElement::new(
                             blur_id,
