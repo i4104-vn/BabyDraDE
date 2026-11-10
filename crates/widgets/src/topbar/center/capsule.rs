@@ -39,8 +39,11 @@ impl IslandCapsule {
             .valign(gtk4::Align::Center)
             .halign(gtk4::Align::Center)
             .css_classes(["panel-notch", "active-music"])
-            .cursor(&gtk4::gdk::Cursor::from_name("pointer", None).unwrap())
             .build();
+
+        if let Some(cursor) = gtk4::gdk::Cursor::from_name("pointer", None) {
+            capsule_box.set_cursor(Some(&cursor));
+        }
 
         let content_slot = Box::builder()
             .orientation(Orientation::Horizontal)

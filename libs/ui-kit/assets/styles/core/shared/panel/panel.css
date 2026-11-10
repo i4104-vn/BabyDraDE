@@ -1,0 +1,259 @@
+* {
+    font-family: 'Quicksand', 'Segoe UI Variable Static Text', 'Segoe UI', 'Inter', system-ui, sans-serif;
+    -gtk-icon-style: symbolic;
+}
+
+button,
+.workspace-dot,
+.panel-notch {
+    transition: all 200ms ease;
+}
+
+.startup-animating,
+.startup-animating button,
+.startup-animating .workspace-dot,
+.startup-animating .panel-notch {
+    transition: none;
+}
+
+popover {
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+}
+
+popover>contents {
+    background-image: none;
+    border-radius: 20px;
+    box-shadow: none;
+    transition: all 200ms ease;
+}
+
+picture.blur-backdrop-image {
+    background-image: none;
+    border-radius: 18px;
+}
+
+overlay.blur-backdrop-host {
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+overlay.launcher-blur-host,
+overlay.launcher-blur-host picture.blur-backdrop-image,
+overlay.control-center-blur-host,
+overlay.control-center-blur-host picture.blur-backdrop-image,
+overlay.calendar-blur-host,
+overlay.calendar-blur-host picture.blur-backdrop-image {
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+overlay.island-blur-host,
+overlay.island-blur-host picture.blur-backdrop-image {
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+popover.blur-backdrop-popover overlay.blur-backdrop-host,
+popover.blur-backdrop-popover picture.blur-backdrop-image {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+popover.context-menu-popover overlay.blur-backdrop-host,
+popover.context-menu-popover picture.blur-backdrop-image {
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+
+popover.status-popover>contents,
+popover.tooltip-popover>contents,
+.status-popover-card,
+.tooltip-popover-card {
+    background-color: rgb(24, 25, 31);
+    background-image: none;
+    opacity: 1.0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+}
+
+.switcher-main-row {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+window,
+window.background,
+window.panel-window,
+window.control-center-window,
+window.calendar-window,
+window.launcher-window,
+window.switcher-window,
+window.notification-card {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    border: none;
+}
+
+/* Panel notification bubble: three rounded corners and a CSS tail aimed at
+ * the bell icon beside the clock. */
+popover.panel-notification-popover {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+}
+
+popover.panel-notification-popover > contents {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+}
+
+.panel-notification-card {
+    background-image: none;
+    border-radius: 18px 6px 18px 18px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    margin-top: 6px;
+    padding: 10px 12px;
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.panel-notification-card:hover {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.30);
+}
+
+.panel-notification-tail {
+    background-image: none;
+    transform: rotate(45deg);
+    border-radius: 4px 0 0 0;
+    margin-top: 2px;
+}
+
+.panel-notification-icon {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 8px;
+    border-radius: 12px;
+}
+
+.panel-notification-app {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.panel-notification-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.panel-notification-body {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    min-width: 0;
+}
+
+.panel-notification-more {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.panel-box {
+    background-color: transparent;
+    background-image: none;
+    margin: 0;
+    padding: 0px 4px;
+    min-height: 36px;
+    border: none;
+    box-shadow: none;
+}
+
+button.panel-logo-btn {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: 0;
+    box-shadow: none;
+    min-height: 20px;
+    min-width: 20px;
+}
+
+button.panel-logo-btn:hover {
+    border: none;
+}
+
+.capsule-separator {
+    font-size: 9px;
+    margin: 0 2px;
+}
+
+popover.status-popover>contents,
+popover.tooltip-popover>contents {
+    border-radius: 14px;
+    padding: 10px 14px;
+}
+
+.status-popover-card,
+.tooltip-popover-card {
+    min-width: 200px;
+}
+
+.status-popover-card.tooltip-popover-simple,
+.tooltip-popover-card.tooltip-popover-simple {
+    min-width: unset;
+    padding: 2px 4px;
+}
+
+.status-popover-header,
+.tooltip-popover-header {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.status-popover-sep,
+.tooltip-popover-sep {
+    opacity: 0.15;
+    margin-bottom: 6px;
+}
+
+.status-popover-key,
+.tooltip-popover-key {
+    font-size: 12px;
+}
+
+.status-popover-val,
+.tooltip-popover-val {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-popover-val.speed-low {
+    color: #ef4444;
+    font-weight: 700;
+}
+
+.status-popover-val.speed-medium {
+    color: #f59e0b;
+    font-weight: 700;
+}
+
+.status-popover-val.speed-high {
+    color: #22c55e;
+    font-weight: 700;
+}

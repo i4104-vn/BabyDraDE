@@ -54,8 +54,11 @@ impl AppMenu {
         // 2. Active Application Title Button
         let app_title_btn = Button::builder()
             .css_classes(["app-title-btn", "func-btn"])
-            .cursor(&gtk4::gdk::Cursor::from_name("pointer", None).unwrap())
             .build();
+
+        if let Some(cursor) = gtk4::gdk::Cursor::from_name("pointer", None) {
+            app_title_btn.set_cursor(Some(&cursor));
+        }
 
         let app_title_label = Label::builder()
             .label(&initial_name)

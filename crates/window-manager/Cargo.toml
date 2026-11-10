@@ -6,6 +6,10 @@ license.workspace = true
 authors.workspace = true
 description = "BabyDraDE Wayland Compositor and Window Manager built on Smithay"
 
+[[bin]]
+name = "babydra-window-manager"
+path = "src/main.rs"
+
 [dependencies]
 smithay = { version = "=0.7.0", default-features = false, features = [
     "backend_winit",

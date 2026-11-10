@@ -75,48 +75,33 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
         .arg("XDG_SESSION_TYPE=wayland")
         .spawn();
 
-    // Autostart BabyDraDE widgets binary
-    let exe_path = std::env::current_exe()
-        .ok()
-        .or_else(|| std::env::args_os().next().map(std::path::PathBuf::from))
-        .unwrap_or_else(|| std::path::PathBuf::from("window-manager"));
-
-    let widgets_exe = exe_path.with_file_name("widgets");
-    let cmd = if widgets_exe.exists() {
-        widgets_exe
-    } else {
-        std::path::PathBuf::from("widgets")
-    };
-
-    let widgets = ["desktop", "topbar"];
-    for widget in widgets {
-        match Command::new(&cmd)
-            .arg(widget)
-            .env("WAYLAND_DISPLAY", &data.state.socket_name)
-            .env("GDK_BACKEND", "wayland")
-            .env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
-            .env("MOZ_ENABLE_WAYLAND", "1")
-            .env("QT_QPA_PLATFORM", "wayland;xcb")
-            .env("XDG_CURRENT_DESKTOP", "BabyDra")
-            .spawn()
-        {
-            Ok(_child) => info!("Started BabyDraDE widget '{widget}'"),
-            Err(err) => warn!("Could not start BabyDraDE widget '{widget}': {err}"),
-        }
-    }
+    let mut spawned_children: Vec<std::process::Child> = Vec::new();
 
     // Only launch a test app if explicitly requested via CLI argument or BABYDRADE_TEST_APP environment variable.
     // Do NOT automatically spawn a terminal on startup.
     if let Some(app) = test_app.or_else(|| std::env::var_os("BABYDRADE_TEST_APP")) {
-        match Command::new(&app)
+        let mut command = Command::new(&app);
+        command
             .env("WAYLAND_DISPLAY", &data.state.socket_name)
             .env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
             .env("MOZ_ENABLE_WAYLAND", "1")
             .env("QT_QPA_PLATFORM", "wayland;xcb")
-            .env("GDK_BACKEND", "wayland,x11,*")
-            .spawn()
-        {
-            Ok(_child) => info!("Started test app: {}", app.to_string_lossy()),
+            .env("GDK_BACKEND", "wayland,x11,*");
+
+        #[cfg(target_os = "linux")]
+        unsafe {
+            use std::os::unix::process::CommandExt;
+            command.pre_exec(|| {
+                libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM);
+                Ok(())
+            });
+        }
+
+        match command.spawn() {
+            Ok(child) => {
+                info!("Started test app: {} (PID: {})", app.to_string_lossy(), child.id());
+                spawned_children.push(child);
+            }
             Err(err) => warn!(
                 "Could not start test app '{}': {}",
                 app.to_string_lossy(),
@@ -129,7 +114,16 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
         "BabyDraDE is running. Wayland socket: {}",
         data.state.socket_name.to_string_lossy()
     );
-    event_loop.run(None, &mut data, |_| {})?;
+
+    let run_res = event_loop.run(None, &mut data, |_| {});
+
+    info!("BabyDraDE compositor stopping, terminating child widgets...");
+    for mut child in spawned_children {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    run_res?;
     Ok(())
 }
 
@@ -146,14 +140,26 @@ fn main() -> Result<(), Box<dyn Error>> {
             let widget_name = args
                 .next()
                 .ok_or_else(|| std::io::Error::other("Missing widget name for __widget"))?;
+            let widget_str = widget_name.to_string_lossy();
+            let clean_name = widget_str.strip_prefix("babydra-").unwrap_or(&widget_str);
+            let bin_name = format!("babydra-{}", clean_name);
             let exe_path = std::env::current_exe().unwrap_or_default();
-            let widgets_exe = exe_path.with_file_name("widgets");
-            let cmd = if widgets_exe.exists() {
-                widgets_exe
+            let same_dir_bin = exe_path.with_file_name(&bin_name);
+            let (cmd, cmd_args): (std::path::PathBuf, Vec<String>) = if same_dir_bin.is_file() {
+                (same_dir_bin, Vec::new())
             } else {
-                std::path::PathBuf::from("widgets")
+                let same_dir_widgets = exe_path.with_file_name("babydra-widgets");
+                if same_dir_widgets.is_file() {
+                    (same_dir_widgets, vec![clean_name.to_string()])
+                } else {
+                    (std::path::PathBuf::from(&bin_name), Vec::new())
+                }
             };
-            let status = Command::new(cmd).arg(widget_name).status()?;
+            let mut command = Command::new(cmd);
+            for arg in cmd_args {
+                command.arg(arg);
+            }
+            let status = command.status()?;
             std::process::exit(status.code().unwrap_or(0));
         }
 

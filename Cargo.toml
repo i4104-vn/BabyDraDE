@@ -6,7 +6,7 @@ members = [
     "libs/services",
     "libs/ui-kit",
 ]
-default-members = ["crates/window-manager"]
+default-members = ["crates/window-manager", "crates/widgets"]
 
 [workspace.package]
 version = "0.1.0"

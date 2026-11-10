@@ -1,0 +1,35 @@
+.sidebar {
+    border-radius: 14px;
+    margin: 8px 4px 8px 8px;
+    min-width: 180px;
+    box-shadow: none;
+}
+
+.sidebar > viewport,
+.sidebar > viewport > box {
+    background-color: transparent;
+    padding: 4px 0;
+}
+
+.sidebar-section-label {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 16px 4px 16px;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-item {
+    background: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    margin: 1px 6px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-item label {
+    font-weight: 700;
+}

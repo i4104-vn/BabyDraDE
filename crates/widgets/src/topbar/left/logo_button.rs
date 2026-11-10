@@ -17,8 +17,11 @@ impl LogoButton {
             .tooltip_text("BabyDraDE")
             .valign(gtk4::Align::Center)
             .halign(gtk4::Align::Center)
-            .cursor(&gtk4::gdk::Cursor::from_name("pointer", None).unwrap())
             .build();
+
+        if let Some(cursor) = gtk4::gdk::Cursor::from_name("pointer", None) {
+            button.set_cursor(Some(&cursor));
+        }
 
         let icon = get_icon("logo", 16);
         button.set_child(Some(&icon));

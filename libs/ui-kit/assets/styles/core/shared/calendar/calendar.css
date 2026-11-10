@@ -1,0 +1,289 @@
+.calendar-box {
+    background-image: none;
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: none;
+    min-width: 330px;
+}
+
+.calendar-top-row {
+    margin-bottom: 12px;
+    padding: 0 4px;
+}
+
+.calendar-top-date {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.calendar-close-btn {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 4px 8px;
+    min-height: 28px;
+    min-width: 32px;
+    box-shadow: none;
+    transition: all 150ms ease;
+}
+
+.calendar-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.calendar-close-btn label {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+calendar.calendar-widget {
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    font-size: 12px;
+    padding: 0;
+    margin-bottom: 8px;
+}
+
+calendar.calendar-widget grid,
+calendar.calendar-widget grid cell,
+calendar.calendar-widget cell {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+}
+
+calendar.calendar-widget header {
+    background-color: transparent;
+    border: none;
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+}
+
+calendar.calendar-widget header label {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 0;
+}
+
+calendar.calendar-widget header button {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 2px 4px;
+    margin: 0;
+    min-height: 20px;
+    min-width: 20px;
+    border-radius: 6px;
+    transition: all 150ms ease;
+}
+
+calendar.calendar-widget header button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+calendar.calendar-widget header button.left image,
+calendar.calendar-widget header button.prev image,
+calendar.calendar-widget header button.prev-month image {
+    -gtk-icon-source: -gtk-icontheme("pan-up-symbolic");
+}
+
+calendar.calendar-widget header button.right image,
+calendar.calendar-widget header button.next image,
+calendar.calendar-widget header button.next-month image {
+    -gtk-icon-source: -gtk-icontheme("pan-down-symbolic");
+}
+
+calendar.calendar-widget header button.double-left,
+calendar.calendar-widget header button.double-right,
+calendar.calendar-widget header button.prev-year,
+calendar.calendar-widget header button.next-year {
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    opacity: 0;
+}
+
+calendar.calendar-widget label.day-name {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+calendar.calendar-widget label.day {
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px;
+    margin: 4px;
+    border-radius: 9999px;
+    min-width: 28px;
+    min-height: 28px;
+    transition: all 150ms ease;
+    background-color: transparent;
+    text-shadow: none;
+    box-shadow: none;
+}
+
+calendar.calendar-widget label.day:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+calendar.calendar-widget label.day.other-month,
+calendar.calendar-widget .other-month {
+    opacity: 1.0;
+}
+
+calendar.calendar-widget label.day:selected,
+calendar.calendar-widget :selected {
+    background-color: #f38064;
+    background-image: none;
+    color: #121317;
+    border-radius: 9999px;
+    font-weight: 700;
+    box-shadow: none;
+    border: none;
+    text-shadow: none;
+}
+
+.notif-panel-title {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+button.clear-all-btn {
+    background-image: none;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 9999px;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 4px 12px;
+    box-shadow: none;
+    transition: all 150ms ease;
+}
+
+button.clear-all-btn:hover {
+    background-color: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #fca5a5;
+    box-shadow: none;
+}
+
+scrolledwindow.notif-scroll {
+    background-color: transparent;
+    border: none;
+}
+
+scrolledwindow.notif-scroll viewport {
+    background-color: transparent;
+}
+
+.notif-stack-box {
+    background-color: transparent;
+    padding: 4px 2px;
+}
+
+.notif-stack-item {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 10px 12px;
+    transition: all 200ms ease;
+    box-shadow: none;
+}
+
+.notif-stack-item:hover {
+    background-color: rgba(255, 255, 255, 0.09);
+    box-shadow: none;
+}
+
+.notif-item-icon {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 6px;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+.notif-item-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.notif-item-body {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.notif-empty-label {
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 20px;
+}
+
+.notif-group-container {
+    margin-bottom: 12px;
+}
+
+.notif-group-header {
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    transition: all 150ms ease;
+}
+
+.notif-group-header:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.notif-sub-box {
+    margin-left: 6px;
+    margin-right: 6px;
+    padding-top: 4px;
+}
+
+.notif-count-badge {
+    background-color: #f43f5e;
+    background-image: none;
+    color: #ffffff;
+    border: none;
+    box-shadow: none;
+    border-radius: 9999px;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 0;
+    min-width: 18px;
+    min-height: 18px;
+    margin-left: 6px;
+}
+
+.notif-item-sub-time {
+    font-size: 12px;
+    margin-right: 4px;
+}
+
+.notif-stack-item-layered-1 {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    min-height: 4px;
+    margin-left: 12px;
+    margin-right: 12px;
+    box-shadow: none;
+}
+
+.notif-stack-item-layered-2 {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    min-height: 4px;
+    margin-left: 6px;
+    margin-right: 6px;
+    box-shadow: none;
+}

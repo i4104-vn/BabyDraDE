@@ -476,11 +476,28 @@ fi
 # ------------------------------------------------------------------------------
 # 4. Ensure XDG_RUNTIME_DIR is properly configured
 # ------------------------------------------------------------------------------
-if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+if [ -z "${XDG_RUNTIME_DIR:-}" ] || [ ! -d "$XDG_RUNTIME_DIR" ] || [ ! -w "$XDG_RUNTIME_DIR" ]; then
     CURRENT_UID="$(id -u 2>/dev/null || echo 1000)"
     export XDG_RUNTIME_DIR="/tmp/babydrade-runtime-$CURRENT_UID"
     mkdir -p "$XDG_RUNTIME_DIR"
     chmod 0700 "$XDG_RUNTIME_DIR"
+fi
+
+# Clean up any lingering widget or compositor processes from previous sessions
+echo "[*] Ensuring clean state (terminating any lingering previous session processes)..."
+pkill -TERM -f "babydra-(window-manager|desktop|topbar|panel|screenshot|keymap|lock|widgets)" 2>/dev/null || true
+pkill -TERM -x widgets 2>/dev/null || true
+pkill -TERM -x window-manager 2>/dev/null || true
+pkill -9 -f "babydra-(window-manager|desktop|topbar|panel|screenshot|keymap|lock|widgets)" 2>/dev/null || true
+pkill -9 -x widgets 2>/dev/null || true
+pkill -9 -x window-manager 2>/dev/null || true
+
+# If no active compositor is running, clean up stale wayland socket & lock files to avoid socket conflicts
+if ! pgrep -f "babydra-window-manager|window-manager" >/dev/null 2>&1; then
+    rm -f "$XDG_RUNTIME_DIR"/wayland-*.lock 2>/dev/null || true
+    if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+        rm -f "$XDG_RUNTIME_DIR"/wayland-[0-9]* 2>/dev/null || true
+    fi
 fi
 
 # ------------------------------------------------------------------------------
@@ -521,12 +538,181 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 7. Build unified BabyDraDE Desktop Environment binary
+# 7. Build BabyDraDE binaries (compositor & widgets)
 # ------------------------------------------------------------------------------
-echo "[*] Building unified BabyDraDE Desktop Environment..."
-cargo build
+echo "[*] Building BabyDraDE binaries (compositor & widgets)..."
+cargo build --workspace
 
 # ------------------------------------------------------------------------------
-# 8. Direct execution — autonomous compositor with built-in widgets
+# 8. Install BabyDraDE binaries into system directories
 # ------------------------------------------------------------------------------
-exec cargo run "${APP_ARGS[@]+"${APP_ARGS[@]}"}"
+echo "[*] Installing BabyDraDE binaries into system..."
+USER_BIN_DIR="${HOME:-}/.local/bin"
+SYSTEM_BIN_DIRS=("/usr/local/bin" "/usr/bin")
+
+# Prepend ~/.local/bin and /usr/local/bin to PATH for current session and children
+export PATH="${USER_BIN_DIR}:/usr/local/bin:${PATH}"
+
+find_babydra_bin() {
+    local bin_name="$1"
+    for candidate in \
+        "/usr/local/bin/$bin_name" \
+        "/usr/bin/$bin_name" \
+        "${USER_BIN_DIR}/$bin_name" \
+        "$bin_name" \
+        "target/debug/$bin_name"
+    do
+        if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    echo "$bin_name"
+    return 1
+}
+
+BINARIES=(
+    "babydra-window-manager"
+    "babydra-desktop"
+    "babydra-topbar"
+    "babydra-panel"
+    "babydra-screenshot"
+    "babydra-keymap"
+    "babydra-lock"
+    "babydra-widgets"
+)
+
+if [ -n "${USER_BIN_DIR}" ]; then
+    mkdir -p "${USER_BIN_DIR}"
+fi
+
+for bin in "${BINARIES[@]}"; do
+    bin_path="target/debug/$bin"
+    if [ -f "$bin_path" ]; then
+        # 1. Install to ~/.local/bin
+        if [ -n "${USER_BIN_DIR}" ]; then
+            cp -f "$bin_path" "${USER_BIN_DIR}/$bin"
+            chmod 755 "${USER_BIN_DIR}/$bin"
+        fi
+
+        # 2. Install to system directories (/usr/local/bin, /usr/bin)
+        for sdir in "${SYSTEM_BIN_DIRS[@]}"; do
+            if [ -d "$sdir" ]; then
+                if [ -w "$sdir" ]; then
+                    install -m 755 "$bin_path" "$sdir/$bin" 2>/dev/null || true
+                else
+                    run_privileged install -m 755 "$bin_path" "$sdir/$bin" 2>/dev/null || true
+                fi
+            fi
+        done
+    fi
+done
+
+# Backwards compatibility: create symlink for window-manager -> babydra-window-manager
+if [ -n "${USER_BIN_DIR}" ] && [ -x "${USER_BIN_DIR}/babydra-window-manager" ]; then
+    ln -sf "babydra-window-manager" "${USER_BIN_DIR}/window-manager" 2>/dev/null || true
+fi
+for sdir in "${SYSTEM_BIN_DIRS[@]}"; do
+    if [ -d "$sdir" ] && [ -x "$sdir/babydra-window-manager" ]; then
+        if [ -w "$sdir" ]; then
+            ln -sf "babydra-window-manager" "$sdir/window-manager" 2>/dev/null || true
+        else
+            run_privileged ln -sf "babydra-window-manager" "$sdir/window-manager" 2>/dev/null || true
+        fi
+    fi
+done
+
+# ------------------------------------------------------------------------------
+# 9. Launch from system — autonomous compositor with autostarted widgets
+# ------------------------------------------------------------------------------
+COMPOSITOR_BIN="$(find_babydra_bin "babydra-window-manager")"
+
+echo "[*] Selected BabyDraDE compositor binary: $COMPOSITOR_BIN"
+
+# Background launcher for desktop widgets (babydra-desktop & babydra-topbar)
+PARENT_WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}"
+WIDGET_LAUNCHER_PID=""
+
+launch_widgets_on_wayland() {
+    (
+        set +e
+        echo "[*] Background widget launcher waiting for Wayland compositor socket in $XDG_RUNTIME_DIR..."
+        local socket_found=""
+
+        # Poll for the new Wayland socket created by BabyDraDE (up to 5 seconds)
+        for _ in $(seq 1 100); do
+            for sock in "$XDG_RUNTIME_DIR"/wayland-[0-9]*; do
+                if [ -S "$sock" ]; then
+                    local sock_name
+                    sock_name="$(basename "$sock")"
+                    # In nested mode, ignore parent compositor socket
+                    if [ -n "$PARENT_WAYLAND_DISPLAY" ] && [ "$sock_name" = "$PARENT_WAYLAND_DISPLAY" ]; then
+                        continue
+                    fi
+                    socket_found="$sock_name"
+                    break 2
+                fi
+            done
+            sleep 0.05
+        done
+
+        if [ -z "$socket_found" ]; then
+            echo "[!] Timeout: Wayland compositor socket was not detected within 5 seconds."
+            exit 1
+        fi
+
+        echo "[*] Wayland socket detected: $socket_found. Setting up environment..."
+        export WAYLAND_DISPLAY="$socket_found"
+        export GDK_BACKEND="wayland"
+        export ELECTRON_OZONE_PLATFORM_HINT="auto"
+        export MOZ_ENABLE_WAYLAND="1"
+        export QT_QPA_PLATFORM="wayland;xcb"
+        export XDG_CURRENT_DESKTOP="BabyDra"
+        export XDG_SESSION_DESKTOP="BabyDra"
+        export XDG_SESSION_TYPE="wayland"
+
+        # Allow compositor event loop and Wayland globals to settle
+        sleep 0.2
+
+        DESKTOP_BIN="$(find_babydra_bin "babydra-desktop")"
+        TOPBAR_BIN="$(find_babydra_bin "babydra-topbar")"
+
+        echo "[*] Autostarting BabyDraDE desktop: $DESKTOP_BIN"
+        "$DESKTOP_BIN" &
+        DESKTOP_PID=$!
+
+        echo "[*] Autostarting BabyDraDE topbar: $TOPBAR_BIN"
+        "$TOPBAR_BIN" &
+        TOPBAR_PID=$!
+
+        # Wait for widget processes
+        wait "$DESKTOP_PID" "$TOPBAR_PID" 2>/dev/null || true
+    ) &
+    WIDGET_LAUNCHER_PID=$!
+}
+
+cleanup_session() {
+    trap - EXIT INT TERM
+    echo "[*] Cleaning up BabyDraDE widgets and session processes..."
+    if [ -n "${WIDGET_LAUNCHER_PID:-}" ]; then
+        kill "$WIDGET_LAUNCHER_PID" 2>/dev/null || true
+    fi
+    pkill -TERM -f "babydra-(desktop|topbar|panel|screenshot|keymap|lock|widgets)" 2>/dev/null || true
+    sleep 0.2
+    pkill -9 -f "babydra-(desktop|topbar|panel|screenshot|keymap|lock|widgets)" 2>/dev/null || true
+}
+
+trap cleanup_session EXIT INT TERM
+
+# Start the background widget launcher
+launch_widgets_on_wayland
+
+# Run compositor in foreground (preserves TTY focus, KMS/DRM master, and signal delivery)
+echo "[*] Launching BabyDraDE compositor: $COMPOSITOR_BIN"
+set +e
+"$COMPOSITOR_BIN" "${APP_ARGS[@]+"${APP_ARGS[@]}"}"
+COMPOSITOR_EXIT_CODE=$?
+set -e
+
+cleanup_session
+exit "$COMPOSITOR_EXIT_CODE"

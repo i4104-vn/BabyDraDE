@@ -5,6 +5,38 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
+[lib]
+name = "widgets"
+path = "src/lib.rs"
+
+[[bin]]
+name = "babydra-desktop"
+path = "src/bin/babydra-desktop.rs"
+
+[[bin]]
+name = "babydra-topbar"
+path = "src/bin/babydra-topbar.rs"
+
+[[bin]]
+name = "babydra-panel"
+path = "src/bin/babydra-panel.rs"
+
+[[bin]]
+name = "babydra-screenshot"
+path = "src/bin/babydra-screenshot.rs"
+
+[[bin]]
+name = "babydra-keymap"
+path = "src/bin/babydra-keymap.rs"
+
+[[bin]]
+name = "babydra-lock"
+path = "src/bin/babydra-lock.rs"
+
+[[bin]]
+name = "babydra-widgets"
+path = "src/bin/babydra-widgets.rs"
+
 [dependencies]
 gtk4 = { version = "0.11" }
 gtk4-layer-shell = "0.8"

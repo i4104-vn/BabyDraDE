@@ -1,0 +1,238 @@
+/* BabyDraDE-only selectors retained alongside the core style source. */
+
+
+/* ── Text & Base Colors ──────────────────────────────────────────── */
+.topbar-box
+{
+    color: rgba(17, 24, 39, 0.95);
+}
+
+
+.left-pill,
+.pill-container
+{
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    color: #111827;
+}
+
+
+.left-pill:hover,
+.pill-container:hover
+{
+    background-color: #f3f4f6;
+    border-color: rgba(0, 0, 0, 0.14);
+}
+
+
+button.app-title-btn:hover,
+button.func-btn:hover,
+.fluent-btn:hover
+{
+    background-color: rgba(0, 0, 0, 0.06);
+    color: #111827;
+}
+
+
+button.app-title-btn:active,
+button.func-btn:active,
+.fluent-btn:active
+{
+    background-color: rgba(0, 0, 0, 0.12);
+    color: #111827;
+}
+
+
+button.app-title-btn,
+button.func-btn,
+.fluent-btn
+{
+    color: rgba(17, 24, 39, 0.85);
+}
+
+
+.shortcut-label
+{
+    color: rgba(0, 0, 0, 0.45);
+}
+
+
+.menu-sep
+{
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+
+/* ── Desktop Shell ───────────────────────────────────────────────── */
+.desktop-wallpaper-container
+{
+    background-color: #f3f4f6;
+}
+
+
+.desktop-icon:hover
+{
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+
+.desktop-icon.selected
+{
+    background-color: rgba(255, 255, 255, 0.30);
+    border: 1px solid rgba(255, 255, 255, 0.50);
+}
+
+
+.desktop-icon-label
+{
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.8);
+}
+
+
+.desktop-rubberband
+{
+    background-color: rgba(37, 99, 235, 0.20);
+    border: 1px solid rgba(37, 99, 235, 0.60);
+}
+
+
+.circular-disc
+{
+    background-color: #f3f4f6;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #2563eb;
+}
+
+
+.badge
+{
+    background: rgba(37, 99, 235, 0.12);
+    color: #2563eb;
+}
+
+
+.badge-subtle
+{
+    background: rgba(0, 0, 0, 0.06);
+    color: rgba(0, 0, 0, 0.75);
+}
+
+
+.recording-header-title
+{
+    color: rgba(0, 0, 0, 0.50);
+}
+
+
+.recording-status-badge
+{
+    background-color: rgba(0, 0, 0, 0.05);
+    color: rgba(0, 0, 0, 0.70);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+
+.recording-hero-timer
+{
+    color: #111827;
+}
+
+
+.recording-setting-row
+{
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+
+.recording-setting-icon
+{
+    color: rgba(0, 0, 0, 0.65);
+}
+
+
+.recording-setting-label
+{
+    color: rgba(0, 0, 0, 0.85);
+}
+
+
+.recording-area-btn
+{
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    color: #111827;
+}
+
+
+.recording-meta-chip
+{
+    color: rgba(0, 0, 0, 0.85);
+}
+
+
+.recording-popover-btn
+{
+    background-color: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+
+.recording-popover-btn:hover
+{
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+
+.recording-btn-icon-holder
+{
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+
+.recording-btn-title
+{
+    color: rgba(0, 0, 0, 0.85);
+}
+
+
+label.recording-capsule-timer
+{
+    color: #111827;
+}
+
+
+.control-slider-val
+{
+    color: #111827;
+}
+
+
+scale.pill-slider trough
+{
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+
+scale.pill-slider highlight
+{
+    background-color: #111827;
+}
+
+
+/* Control Popovers (Light) */
+popover.clean-popover>contents,
+popover.vpn-popover>contents
+{
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: #111827;
+}
+
+
+.clean-target-size
+{
+    color: rgba(0, 0, 0, 0.50);
+}
