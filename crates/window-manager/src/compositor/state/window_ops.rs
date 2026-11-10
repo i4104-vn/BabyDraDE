@@ -26,6 +26,13 @@ impl BabydraState {
         self.windows.retain(|w| w.alive());
     }
 
+    pub(crate) fn raise_window(&mut self, window: &Window) {
+        if let Some(pos) = self.windows.iter().position(|w| w == window) {
+            let win = self.windows.remove(pos);
+            self.windows.push(win);
+        }
+    }
+
     pub(crate) fn find_window_for_surface(&self, surface: &ToplevelSurface) -> Option<Window> {
         self.windows
             .iter()
@@ -81,6 +88,8 @@ impl BabydraState {
 
         self.space.map_element(window.clone(), target_loc, true);
         self.space.raise_element(window, true);
+        self.raise_window(window);
+        self.space.refresh();
 
         toplevel.with_pending_state(|state| {
             state.states.set(xdg_toplevel::State::Maximized);
@@ -128,21 +137,21 @@ impl BabydraState {
     }
 
     pub(crate) fn minimize_window(&mut self, window: &Window) {
+        let current_loc = self.space.element_location(window);
         {
             let mut state_guard = window_state(window).lock().unwrap();
             state_guard.is_minimized = true;
+            if let Some(loc) = current_loc {
+                state_guard.saved_location = Some(loc);
+            }
         }
 
         self.space.unmap_elem(window);
-
-        self.space.elements().for_each(|w| {
-            if let Some(top) = w.toplevel() {
-                top.send_pending_configure();
-            }
-        });
+        self.space.refresh();
 
         let next_top = self.space.elements().next_back().cloned();
         if let Some(ref next) = next_top {
+            next.set_activated(true);
             if let Some(top) = next.toplevel() {
                 if let Some(keyboard) = self.seat.get_keyboard() {
                     keyboard.set_focus(
@@ -151,8 +160,24 @@ impl BabydraState {
                         SERIAL_COUNTER.next_serial(),
                     );
                 }
+                top.send_configure();
             }
+        } else if let Some(keyboard) = self.seat.get_keyboard() {
+            keyboard.set_focus(
+                self,
+                Option::<smithay::reexports::wayland_server::protocol::wl_surface::WlSurface>::None,
+                SERIAL_COUNTER.next_serial(),
+            );
         }
+
+        self.space.elements().for_each(|w| {
+            if next_top.as_ref() != Some(w) {
+                w.set_activated(false);
+            }
+            if let Some(top) = w.toplevel() {
+                top.send_pending_configure();
+            }
+        });
         self.update_active_window(next_top.as_ref());
     }
 
@@ -175,6 +200,17 @@ impl BabydraState {
         }
 
         self.space.raise_element(window, true);
+        self.raise_window(window);
+        self.space.refresh();
+
+        self.space.elements().for_each(|w| {
+            let active = w == window;
+            w.set_activated(active);
+            if let Some(toplevel) = w.toplevel() {
+                toplevel.send_pending_configure();
+            }
+        });
+
         if let Some(toplevel) = window.toplevel() {
             if let Some(keyboard) = self.seat.get_keyboard() {
                 keyboard.set_focus(
@@ -183,7 +219,7 @@ impl BabydraState {
                     SERIAL_COUNTER.next_serial(),
                 );
             }
-            toplevel.send_pending_configure();
+            toplevel.send_configure();
         }
         self.update_active_window(Some(window));
     }

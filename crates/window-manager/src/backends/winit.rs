@@ -85,7 +85,10 @@ pub(crate) fn init(
                         None,
                     );
                 }
-                WinitEvent::Input(event) => state.process_input_event(event),
+                WinitEvent::Input(event) => {
+                    state.process_input_event(event);
+                    backend.window().request_redraw();
+                }
                 WinitEvent::Redraw => {
                     if let Some(action) = services::system::window::read_and_clear_window_action() {
                         state.handle_window_action(&action);

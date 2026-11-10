@@ -29,7 +29,14 @@ impl BabydraState {
                 .entries
                 .retain(|entry| all_windows.iter().any(|window| window == &entry.window));
 
-            if switcher.entries.len() < 2 {
+            if switcher.entries.is_empty() {
+                return;
+            }
+
+            if switcher.entries.len() == 1 {
+                switcher.selected_index = 0;
+                switcher.transition_started = Instant::now();
+                self.alt_tab_switcher = Some(switcher);
                 return;
             }
 
@@ -91,11 +98,17 @@ impl BabydraState {
             })
             .collect::<Vec<_>>();
 
-        if entries.len() < 2 {
+        if entries.is_empty() {
             return;
         }
 
-        let selected_index = if backwards { entries.len() - 1 } else { 1 };
+        let selected_index = if entries.len() == 1 {
+            0
+        } else if backwards {
+            entries.len() - 1
+        } else {
+            1
+        };
         self.alt_tab_switcher = Some(AltTabSwitcher {
             entries,
             selected_index,

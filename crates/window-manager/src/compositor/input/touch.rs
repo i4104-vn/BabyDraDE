@@ -27,6 +27,7 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
 
     if let Some((window, _)) = state.window_under(position) {
         state.space.raise_element(&window, true);
+        state.raise_window(&window);
         if let Some(toplevel) = window.toplevel() {
             keyboard.set_focus(
                 state,
@@ -34,6 +35,8 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
                 serial,
             );
             state.space.elements().for_each(|w| {
+                let active = w == &window;
+                w.set_activated(active);
                 if let Some(top) = w.toplevel() {
                     top.send_pending_configure();
                 }

@@ -134,13 +134,18 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
             if !pointer.is_grabbed() {
                 if let Some((window, location)) = state.window_under(state.pointer_location) {
                     state.space.raise_element(&window, true);
+                    state.raise_window(&window);
                     keyboard.set_focus(
                         state,
                         Some(window.toplevel().unwrap().wl_surface().clone()),
                         serial,
                     );
-                    state.space.elements().for_each(|window| {
-                        window.toplevel().unwrap().send_pending_configure();
+                    state.space.elements().for_each(|w| {
+                        let active = w == &window;
+                        w.set_activated(active);
+                        if let Some(top) = w.toplevel() {
+                            top.send_pending_configure();
+                        }
                     });
                     state.update_active_window(Some(&window));
 

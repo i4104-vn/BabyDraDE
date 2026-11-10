@@ -26,6 +26,7 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
     let mut toggle_maximize_active = false;
     let mut minimize_active = false;
     let mut toggle_fullscreen_active = false;
+    let mut cycle_window_step = None;
 
     keyboard.input::<(), _>(
         state,
@@ -55,8 +56,9 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
 
             if switcher_active
                 && event.state() == KeyState::Released
-                && (sym == keysyms::KEY_Alt_L.into() || sym == keysyms::KEY_Alt_R.into())
-                && !modifiers.alt
+                && (!modifiers.alt
+                    || sym == keysyms::KEY_Alt_L.into()
+                    || sym == keysyms::KEY_Alt_R.into())
             {
                 commit_switcher = true;
             }
@@ -135,6 +137,15 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                     toggle_fullscreen_active = true;
                     return FilterResult::Intercept(());
                 }
+
+                // 9. Super + Tab: Cycle window focus
+                if modifiers.logo
+                    && !modifiers.alt
+                    && (sym == keysyms::KEY_Tab.into() || sym == keysyms::KEY_ISO_Left_Tab.into())
+                {
+                    cycle_window_step = Some(!modifiers.shift);
+                    return FilterResult::Intercept(());
+                }
             }
             FilterResult::Forward
         },
@@ -194,6 +205,10 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
         }
     }
 
+    if let Some(forward) = cycle_window_step {
+        cycle_window_focus(state, forward, serial);
+    }
+
     if cancel_switcher {
         state.alt_tab_switcher = None;
     } else if let Some(backwards) = switcher_step {
@@ -213,21 +228,24 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
 }
 
 pub(crate) fn cycle_window_focus(state: &mut BabydraState, forward: bool, serial: Serial) -> bool {
-    let next_window = if forward {
-        state.space.elements().rev().nth(1).cloned()
+    state.cleanup_windows();
+    if state.windows.is_empty() {
+        return false;
+    }
+
+    let next_window = if state.windows.len() == 1 {
+        state.windows.first().cloned()
+    } else if forward {
+        state.windows.iter().rev().nth(1).cloned()
     } else {
-        let mut windows = state.space.elements();
-        let previous = windows.next().cloned();
-        if windows.next().is_some() {
-            previous
-        } else {
-            None
-        }
+        state.windows.first().cloned()
     };
+
     let Some(next_window) = next_window else {
         return false;
     };
 
+    state.unminimize_window(&next_window);
     focus_window(state, next_window, serial);
     true
 }
@@ -241,9 +259,12 @@ fn focus_window(state: &mut BabydraState, window: smithay::desktop::Window, seri
     };
 
     state.space.raise_element(&window, true);
+    state.raise_window(&window);
     keyboard.set_focus(state, Some(toplevel.wl_surface().clone()), serial);
-    state.space.elements().for_each(|window| {
-        if let Some(toplevel) = window.toplevel() {
+    state.space.elements().for_each(|w| {
+        let active = w == &window;
+        w.set_activated(active);
+        if let Some(toplevel) = w.toplevel() {
             toplevel.send_pending_configure();
         }
     });
