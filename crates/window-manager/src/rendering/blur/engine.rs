@@ -1,6 +1,6 @@
 use smithay::{
     desktop::Window,
-    utils::{Physical, Rectangle},
+    utils::{Physical, Rectangle, Transform},
     wayland::{
         compositor::with_states,
         shell::xdg::XdgToplevelSurfaceData,
@@ -165,6 +165,7 @@ impl BlurEngine {
         gl: &glow::Context,
         dst: Rectangle<i32, Physical>,
         corner_radius: f32,
+        transform: Transform,
     ) {
         if !self.params.enabled {
             return;
@@ -184,7 +185,7 @@ impl BlurEngine {
 
         if let Some(pipeline) = self.pipeline.as_mut() {
             unsafe {
-                pipeline.render_blur(gl, dst, corner_radius, &self.params);
+                pipeline.render_blur(gl, dst, corner_radius, transform, &self.params);
             }
         }
     }

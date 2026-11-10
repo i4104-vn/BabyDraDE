@@ -5,6 +5,7 @@ use smithay::{
         gles::GlesError,
         glow::{GlowFrame, GlowRenderer},
         utils::{CommitCounter, DamageSet, OpaqueRegions},
+        Frame,
     },
     utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Transform},
 };
@@ -24,12 +25,13 @@ pub struct BlurRenderElement {
 
 impl BlurRenderElement {
     pub fn new(
+        id: Id,
         area: Rectangle<i32, Logical>,
         corner_radius: f32,
         blur_engine: Arc<Mutex<BlurEngine>>,
     ) -> Self {
         Self {
-            id: Id::new(),
+            id,
             commit_counter: CommitCounter::default(),
             area,
             corner_radius,
@@ -94,9 +96,10 @@ impl RenderElement<GlowRenderer> for BlurRenderElement {
         _damage: &[Rectangle<i32, Physical>],
         _opaque_regions: &[Rectangle<i32, Physical>],
     ) -> Result<(), GlesError> {
+        let transform = frame.transformation();
         frame.with_context(|glow| {
             if let Ok(mut engine) = self.blur_engine.lock() {
-                engine.render_blur(glow, dst, self.corner_radius);
+                engine.render_blur(glow, dst, self.corner_radius, transform);
             }
         })?;
         Ok(())

@@ -4,7 +4,7 @@ use smithay::{
     backend::renderer::{
         element::{
             memory::MemoryRenderBufferRenderElement, render_elements,
-            surface::WaylandSurfaceRenderElement, AsRenderElements,
+            surface::WaylandSurfaceRenderElement, AsRenderElements, Id,
         },
         glow::GlowRenderer,
     },
@@ -15,6 +15,12 @@ use smithay::{
 };
 
 use super::blur::{BlurEngine, BlurRenderElement};
+
+#[derive(Debug, Clone)]
+struct WindowBlurId(Id);
+
+#[derive(Debug, Clone)]
+struct LayerBlurId(Id);
 
 render_elements! {
     pub CustomRenderElements<=GlowRenderer>;
@@ -66,9 +72,21 @@ pub fn render_window(
     // 2. Blur backdrop element (placed behind window surfaces)
     if should_blur {
         if let Some(engine_lock) = blur_engine {
-            let bbox = window.bbox();
-            let blur_area = Rectangle::new(location + bbox.loc, bbox.size);
+            let geo = window.geometry();
+            let blur_area = Rectangle::new(location, geo.size);
+
+            window
+                .user_data()
+                .insert_if_missing(|| WindowBlurId(Id::new()));
+            let blur_id = window
+                .user_data()
+                .get::<WindowBlurId>()
+                .unwrap()
+                .0
+                .clone();
+
             let blur_elem = BlurRenderElement::new(
+                blur_id,
                 blur_area,
                 corner_radius,
                 engine_lock.clone(),
@@ -119,12 +137,28 @@ pub fn render_layer_surfaces(
                 if should_blur {
                     if let Some(engine_lock) = blur_engine {
                         let corner_radius = if let Ok(engine) = engine_lock.lock() {
-                            engine.params.corner_radius
+                            if layer.namespace().contains("topbar") {
+                                0.0
+                            } else {
+                                engine.params.corner_radius
+                            }
                         } else {
                             0.0
                         };
                         let blur_area = Rectangle::new(geo.loc, geo.size);
+
+                        layer
+                            .user_data()
+                            .insert_if_missing_threadsafe(|| LayerBlurId(Id::new()));
+                        let blur_id = layer
+                            .user_data()
+                            .get::<LayerBlurId>()
+                            .unwrap()
+                            .0
+                            .clone();
+
                         let blur_elem = BlurRenderElement::new(
+                            blur_id,
                             blur_area,
                             corner_radius,
                             engine_lock.clone(),

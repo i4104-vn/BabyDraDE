@@ -1,5 +1,5 @@
 use glow::HasContext;
-use smithay::utils::{Physical, Rectangle};
+use smithay::utils::{Physical, Rectangle, Size, Transform};
 
 use super::config::BlurParams;
 
@@ -11,59 +11,94 @@ const QUAD_VERTICES: [f32; 8] = [
 ];
 
 const VERTEX_SHADER_SRC: &str = r#"
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
 attribute vec2 a_position;
 varying vec2 v_tex_coord;
+varying vec2 v_norm_coord;
+uniform vec2 u_scale_uv;
 
 void main() {
-    v_tex_coord = a_position * 0.5 + 0.5;
+    v_norm_coord = a_position * 0.5 + 0.5;
+    v_tex_coord = v_norm_coord * u_scale_uv;
     gl_Position = vec4(a_position, 0.0, 1.0);
 }
 "#;
 
 const DOWNSAMPLE_SHADER_SRC: &str = r#"
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
+
 varying vec2 v_tex_coord;
 uniform sampler2D u_texture;
 uniform vec2 u_halfpixel;
 uniform float u_offset;
+uniform vec2 u_scale_uv;
+
+vec4 sample_clamped(vec2 uv) {
+    return texture2D(u_texture, clamp(uv, vec2(0.0), u_scale_uv));
+}
 
 void main() {
     vec2 d = u_halfpixel * u_offset;
-    vec4 sum = texture2D(u_texture, v_tex_coord) * 4.0;
-    sum += texture2D(u_texture, v_tex_coord - d);
-    sum += texture2D(u_texture, v_tex_coord + d);
-    sum += texture2D(u_texture, v_tex_coord + vec2(d.x, -d.y));
-    sum += texture2D(u_texture, v_tex_coord + vec2(-d.x, d.y));
+    vec4 sum = sample_clamped(v_tex_coord) * 4.0;
+    sum += sample_clamped(v_tex_coord - d);
+    sum += sample_clamped(v_tex_coord + d);
+    sum += sample_clamped(v_tex_coord + vec2(d.x, -d.y));
+    sum += sample_clamped(v_tex_coord + vec2(-d.x, d.y));
     gl_FragColor = sum / 8.0;
 }
 "#;
 
 const UPSAMPLE_SHADER_SRC: &str = r#"
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
+
 varying vec2 v_tex_coord;
 uniform sampler2D u_texture;
 uniform vec2 u_halfpixel;
 uniform float u_offset;
+uniform vec2 u_scale_uv;
+
+vec4 sample_clamped(vec2 uv) {
+    return texture2D(u_texture, clamp(uv, vec2(0.0), u_scale_uv));
+}
 
 void main() {
     vec2 d = u_halfpixel * u_offset;
     vec4 sum = vec4(0.0);
-    sum += texture2D(u_texture, v_tex_coord + vec2(-d.x * 2.0, 0.0));
-    sum += texture2D(u_texture, v_tex_coord + vec2(-d.x, d.y)) * 2.0;
-    sum += texture2D(u_texture, v_tex_coord + vec2(0.0, d.y * 2.0));
-    sum += texture2D(u_texture, v_tex_coord + vec2(d.x, d.y)) * 2.0;
-    sum += texture2D(u_texture, v_tex_coord + vec2(d.x * 2.0, 0.0));
-    sum += texture2D(u_texture, v_tex_coord + vec2(d.x, -d.y)) * 2.0;
-    sum += texture2D(u_texture, v_tex_coord + vec2(0.0, -d.y * 2.0));
-    sum += texture2D(u_texture, v_tex_coord + vec2(-d.x, -d.y)) * 2.0;
-    sum += texture2D(u_texture, v_tex_coord) * 4.0;
+    sum += sample_clamped(v_tex_coord + vec2(-d.x * 2.0, 0.0));
+    sum += sample_clamped(v_tex_coord + vec2(-d.x, d.y)) * 2.0;
+    sum += sample_clamped(v_tex_coord + vec2(0.0, d.y * 2.0));
+    sum += sample_clamped(v_tex_coord + vec2(d.x, d.y)) * 2.0;
+    sum += sample_clamped(v_tex_coord + vec2(d.x * 2.0, 0.0));
+    sum += sample_clamped(v_tex_coord + vec2(d.x, -d.y)) * 2.0;
+    sum += sample_clamped(v_tex_coord + vec2(0.0, -d.y * 2.0));
+    sum += sample_clamped(v_tex_coord + vec2(-d.x, -d.y)) * 2.0;
+    sum += sample_clamped(v_tex_coord) * 4.0;
     gl_FragColor = sum / 16.0;
 }
 "#;
 
 const COMPOSITE_SHADER_SRC: &str = r#"
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
+
 varying vec2 v_tex_coord;
+varying vec2 v_norm_coord;
 uniform sampler2D u_texture;
 uniform vec2 u_rect_size;
 uniform float u_radius;
@@ -72,19 +107,23 @@ uniform vec4 u_tint;
 uniform float u_noise;
 uniform float u_brightness;
 uniform float u_contrast;
+uniform vec2 u_scale_uv;
 
 float rounded_box_sdf(vec2 p, vec2 b, float r) {
     vec2 q = abs(p) - b + vec2(r);
     return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
 }
 
+// Robust pseudorandom hash that avoids fp16 overflow on mobile/tablet GPUs
 float rand(vec2 co) {
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+    vec2 p = fract(co * vec2(443.897, 441.423));
+    p += dot(p, p.yx + 19.19);
+    return fract((p.x + p.y) * p.x);
 }
 
 void main() {
     vec2 half_size = u_rect_size * 0.5;
-    vec2 p = (v_tex_coord - 0.5) * u_rect_size;
+    vec2 p = (v_norm_coord - 0.5) * u_rect_size;
     float r = min(u_radius, min(half_size.x, half_size.y));
     float d = rounded_box_sdf(p, half_size, r);
     if (d > 1.0) {
@@ -92,12 +131,13 @@ void main() {
     }
     float alpha = clamp(0.5 - d, 0.0, 1.0) * u_opacity;
 
-    vec4 color = texture2D(u_texture, v_tex_coord);
+    vec2 uv = clamp(v_tex_coord, vec2(0.0), u_scale_uv);
+    vec4 color = texture2D(u_texture, uv);
     color.rgb = (color.rgb - 0.5) * u_contrast + 0.5;
     color.rgb *= u_brightness;
     color.rgb = mix(color.rgb, u_tint.rgb, u_tint.a);
 
-    float n = (rand(v_tex_coord * u_rect_size) - 0.5) * u_noise;
+    float n = (rand(v_norm_coord * u_rect_size) - 0.5) * u_noise;
     color.rgb += vec3(n);
 
     gl_FragColor = vec4(color.rgb * alpha, alpha);
@@ -109,6 +149,7 @@ struct DownsampleProgram {
     u_texture: glow::UniformLocation,
     u_halfpixel: glow::UniformLocation,
     u_offset: glow::UniformLocation,
+    u_scale_uv: glow::UniformLocation,
     a_position: u32,
 }
 
@@ -117,6 +158,7 @@ struct UpsampleProgram {
     u_texture: glow::UniformLocation,
     u_halfpixel: glow::UniformLocation,
     u_offset: glow::UniformLocation,
+    u_scale_uv: glow::UniformLocation,
     a_position: u32,
 }
 
@@ -130,6 +172,7 @@ struct CompositeProgram {
     u_noise: glow::UniformLocation,
     u_brightness: glow::UniformLocation,
     u_contrast: glow::UniformLocation,
+    u_scale_uv: glow::UniformLocation,
     a_position: u32,
 }
 
@@ -270,7 +313,8 @@ impl BlurPipeline {
         self.allocated_h = new_h;
     }
 
-    /// Renders the Dual Kawase blur backdrop directly over `dst`
+    /// Renders the Dual Kawase blur backdrop directly over `dst`, taking into
+    /// account screen rotation/orientation and GL scissor states.
     ///
     /// # Safety
     ///
@@ -280,6 +324,7 @@ impl BlurPipeline {
         gl: &glow::Context,
         dst: Rectangle<i32, Physical>,
         corner_radius: f32,
+        transform: Transform,
         params: &BlurParams,
     ) {
         if dst.size.w <= 8 || dst.size.h <= 8 || !params.enabled {
@@ -298,17 +343,55 @@ impl BlurPipeline {
             return;
         }
 
+        // Save and disable scissor test so FBO offscreen passes are not clipped
+        let scissor_was_enabled = gl.is_enabled(glow::SCISSOR_TEST);
+        let mut saved_scissor = [0i32; 4];
+        gl.get_parameter_i32_slice(glow::SCISSOR_BOX, &mut saved_scissor);
+        gl.disable(glow::SCISSOR_TEST);
+
+        // Derive oriented display size from physical framebuffer dimensions
+        let oriented_size = match transform {
+            Transform::_90 | Transform::_270 | Transform::Flipped90 | Transform::Flipped270 => {
+                Size::from((screen_h, screen_w))
+            }
+            _ => Size::from((screen_w, screen_h)),
+        };
+
+        // Transform dst rectangle from logical oriented space into physical panel pixels
+        let phys_rect = transform.transform_rect_in(dst, &oriented_size);
+
+        // Clip against the physical panel area
+        let screen_rect = Rectangle::from_size(Size::from((screen_w, screen_h)));
+        let visible_rect = match phys_rect.intersection(screen_rect) {
+            Some(rect) => rect,
+            None => {
+                // Completely offscreen, restore scissor and return
+                if scissor_was_enabled {
+                    gl.enable(glow::SCISSOR_TEST);
+                    gl.scissor(saved_scissor[0], saved_scissor[1], saved_scissor[2], saved_scissor[3]);
+                }
+                return;
+            }
+        };
+
         // Convert physical Wayland top-left coords to GL bottom-left coords
-        let gl_x = dst.loc.x.clamp(0, screen_w - 1);
-        let gl_y = (screen_h - (dst.loc.y + dst.size.h)).clamp(0, screen_h - 1);
-        let gl_w = dst.size.w.min(screen_w - gl_x);
-        let gl_h = dst.size.h.min(screen_h - gl_y);
+        let gl_x = visible_rect.loc.x;
+        let gl_y = screen_h - (visible_rect.loc.y + visible_rect.size.h);
+        let gl_w = visible_rect.size.w;
+        let gl_h = visible_rect.size.h;
 
         if gl_w <= 8 || gl_h <= 8 {
+            if scissor_was_enabled {
+                gl.enable(glow::SCISSOR_TEST);
+                gl.scissor(saved_scissor[0], saved_scissor[1], saved_scissor[2], saved_scissor[3]);
+            }
             return;
         }
 
         self.ensure_texture_sizes(gl, gl_w, gl_h);
+
+        let scale_u = gl_w as f32 / self.allocated_w as f32;
+        let scale_v = gl_h as f32 / self.allocated_h as f32;
 
         // 1. Capture the background behind the window from the active framebuffer into capture_tex
         gl.bind_texture(glow::TEXTURE_2D, Some(self.capture_tex));
@@ -341,10 +424,11 @@ impl BlurPipeline {
         gl.uniform_1_i32(Some(&self.downsample_prog.u_texture), 0);
         gl.uniform_2_f32(
             Some(&self.downsample_prog.u_halfpixel),
-            0.5 / gl_w as f32,
-            0.5 / gl_h as f32,
+            0.5 / self.allocated_w as f32,
+            0.5 / self.allocated_h as f32,
         );
         gl.uniform_1_f32(Some(&self.downsample_prog.u_offset), params.radius * 0.5);
+        gl.uniform_2_f32(Some(&self.downsample_prog.u_scale_uv), scale_u, scale_v);
 
         gl.enable_vertex_attrib_array(self.downsample_prog.a_position);
         gl.vertex_attrib_pointer_f32(self.downsample_prog.a_position, 2, glow::FLOAT, false, 8, 0);
@@ -357,10 +441,11 @@ impl BlurPipeline {
         gl.bind_texture(glow::TEXTURE_2D, Some(self.tex1));
         gl.uniform_2_f32(
             Some(&self.downsample_prog.u_halfpixel),
-            1.0 / gl_w as f32,
-            1.0 / gl_h as f32,
+            1.0 / self.allocated_w as f32,
+            1.0 / self.allocated_h as f32,
         );
         gl.uniform_1_f32(Some(&self.downsample_prog.u_offset), params.radius * 1.0);
+        gl.uniform_2_f32(Some(&self.downsample_prog.u_scale_uv), scale_u, scale_v);
         gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
         gl.disable_vertex_attrib_array(self.downsample_prog.a_position);
 
@@ -373,10 +458,11 @@ impl BlurPipeline {
         gl.uniform_1_i32(Some(&self.upsample_prog.u_texture), 0);
         gl.uniform_2_f32(
             Some(&self.upsample_prog.u_halfpixel),
-            2.0 / gl_w as f32,
-            2.0 / gl_h as f32,
+            2.0 / self.allocated_w as f32,
+            2.0 / self.allocated_h as f32,
         );
         gl.uniform_1_f32(Some(&self.upsample_prog.u_offset), params.radius * 1.0);
+        gl.uniform_2_f32(Some(&self.upsample_prog.u_scale_uv), scale_u, scale_v);
 
         gl.enable_vertex_attrib_array(self.upsample_prog.a_position);
         gl.vertex_attrib_pointer_f32(self.upsample_prog.a_position, 2, glow::FLOAT, false, 8, 0);
@@ -407,6 +493,7 @@ impl BlurPipeline {
         gl.uniform_1_f32(Some(&self.composite_prog.u_noise), params.noise);
         gl.uniform_1_f32(Some(&self.composite_prog.u_brightness), params.brightness);
         gl.uniform_1_f32(Some(&self.composite_prog.u_contrast), params.contrast);
+        gl.uniform_2_f32(Some(&self.composite_prog.u_scale_uv), scale_u, scale_v);
 
         gl.enable_vertex_attrib_array(self.composite_prog.a_position);
         gl.vertex_attrib_pointer_f32(self.composite_prog.a_position, 2, glow::FLOAT, false, 8, 0);
@@ -420,6 +507,11 @@ impl BlurPipeline {
         gl.viewport(saved_viewport[0], saved_viewport[1], saved_viewport[2], saved_viewport[3]);
         gl.enable(glow::BLEND);
         gl.blend_func(glow::ONE, glow::ONE_MINUS_SRC_ALPHA);
+
+        if scissor_was_enabled {
+            gl.enable(glow::SCISSOR_TEST);
+            gl.scissor(saved_scissor[0], saved_scissor[1], saved_scissor[2], saved_scissor[3]);
+        }
     }
 }
 
@@ -466,6 +558,7 @@ unsafe fn compile_downsample(gl: &glow::Context) -> Result<DownsampleProgram, St
     let u_texture = gl.get_uniform_location(prog, "u_texture").ok_or("u_texture not found")?;
     let u_halfpixel = gl.get_uniform_location(prog, "u_halfpixel").ok_or("u_halfpixel not found")?;
     let u_offset = gl.get_uniform_location(prog, "u_offset").ok_or("u_offset not found")?;
+    let u_scale_uv = gl.get_uniform_location(prog, "u_scale_uv").ok_or("u_scale_uv not found")?;
     let a_position = gl.get_attrib_location(prog, "a_position").ok_or("a_position not found")?;
 
     Ok(DownsampleProgram {
@@ -473,6 +566,7 @@ unsafe fn compile_downsample(gl: &glow::Context) -> Result<DownsampleProgram, St
         u_texture,
         u_halfpixel,
         u_offset,
+        u_scale_uv,
         a_position,
     })
 }
@@ -482,6 +576,7 @@ unsafe fn compile_upsample(gl: &glow::Context) -> Result<UpsampleProgram, String
     let u_texture = gl.get_uniform_location(prog, "u_texture").ok_or("u_texture not found")?;
     let u_halfpixel = gl.get_uniform_location(prog, "u_halfpixel").ok_or("u_halfpixel not found")?;
     let u_offset = gl.get_uniform_location(prog, "u_offset").ok_or("u_offset not found")?;
+    let u_scale_uv = gl.get_uniform_location(prog, "u_scale_uv").ok_or("u_scale_uv not found")?;
     let a_position = gl.get_attrib_location(prog, "a_position").ok_or("a_position not found")?;
 
     Ok(UpsampleProgram {
@@ -489,6 +584,7 @@ unsafe fn compile_upsample(gl: &glow::Context) -> Result<UpsampleProgram, String
         u_texture,
         u_halfpixel,
         u_offset,
+        u_scale_uv,
         a_position,
     })
 }
@@ -503,6 +599,7 @@ unsafe fn compile_composite(gl: &glow::Context) -> Result<CompositeProgram, Stri
     let u_noise = gl.get_uniform_location(prog, "u_noise").ok_or("u_noise not found")?;
     let u_brightness = gl.get_uniform_location(prog, "u_brightness").ok_or("u_brightness not found")?;
     let u_contrast = gl.get_uniform_location(prog, "u_contrast").ok_or("u_contrast not found")?;
+    let u_scale_uv = gl.get_uniform_location(prog, "u_scale_uv").ok_or("u_scale_uv not found")?;
     let a_position = gl.get_attrib_location(prog, "a_position").ok_or("a_position not found")?;
 
     Ok(CompositeProgram {
@@ -515,6 +612,7 @@ unsafe fn compile_composite(gl: &glow::Context) -> Result<CompositeProgram, Stri
         u_noise,
         u_brightness,
         u_contrast,
+        u_scale_uv,
         a_position,
     })
 }
