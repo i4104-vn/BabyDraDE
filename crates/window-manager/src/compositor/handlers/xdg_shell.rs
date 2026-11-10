@@ -65,10 +65,8 @@ impl XdgShellHandler for BabydraState {
     fn grab(&mut self, _surface: PopupSurface, _seat: wl_seat::WlSeat, _serial: Serial) {}
 
     fn move_request(&mut self, surface: ToplevelSurface, _seat: wl_seat::WlSeat, _serial: Serial) {
-        // Only allow moving if a pointer button (such as left click) is actively held down.
-        // If the user already released the button (e.g. quick click or tap), ignore the request.
-        if self.pointer_pressed_buttons.is_empty() {
-            tracing::debug!("Ignoring xdg_toplevel.move_request: pointer button is not held down");
+        if self.pointer_pressed_buttons.is_empty() && self.touch_slots.is_empty() {
+            tracing::debug!("Ignoring xdg_toplevel.move_request: neither pointer button nor touch contact is held down");
             return;
         }
 

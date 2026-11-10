@@ -77,6 +77,7 @@ pub(crate) struct BabydraState {
     pub(crate) blur_engine: std::sync::Arc<std::sync::Mutex<crate::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
+    pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
 }
 
 impl BabydraState {
@@ -96,6 +97,7 @@ impl BabydraState {
         seat.add_keyboard(Default::default(), 200, 25)
             .expect("failed to initialize keyboard");
         seat.add_pointer();
+        seat.add_touch();
 
         let socket_name = Self::init_wayland_listener(display, event_loop);
 
@@ -123,6 +125,7 @@ impl BabydraState {
             )),
             pointer_location: Point::from((100.0, 100.0)),
             pointer_pressed_buttons: std::collections::HashSet::new(),
+            touch_slots: std::collections::HashSet::new(),
         }
     }
 

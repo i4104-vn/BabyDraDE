@@ -1,6 +1,7 @@
 pub mod keyboard;
 pub mod launcher;
 pub mod pointer;
+pub mod touch;
 pub mod touchpad;
 
 use smithay::backend::input::{InputBackend, InputEvent};
@@ -48,6 +49,21 @@ impl BabydraState {
             }
             InputEvent::GestureHoldEnd { event, .. } => {
                 touchpad::handle_hold_end(self, event);
+            }
+            InputEvent::TouchDown { event, .. } => {
+                touch::handle_touch_down(self, event);
+            }
+            InputEvent::TouchMotion { event, .. } => {
+                touch::handle_touch_motion(self, event);
+            }
+            InputEvent::TouchUp { event, .. } => {
+                touch::handle_touch_up(self, event);
+            }
+            InputEvent::TouchCancel { event, .. } => {
+                touch::handle_touch_cancel(self, event);
+            }
+            InputEvent::TouchFrame { event, .. } => {
+                touch::handle_touch_frame(self, event);
             }
             _ => {}
         }
