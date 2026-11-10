@@ -135,41 +135,6 @@ impl XdgShellHandler for BabydraState {
             self.unfullscreen_window(&window);
         }
     }
-    }
-
-    fn maximize_request(&mut self, surface: ToplevelSurface) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
-            self.maximize_window(&window);
-        }
-    }
-
-    fn unmaximize_request(&mut self, surface: ToplevelSurface) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
-            self.unmaximize_window(&window);
-        }
-    }
-
-    fn minimize_request(&mut self, surface: ToplevelSurface) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
-            self.minimize_window(&window);
-        }
-    }
-
-    fn fullscreen_request(
-        &mut self,
-        surface: ToplevelSurface,
-        output: Option<smithay::reexports::wayland_server::protocol::wl_output::WlOutput>,
-    ) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
-            self.fullscreen_window(&window, output);
-        }
-    }
-
-    fn unfullscreen_request(&mut self, surface: ToplevelSurface) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
-            self.unfullscreen_window(&window);
-        }
-    }
 
     fn reposition_request(
         &mut self,
