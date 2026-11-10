@@ -1,5 +1,5 @@
 use glow::HasContext;
-use smithay::utils::{Physical, Rectangle, Transform};
+use smithay::utils::{Physical, Rectangle};
 
 use super::config::BlurParams;
 
@@ -231,9 +231,9 @@ impl BlurPipeline {
         })
     }
 
-    unsafe fn ensure_texture_sizes(&mut self, gl: &glow::Context, w: i32, h: i32) {
+    unsafe fn ensure_texture_sizes(&mut self, gl: &glow::Context, w: i32, h: i32) -> bool {
         if self.allocated_w >= w && self.allocated_h >= h {
-            return;
+            return true;
         }
 
         let previous_framebuffer =
@@ -258,6 +258,7 @@ impl BlurPipeline {
         );
         setup_tex_params(gl);
 
+        let mut framebuffers_complete = true;
         for (index, target) in self.pass_targets.iter().enumerate() {
             let divisor = 1_i32 << (index + 1);
             let width = (new_w / divisor).max(1);
@@ -283,13 +284,19 @@ impl BlurPipeline {
                 Some(target.texture),
                 0,
             );
+            framebuffers_complete &=
+                gl.check_framebuffer_status(glow::FRAMEBUFFER) == glow::FRAMEBUFFER_COMPLETE;
         }
 
         gl.bind_texture(glow::TEXTURE_2D, None);
         gl.bind_framebuffer(glow::FRAMEBUFFER, previous_framebuffer);
 
-        self.allocated_w = new_w;
-        self.allocated_h = new_h;
+        if framebuffers_complete {
+            self.allocated_w = new_w;
+            self.allocated_h = new_h;
+        }
+
+        framebuffers_complete
     }
 
     /// Renders the Dual Kawase blur backdrop directly over `dst`, taking into
@@ -303,7 +310,6 @@ impl BlurPipeline {
         gl: &glow::Context,
         dst: Rectangle<i32, Physical>,
         corner_radius: f32,
-        _transform: Transform,
         projection: [f32; 9],
         params: &BlurParams,
     ) {
@@ -358,7 +364,12 @@ impl BlurPipeline {
         }
 
         gl.active_texture(glow::TEXTURE0);
-        self.ensure_texture_sizes(gl, gl_w, gl_h);
+        // Do not composite an uninitialized texture if the driver rejects one
+        // of the offscreen targets. The normal surface render must remain
+        // visible instead of being covered by a black quad.
+        if !self.ensure_texture_sizes(gl, gl_w, gl_h) {
+            return;
+        }
 
         let scale_u = gl_w as f32 / self.allocated_w as f32;
         let scale_v = gl_h as f32 / self.allocated_h as f32;

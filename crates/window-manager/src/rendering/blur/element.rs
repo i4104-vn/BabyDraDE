@@ -1,18 +1,18 @@
-use std::sync::{Arc, Mutex};
 use smithay::{
     backend::renderer::{
         element::{Element, Id, Kind, RenderElement, UnderlyingStorage},
         gles::GlesError,
         glow::{GlowFrame, GlowRenderer},
         utils::{CommitCounter, DamageSet, OpaqueRegions},
-        Frame,
     },
     utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Transform},
 };
 
 use std::borrow::Borrow;
-use smithay::backend::renderer::gles::GlesFrame;
+use std::sync::{Arc, Mutex};
+
 use super::engine::BlurEngine;
+use smithay::backend::renderer::gles::GlesFrame;
 
 /// A render element that applies background Dual Kawase frosted glass blur
 /// behind transparent/translucent windows and layer shell surfaces
@@ -66,13 +66,14 @@ impl Element for BlurRenderElement {
     fn damage_since(
         &self,
         scale: Scale<f64>,
-        commit: Option<CommitCounter>,
+        _commit: Option<CommitCounter>,
     ) -> DamageSet<i32, Physical> {
-        if commit != Some(self.current_commit()) {
-            DamageSet::from_slice(&[Rectangle::from_size(self.geometry(scale).size)])
-        } else {
-            DamageSet::default()
-        }
+        // The blur source is the framebuffer underneath this element. It is not
+        // stable like a normal surface: a hover/animation can change the pixels
+        // behind it without changing this element's commit counter. Always
+        // damaging the backdrop makes Smithay redraw the underlying scene before
+        // we copy it, preventing recursive blur/tint feedback on partial damage.
+        DamageSet::from_slice(&[Rectangle::from_size(self.geometry(scale).size)])
     }
 
     fn opaque_regions(&self, _scale: Scale<f64>) -> OpaqueRegions<i32, Physical> {
@@ -98,14 +99,13 @@ impl RenderElement<GlowRenderer> for BlurRenderElement {
         _damage: &[Rectangle<i32, Physical>],
         _opaque_regions: &[Rectangle<i32, Physical>],
     ) -> Result<(), GlesError> {
-        let transform = frame.transformation();
         let projection: [f32; 9] = {
             let gles: &GlesFrame<'_, '_> = (*frame).borrow();
             *gles.projection()
         };
         frame.with_context(|glow| {
             if let Ok(mut engine) = self.blur_engine.lock() {
-                engine.render_blur(glow, dst, self.corner_radius, transform, projection);
+                engine.render_blur(glow, dst, self.corner_radius, projection);
             }
         })?;
         Ok(())

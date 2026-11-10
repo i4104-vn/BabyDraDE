@@ -1,10 +1,7 @@
 use smithay::{
     desktop::Window,
-    utils::{Physical, Rectangle, Transform},
-    wayland::{
-        compositor::with_states,
-        shell::xdg::XdgToplevelSurfaceData,
-    },
+    utils::{Physical, Rectangle},
+    wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData},
 };
 use tracing::{error, info};
 
@@ -61,10 +58,11 @@ impl BlurEngine {
             return false;
         }
 
-        if self.params.blur_all {
-            return true;
-        }
-
+        // `blur_all` is documented as applying to application windows. A
+        // layer-shell overlay may legitimately be sized to the whole output
+        // while only painting a small transparent card; blurring its geometry
+        // would therefore put an opaque backdrop over the entire desktop.
+        // Layer-shell blur remains opt-in through an explicit namespace rule.
         let ns_lower = namespace.to_lowercase();
         self.params.app_rules.iter().any(|rule| {
             let rule_lower = rule.to_lowercase();
@@ -123,7 +121,13 @@ impl BlurEngine {
     /// Add an app rule to the blur engine and persist configuration
     pub fn add_app(&mut self, app_id: &str) {
         let trimmed = app_id.trim();
-        if !trimmed.is_empty() && !self.params.app_rules.iter().any(|r| r.eq_ignore_ascii_case(trimmed)) {
+        if !trimmed.is_empty()
+            && !self
+                .params
+                .app_rules
+                .iter()
+                .any(|r| r.eq_ignore_ascii_case(trimmed))
+        {
             info!("BabyDraDE BlurEngine: adding app rule '{}'", trimmed);
             self.params.app_rules.push(trimmed.to_string());
             let _ = self.params.save();
@@ -133,7 +137,12 @@ impl BlurEngine {
     /// Remove an app rule from the blur engine and persist configuration
     pub fn remove_app(&mut self, app_id: &str) {
         let trimmed = app_id.trim();
-        if let Some(pos) = self.params.app_rules.iter().position(|r| r.eq_ignore_ascii_case(trimmed)) {
+        if let Some(pos) = self
+            .params
+            .app_rules
+            .iter()
+            .position(|r| r.eq_ignore_ascii_case(trimmed))
+        {
             info!("BabyDraDE BlurEngine: removing app rule '{}'", trimmed);
             self.params.app_rules.remove(pos);
             let _ = self.params.save();
@@ -165,7 +174,6 @@ impl BlurEngine {
         gl: &glow::Context,
         dst: Rectangle<i32, Physical>,
         corner_radius: f32,
-        transform: Transform,
         projection: [f32; 9],
     ) {
         if !self.params.enabled {
@@ -186,7 +194,7 @@ impl BlurEngine {
 
         if let Some(pipeline) = self.pipeline.as_mut() {
             unsafe {
-                pipeline.render_blur(gl, dst, corner_radius, transform, projection, &self.params);
+                pipeline.render_blur(gl, dst, corner_radius, projection, &self.params);
             }
         }
     }
@@ -233,7 +241,7 @@ mod tests {
 
         // Blur all toggle
         engine.set_blur_all(true);
-        assert!(engine.matches_layer("random-layer"));
+        assert!(!engine.matches_layer("random-layer"));
         engine.set_blur_all(false);
         assert!(engine.matches_layer("babydra-panel"));
         assert!(!engine.matches_layer("random-layer"));
