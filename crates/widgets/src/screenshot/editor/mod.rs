@@ -1,21 +1,21 @@
 //! Screenshot editor window: assembly, keyboard shortcuts, and UI construction.
 
 pub mod canvas;
-pub mod clipboard;
-pub mod color_popover;
-mod render;
-pub mod shape_popover;
+pub mod handle;
+pub mod model;
+pub mod popovers;
+mod view;
 
-pub use render::build_editor_ui;
+pub use view::build_editor_ui;
 
-use super::model::EditorState;
-use super::render::trigger_save;
+use self::handle::clipboard::copy_to_clipboard;
+use self::handle::drawing::trigger_save;
+use self::model::EditorState;
 use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use self::canvas::delete_selected;
-use self::clipboard::copy_to_clipboard;
 
 /// Sets up keyboard event controllers to handle global shortcuts like Escape (cancel),
 /// Return (copy to clipboard), Ctrl+S (save to file), and Delete (remove selected drawing).

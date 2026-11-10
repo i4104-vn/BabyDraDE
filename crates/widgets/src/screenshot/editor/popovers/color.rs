@@ -2,7 +2,7 @@ use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::screenshot::model::{Drawing, EditorState, STROKE_WIDTHS};
+use crate::screenshot::editor::model::{Drawing, EditorState, STROKE_WIDTHS};
 
 /// Creates a Popover containing the color palette grid, stroke-width choices,
 /// and a delete action for the currently selected drawing.
@@ -136,7 +136,7 @@ pub fn create_color_popover(
     let popover_d = popover.clone();
     let canvas_d = canvas.clone();
     delete_btn.connect_clicked(move |_| {
-        super::canvas::delete_selected(&mut state_d.borrow_mut());
+        super::super::canvas::delete_selected(&mut state_d.borrow_mut());
         canvas_d.queue_draw();
         popover_d.popdown();
     });

@@ -5,15 +5,15 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use super::handle::drawing::trigger_save;
+use super::model::{EditorState, Tool};
 use crate::common::init_layer_window;
-use crate::screenshot::model::{EditorState, Tool};
-use crate::screenshot::render::trigger_save;
 
 use super::canvas::{draw_editor_canvas, setup_editor_gest};
-use super::clipboard::copy_to_clipboard;
-use super::color_popover::create_color_popover;
+use super::handle::clipboard::copy_to_clipboard;
+use super::popovers::color::create_color_popover;
+use super::popovers::shape::{create_shape_popover, is_shape_tool};
 use super::setup_editor_keys;
-use super::shape_popover::{create_shape_popover, is_shape_tool};
 
 /// Creates a flat toolbar button with the given icon.
 fn toolbar_button(icon: &str, tooltip: &str) -> gtk4::Button {

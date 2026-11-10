@@ -15,8 +15,8 @@ impl LeftPill {
         let pill = PillBox::with_extra_class(4, "left-pill");
 
         // 1. Logo button
-        let logo_btn = LogoButton::new();
-        pill.append(logo_btn.widget());
+        let logo_button = LogoButton::new();
+        pill.append(logo_button.widget());
 
         // 2. Vertical separator
         let sep = VerticalSeparator::new();

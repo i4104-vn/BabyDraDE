@@ -2,8 +2,6 @@
 
 pub mod capture;
 pub mod editor;
-pub mod model;
-pub mod render;
 
 use capture::{capture_fullscreen, capture_screen};
 use editor::build_editor_ui;

@@ -3,9 +3,9 @@
 use gtk4::prelude::*;
 use std::io::Write;
 
+use super::drawing::save_cropped_surface;
 use crate::screenshot::capture::send_notification;
-use crate::screenshot::model::EditorState;
-use crate::screenshot::render::save_cropped_surface;
+use crate::screenshot::editor::model::EditorState;
 
 /// Copies the cropped annotated screenshot to the clipboard using `wl-copy` or
 /// a GTK clipboard fallback. Returns `true` on success.

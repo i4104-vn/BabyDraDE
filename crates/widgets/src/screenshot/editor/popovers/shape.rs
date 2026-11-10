@@ -2,7 +2,7 @@ use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::screenshot::model::{EditorState, Tool};
+use crate::screenshot::editor::model::{EditorState, Tool};
 
 /// A shape entry shown inside the shapes popover.
 const SHAPES: &[(Tool, &str)] = &[
