@@ -3,7 +3,7 @@ mod layer_shell;
 mod xdg_shell;
 
 use smithay::{
-    delegate_data_device, delegate_output, delegate_seat,
+    delegate_data_device, delegate_output, delegate_pointer_gestures, delegate_seat,
     input::{pointer::CursorImageStatus, Seat, SeatHandler, SeatState},
     reexports::wayland_server::{protocol::wl_surface::WlSurface, Resource},
     wayland::{
@@ -57,3 +57,5 @@ delegate_data_device!(BabydraState);
 impl OutputHandler for BabydraState {}
 
 delegate_output!(BabydraState);
+
+delegate_pointer_gestures!(BabydraState);

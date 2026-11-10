@@ -8,6 +8,7 @@ pub mod dbus;
 pub mod menu;
 
 use dbus::{clear_menubar, load_and_render_dbus_menu, trigger_dbus_menu_discovery};
+use gtk4::gio::prelude::*;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Box, Button, GestureClick, Label, Orientation};
@@ -20,6 +21,7 @@ use std::time::Duration;
 pub struct AppMenu {
     container: Box,
     menubar_box: Box,
+    app_title_icon: gtk4::Image,
     app_title_label: Label,
     current_app_info: Rc<RefCell<ActiveWindowInfo>>,
     current_service: Rc<RefCell<Option<String>>>,
@@ -60,12 +62,24 @@ impl AppMenu {
             app_title_btn.set_cursor(Some(&cursor));
         }
 
+        let app_title_icon = gtk4::Image::new();
+        app_title_icon.set_pixel_size(16);
+        app_title_icon.add_css_class("app-title-icon");
+        update_app_icon(&app_title_icon, &current_app_info.borrow().app_id);
+
         let app_title_label = Label::builder()
             .label(&initial_name)
             .css_classes(["app-title"])
             .build();
 
-        app_title_btn.set_child(Some(&app_title_label));
+        let app_title_content = Box::builder()
+            .orientation(Orientation::Horizontal)
+            .spacing(6)
+            .valign(gtk4::Align::Center)
+            .build();
+        app_title_content.append(&app_title_icon);
+        app_title_content.append(&app_title_label);
+        app_title_btn.set_child(Some(&app_title_content));
         container.append(&app_title_btn);
 
         // 3. Dynamic Application Title Context Menu (Real Window Operations)
@@ -90,6 +104,7 @@ impl AppMenu {
         // 5. Setup periodic polling for real-time active window detection
         let container_poll = container.clone();
         let app_info_poll = current_app_info.clone();
+        let icon_poll = app_title_icon.clone();
         let label_poll = app_title_label.clone();
         let menubar_poll = menubar_box.clone();
         let service_poll = current_service.clone();
@@ -131,6 +146,7 @@ impl AppMenu {
 
                 if has_app {
                     let display_name = get_app_display_name(&latest.app_id, &latest.title);
+                    update_app_icon(&icon_poll, &latest.app_id);
                     label_poll.set_label(&display_name);
                     trigger_dbus_menu_discovery(
                         &latest.app_id,
@@ -153,6 +169,7 @@ impl AppMenu {
         Self {
             container,
             menubar_box,
+            app_title_icon,
             app_title_label,
             current_app_info,
             current_service,
@@ -166,6 +183,7 @@ impl AppMenu {
         let is_empty = app_name.trim().is_empty() || app_name.eq_ignore_ascii_case("desktop");
         self.container.set_visible(!is_empty);
         if !is_empty {
+            update_app_icon(&self.app_title_icon, app_name);
             self.app_title_label.set_label(app_name);
             *self.current_app_info.borrow_mut() = ActiveWindowInfo {
                 app_id: app_name.to_string(),
@@ -205,6 +223,37 @@ impl AppMenu {
     pub fn widget(&self) -> &Box {
         &self.container
     }
+}
+
+fn update_app_icon(icon: &gtk4::Image, app_id: &str) {
+    let app_id = app_id
+        .trim()
+        .strip_suffix(".desktop")
+        .unwrap_or(app_id.trim());
+    let app_info = gtk4::gio::AppInfo::all().into_iter().find(|info| {
+        info.id().is_some_and(|id| {
+            id.strip_suffix(".desktop")
+                .unwrap_or(id.as_str())
+                .eq_ignore_ascii_case(app_id)
+        })
+    });
+
+    if let Some(gicon) = app_info.and_then(|info| info.icon()) {
+        icon.set_from_gicon(&gicon);
+        icon.set_pixel_size(16);
+        return;
+    }
+
+    if let Some(display) = gtk4::gdk::Display::default() {
+        if gtk4::IconTheme::for_display(&display).has_icon(app_id) {
+            icon.set_icon_name(Some(app_id));
+            icon.set_pixel_size(16);
+            return;
+        }
+    }
+
+    icon.set_icon_name(Some("application-x-executable"));
+    icon.set_pixel_size(16);
 }
 
 impl Default for AppMenu {

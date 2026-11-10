@@ -1,7 +1,7 @@
 use smithay::{
     backend::input::{Event, InputBackend, KeyState, KeyboardKeyEvent},
     input::keyboard::{keysyms, FilterResult},
-    utils::SERIAL_COUNTER,
+    utils::{Serial, SERIAL_COUNTER},
 };
 use tracing::info;
 
@@ -93,18 +93,39 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
     }
 
     if cycle_focus {
-        let next_window = state.space.elements().rev().nth(1).cloned();
-        if let Some(next_window) = next_window {
-            state.space.raise_element(&next_window, true);
-            keyboard.set_focus(
-                state,
-                Some(next_window.toplevel().unwrap().wl_surface().clone()),
-                serial,
-            );
-            state.space.elements().for_each(|window| {
-                window.toplevel().unwrap().send_pending_configure();
-            });
-            state.update_active_window(Some(&next_window));
-        }
+        cycle_window_focus(state, true, serial);
     }
+}
+
+pub(crate) fn cycle_window_focus(state: &mut BabydraState, forward: bool, serial: Serial) -> bool {
+    let next_window = if forward {
+        state.space.elements().rev().nth(1).cloned()
+    } else {
+        let mut windows = state.space.elements();
+        let previous = windows.next().cloned();
+        if windows.next().is_some() {
+            previous
+        } else {
+            None
+        }
+    };
+    let Some(next_window) = next_window else {
+        return false;
+    };
+
+    let Some(keyboard) = state.seat.get_keyboard() else {
+        return false;
+    };
+
+    state.space.raise_element(&next_window, true);
+    keyboard.set_focus(
+        state,
+        Some(next_window.toplevel().unwrap().wl_surface().clone()),
+        serial,
+    );
+    state.space.elements().for_each(|window| {
+        window.toplevel().unwrap().send_pending_configure();
+    });
+    state.update_active_window(Some(&next_window));
+    true
 }

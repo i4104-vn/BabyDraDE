@@ -17,8 +17,12 @@ use smithay::{
     wayland::{
         compositor::{CompositorClientState, CompositorState},
         output::OutputManagerState,
+        pointer_gestures::PointerGesturesState,
         selection::data_device::DataDeviceState,
-        shell::{wlr_layer::WlrLayerShellState, xdg::XdgShellState},
+        shell::{
+            wlr_layer::{Layer, WlrLayerShellState},
+            xdg::XdgShellState,
+        },
         shm::ShmState,
         socket::ListeningSocketSource,
     },
@@ -38,6 +42,14 @@ pub(crate) struct MoveState {
     pub(crate) button: u32,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct TrackpadSwipeBuffer {
+    pub(crate) fingers: u32,
+    pub(crate) time: u32,
+    pub(crate) total_delta: Point<f64, Logical>,
+    pub(crate) updates: Vec<(Point<f64, Logical>, u32)>,
+}
+
 pub(crate) struct BabydraState {
     pub(crate) start_time: Instant,
     pub(crate) socket_name: OsString,
@@ -48,6 +60,7 @@ pub(crate) struct BabydraState {
     pub(crate) compositor_state: CompositorState,
     pub(crate) xdg_shell_state: XdgShellState,
     pub(crate) wlr_layer_shell_state: WlrLayerShellState,
+    pub(crate) _pointer_gestures_state: PointerGesturesState,
     pub(crate) shm_state: ShmState,
     pub(crate) _output_manager_state: OutputManagerState,
     pub(crate) seat_state: SeatState<BabydraState>,
@@ -56,6 +69,7 @@ pub(crate) struct BabydraState {
     pub(crate) seat: Seat<BabydraState>,
 
     pub(crate) move_state: Option<MoveState>,
+    pub(crate) trackpad_swipe: Option<TrackpadSwipeBuffer>,
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
 }
@@ -66,6 +80,7 @@ impl BabydraState {
         let compositor_state = CompositorState::new::<Self>(&display_handle);
         let xdg_shell_state = XdgShellState::new::<Self>(&display_handle);
         let wlr_layer_shell_state = WlrLayerShellState::new::<Self>(&display_handle);
+        let pointer_gestures_state = PointerGesturesState::new::<Self>(&display_handle);
         let shm_state = ShmState::new::<Self>(&display_handle, vec![]);
         let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&display_handle);
         let data_device_state = DataDeviceState::new::<Self>(&display_handle);
@@ -88,6 +103,7 @@ impl BabydraState {
             compositor_state,
             xdg_shell_state,
             wlr_layer_shell_state,
+            _pointer_gestures_state: pointer_gestures_state,
             shm_state,
             _output_manager_state: output_manager_state,
             seat_state,
@@ -95,6 +111,7 @@ impl BabydraState {
             popups: PopupManager::default(),
             seat,
             move_state: None,
+            trackpad_swipe: None,
             pointer_location: Point::from((100.0, 100.0)),
             pointer_pressed_buttons: std::collections::HashSet::new(),
         }
@@ -180,26 +197,8 @@ impl BabydraState {
         }
 
         // 1. Check Overlay and Top layer surfaces (bars, overlays, dynamic islands)
-        for output in self.space.outputs() {
-            let layer_map = smithay::desktop::layer_map_for_output(output);
-            for layer in layer_map.layers().rev() {
-                if matches!(
-                    layer.layer(),
-                    smithay::wayland::shell::wlr_layer::Layer::Overlay
-                        | smithay::wayland::shell::wlr_layer::Layer::Top
-                ) {
-                    if let Some(geo) = layer_map.layer_geometry(layer) {
-                        if geo.to_f64().contains(position) {
-                            if let Some((surf, surf_loc)) = layer.surface_under(
-                                position - geo.loc.to_f64(),
-                                WindowSurfaceType::ALL,
-                            ) {
-                                return Some((surf, (surf_loc + geo.loc).to_f64()));
-                            }
-                        }
-                    }
-                }
-            }
+        if let Some(surface) = self.surface_under_layers(position, &[Layer::Overlay, Layer::Top]) {
+            return Some(surface);
         }
 
         // 2. Check normal desktop windows
@@ -212,14 +211,18 @@ impl BabydraState {
         }
 
         // 3. Check Bottom and Background layer surfaces (wallpapers, desktop widgets)
+        self.surface_under_layers(position, &[Layer::Bottom, Layer::Background])
+    }
+
+    fn surface_under_layers(
+        &self,
+        position: Point<f64, Logical>,
+        layers: &[Layer],
+    ) -> Option<(WlSurface, Point<f64, Logical>)> {
         for output in self.space.outputs() {
             let layer_map = smithay::desktop::layer_map_for_output(output);
             for layer in layer_map.layers().rev() {
-                if matches!(
-                    layer.layer(),
-                    smithay::wayland::shell::wlr_layer::Layer::Bottom
-                        | smithay::wayland::shell::wlr_layer::Layer::Background
-                ) {
+                if layers.contains(&layer.layer()) {
                     if let Some(geo) = layer_map.layer_geometry(layer) {
                         if geo.to_f64().contains(position) {
                             if let Some((surf, surf_loc)) = layer.surface_under(
