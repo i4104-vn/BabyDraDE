@@ -214,10 +214,12 @@ pub(crate) fn configure_touchpad(
         }
     } else {
         tracing::debug!(
-            "Input device '{}' ({}) does not support tapping",
+            "Input device '{}' ({}) does not support tapping, configuring as pointer/mouse",
             name,
             sysname
         );
+        let mouse_config = crate::compositor::input::pointer::MouseConfig::load();
+        crate::compositor::input::pointer::configure_mouse(device, &mouse_config);
     }
 }
 
