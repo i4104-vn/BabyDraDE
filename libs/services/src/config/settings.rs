@@ -1,6 +1,8 @@
 //! Configuration load/save logic for `~/.babydra/babydra.conf` matching babydra-core.
 
-use super::models::{BabyDraConfig, BlurConfig, DesktopConfig, GestureConfig, TouchpadConfig};
+use super::models::{
+    BabyDraConfig, BlurConfig, DesktopConfig, GestureConfig, MouseConfig, TouchpadConfig,
+};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
 use std::time::SystemTime;
@@ -226,5 +228,30 @@ pub fn load_gesture_config() -> GestureConfig {
 pub fn save_gesture_config(gestures: &GestureConfig) {
     let mut config = load_babydra_config();
     config.gestures = gestures.clone();
+    save_babydra_config(&config);
+}
+
+/// Loads mouse / pointer configuration from `~/.babydra/babydra.conf`.
+///
+/// Reads the `[mouse]` section from the cached or on-disk configuration,
+/// falling back to defaults if the section is absent.
+///
+/// # Returns
+///
+/// Returns the current [`MouseConfig`] settings.
+pub fn load_mouse_config() -> MouseConfig {
+    load_babydra_config().mouse
+}
+
+/// Persists mouse / pointer configuration into `~/.babydra/babydra.conf`.
+///
+/// Updates the `[mouse]` section and flushes the full config to disk.
+///
+/// # Arguments
+///
+/// * `mouse` - Reference to the updated [`MouseConfig`] to persist.
+pub fn save_mouse_config(mouse: &MouseConfig) {
+    let mut config = load_babydra_config();
+    config.mouse = mouse.clone();
     save_babydra_config(&config);
 }

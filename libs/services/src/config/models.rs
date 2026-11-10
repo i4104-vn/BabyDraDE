@@ -416,6 +416,30 @@ impl Default for TouchpadConfig {
     }
 }
 
+/// Mouse / pointer configuration persisted in `~/.babydra/babydra.conf` under `[mouse]`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MouseConfig {
+    /// Whether natural (reverse) scrolling direction is enabled for mouse wheels.
+    #[serde(default)]
+    pub natural_scroll: bool,
+    /// Optional pointer acceleration speed (-1.0 to 1.0).
+    #[serde(default)]
+    pub speed: Option<f64>,
+    /// Whether middle mouse button emulation (pressing left and right together) is enabled.
+    #[serde(default)]
+    pub middle_emulation: bool,
+}
+
+impl Default for MouseConfig {
+    fn default() -> Self {
+        Self {
+            natural_scroll: false,
+            speed: None,
+            middle_emulation: false,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct BabyDraConfig {
     #[serde(rename = "1st", default)]
@@ -438,6 +462,8 @@ pub struct BabyDraConfig {
     pub blur: BlurConfig,
     #[serde(default)]
     pub touchpad: TouchpadConfig,
+    #[serde(default)]
+    pub mouse: MouseConfig,
     #[serde(default)]
     pub gestures: GestureConfig,
 }
@@ -478,5 +504,27 @@ speed = 0.5
         assert!(!config.touchpad.dwt);
         assert!(config.touchpad.natural_scroll);
         assert_eq!(config.touchpad.speed, Some(0.5));
+    }
+
+    #[test]
+    fn test_mouse_config_defaults() {
+        let config = MouseConfig::default();
+        assert!(!config.natural_scroll);
+        assert_eq!(config.speed, None);
+        assert!(!config.middle_emulation);
+    }
+
+    #[test]
+    fn test_mouse_config_toml_roundtrip() {
+        let toml_str = r#"
+[mouse]
+natural_scroll = true
+speed = -0.2
+middle_emulation = true
+"#;
+        let config: BabyDraConfig = toml::from_str(toml_str).unwrap();
+        assert!(config.mouse.natural_scroll);
+        assert_eq!(config.mouse.speed, Some(-0.2));
+        assert!(config.mouse.middle_emulation);
     }
 }
