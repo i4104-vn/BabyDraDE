@@ -477,6 +477,25 @@ if [ -n "${WAYLAND_DISPLAY:-}" ] || [ -n "${DISPLAY:-}" ]; then
     echo "[*] Launching BabyDraDE in nested mode (Winit backend with GlowRenderer)..."
 else
     echo "[*] Running on bare TTY / hardware console."
+    # Ensure current user has video/render/input/seat group access for DRM master
+    if [ "$(id -u)" -ne 0 ] && command -v id >/dev/null 2>&1; then
+        USER_GROUPS="$(id -Gn 2>/dev/null || true)"
+        for grp in video render seat input; do
+            if getent group "$grp" >/dev/null 2>&1 && ! echo " $USER_GROUPS " | grep -q " $grp "; then
+                echo "[!] Current user '$USER' is not in '$grp' group (required for direct DRM master & input access)."
+                echo "[*] Adding '$USER' to '$grp'..."
+                run_privileged usermod -aG "$grp" "$USER" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    # Ensure seatd or systemd-logind is active if present
+    if command -v systemctl >/dev/null 2>&1; then
+        if systemctl is-enabled --quiet seatd 2>/dev/null && ! systemctl is-active --quiet seatd 2>/dev/null; then
+            run_privileged systemctl start seatd 2>/dev/null || true
+        fi
+    fi
+
     echo "[*] Launching autonomous BabyDraDE Udev/DRM hardware compositor with GlowRenderer (OpenGL ES via GBM)..."
 fi
 

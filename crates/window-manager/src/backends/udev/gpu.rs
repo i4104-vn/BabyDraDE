@@ -126,6 +126,7 @@ fn try_init_gpu(
         Ok(gbm) => gbm,
         Err(err) => {
             warn!("Failed to create GbmDevice on {:?}: {err}", primary_gpu_path);
+            drm_device.pause();
             return None;
         }
     };
@@ -137,6 +138,7 @@ fn try_init_gpu(
         Ok(disp) => disp,
         Err(err) => {
             warn!("Failed to create EGLDisplay on {:?}: {err}", primary_gpu_path);
+            drm_device.pause();
             return None;
         }
     };
@@ -145,6 +147,7 @@ fn try_init_gpu(
         Ok(ctx) => ctx,
         Err(err) => {
             warn!("Failed to create EGLContext on {:?}: {err}", primary_gpu_path);
+            drm_device.pause();
             return None;
         }
     };
@@ -153,6 +156,7 @@ fn try_init_gpu(
         Ok(ren) => ren,
         Err(err) => {
             warn!("Failed to initialize GlowRenderer on {:?}: {err}", primary_gpu_path);
+            drm_device.pause();
             return None;
         }
     };
@@ -166,6 +170,7 @@ fn try_init_gpu(
         Ok(res) => res,
         Err(err) => {
             warn!("Failed to scan connectors on {:?}: {err}", primary_gpu_path);
+            drm_device.pause();
             return None;
         }
     };
@@ -283,6 +288,9 @@ fn try_init_gpu(
                 gbm_device,
             ))
         }
-        true => None,
+        true => {
+            drm_device.pause();
+            None
+        }
     }
 }

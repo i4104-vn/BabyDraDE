@@ -30,11 +30,7 @@ pub fn create_color_popover(
     grid.set_row_spacing(6);
 
     let colors = vec![
-        (
-            services::trans("color.red"),
-            "red",
-            (0.93, 0.15, 0.15),
-        ),
+        (services::trans("color.red"), "red", (0.93, 0.15, 0.15)),
         (
             services::trans("color.orange"),
             "orange",
@@ -45,31 +41,15 @@ pub fn create_color_popover(
             "yellow",
             (0.92, 0.70, 0.15),
         ),
-        (
-            services::trans("color.green"),
-            "green",
-            (0.13, 0.77, 0.36),
-        ),
-        (
-            services::trans("color.blue"),
-            "blue",
-            (0.23, 0.51, 0.96),
-        ),
+        (services::trans("color.green"), "green", (0.13, 0.77, 0.36)),
+        (services::trans("color.blue"), "blue", (0.23, 0.51, 0.96)),
         (
             services::trans("color.purple"),
             "purple",
             (0.66, 0.33, 0.97),
         ),
-        (
-            services::trans("color.white"),
-            "white",
-            (1.0, 1.0, 1.0),
-        ),
-        (
-            services::trans("color.black"),
-            "black",
-            (0.0, 0.0, 0.0),
-        ),
+        (services::trans("color.white"), "white", (1.0, 1.0, 1.0)),
+        (services::trans("color.black"), "black", (0.0, 0.0, 0.0)),
     ];
 
     for (col, (name, name_en, rgb)) in colors.into_iter().enumerate() {
@@ -147,9 +127,7 @@ pub fn create_color_popover(
     let delete_btn = gtk4::Button::builder()
         .child(&ui_kit::icons::get_icon("trash", 16))
         .build();
-    delete_btn.set_tooltip_text(Some(&services::trans(
-        "screenshot.delete_tooltip",
-    )));
+    delete_btn.set_tooltip_text(Some(&services::trans("screenshot.delete_tooltip")));
     delete_btn.add_css_class("flat");
     delete_btn.add_css_class("screenshot-toolbar-btn");
     delete_btn.set_halign(gtk4::Align::Center);

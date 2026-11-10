@@ -37,3 +37,11 @@ pub struct UdevState {
     pub _session: LibSeatSession,
 }
 
+impl Drop for UdevState {
+    fn drop(&mut self) {
+        // Explicitly pause DRM device before dropping to avoid AtomicDrmDevice trying to
+        // commit/restore previous state on an invalid or unprivileged FD on teardown.
+        self._drm_device.pause();
+    }
+}
+

@@ -1,4 +1,4 @@
-pub mod renderer;
+pub mod render;
 
 use gtk4::prelude::*;
 use services::wallpaper::get_wallpaper;
@@ -17,12 +17,7 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
 
     drawing_area.set_draw_func(move |_, cr, width, height| {
         let wp_path = get_wallpaper();
-        renderer::render_wallpaper_background(
-            cr,
-            width as f64,
-            height as f64,
-            wp_path.as_deref(),
-        );
+        render::render_wallpaper_background(cr, width as f64, height as f64, wp_path.as_deref());
     });
 
     container.set_child(Some(&drawing_area));

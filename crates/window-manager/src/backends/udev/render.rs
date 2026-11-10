@@ -39,10 +39,14 @@ pub fn setup_render_loop(
                 SessionEvent::PauseSession => {
                     info!("Session paused (switched away to another VT). Suspending scanout.");
                     s.active = false;
+                    s._drm_device.pause();
                 }
                 SessionEvent::ActivateSession => {
                     info!("Session activated (switched back to BabyDraDE VT). Resuming scanout.");
                     s.active = true;
+                    if let Err(err) = s._drm_device.activate(false) {
+                        warn!("Failed to reactivate DRM device: {err}");
+                    }
                 }
             }
         })

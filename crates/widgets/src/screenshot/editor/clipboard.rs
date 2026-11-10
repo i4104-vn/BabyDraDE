@@ -1,7 +1,7 @@
 //! Clipboard handling for the screenshot editor.
 
-use std::io::Write;
 use gtk4::prelude::*;
+use std::io::Write;
 
 use crate::screenshot::capture::send_notification;
 use crate::screenshot::model::EditorState;

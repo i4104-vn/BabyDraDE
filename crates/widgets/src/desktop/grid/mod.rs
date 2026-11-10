@@ -43,18 +43,17 @@ pub fn create_desktop_grid(parent_window: &gtk4::ApplicationWindow) -> (Fixed, R
         services::config::desktop_layout::cleanup_stale(&names);
 
         for (idx, entry) in entries.iter().enumerate() {
-            let (x, y) = if let Some(pos) =
-                services::config::desktop_layout::get_position(&entry.name)
-            {
-                (pos.0 as f64, pos.1 as f64)
-            } else {
-                let col = idx / max_rows;
-                let row = idx % max_rows;
-                (
-                    pad_x + (col as f64) * (icon_w + 12.0),
-                    pad_y + (row as f64) * icon_h,
-                )
-            };
+            let (x, y) =
+                if let Some(pos) = services::config::desktop_layout::get_position(&entry.name) {
+                    (pos.0 as f64, pos.1 as f64)
+                } else {
+                    let col = idx / max_rows;
+                    let row = idx % max_rows;
+                    (
+                        pad_x + (col as f64) * (icon_w + 12.0),
+                        pad_y + (row as f64) * icon_h,
+                    )
+                };
 
             let holder_icon = holder_c.clone();
             let rebuild_self: Rc<dyn Fn()> = Rc::new(move || {
@@ -96,13 +95,7 @@ pub fn create_desktop_grid(parent_window: &gtk4::ApplicationWindow) -> (Fixed, R
                 child = w.next_sibling();
             }
         } else if btn == 3 {
-            show_desktop_context_menu(
-                &fixed_click,
-                &win_for_menu,
-                x,
-                y,
-                rebuild_for_menu.clone(),
-            );
+            show_desktop_context_menu(&fixed_click, &win_for_menu, x, y, rebuild_for_menu.clone());
         }
     });
     fixed.add_controller(bg_click);

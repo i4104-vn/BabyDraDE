@@ -82,7 +82,12 @@ pub fn create_lock_window(
         setup_clock_timer(&clock_label, &date_label);
 
         let card_box = build_primary_card(&clock_label, &date_label);
-        setup_auth_handler(on_unlock, &card_box.entry, &card_box.status_label, &card_box.card_box);
+        setup_auth_handler(
+            on_unlock,
+            &card_box.entry,
+            &card_box.status_label,
+            &card_box.card_box,
+        );
         setup_focus_management(&window, &card_box.entry);
         center_box.append(&card_box.card_box);
     } else {
@@ -253,7 +258,9 @@ fn schedule_reverse_blur_step(transition: LockTransition, on_complete: Rc<dyn Fn
 
     glib::timeout_add_local_once(Duration::from_millis(35), move || {
         let next = current.saturating_sub(1);
-        transition.stack.set_visible_child_name(&format!("blur-{next}"));
+        transition
+            .stack
+            .set_visible_child_name(&format!("blur-{next}"));
         transition.last_blur_frame.set(next);
         if next == 0 {
             fade_out_reverse_transition(transition, on_complete);

@@ -37,8 +37,8 @@ pub fn capture_fullscreen() -> bool {
         let save_path = get_screenshot_path();
         if std::fs::copy(&temp_path, &save_path).is_ok() {
             let notif_title = services::trans("screenshot.full_saved_title");
-            let notif_msg = services::trans("screenshot.saved_msg")
-                .replace("{}", &format!("{:?}", save_path));
+            let notif_msg =
+                services::trans("screenshot.saved_msg").replace("{}", &format!("{:?}", save_path));
 
             send_notification(&notif_title, &notif_msg);
             let _ = std::fs::remove_file(temp_path);

@@ -60,10 +60,7 @@ fn get_pam() -> Option<&'static PamLib> {
     PAM.get_or_init(|| {
         unsafe {
             // Dynamically load libpam to avoid hard build-time link dependency on -lpam
-            let lib_names = [
-                c"libpam.so.0".as_ptr(),
-                c"libpam.so".as_ptr(),
-            ];
+            let lib_names = [c"libpam.so.0".as_ptr(), c"libpam.so".as_ptr()];
 
             let mut handle = std::ptr::null_mut();
             for name in lib_names {
@@ -164,7 +161,8 @@ pub fn verify_password(username: &str, password: &str) -> bool {
         let Ok(service_c) = CString::new("login") else {
             return false;
         };
-        let start_status = (pam.pam_start)(service_c.as_ptr(), username_c.as_ptr(), &conv, &mut pamh);
+        let start_status =
+            (pam.pam_start)(service_c.as_ptr(), username_c.as_ptr(), &conv, &mut pamh);
 
         if start_status != PAM_SUCCESS {
             return false;

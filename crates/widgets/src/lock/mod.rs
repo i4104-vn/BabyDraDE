@@ -4,7 +4,9 @@ pub mod auth;
 pub mod render;
 
 use gtk4::prelude::*;
-use render::{capture_transition_images, create_lock_window, reverse_lock_transition, LockTransition};
+use render::{
+    capture_transition_images, create_lock_window, reverse_lock_transition, LockTransition,
+};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -18,7 +20,10 @@ pub fn run() {
             if (args[i] == "--image" || args[i] == "-i") && i + 1 < args.len() {
                 custom_image = Some(args[i + 1].clone());
                 i += 2;
-            } else if !args[i].starts_with('-') && !args[i].contains("lock") && !args[i].contains("__widget") {
+            } else if !args[i].starts_with('-')
+                && !args[i].contains("lock")
+                && !args[i].contains("__widget")
+            {
                 custom_image = Some(args[i].clone());
                 i += 1;
             } else {

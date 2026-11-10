@@ -77,7 +77,12 @@ pub fn create_icon_widget(entry: &DesktopEntry, rebuild: Rc<dyn Fn()>) -> Box {
                         .arg("--working-directory")
                         .arg(&path_clone)
                         .spawn()
-                        .or_else(|_| Command::new("foot").arg("--working-directory").arg(&path_clone).spawn())
+                        .or_else(|_| {
+                            Command::new("foot")
+                                .arg("--working-directory")
+                                .arg(&path_clone)
+                                .spawn()
+                        })
                         .or_else(|_| Command::new("xdg-open").arg(&path_clone).spawn());
                 } else {
                     let _ = Command::new("xdg-open").arg(&path_clone).spawn();

@@ -12,8 +12,8 @@ use crate::screenshot::render::trigger_save;
 use super::canvas::{draw_editor_canvas, setup_editor_gest};
 use super::clipboard::copy_to_clipboard;
 use super::color_popover::create_color_popover;
-use super::shape_popover::{create_shape_popover, is_shape_tool};
 use super::setup_editor_keys;
+use super::shape_popover::{create_shape_popover, is_shape_tool};
 
 /// Creates a flat toolbar button with the given icon.
 fn toolbar_button(icon: &str, tooltip: &str) -> gtk4::Button {
@@ -100,23 +100,11 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
     toolbar.set_margin_bottom(8);
 
     // Tool buttons
-    let btn_reset = toolbar_button(
-        "refresh",
-        &services::trans("screenshot.reset_tooltip"),
-    );
+    let btn_reset = toolbar_button("refresh", &services::trans("screenshot.reset_tooltip"));
     let btn_pen = toolbar_button("edit", &services::trans("screenshot.pen_tooltip"));
-    let btn_shape = toolbar_button(
-        "rect",
-        &services::trans("screenshot.shape_tooltip"),
-    );
-    let btn_blur = toolbar_button(
-        "blur",
-        &services::trans("screenshot.blur_tooltip"),
-    );
-    let btn_eraser = toolbar_button(
-        "eraser",
-        &services::trans("screenshot.eraser_tooltip"),
-    );
+    let btn_shape = toolbar_button("rect", &services::trans("screenshot.shape_tooltip"));
+    let btn_blur = toolbar_button("blur", &services::trans("screenshot.blur_tooltip"));
+    let btn_eraser = toolbar_button("eraser", &services::trans("screenshot.eraser_tooltip"));
 
     let color_btn = gtk4::Button::new();
     color_btn.set_tooltip_text(Some(&services::trans("screenshot.color_tooltip")));
@@ -221,10 +209,7 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
     });
 
     // Action buttons
-    let btn_copy = toolbar_button(
-        "copy",
-        &services::trans("screenshot.copy_tooltip"),
-    );
+    let btn_copy = toolbar_button("copy", &services::trans("screenshot.copy_tooltip"));
 
     let state_copy = state.clone();
     let win_copy = window.clone();
@@ -234,10 +219,7 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
         }
     });
 
-    let btn_save = toolbar_button(
-        "download",
-        &services::trans("screenshot.save_tooltip"),
-    );
+    let btn_save = toolbar_button("download", &services::trans("screenshot.save_tooltip"));
 
     let state_save = state.clone();
     let win_save = window.clone();
@@ -247,10 +229,7 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
         }
     });
 
-    let btn_cancel = toolbar_button(
-        "close",
-        &services::trans("screenshot.cancel_tooltip"),
-    );
+    let btn_cancel = toolbar_button("close", &services::trans("screenshot.cancel_tooltip"));
 
     let win_cancel = window.clone();
     btn_cancel.connect_clicked(move |_| {

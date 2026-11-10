@@ -36,7 +36,11 @@ fn load() -> Vec<Shortcut> {
     if path.exists() {
         if let Ok(content) = std::fs::read_to_string(&path) {
             if let Ok(config) = toml::from_str::<ConfigFile>(&content) {
-                for (combo, cmd) in config.shortcuts.iter().chain(config.custom_shortcuts.iter()) {
+                for (combo, cmd) in config
+                    .shortcuts
+                    .iter()
+                    .chain(config.custom_shortcuts.iter())
+                {
                     let mut parts = combo.split('-');
                     let key = parts.next_back().unwrap_or_default().to_string();
                     let modifiers = parts.collect::<Vec<_>>().join("-");

@@ -1,9 +1,13 @@
-pub mod components;
+pub mod center;
+pub mod left;
+pub mod right;
 
-use components::{create_right_section, DynamicIsland, LeftPill};
+use center::DynamicIsland;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, CenterBox};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
+use left::LeftPill;
+use right::create_right_section;
 
 /// Launches the BabyDraDE TopBar GTK4 Layer-Shell widget
 pub fn run() {
@@ -69,4 +73,3 @@ pub fn run() {
 
     app.run_with_args::<&str>(&[]);
 }
-

@@ -17,8 +17,8 @@ pub fn trigger_save(state: &EditorState) -> bool {
         return false;
     }
     let title = services::trans("screenshot.saved_title");
-    let message = services::trans("screenshot.saved_msg")
-        .replace("{}", &format!("{:?}", save_path));
+    let message =
+        services::trans("screenshot.saved_msg").replace("{}", &format!("{:?}", save_path));
     send_notification(&title, &message);
     true
 }
