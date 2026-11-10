@@ -1,6 +1,7 @@
 //! Desktop shell data and file manager backend
 
-pub use crate::config::{load_desktop_config, save_desktop_config, DesktopConfig};
+pub use crate::config::{load_desktop_config, save_desktop_config};
+pub use crate::models::DesktopConfig;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]

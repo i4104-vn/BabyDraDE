@@ -181,7 +181,7 @@ where
 fn handle_three_finger(
     state: &mut BabydraState,
     dir: SwipeDirection,
-    cfg: &services::config::GestureConfig,
+    cfg: &services::models::GestureConfig,
 ) -> bool {
     match dir {
         SwipeDirection::Left if cfg.three_finger_swipe_window => {
@@ -220,7 +220,7 @@ fn handle_three_finger(
 fn handle_four_finger(
     state: &mut BabydraState,
     dir: SwipeDirection,
-    cfg: &services::config::GestureConfig,
+    cfg: &services::models::GestureConfig,
 ) -> bool {
     match dir {
         SwipeDirection::Left if cfg.four_finger_swipe_window => {

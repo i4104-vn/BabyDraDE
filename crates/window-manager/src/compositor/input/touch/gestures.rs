@@ -128,7 +128,7 @@ fn try_fire_touch_gesture(
     state: &mut BabydraState,
     n: usize,
     time_ms: u64,
-    cfg: &services::config::GestureConfig,
+    cfg: &services::models::GestureConfig,
 ) -> bool {
     match n {
         2 => try_two_finger_swipe(state, cfg),
@@ -154,7 +154,7 @@ fn try_fire_touch_gesture(
 /// `true` if the swipe was recognised and an action was fired.
 fn try_two_finger_swipe(
     state: &mut BabydraState,
-    cfg: &services::config::GestureConfig,
+    cfg: &services::models::GestureConfig,
 ) -> bool {
     let threshold = cfg.touch_swipe_threshold;
     let slots: Vec<_> = state.touch_gesture.slots.values().cloned().collect();
@@ -217,7 +217,7 @@ fn try_two_finger_swipe(
 fn try_three_finger_tap(
     state: &mut BabydraState,
     time_ms: u64,
-    cfg: &services::config::GestureConfig,
+    cfg: &services::models::GestureConfig,
 ) -> bool {
     if !cfg.touch_three_finger_tap {
         return false;

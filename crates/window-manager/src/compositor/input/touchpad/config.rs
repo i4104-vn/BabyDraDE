@@ -45,8 +45,8 @@ impl Default for TouchpadConfig {
     }
 }
 
-impl From<services::config::TouchpadConfig> for TouchpadConfig {
-    /// Converts a persistent [`services::config::TouchpadConfig`] from `babydra.conf`
+impl From<services::models::TouchpadConfig> for TouchpadConfig {
+    /// Converts a persistent [`services::models::TouchpadConfig`] from `babydra.conf`
     /// into compositor runtime [`TouchpadConfig`] with Smithay input types.
     ///
     /// # Arguments
@@ -56,7 +56,7 @@ impl From<services::config::TouchpadConfig> for TouchpadConfig {
     /// # Returns
     ///
     /// Returns the converted [`TouchpadConfig`].
-    fn from(cfg: services::config::TouchpadConfig) -> Self {
+    fn from(cfg: services::models::TouchpadConfig) -> Self {
         let button_map = match cfg.button_map.as_str() {
             "lmr" => smithay::reexports::input::TapButtonMap::LeftMiddleRight,
             _ => smithay::reexports::input::TapButtonMap::LeftRightMiddle,
@@ -79,7 +79,7 @@ impl TouchpadConfig {
     ///
     /// # Returns
     ///
-    /// Returns a resolved [`TouchpadConfig`] mapped from the shared [`services::config::TouchpadConfig`].
+    /// Returns a resolved [`TouchpadConfig`] mapped from the shared [`services::models::TouchpadConfig`].
     pub fn load() -> Self {
         let shared_cfg = services::config::load_touchpad_config();
         Self::from(shared_cfg)
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn test_touchpad_config_from_shared_config() {
-        let shared = services::config::TouchpadConfig {
+        let shared = services::models::TouchpadConfig {
             tap_to_click: true,
             tap_drag: false,
             tap_drag_lock: true,

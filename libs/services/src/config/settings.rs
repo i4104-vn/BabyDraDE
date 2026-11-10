@@ -1,6 +1,6 @@
 //! Configuration load/save logic for `~/.babydra/babydra.conf` matching babydra-core.
 
-use super::models::{
+use crate::models::{
     BabyDraConfig, BlurConfig, DesktopConfig, GestureConfig, MouseConfig, TouchpadConfig,
 };
 use std::path::PathBuf;

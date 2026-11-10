@@ -1,10 +1,11 @@
 //! Runtime overrides for the shared compositor blur configuration.
 //!
-//! The persisted configuration lives in `services::config::BabyDraConfig`.
+//! The persisted configuration lives in `services::models::BabyDraConfig`.
 //! This module only keeps command-line/environment compatibility local to the
 //! compositor and does not create a second configuration file.
 
-use services::config::{self as shared_config, BlurConfig};
+use services::config as shared_config;
+use services::models::BlurConfig;
 
 pub type BlurParams = BlurConfig;
 

@@ -1,14 +1,7 @@
-//! Configuration path resolvers and settings models matching babydra-core.
+//! Configuration path resolvers and settings loader/saver matching babydra-core.
 
 pub mod desktop_layout;
-pub mod models;
 pub mod settings;
-
-pub use models::{
-    BabyDraConfig, BlurConfig, ClipboardConfig, CustomContextItem, DesktopConfig, DisplayConfig,
-    DisplayMonitorSetting, GestureConfig, LockscreenConfig, MouseConfig, NotificationConfig,
-    PowerConfig, TouchpadConfig, WallpaperConfig,
-};
 
 pub use settings::{
     ensure_babydra_dirs, get_babydra_dir, get_conf_path, get_config_dir, get_home_dir,
