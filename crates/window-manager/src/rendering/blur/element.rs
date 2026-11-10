@@ -10,6 +10,8 @@ use smithay::{
     utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Transform},
 };
 
+use std::borrow::Borrow;
+use smithay::backend::renderer::gles::GlesFrame;
 use super::engine::BlurEngine;
 
 /// A render element that applies background Dual Kawase frosted glass blur
@@ -97,9 +99,13 @@ impl RenderElement<GlowRenderer> for BlurRenderElement {
         _opaque_regions: &[Rectangle<i32, Physical>],
     ) -> Result<(), GlesError> {
         let transform = frame.transformation();
+        let projection: [f32; 9] = {
+            let gles: &GlesFrame<'_, '_> = (*frame).borrow();
+            *gles.projection()
+        };
         frame.with_context(|glow| {
             if let Ok(mut engine) = self.blur_engine.lock() {
-                engine.render_blur(glow, dst, self.corner_radius, transform);
+                engine.render_blur(glow, dst, self.corner_radius, transform, projection);
             }
         })?;
         Ok(())

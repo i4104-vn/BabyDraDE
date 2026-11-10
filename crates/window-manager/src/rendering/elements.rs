@@ -77,7 +77,18 @@ pub fn render_window(
     if should_blur {
         if let Some(engine_lock) = blur_engine {
             let bbox = window.bbox();
-            let blur_area = Rectangle::new(location + bbox.loc, bbox.size);
+            let geo = window.geometry();
+            let blur_size = if geo.size.w > 0 && geo.size.h > 0 {
+                geo.size
+            } else {
+                bbox.size
+            };
+            let blur_loc = if geo.size.w > 0 && geo.size.h > 0 {
+                location
+            } else {
+                location + bbox.loc
+            };
+            let blur_area = Rectangle::new(blur_loc, blur_size);
 
             window
                 .user_data()
