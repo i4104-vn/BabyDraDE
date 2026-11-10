@@ -76,6 +76,7 @@ pub(crate) struct BabydraState {
     pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
     pub(crate) blur_engine: std::sync::Arc<std::sync::Mutex<crate::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
+    pub(crate) cursor_visible: bool,
     pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
     pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
 }
@@ -124,6 +125,7 @@ impl BabydraState {
                 crate::rendering::blur::BlurEngine::new(),
             )),
             pointer_location: Point::from((100.0, 100.0)),
+            cursor_visible: true,
             pointer_pressed_buttons: std::collections::HashSet::new(),
             touch_slots: std::collections::HashSet::new(),
         }

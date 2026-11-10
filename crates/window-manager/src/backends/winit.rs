@@ -94,10 +94,12 @@ pub(crate) fn init(
                     let blur_engine = Some(&state.blur_engine);
 
                     // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
-                    if let Some(cursor_elem) =
-                        cursor.element(backend.renderer(), state.pointer_location, scale)
-                    {
-                        render_elements.push(cursor_elem);
+                    if state.cursor_visible {
+                        if let Some(cursor_elem) =
+                            cursor.element(backend.renderer(), state.pointer_location, scale)
+                        {
+                            render_elements.push(cursor_elem);
+                        }
                     }
 
                     let oriented_size = output.current_transform().transform_size(size);

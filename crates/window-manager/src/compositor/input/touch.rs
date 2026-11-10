@@ -8,23 +8,18 @@ use smithay::{
 };
 
 use super::super::state::BabydraState;
+use super::transform_absolute_position;
 
 pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
     state: &mut BabydraState,
     event: T,
 ) {
-    let output = state.space.outputs().next();
-    let Some(output) = output else { return };
-    let Some(output_geometry) = state.space.output_geometry(output) else { return };
-
-    let mut position =
-        event.position_transformed(output_geometry.size) + output_geometry.loc.to_f64();
-    let max_x = (output_geometry.loc.x + output_geometry.size.w) as f64;
-    let max_y = (output_geometry.loc.y + output_geometry.size.h) as f64;
-    position.x = position.x.clamp(output_geometry.loc.x as f64, max_x);
-    position.y = position.y.clamp(output_geometry.loc.y as f64, max_y);
+    let Some(position) = transform_absolute_position(state, &event, true) else {
+        return;
+    };
 
     state.pointer_location = position;
+    state.cursor_visible = false;
     state.touch_slots.insert(event.slot());
 
     let serial = SERIAL_COUNTER.next_serial();
@@ -59,6 +54,7 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
                 time: event.time_msec(),
             },
         );
+        touch.frame(state);
     }
 }
 
@@ -66,18 +62,12 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
     state: &mut BabydraState,
     event: T,
 ) {
-    let output = state.space.outputs().next();
-    let Some(output) = output else { return };
-    let Some(output_geometry) = state.space.output_geometry(output) else { return };
-
-    let mut position =
-        event.position_transformed(output_geometry.size) + output_geometry.loc.to_f64();
-    let max_x = (output_geometry.loc.x + output_geometry.size.w) as f64;
-    let max_y = (output_geometry.loc.y + output_geometry.size.h) as f64;
-    position.x = position.x.clamp(output_geometry.loc.x as f64, max_x);
-    position.y = position.y.clamp(output_geometry.loc.y as f64, max_y);
+    let Some(position) = transform_absolute_position(state, &event, true) else {
+        return;
+    };
 
     state.pointer_location = position;
+    state.cursor_visible = false;
 
     // Handle touch-drag window movement if an active move request was started
     if let Some(ref mut move_state) = state.move_state {
@@ -103,6 +93,7 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
                 time: event.time_msec(),
             },
         );
+        touch.frame(state);
     }
 }
 
@@ -125,6 +116,7 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
                 time: event.time_msec(),
             },
         );
+        touch.frame(state);
     }
 }
 
@@ -139,6 +131,7 @@ pub(crate) fn handle_touch_cancel<B: InputBackend, T: TouchCancelEvent<B>>(
 
     if let Some(touch) = state.seat.get_touch() {
         touch.cancel(state);
+        touch.frame(state);
     }
 }
 
@@ -148,5 +141,34 @@ pub(crate) fn handle_touch_frame<B: InputBackend, T: TouchFrameEvent<B>>(
 ) {
     if let Some(touch) = state.seat.get_touch() {
         touch.frame(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use smithay::utils::{Logical, Point, Size, Transform};
+
+    #[test]
+    fn test_touch_coordinate_rotation_90() {
+        let raw_size = Size::<f64, Logical>::from((1600.0, 2560.0));
+        let transform = Transform::_90;
+
+        // Physical center (800, 1280) -> Landscape center (1280, 800)
+        let pt_center = Point::<f64, Logical>::from((800.0, 1280.0));
+        let oriented_center = transform.transform_point_in(pt_center, &raw_size);
+        assert_eq!(oriented_center.x, 1280.0);
+        assert_eq!(oriented_center.y, 800.0);
+
+        // Physical bottom-left (0, 2560) -> Landscape top-left (0, 0)
+        let pt_bl = Point::<f64, Logical>::from((0.0, 2560.0));
+        let oriented_bl = transform.transform_point_in(pt_bl, &raw_size);
+        assert_eq!(oriented_bl.x, 0.0);
+        assert_eq!(oriented_bl.y, 0.0);
+
+        // Physical top-left (0, 0) -> Landscape top-right (2560, 0)
+        let pt_tl = Point::<f64, Logical>::from((0.0, 0.0));
+        let oriented_tl = transform.transform_point_in(pt_tl, &raw_size);
+        assert_eq!(oriented_tl.x, 2560.0);
+        assert_eq!(oriented_tl.y, 0.0);
     }
 }

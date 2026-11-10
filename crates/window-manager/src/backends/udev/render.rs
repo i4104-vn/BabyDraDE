@@ -116,10 +116,12 @@ pub fn setup_render_loop(
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();
 
                     // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
-                    if let Some(cursor_elem) =
-                        cursor.element(renderer, state.pointer_location, scale)
-                    {
-                        render_elements.push(cursor_elem);
+                    if state.cursor_visible {
+                        if let Some(cursor_elem) =
+                            cursor.element(renderer, state.pointer_location, scale)
+                        {
+                            render_elements.push(cursor_elem);
+                        }
                     }
 
                     let output = &surface_data.output;

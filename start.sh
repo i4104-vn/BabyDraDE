@@ -43,6 +43,14 @@ while [ $# -gt 0 ]; do
                 shift
             fi
             ;;
+        --touch-rotate)
+            if [ $# -gt 1 ]; then
+                BABYDRADE_TOUCH_TRANSFORM="$2"
+                shift 2
+            else
+                shift
+            fi
+            ;;
         *)
             APP_ARGS+=("$1")
             shift
@@ -151,6 +159,9 @@ configure_screen_orientation() {
     # 2. Export environment variables for BabyDraDE compositor
     export BABYDRADE_ORIENTATION="$BABYDRADE_ORIENTATION"
     export BABYDRADE_TRANSFORM="$BABYDRADE_TRANSFORM"
+    if [ -n "${BABYDRADE_TOUCH_TRANSFORM:-}" ]; then
+        export BABYDRADE_TOUCH_TRANSFORM="$BABYDRADE_TOUCH_TRANSFORM"
+    fi
 
     # 3. If running inside an active graphical session with wlr-randr or xrandr
     if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wlr-randr >/dev/null 2>&1; then

@@ -25,6 +25,7 @@ where
     B: InputBackend,
     E: PointerAxisEvent<B>,
 {
+    state.cursor_visible = true;
     let source = event.source();
     let mut frame = AxisFrame::new(event.time_msec())
         .source(source)

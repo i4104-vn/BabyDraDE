@@ -55,6 +55,7 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
     state: &mut BabydraState,
     event: P,
 ) {
+    state.cursor_visible = true;
     let pointer = state.seat.get_pointer().unwrap();
     let delta = event.delta();
     let mut position = state.pointer_location + delta;
@@ -91,10 +92,10 @@ pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositio
     state: &mut BabydraState,
     event: P,
 ) {
-    let output = state.space.outputs().next().unwrap();
-    let output_geometry = state.space.output_geometry(output).unwrap();
-    let position =
-        event.position_transformed(output_geometry.size) + output_geometry.loc.to_f64();
+    state.cursor_visible = true;
+    let Some(position) = super::transform_absolute_position(state, &event, false) else {
+        return;
+    };
     let pointer = state.seat.get_pointer().unwrap();
 
     state.pointer_location = position;
@@ -120,6 +121,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
     state: &mut BabydraState,
     event: P,
 ) {
+    state.cursor_visible = true;
     let pointer = state.seat.get_pointer().unwrap();
     let keyboard = state.seat.get_keyboard().unwrap();
     let serial = SERIAL_COUNTER.next_serial();
