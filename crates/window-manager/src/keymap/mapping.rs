@@ -1,4 +1,4 @@
-//! Combo parsing and evdev key-name mapping for `babydra-keymap`.
+//! Combo parsing and evdev key-name mapping for the window manager.
 
 use evdev::Key;
 use serde::{Deserialize, Serialize};
@@ -16,17 +16,6 @@ pub struct Shortcut {
     pub command: String,
     #[serde(default = "default_true")]
     pub enabled: bool,
-}
-
-impl Shortcut {
-    /// Builds the full combo spec (e.g. `"W-S-s"`).
-    pub fn combo(&self) -> String {
-        if self.modifiers.is_empty() {
-            self.key.clone()
-        } else {
-            format!("{}-{}", self.modifiers, self.key)
-        }
-    }
 }
 
 /// Modifier set required for a shortcut.

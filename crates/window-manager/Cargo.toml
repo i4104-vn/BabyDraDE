@@ -32,3 +32,12 @@ tracing-subscriber.workspace = true
 libc = "0.2"
 cairo-rs = "0.22"
 glow = "0.16"
+gtk4 = { version = "0.11" }
+gtk4-layer-shell = "0.8"
+glib = "0.22"
+chrono = "0.4"
+ui-kit = { path = "../../libs/ui-kit" }
+tokio = { version = "1.0", features = ["rt", "time", "sync", "macros", "process", "io-util"] }
+evdev = { version = "0.12", features = ["tokio"] }
+serde = { version = "1.0", features = ["derive"] }
+toml = "1.2"

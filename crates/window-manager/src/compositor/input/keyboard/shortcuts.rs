@@ -5,6 +5,7 @@ use smithay::utils::Serial;
 use tracing::info;
 
 use crate::compositor::state::BabydraState;
+use crate::rendering::lock;
 use super::focus::{cycle_window_focus, focus_window};
 use super::launcher::spawn_new_terminal;
 
@@ -17,6 +18,8 @@ pub(crate) enum KeyboardAction {
     CloseActiveWindow,
     /// Spawn a new terminal emulator instance.
     SpawnTerminal,
+    /// Show the integrated lock screen.
+    LockScreen,
     /// Toggle background blur shader on the active window.
     ToggleBlur,
     /// Toggle maximize state on the active window.
@@ -76,7 +79,15 @@ pub(crate) fn check_key_shortcut(
         return Some(KeyboardAction::SpawnTerminal);
     }
 
-    // 4. Alt + Tab: choose a window, then focus it when Alt is released
+    // 4. Super + L: Lock the current session
+    if modifiers.logo
+        && !modifiers.shift
+        && (sym == keysyms::KEY_l || sym == keysyms::KEY_L)
+    {
+        return Some(KeyboardAction::LockScreen);
+    }
+
+    // 5. Alt + Tab: choose a window, then focus it when Alt is released
     if modifiers.alt
         && (sym == keysyms::KEY_Tab || sym == keysyms::KEY_ISO_Left_Tab)
     {
@@ -155,6 +166,10 @@ pub(crate) fn execute_action(
         }
         KeyboardAction::SpawnTerminal => {
             spawn_new_terminal(&state.socket_name);
+        }
+        KeyboardAction::LockScreen => {
+            info!("Super+L pressed: locking the session");
+            lock::spawn();
         }
         KeyboardAction::ToggleBlur => {
             if let Some((app_id, is_now_blurred)) = state.toggle_blur_active_window() {
