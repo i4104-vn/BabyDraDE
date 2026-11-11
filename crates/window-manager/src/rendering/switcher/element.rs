@@ -140,9 +140,7 @@ impl SwitcherOverlay {
             }
         }
 
-        // 2. Active Stage window (ONLY 1 REAL APP in center, rendered via constrain_space_element
-        //    so it is properly scaled to fit its slot while keeping correct geometry in the damage
-        //    tracker).
+        // 2. Active Stage window (ONLY 1 REAL APP in center, stretched to fill the full slot).
         let (front_idx, front_layout) = &layout.stage;
         if let Some(entry) = switcher.entries.get(*front_idx) {
             elements.extend(render_window_preview(
@@ -151,10 +149,11 @@ impl SwitcherOverlay {
                 front_layout.preview,
                 scale,
                 layout.alpha as f32,
+                ConstrainScaleBehavior::Stretch,
             ));
         }
 
-        // 3. Dock thumbnail windows (ALL apps in left strip, each properly scaled).
+        // 3. Dock thumbnail windows (ALL apps in left strip, aspect-ratio preserved via Fit).
         for (dock_idx, dock_layout) in &layout.dock_items {
             if let Some(entry) = switcher.entries.get(*dock_idx) {
                 elements.extend(render_window_preview(
@@ -163,6 +162,7 @@ impl SwitcherOverlay {
                     dock_layout.preview,
                     scale,
                     (0.95 * layout.alpha) as f32,
+                    ConstrainScaleBehavior::Fit,
                 ));
             }
         }
@@ -198,7 +198,11 @@ impl SwitcherOverlay {
     }
 }
 
-/// Render a window scaled/cropped to fit inside `target_rect` (logical coordinates).
+/// Render a window scaled into `target_rect` (logical coordinates).
+///
+/// `scale_behavior` controls whether the window is stretched to fill the slot
+/// (`Stretch`, used for the center stage) or fitted while preserving aspect ratio
+/// (`Fit`, used for dock thumbnails).
 ///
 /// Uses smithay's `constrain_space_element` pipeline so that the compositor's damage
 /// tracker sees the correct physical geometry of every sub-surface element.
@@ -208,6 +212,7 @@ fn render_window_preview(
     target_rect: Rect,
     output_scale: Scale<f64>,
     alpha: f32,
+    scale_behavior: ConstrainScaleBehavior,
 ) -> Vec<CustomRenderElements> {
     // Guard: window must have a valid bounding-box so constrain can compute scale.
     let bbox = window.bbox();
@@ -239,7 +244,7 @@ fn render_window_preview(
 
     let behavior = ConstrainBehavior {
         reference: ConstrainReference::BoundingBox,
-        behavior: ConstrainScaleBehavior::Fit,
+        behavior: scale_behavior,
         align: ConstrainAlign::CENTER,
     };
 
