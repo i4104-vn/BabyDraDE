@@ -579,7 +579,6 @@ BINARIES=(
     "babydra-topbar"
     "babydra-panel"
     "babydra-screenshot"
-    "babydra-keymap"
     "babydra-lock"
     "babydra-widgets"
 )

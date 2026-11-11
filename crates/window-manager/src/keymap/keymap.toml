@@ -1,0 +1,8 @@
+# BabyDraDE global keyboard shortcuts.
+#
+# Modifier names: W = Super/Windows, A = Alt, C = Ctrl, S = Shift.
+# Add or edit shortcuts under `[shortcuts]`.
+
+[shortcuts]
+"W-S-s" = "babydra-screenshot"
+"W-l" = "babydra-lock"

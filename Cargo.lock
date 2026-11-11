@@ -2859,7 +2859,6 @@ dependencies = [
  "cairo-rs",
  "chrono",
  "dirs",
- "evdev",
  "gdk-pixbuf",
  "gio",
  "glib",
@@ -2889,11 +2888,15 @@ name = "window-manager"
 version = "0.1.0"
 dependencies = [
  "cairo-rs",
+ "evdev",
  "glow",
  "libc",
+ "serde",
  "services",
  "smithay",
  "smithay-drm-extras",
+ "tokio",
+ "toml",
  "tracing",
  "tracing-subscriber",
  "wayland-sys",

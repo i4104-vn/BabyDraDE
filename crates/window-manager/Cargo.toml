@@ -32,3 +32,7 @@ tracing-subscriber.workspace = true
 libc = "0.2"
 cairo-rs = "0.22"
 glow = "0.16"
+tokio = { version = "1.0", features = ["rt", "time", "sync", "macros", "process", "io-util"] }
+evdev = { version = "0.12", features = ["tokio"] }
+serde = { version = "1.0", features = ["derive"] }
+toml = "1.2"

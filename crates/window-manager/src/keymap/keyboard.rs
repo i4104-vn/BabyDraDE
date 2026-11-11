@@ -1,4 +1,4 @@
-//! evdev keyboard listener for `babydra-keymap`.
+//! evdev keyboard listener for the window-manager keymap.
 
 use super::daemon::SharedShortcuts;
 use super::mapping::{Mods, ResolvedShortcut};

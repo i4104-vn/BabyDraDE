@@ -1,5 +1,6 @@
 mod backends;
 mod compositor;
+mod keymap;
 pub mod rendering;
 
 use std::{error::Error, ffi::OsString, process::Command};
@@ -31,6 +32,11 @@ fn ensure_runtime_dir() {
 pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
     ensure_runtime_dir();
     services::config::ensure_babydra_dirs();
+
+    std::thread::Builder::new()
+        .name("babydra-keymap".to_string())
+        .spawn(keymap::run)
+        .map_err(|err| format!("failed to start keymap daemon: {err}"))?;
 
     if std::env::var_os("WAYLAND_DISPLAY").is_none()
         && std::env::var_os("WAYLAND_SOCKET").is_none()
