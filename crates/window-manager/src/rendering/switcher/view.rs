@@ -4,9 +4,7 @@ use cairo::{Context, Operator};
 
 use crate::compositor::AltTabSwitcher;
 
-use super::draw::{
-    draw_app_badge, draw_card_border, draw_stage_header_pill, rounded_rect, Rect,
-};
+use super::draw::{draw_app_badge, draw_card_border, Rect};
 
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
 
@@ -31,7 +29,6 @@ pub(crate) struct CardLayout {
 pub(crate) struct SwitcherLayout {
     pub(crate) stage: (usize, CardLayout),
     pub(crate) dock_items: Vec<(usize, CardLayout)>,
-    pub(crate) pulse: f64,
 }
 
 pub(crate) fn compute_layout(
@@ -47,10 +44,8 @@ pub(crate) fn compute_layout(
     let sel = switcher.selected_index.min(n - 1);
     let elapsed = switcher.transition_started.elapsed().as_secs_f64();
     let progress = ease_out_cubic((elapsed / ANIMATION_DURATION.as_secs_f64()).clamp(0.0, 1.0));
-    let pulse = (progress * std::f64::consts::PI).sin().max(0.0);
 
-    // Left dock: every card has the same geometry. Selection is indicated by
-    // its border only, so changing the selected app cannot reflow the dock.
+    // Dock thumbnails stay fixed while the selected preview animates in the center.
     let avail_dock_h = (screen_h - DOCK_TOP_MARGIN - DOCK_BOTTOM_MARGIN).max(120.0);
     let gap = if n <= 4 {
         16.0
@@ -80,30 +75,13 @@ pub(crate) fn compute_layout(
                 card.height - 2.0 * thumb_pad,
             );
 
-            // Stagger the dock from top to bottom. Each preview slides in from
-            // the left and settles with a small spring-like lift when selected.
-            let item_elapsed = (elapsed - idx as f64 * 0.028).max(0.0);
-            let item_progress = ease_out_cubic((item_elapsed / 0.30).clamp(0.0, 1.0));
-            let selected_lift = if idx == sel {
-                0.035 * (item_progress * std::f64::consts::PI).sin().max(0.0)
-            } else {
-                0.0
-            };
-            let scale = 0.94 + 0.06 * item_progress + selected_lift;
-            let center = (card.center_x(), card.y + card.height / 2.0);
-            let mut card = scale_rect_around(card, center, scale);
-            let mut preview = scale_rect_around(preview, center, scale);
-            let slide_x = -26.0 * (1.0 - item_progress);
-            card.x += slide_x;
-            preview.x += slide_x;
-
             (
                 idx,
                 CardLayout {
                     card,
                     preview,
                     radius,
-                    opacity: 0.16 + 0.84 * item_progress,
+                    opacity: 1.0,
                 },
             )
         })
@@ -130,15 +108,8 @@ pub(crate) fn compute_layout(
     let stage_x = stage_min_x + (avail_w - stage_w) / 2.0;
     let stage_y = ((screen_h - stage_h) / 2.0).max(36.0);
 
-    let header_h = 24.0;
-    let stage_pad = 4.0;
     let stage_card = Rect::new(stage_x, stage_y, stage_w, stage_h);
-    let stage_preview = Rect::new(
-        stage_x + stage_pad,
-        stage_y + header_h,
-        stage_w - 2.0 * stage_pad,
-        stage_h - header_h - stage_pad,
-    );
+    let stage_preview = stage_card;
     let stage_center = (stage_card.center_x(), stage_card.y + stage_card.height / 2.0);
     let stage_scale = 0.965 + 0.035 * progress;
     let stage_card = scale_rect_around(stage_card, stage_center, stage_scale);
@@ -156,7 +127,6 @@ pub(crate) fn compute_layout(
     Some(SwitcherLayout {
         stage,
         dock_items,
-        pulse,
     })
 }
 
@@ -185,88 +155,17 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    // 1. Center stage: prominent active border, header dots & title pill above real window
-    let (sel_idx, front) = &layout.stage;
-
-    // Glowing active border: outer blue glow ring + inner crisp white border
-    rounded_rect(
-        context,
-        front.card.x - 1.5,
-        front.card.y - 1.5,
-        front.card.width + 3.0,
-        front.card.height + 3.0,
-        front.radius + 1.5,
-    );
-    context.set_source_rgba(0.38, 0.68, 1.0, (0.32 + 0.36 * layout.pulse) * front.opacity);
-    context.set_line_width(2.4 + 1.8 * layout.pulse);
-    context.stroke()?;
-
-    rounded_rect(
-        context,
-        front.card.x,
-        front.card.y,
-        front.card.width,
-        front.card.height,
-        front.radius,
-    );
-    context.set_source_rgba(1.0, 1.0, 1.0, 0.85 * front.opacity);
-    context.set_line_width(1.8);
-    context.stroke()?;
-
-    if let Some(entry) = switcher.entries.get(*sel_idx) {
-        let pill_y = (front.card.y - 34.0).max(6.0);
-        draw_stage_header_pill(
-            context,
-            entry,
-            front.card.center_x(),
-            pill_y,
-            front.card.width,
-            front.opacity,
-        )?;
-    }
-
-    // 2. Dock thumbnails: borders & app icon badges (active item pops out with glowing active border)
+    // The center preview has no frame or backdrop. Only the dock is drawn here,
+    // with fixed thumbnail geometry and a static selection outline.
     for (entry_idx, item) in &layout.dock_items {
         let is_selected = *entry_idx == switcher.selected_index;
-        if is_selected {
-            // Prominent active border: outer blue glow + crisp bright inner line
-            rounded_rect(
-                context,
-                item.card.x - 1.5,
-                item.card.y - 1.5,
-                item.card.width + 3.0,
-                item.card.height + 3.0,
-                item.radius + 1.5,
-            );
-            context.set_source_rgba(
-                0.35,
-                0.65,
-                1.0,
-                (0.48 + 0.32 * layout.pulse) * item.opacity,
-            );
-            context.set_line_width(2.4 + 1.6 * layout.pulse);
-            context.stroke()?;
-
-            rounded_rect(
-                context,
-                item.card.x,
-                item.card.y,
-                item.card.width,
-                item.card.height,
-                item.radius,
-            );
-            context.set_source_rgba(1.0, 1.0, 1.0, 0.95 * item.opacity);
-            context.set_line_width(2.0);
-            context.stroke()?;
-        } else {
-            draw_card_border(context, item.card, item.radius, false, item.opacity)?;
-        }
+        draw_card_border(context, item.card, item.radius, is_selected, 1.0)?;
 
         if let Some(entry) = switcher.entries.get(*entry_idx) {
             let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
             let badge_x = item.card.x + 4.0;
             let badge_y = item.card.y + item.card.height - badge_size - 4.0;
-            draw_app_badge(context, entry, badge_x, badge_y, badge_size, item.opacity)?;
+            draw_app_badge(context, entry, badge_x, badge_y, badge_size, 1.0)?;
         }
     }
 

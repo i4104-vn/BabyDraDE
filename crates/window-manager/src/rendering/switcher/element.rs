@@ -22,9 +22,7 @@ use crate::compositor::AltTabSwitcher;
 use super::{
     super::CustomRenderElements,
     draw::Rect,
-    view::{
-        compute_layout, draw_switcher_foreground, ANIMATION_DURATION,
-    },
+    view::{compute_layout, draw_switcher_foreground},
 };
 
 #[derive(Default)]
@@ -71,10 +69,9 @@ impl SwitcherOverlay {
             return Vec::new();
         };
 
-        let animation_active = switcher.transition_started.elapsed() < ANIMATION_DURATION;
         let render_key = (switcher.transition_started, switcher.selected_index);
 
-        if animation_active || self.last_rendered != Some(render_key) {
+        if self.last_rendered != Some(render_key) {
             if let Some(fg_buf) = self.fg_buffer.as_mut() {
                 if let Some(pixels) = render_pixels(width, height, scale, |ctx| {
                     draw_switcher_foreground(ctx, switcher, &layout)
@@ -98,8 +95,7 @@ impl SwitcherOverlay {
 
         let mut elements = Vec::new();
 
-        // 1. Foreground overlay (borders, three dots header, title pill, dock app badges)
-        //    Drawn LAST so it appears on top of real window surfaces.
+        // 1. Static dock decorations, drawn above the window previews.
         if let Some(fg_buf) = self.fg_buffer.as_mut() {
             if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
                 renderer,
@@ -114,7 +110,7 @@ impl SwitcherOverlay {
             }
         }
 
-        // 2. Active Stage window (ONLY 1 REAL APP in center, stretched to fill the full slot).
+        // 2. Center window preview. Its size and opacity animate during selection.
         let (front_idx, front_layout) = &layout.stage;
         if let Some(entry) = switcher.entries.get(*front_idx) {
             elements.extend(render_window_preview(
@@ -127,7 +123,7 @@ impl SwitcherOverlay {
             ));
         }
 
-        // 3. Dock thumbnail windows (ALL apps in left strip, aspect-ratio preserved via Fit).
+        // 3. Dock thumbnails stay stationary with their aspect ratios preserved.
         for (dock_idx, dock_layout) in &layout.dock_items {
             if let Some(entry) = switcher.entries.get(*dock_idx) {
                 elements.extend(render_window_preview(
