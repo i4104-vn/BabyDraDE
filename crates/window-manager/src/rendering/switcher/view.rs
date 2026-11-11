@@ -11,6 +11,16 @@ use super::draw::{
 
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(260);
 
+// The switcher is a layout, not a collection of windows laid out at their
+// native sizes. Keeping these values independent from the selected window
+// prevents the dock and the stage from moving while Alt+Tab is held.
+const DOCK_X: f64 = 24.0;
+const DOCK_TOP_MARGIN: f64 = 32.0;
+const DOCK_BOTTOM_MARGIN: f64 = 32.0;
+const STAGE_SIDE_GAP: f64 = 28.0;
+const STAGE_RIGHT_MARGIN: f64 = 24.0;
+const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct CardLayout {
     pub(crate) card: Rect,
@@ -36,11 +46,9 @@ pub(crate) fn compute_layout(
     let n = switcher.entries.len();
     let sel = switcher.selected_index.min(n - 1);
 
-    // Left Dock: Fixed position (no flickering/jumping when switching tabs)
-    let dock_x = 24.0;
-    let top_margin = 32.0;
-    let bottom_margin = 32.0;
-    let avail_dock_h = (screen_h - top_margin - bottom_margin).max(120.0);
+    // Left dock: every card has the same geometry. Selection is indicated by
+    // its border only, so changing the selected app cannot reflow the dock.
+    let avail_dock_h = (screen_h - DOCK_TOP_MARGIN - DOCK_BOTTOM_MARGIN).max(120.0);
     let gap = if n <= 4 {
         16.0
     } else if n <= 7 {
@@ -55,25 +63,13 @@ pub(crate) fn compute_layout(
     let thumb_pad = 3.0;
 
     let total_dock_h = n as f64 * base_thumb_h + (n.saturating_sub(1) as f64) * gap;
-    let dock_start_y = ((screen_h - total_dock_h) / 2.0).max(top_margin);
+    let dock_start_y = ((screen_h - total_dock_h) / 2.0).max(DOCK_TOP_MARGIN);
 
     let dock_items: Vec<(usize, CardLayout)> = (0..n)
         .map(|idx| {
-            let is_sel = idx == sel;
             let card_y = dock_start_y + idx as f64 * (base_thumb_h + gap);
-            // Active item pops out bigger (1.10x scale and +6px offset)
-            let (thumb_w, thumb_h, card_x, card_y_adj) = if is_sel {
-                let w = base_thumb_w * 1.10;
-                let h = base_thumb_h * 1.10;
-                let x = dock_x + 6.0;
-                let y = card_y - (h - base_thumb_h) / 2.0;
-                (w, h, x, y)
-            } else {
-                (base_thumb_w, base_thumb_h, dock_x, card_y)
-            };
-
-            let card = Rect::new(card_x, card_y_adj, thumb_w, thumb_h);
-            let radius = (thumb_h * 0.13).clamp(8.0, 14.0);
+            let card = Rect::new(DOCK_X, card_y, base_thumb_w, base_thumb_h);
+            let radius = (base_thumb_h * 0.13).clamp(8.0, 14.0);
             let preview = Rect::new(
                 card.x + thumb_pad,
                 card.y + thumb_pad,
@@ -91,32 +87,22 @@ pub(crate) fn compute_layout(
         })
         .collect();
 
-    // Center Stage: MUCH LARGER - occupying most of the remaining screen area
-    let stage_min_x = dock_x + base_thumb_w * 1.10 + 28.0;
-    let stage_max_x = screen_w - 24.0;
+    // Center stage: a fixed 16:9 presentation area. The selected app is fit
+    // into this area by the renderer below; its native aspect ratio must not
+    // change the stage geometry.
+    let stage_min_x = DOCK_X + base_thumb_w + STAGE_SIDE_GAP;
+    let stage_max_x = screen_w - STAGE_RIGHT_MARGIN;
     let avail_w = (stage_max_x - stage_min_x).max(240.0);
     let avail_h = (screen_h - 48.0).max(200.0);
 
-    let sel_win = &switcher.entries[sel].window;
-    let geo_size = sel_win.geometry().size;
-    let bbox_size = sel_win.bbox().size;
-    let size = if geo_size.w > 0 && geo_size.h > 0 {
-        geo_size
-    } else if bbox_size.w > 0 && bbox_size.h > 0 {
-        bbox_size
-    } else {
-        (1280, 800).into()
-    };
-    let aspect = (size.w as f64 / size.h as f64).clamp(0.65, 2.3);
-
-    // Occupy 96% of available width and 94% of available height
-    let max_stage_w = (avail_w * 0.96).max(400.0);
-    let max_stage_h = (avail_h * 0.94).max(300.0);
+    // Occupy most of the available area while remaining stable for every app.
+    let max_stage_w = avail_w * 0.96;
+    let max_stage_h = avail_h * 0.94;
     let mut stage_w = max_stage_w;
-    let mut stage_h = stage_w / aspect;
+    let mut stage_h = stage_w / STAGE_ASPECT_RATIO;
     if stage_h > max_stage_h {
         stage_h = max_stage_h;
-        stage_w = stage_h * aspect;
+        stage_w = stage_h * STAGE_ASPECT_RATIO;
     }
 
     let stage_x = stage_min_x + (avail_w - stage_w) / 2.0;
@@ -239,12 +225,7 @@ pub(crate) fn draw_switcher_foreground(
     context.set_line_width(1.8);
     context.stroke()?;
 
-    draw_dots_header(
-        context,
-        front.card.center_x(),
-        front.card.y + 11.0,
-        1.0,
-    )?;
+    draw_dots_header(context, front.card.center_x(), front.card.y + 11.0, 1.0)?;
 
     if let Some(entry) = switcher.entries.get(*sel_idx) {
         let pill_y = (front.card.y - 34.0).max(6.0);
@@ -294,14 +275,7 @@ pub(crate) fn draw_switcher_foreground(
             let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
             let badge_x = item.card.x + 4.0;
             let badge_y = item.card.y + item.card.height - badge_size - 4.0;
-            draw_app_badge(
-                context,
-                entry,
-                badge_x,
-                badge_y,
-                badge_size,
-                1.0,
-            )?;
+            draw_app_badge(context, entry, badge_x, badge_y, badge_size, 1.0)?;
         }
     }
 
