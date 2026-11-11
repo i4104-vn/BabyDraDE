@@ -487,10 +487,10 @@ fi
 
 # Clean up any lingering widget or compositor processes from previous sessions
 echo "[*] Ensuring clean state (terminating any lingering previous session processes)..."
-pkill -TERM -f "babydra-(window-manager|desktop|topbar|panel|screenshot|keymap|lock|widgets)" 2>/dev/null || true
+    pkill -TERM -f "babydra-(window-manager|desktop|topbar|panel|screenshot|keymap|widgets)" 2>/dev/null || true
 pkill -TERM -x widgets 2>/dev/null || true
 pkill -TERM -x window-manager 2>/dev/null || true
-pkill -9 -f "babydra-(window-manager|desktop|topbar|panel|screenshot|keymap|lock|widgets)" 2>/dev/null || true
+    pkill -9 -f "babydra-(window-manager|desktop|topbar|panel|screenshot|keymap|widgets)" 2>/dev/null || true
 pkill -9 -x widgets 2>/dev/null || true
 pkill -9 -x window-manager 2>/dev/null || true
 
@@ -579,7 +579,6 @@ BINARIES=(
     "babydra-topbar"
     "babydra-panel"
     "babydra-screenshot"
-    "babydra-lock"
     "babydra-widgets"
 )
 
@@ -698,9 +697,9 @@ cleanup_session() {
     if [ -n "${WIDGET_LAUNCHER_PID:-}" ]; then
         kill "$WIDGET_LAUNCHER_PID" 2>/dev/null || true
     fi
-    pkill -TERM -f "babydra-(desktop|topbar|panel|screenshot|keymap|lock|widgets)" 2>/dev/null || true
+    pkill -TERM -f "babydra-(desktop|topbar|panel|screenshot|keymap|widgets)" 2>/dev/null || true
     sleep 0.2
-    pkill -9 -f "babydra-(desktop|topbar|panel|screenshot|keymap|lock|widgets)" 2>/dev/null || true
+    pkill -9 -f "babydra-(desktop|topbar|panel|screenshot|keymap|widgets)" 2>/dev/null || true
 }
 
 trap cleanup_session EXIT INT TERM

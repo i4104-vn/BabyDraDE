@@ -44,13 +44,6 @@ pub fn load() -> Vec<Shortcut> {
                 command: "babydra-screenshot".to_string(),
                 enabled: true,
             },
-            Shortcut {
-                id: 2,
-                modifiers: "W".to_string(),
-                key: "l".to_string(),
-                command: "babydra-lock".to_string(),
-                enabled: true,
-            },
         ]);
     }
 

@@ -109,13 +109,6 @@ pub(crate) fn init(
                     }
 
                     let oriented_size = output.current_transform().transform_size(size);
-                    if let Some(element) = switcher_overlay.element(
-                        backend.renderer(),
-                        state.alt_tab_switcher.as_ref(),
-                        (oriented_size.w, oriented_size.h),
-                    ) {
-                        render_elements.push(element);
-                    }
 
                     // 2. Render Overlay & Top layer surfaces (topbar, dynamic island, notification popups)
                     render_elements.extend(render_layer_surfaces(
@@ -129,17 +122,29 @@ pub(crate) fn init(
                         blur_engine,
                     ));
 
-                    // 3. Render each mapped window in front-to-back order (highest z-index / focused window first)
-                    for window in state.space.elements().rev() {
-                        if let Some(loc) = state.space.element_location(window) {
-                            render_elements.extend(render_window(
-                                backend.renderer(),
-                                window,
-                                loc,
-                                scale,
-                                blur_engine,
-                            ));
+                    // 3. Render either the Stage Manager switcher or the normal mapped windows
+                    if state.alt_tab_switcher.is_none() {
+                        // Render each mapped window in front-to-back order (highest z-index / focused window first)
+                        for window in state.space.elements().rev() {
+                            if let Some(loc) = state.space.element_location(window) {
+                                render_elements.extend(render_window(
+                                    backend.renderer(),
+                                    window,
+                                    loc,
+                                    scale,
+                                    blur_engine,
+                                ));
+                            }
                         }
+                    } else {
+                        // Switcher is active: normal windows are hidden to reveal desktop wallpaper,
+                        // and live Stage Manager previews of apps are rendered here.
+                        render_elements.extend(switcher_overlay.render(
+                            backend.renderer(),
+                            state.alt_tab_switcher.as_ref(),
+                            (oriented_size.w, oriented_size.h),
+                            scale,
+                        ));
                     }
 
                     // 4. Render Bottom & Background layer surfaces (wallpaper, desktop background)

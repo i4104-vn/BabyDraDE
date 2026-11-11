@@ -2888,8 +2888,12 @@ name = "window-manager"
 version = "0.1.0"
 dependencies = [
  "cairo-rs",
+ "chrono",
  "evdev",
+ "glib",
  "glow",
+ "gtk4",
+ "gtk4-layer-shell",
  "libc",
  "serde",
  "services",
@@ -2899,6 +2903,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "ui-kit",
  "wayland-sys",
 ]
 

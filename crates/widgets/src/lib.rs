@@ -1,11 +1,10 @@
 //! BabyDraDE Desktop Widgets Library
 //!
 //! Provides the core implementation for BabyDraDE desktop shell widgets:
-//! desktop grid/wallpaper, topbar/panel, screenshot utility, and lock screen.
+//! desktop grid/wallpaper, topbar/panel, and screenshot utility.
 
 pub mod common;
 pub mod desktop;
-pub mod lock;
 pub mod screenshot;
 pub mod topbar;
 
@@ -15,7 +14,6 @@ pub const AVAILABLE_WIDGETS: &[&str] = &[
     "topbar",
     "panel",
     "screenshot",
-    "lock",
 ];
 
 /// Runs a specific built-in widget by name
@@ -31,10 +29,6 @@ pub fn run_widget(name: &str) -> Result<(), Box<dyn std::error::Error>> {
         }
         "screenshot" => {
             screenshot::run();
-            Ok(())
-        }
-        "lock" => {
-            lock::run();
             Ok(())
         }
         other => Err(format!(

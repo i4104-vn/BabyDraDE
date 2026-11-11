@@ -26,10 +26,6 @@ name = "babydra-screenshot"
 path = "src/bin/babydra-screenshot.rs"
 
 [[bin]]
-name = "babydra-lock"
-path = "src/bin/babydra-lock.rs"
-
-[[bin]]
 name = "babydra-widgets"
 path = "src/bin/babydra-widgets.rs"
 

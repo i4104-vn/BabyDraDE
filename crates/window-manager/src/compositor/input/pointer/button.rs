@@ -35,6 +35,58 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
         ButtonState::Pressed => {
             state.pointer_pressed_buttons.insert(button_code);
 
+            if let Some(switcher) = state.alt_tab_switcher.as_ref() {
+                let output = state.space.outputs().next().cloned();
+                let size = output
+                    .as_ref()
+                    .and_then(|o| o.current_mode())
+                    .map(|m| m.size)
+                    .unwrap_or((1920, 1080).into());
+                if let Some(layout) = crate::rendering::switcher::view::compute_layout(
+                    switcher,
+                    size.w as f64,
+                    size.h as f64,
+                ) {
+                    let px = state.pointer_location.x;
+                    let py = state.pointer_location.y;
+                    let in_rect = |r: &crate::rendering::switcher::draw::Rect| {
+                        px >= r.x && px <= r.x + r.width && py >= r.y && py <= r.y + r.height
+                    };
+                    let clicked_idx = layout
+                        .dock_items
+                        .iter()
+                        .find(|(_, item)| in_rect(&item.card))
+                        .map(|(idx, _)| *idx)
+                        .or_else(|| {
+                            layout
+                                .stage_peek
+                                .as_ref()
+                                .filter(|(_, peek)| in_rect(&peek.card))
+                                .map(|(idx, _)| *idx)
+                        })
+                        .or_else(|| {
+                            if in_rect(&layout.stage_front.1.card) {
+                                Some(layout.stage_front.0)
+                            } else {
+                                None
+                            }
+                        });
+
+                    if let Some(switcher) = state.alt_tab_switcher.take() {
+                        if let Some(idx) = clicked_idx {
+                            if let Some(entry) = switcher.entries.get(idx) {
+                                let window = entry.window.clone();
+                                state.unminimize_window(&window);
+                                crate::compositor::input::keyboard::focus::focus_window(
+                                    state, window, serial,
+                                );
+                            }
+                        }
+                    }
+                    return;
+                }
+            }
+
             if !pointer.is_grabbed() {
                 if let Some((window, location)) = state.window_under(state.pointer_location) {
                     state.space.raise_element(&window, true);

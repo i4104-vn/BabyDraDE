@@ -9,9 +9,28 @@ use render::{
 };
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Runs the lock screen widget.
-pub fn run() {
+static LOCK_SCREEN_RUNNING: AtomicBool = AtomicBool::new(false);
+
+/// Starts the lock screen inside the window-manager process.
+pub fn spawn() {
+    if LOCK_SCREEN_RUNNING
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+    {
+        return;
+    }
+
+    let _ = std::thread::Builder::new()
+        .name("babydra-lock-screen".to_string())
+        .spawn(|| {
+            run();
+            LOCK_SCREEN_RUNNING.store(false, Ordering::Release);
+        });
+}
+
+fn run() {
     let args: Vec<String> = std::env::args().collect();
     let mut custom_image = None;
     if args.len() > 1 {
