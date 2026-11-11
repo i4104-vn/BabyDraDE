@@ -343,4 +343,3 @@ impl BlurPipeline {
         drop(gl_state);
     }
 }
-

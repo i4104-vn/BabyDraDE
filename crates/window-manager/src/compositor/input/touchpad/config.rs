@@ -95,8 +95,8 @@ impl TouchpadConfig {
 ///
 /// * `device` - Mutable reference to the newly connected input device.
 pub(crate) fn handle_device_added<D: std::any::Any>(device: &mut D) {
-    if let Some(libinput_device) = (device as &mut dyn std::any::Any)
-        .downcast_mut::<smithay::reexports::input::Device>()
+    if let Some(libinput_device) =
+        (device as &mut dyn std::any::Any).downcast_mut::<smithay::reexports::input::Device>()
     {
         let config = TouchpadConfig::load();
         configure_touchpad(libinput_device, &config);
@@ -281,4 +281,3 @@ mod tests {
         handle_device_removed(&mock);
     }
 }
-

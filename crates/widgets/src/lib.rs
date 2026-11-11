@@ -9,12 +9,7 @@ pub mod screenshot;
 pub mod topbar;
 
 /// Available built-in widget identifiers
-pub const AVAILABLE_WIDGETS: &[&str] = &[
-    "desktop",
-    "topbar",
-    "panel",
-    "screenshot",
-];
+pub const AVAILABLE_WIDGETS: &[&str] = &["desktop", "topbar", "panel", "screenshot"];
 
 /// Runs a specific built-in widget by name
 pub fn run_widget(name: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -38,4 +33,3 @@ pub fn run_widget(name: &str) -> Result<(), Box<dyn std::error::Error>> {
         .into()),
     }
 }
-

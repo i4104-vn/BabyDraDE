@@ -9,10 +9,10 @@ use smithay::{
     utils::SERIAL_COUNTER,
 };
 
+use super::drag::handle_touch_drag;
 use crate::compositor::input::common::transform_absolute_position;
 use crate::compositor::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
 use crate::compositor::state::BabydraState;
-use super::drag::handle_touch_drag;
 
 /// Handles a touchscreen contact press (touch down).
 ///
@@ -45,11 +45,7 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
         state.space.raise_element(&window, true);
         state.raise_window(&window);
         if let Some(toplevel) = window.toplevel() {
-            keyboard.set_focus(
-                state,
-                Some(toplevel.wl_surface().clone()),
-                serial,
-            );
+            keyboard.set_focus(state, Some(toplevel.wl_surface().clone()), serial);
             state.space.elements().for_each(|w| {
                 let active = w == &window;
                 w.set_activated(active);
@@ -218,4 +214,3 @@ mod tests {
         assert_eq!(oriented_tl.y, 0.0);
     }
 }
-

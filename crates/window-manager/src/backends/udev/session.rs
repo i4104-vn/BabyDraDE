@@ -5,10 +5,7 @@ use smithay::{
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         session::{libseat::LibSeatSession, Session},
     },
-    reexports::{
-        calloop::EventLoop,
-        input::Libinput,
-    },
+    reexports::{calloop::EventLoop, input::Libinput},
 };
 use tracing::info;
 
@@ -39,11 +36,9 @@ impl UdevSession {
         // Setup Libinput for keyboard, pointer, and touch inputs on bare TTY
         let mut libinput_context =
             Libinput::new_with_udev(LibinputSessionInterface::from(session.clone()));
-        libinput_context
-            .udev_assign_seat(&seat_name)
-            .map_err(|_| {
-                std::io::Error::other(format!("Failed to assign seat '{seat_name}' to Libinput"))
-            })?;
+        libinput_context.udev_assign_seat(&seat_name).map_err(|_| {
+            std::io::Error::other(format!("Failed to assign seat '{seat_name}' to Libinput"))
+        })?;
 
         let libinput_backend = LibinputInputBackend::new(libinput_context);
 

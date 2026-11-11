@@ -18,4 +18,3 @@ pub use tile::{
     create_color_btn, create_icon_button, create_square_tile, create_toggle_tile,
     create_wifi_net_icon, update_toggle_state,
 };
-

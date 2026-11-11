@@ -50,7 +50,11 @@ pub(crate) fn cycle_window_focus(state: &mut BabydraState, forward: bool, serial
 /// * `state` - Mutable reference to [`BabydraState`].
 /// * `window` - The desktop [`Window`](smithay::desktop::Window) to raise and focus.
 /// * `serial` - Serial identifier associated with the keyboard focus event.
-pub(crate) fn focus_window(state: &mut BabydraState, window: smithay::desktop::Window, serial: Serial) {
+pub(crate) fn focus_window(
+    state: &mut BabydraState,
+    window: smithay::desktop::Window,
+    serial: Serial,
+) {
     let Some(toplevel) = window.toplevel() else {
         return;
     };
@@ -70,4 +74,3 @@ pub(crate) fn focus_window(state: &mut BabydraState, window: smithay::desktop::W
     });
     state.update_active_window(Some(&window));
 }
-

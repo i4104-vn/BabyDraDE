@@ -30,7 +30,11 @@ pub fn create_toggle_tile(
     h_box.set_valign(gtk4::Align::Center);
     h_box.set_hexpand(true);
 
-    let icon_color = if active { "#ffffff" } else { "rgba(255, 255, 255, 0.7)" };
+    let icon_color = if active {
+        "#ffffff"
+    } else {
+        "rgba(255, 255, 255, 0.7)"
+    };
     let icon = get_icon_colored(icon_name, 18, icon_color);
     icon.set_valign(gtk4::Align::Center);
     h_box.append(&icon);
@@ -79,7 +83,11 @@ pub fn update_toggle_state(btn: &gtk4::Button, active: bool, icon_name: &str) {
         btn.remove_css_class("active");
     }
 
-    let icon_color = if active { "#ffffff" } else { "rgba(255, 255, 255, 0.7)" };
+    let icon_color = if active {
+        "#ffffff"
+    } else {
+        "rgba(255, 255, 255, 0.7)"
+    };
     if let Some(child) = btn.child() {
         if let Some(h_box) = child.downcast_ref::<gtk4::Box>() {
             if let Some(first) = h_box.first_child() {
@@ -111,7 +119,11 @@ pub fn create_square_tile(
         button.add_css_class("active");
     }
 
-    let icon_color = if active { "#ffffff" } else { "rgba(255, 255, 255, 0.8)" };
+    let icon_color = if active {
+        "#ffffff"
+    } else {
+        "rgba(255, 255, 255, 0.8)"
+    };
     let icon = get_icon_colored(icon_name, 18, icon_color);
 
     if label.is_empty() {
@@ -143,7 +155,11 @@ pub fn create_square_tile(
             button_c.remove_css_class("active");
         }
 
-        let col = if new_state { "#ffffff" } else { "rgba(255, 255, 255, 0.8)" };
+        let col = if new_state {
+            "#ffffff"
+        } else {
+            "rgba(255, 255, 255, 0.8)"
+        };
         let new_icon = get_icon_colored(&icon_name_c, 18, col);
         button_c.set_child(Some(&new_icon));
 
@@ -231,4 +247,3 @@ pub fn create_wifi_net_icon(
         get_icon(icon_name, size)
     }
 }
-

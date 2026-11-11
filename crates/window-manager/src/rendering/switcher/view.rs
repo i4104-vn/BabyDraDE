@@ -14,6 +14,9 @@ pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
 const DOCK_X: f64 = 24.0;
 const DOCK_TOP_MARGIN: f64 = 32.0;
 const DOCK_BOTTOM_MARGIN: f64 = 32.0;
+const DOCK_THUMBNAIL_WIDTH: f64 = 175.0;
+const DOCK_THUMBNAIL_HEIGHT: f64 = 115.0;
+const DOCK_GAP: f64 = 12.0;
 const STAGE_SIDE_GAP: f64 = 28.0;
 const STAGE_RIGHT_MARGIN: f64 = 24.0;
 const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
@@ -28,6 +31,7 @@ pub(crate) struct CardLayout {
 
 pub(crate) struct SwitcherLayout {
     pub(crate) stage: (usize, CardLayout),
+    pub(crate) dock_viewport: Rect,
     pub(crate) dock_items: Vec<(usize, CardLayout)>,
 }
 
@@ -45,47 +49,10 @@ pub(crate) fn compute_layout(
     let elapsed = switcher.transition_started.elapsed().as_secs_f64();
     let progress = ease_out_cubic((elapsed / ANIMATION_DURATION.as_secs_f64()).clamp(0.0, 1.0));
 
-    // Dock thumbnails stay fixed while the selected preview animates in the center.
-    let avail_dock_h = (screen_h - DOCK_TOP_MARGIN - DOCK_BOTTOM_MARGIN).max(120.0);
-    let gap = if n <= 4 {
-        16.0
-    } else if n <= 7 {
-        12.0
-    } else {
-        8.0
-    };
-
-    let max_per_item_h = ((avail_dock_h - (n.saturating_sub(1) as f64) * gap) / n as f64).floor();
-    let base_thumb_h = max_per_item_h.clamp(52.0, 115.0);
-    let base_thumb_w = (base_thumb_h / 0.62).clamp(84.0, 175.0);
-    let thumb_pad = 3.0;
-
-    let total_dock_h = n as f64 * base_thumb_h + (n.saturating_sub(1) as f64) * gap;
-    let dock_start_y = ((screen_h - total_dock_h) / 2.0).max(DOCK_TOP_MARGIN);
-
-    let dock_items: Vec<(usize, CardLayout)> = (0..n)
-        .map(|idx| {
-            let card_y = dock_start_y + idx as f64 * (base_thumb_h + gap);
-            let card = Rect::new(DOCK_X, card_y, base_thumb_w, base_thumb_h);
-            let radius = (base_thumb_h * 0.13).clamp(8.0, 14.0);
-            let preview = Rect::new(
-                card.x + thumb_pad,
-                card.y + thumb_pad,
-                card.width - 2.0 * thumb_pad,
-                card.height - 2.0 * thumb_pad,
-            );
-
-            (
-                idx,
-                CardLayout {
-                    card,
-                    preview,
-                    radius,
-                    opacity: 1.0,
-                },
-            )
-        })
-        .collect();
+    // The dock has a bounded viewport. Cards keep a fixed size, and the
+    // selected entry stays centered while the list moves vertically.
+    let (dock_viewport, dock_items) = compute_dock_layout(n, sel, screen_h);
+    let base_thumb_w = DOCK_THUMBNAIL_WIDTH;
 
     // Center stage: a fixed 16:9 presentation area. The selected app is fit
     // into this area by the renderer below; its native aspect ratio must not
@@ -110,7 +77,10 @@ pub(crate) fn compute_layout(
 
     let stage_card = Rect::new(stage_x, stage_y, stage_w, stage_h);
     let stage_preview = stage_card;
-    let stage_center = (stage_card.center_x(), stage_card.y + stage_card.height / 2.0);
+    let stage_center = (
+        stage_card.center_x(),
+        stage_card.y + stage_card.height / 2.0,
+    );
     let stage_scale = 0.965 + 0.035 * progress;
     let stage_card = scale_rect_around(stage_card, stage_center, stage_scale);
     let stage_preview = scale_rect_around(stage_preview, stage_center, stage_scale);
@@ -126,8 +96,60 @@ pub(crate) fn compute_layout(
 
     Some(SwitcherLayout {
         stage,
+        dock_viewport,
         dock_items,
     })
+}
+
+fn compute_dock_layout(
+    entry_count: usize,
+    selected_index: usize,
+    screen_h: f64,
+) -> (Rect, Vec<(usize, CardLayout)>) {
+    let viewport_y = DOCK_TOP_MARGIN.min((screen_h - 1.0).max(0.0));
+    let viewport_bottom = (screen_h - DOCK_BOTTOM_MARGIN).max(viewport_y + 1.0);
+    let viewport = Rect::new(
+        DOCK_X,
+        viewport_y,
+        DOCK_THUMBNAIL_WIDTH,
+        viewport_bottom - viewport_y,
+    );
+
+    let thumb_pad = 3.0;
+    let item_step = DOCK_THUMBNAIL_HEIGHT + DOCK_GAP;
+    let selected_y = viewport.y + (viewport.height - DOCK_THUMBNAIL_HEIGHT) / 2.0;
+    let first_item_y = selected_y - selected_index as f64 * item_step;
+    let viewport_bottom = viewport.y + viewport.height;
+
+    let dock_items = (0..entry_count)
+        .filter_map(|idx| {
+            let card_y = first_item_y + idx as f64 * item_step;
+            let card_bottom = card_y + DOCK_THUMBNAIL_HEIGHT;
+            if card_bottom <= viewport.y || card_y >= viewport_bottom {
+                return None;
+            }
+
+            let card = Rect::new(DOCK_X, card_y, DOCK_THUMBNAIL_WIDTH, DOCK_THUMBNAIL_HEIGHT);
+            let preview = Rect::new(
+                card.x + thumb_pad,
+                card.y + thumb_pad,
+                card.width - 2.0 * thumb_pad,
+                card.height - 2.0 * thumb_pad,
+            );
+
+            Some((
+                idx,
+                CardLayout {
+                    card,
+                    preview,
+                    radius: (DOCK_THUMBNAIL_HEIGHT * 0.13).clamp(8.0, 14.0),
+                    opacity: 1.0,
+                },
+            ))
+        })
+        .collect();
+
+    (viewport, dock_items)
 }
 
 fn ease_out_cubic(value: f64) -> f64 {
@@ -155,8 +177,17 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    // The center preview has no frame or backdrop. Only the dock is drawn here,
-    // with fixed thumbnail geometry and a static selection outline.
+    // Clip dock decorations to the same viewport used by its previews and
+    // pointer hit-testing.
+    context.save()?;
+    context.rectangle(
+        layout.dock_viewport.x,
+        layout.dock_viewport.y,
+        layout.dock_viewport.width,
+        layout.dock_viewport.height,
+    );
+    context.clip();
+
     for (entry_idx, item) in &layout.dock_items {
         let is_selected = *entry_idx == switcher.selected_index;
         draw_card_border(context, item.card, item.radius, is_selected, 1.0)?;
@@ -169,6 +200,7 @@ pub(crate) fn draw_switcher_foreground(
         }
     }
 
+    context.restore()?;
     Ok(())
 }
 
@@ -186,4 +218,42 @@ mod tests {
         assert!(compute_layout(&switcher, 1920.0, 1080.0).is_none());
     }
 
+    #[test]
+    fn dock_viewport_is_bounded_and_thumbnail_size_is_fixed() {
+        let (short_viewport, short_items) = compute_dock_layout(2, 0, 1080.0);
+        let (long_viewport, long_items) = compute_dock_layout(30, 12, 1080.0);
+
+        assert_eq!(short_viewport.height, 1016.0);
+        assert_eq!(long_viewport.height, short_viewport.height);
+        assert_eq!(short_items[0].1.card.width, DOCK_THUMBNAIL_WIDTH);
+        assert_eq!(short_items[0].1.card.height, DOCK_THUMBNAIL_HEIGHT);
+        assert_eq!(long_items[0].1.card.width, DOCK_THUMBNAIL_WIDTH);
+        assert_eq!(long_items[0].1.card.height, DOCK_THUMBNAIL_HEIGHT);
+    }
+
+    #[test]
+    fn selected_dock_item_stays_centered_at_both_ends_and_in_the_middle() {
+        let entry_count = 30;
+
+        for selected_index in [0, 14, entry_count - 1] {
+            let (viewport, items) = compute_dock_layout(entry_count, selected_index, 1080.0);
+            let (_, selected) = items
+                .iter()
+                .find(|(idx, _)| *idx == selected_index)
+                .expect("selected item should intersect the viewport");
+            let selected_center = selected.card.y + selected.card.height / 2.0;
+            let viewport_center = viewport.y + viewport.height / 2.0;
+
+            assert!((selected_center - viewport_center).abs() < 0.001);
+        }
+    }
+
+    #[test]
+    fn visible_dock_items_keep_top_to_bottom_entry_order() {
+        let (_, items) = compute_dock_layout(30, 12, 1080.0);
+
+        assert!(items
+            .windows(2)
+            .all(|pair| { pair[0].0 < pair[1].0 && pair[0].1.card.y < pair[1].1.card.y }));
+    }
 }

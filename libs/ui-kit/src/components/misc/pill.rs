@@ -35,4 +35,3 @@ impl PillBox {
         self.container.set_tooltip_text(Some(text));
     }
 }
-

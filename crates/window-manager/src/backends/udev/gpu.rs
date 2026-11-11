@@ -106,7 +106,10 @@ fn try_init_gpu(
     ) {
         Ok(fd) => fd,
         Err(err) => {
-            warn!("Failed to open GPU {:?} via LibSeat: {err}", primary_gpu_path);
+            warn!(
+                "Failed to open GPU {:?} via LibSeat: {err}",
+                primary_gpu_path
+            );
             return None;
         }
     };
@@ -117,7 +120,10 @@ fn try_init_gpu(
     let (mut drm_device, drm_notifier) = match DrmDevice::new(drm_device_fd.clone(), false) {
         Ok(dev) => dev,
         Err(err) => {
-            warn!("Failed to initialize DrmDevice on {:?}: {err}", primary_gpu_path);
+            warn!(
+                "Failed to initialize DrmDevice on {:?}: {err}",
+                primary_gpu_path
+            );
             return None;
         }
     };
@@ -125,7 +131,10 @@ fn try_init_gpu(
     let gbm_device: GbmDevice<DrmDeviceFd> = match GbmDevice::new(drm_device_fd.clone()) {
         Ok(gbm) => gbm,
         Err(err) => {
-            warn!("Failed to create GbmDevice on {:?}: {err}", primary_gpu_path);
+            warn!(
+                "Failed to create GbmDevice on {:?}: {err}",
+                primary_gpu_path
+            );
             drm_device.pause();
             return None;
         }
@@ -137,7 +146,10 @@ fn try_init_gpu(
     let egl_display = match unsafe { EGLDisplay::new(gbm_device.clone()) } {
         Ok(disp) => disp,
         Err(err) => {
-            warn!("Failed to create EGLDisplay on {:?}: {err}", primary_gpu_path);
+            warn!(
+                "Failed to create EGLDisplay on {:?}: {err}",
+                primary_gpu_path
+            );
             drm_device.pause();
             return None;
         }
@@ -146,7 +158,10 @@ fn try_init_gpu(
     let egl_context = match EGLContext::new(&egl_display) {
         Ok(ctx) => ctx,
         Err(err) => {
-            warn!("Failed to create EGLContext on {:?}: {err}", primary_gpu_path);
+            warn!(
+                "Failed to create EGLContext on {:?}: {err}",
+                primary_gpu_path
+            );
             drm_device.pause();
             return None;
         }
@@ -155,7 +170,10 @@ fn try_init_gpu(
     let renderer = match unsafe { GlowRenderer::new(egl_context) } {
         Ok(ren) => ren,
         Err(err) => {
-            warn!("Failed to initialize GlowRenderer on {:?}: {err}", primary_gpu_path);
+            warn!(
+                "Failed to initialize GlowRenderer on {:?}: {err}",
+                primary_gpu_path
+            );
             drm_device.pause();
             return None;
         }
@@ -254,7 +272,9 @@ fn try_init_gpu(
                 data.state.space.map_output(&output, (0, 0));
 
                 let planes = drm_device.planes(&crtc).ok();
-                if let Ok(drm_surface) = drm_device.create_surface(crtc, drm_mode, &[connector.handle()]) {
+                if let Ok(drm_surface) =
+                    drm_device.create_surface(crtc, drm_mode, &[connector.handle()])
+                {
                     if let Ok(compositor) = DrmCompositor::new(
                         &output,
                         drm_surface,
@@ -280,13 +300,7 @@ fn try_init_gpu(
                 primary_gpu_path,
                 surfaces.len()
             );
-            Some((
-                drm_device,
-                drm_notifier,
-                surfaces,
-                renderer,
-                gbm_device,
-            ))
+            Some((drm_device, drm_notifier, surfaces, renderer, gbm_device))
         }
         true => {
             drm_device.pause();

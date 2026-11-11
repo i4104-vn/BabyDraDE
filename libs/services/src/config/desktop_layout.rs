@@ -98,4 +98,3 @@ pub fn flush_if_dirty() {
         });
     }
 }
-

@@ -26,4 +26,3 @@ impl FluentButton {
         &self.button
     }
 }
-

@@ -59,7 +59,10 @@ impl BlurEngine {
         }
 
         let ns_lower = namespace.to_lowercase();
-        if ns_lower.contains("topbar") || ns_lower.contains("desktop") || ns_lower.contains("wallpaper") {
+        if ns_lower.contains("topbar")
+            || ns_lower.contains("desktop")
+            || ns_lower.contains("wallpaper")
+        {
             return false;
         }
 

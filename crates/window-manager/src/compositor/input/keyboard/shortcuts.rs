@@ -4,10 +4,10 @@ use smithay::input::keyboard::{keysyms, ModifiersState};
 use smithay::utils::Serial;
 use tracing::info;
 
-use crate::compositor::state::BabydraState;
-use crate::rendering::lock;
 use super::focus::{cycle_window_focus, focus_window};
 use super::launcher::spawn_new_terminal;
+use crate::compositor::state::BabydraState;
+use crate::rendering::lock;
 
 /// High-level compositor actions triggered by keyboard shortcuts.
 #[derive(Debug, PartialEq, Eq)]
@@ -48,81 +48,55 @@ pub(crate) enum KeyboardAction {
 /// # Returns
 ///
 /// Returns `Some(KeyboardAction)` if a global shortcut matched, or `None` if the event should forward to clients.
-pub(crate) fn check_key_shortcut(
-    modifiers: &ModifiersState,
-    sym: u32,
-) -> Option<KeyboardAction> {
+pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option<KeyboardAction> {
     // 1. Super + Escape OR Super + Shift + Q OR Ctrl + Alt + Backspace: Quit WM immediately
     if (modifiers.logo && sym == keysyms::KEY_Escape)
-        || (modifiers.logo
-            && modifiers.shift
-            && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q))
+        || (modifiers.logo && modifiers.shift && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q))
         || (modifiers.ctrl && modifiers.alt && sym == keysyms::KEY_BackSpace)
     {
         return Some(KeyboardAction::QuitCompositor);
     }
 
     // 2. Super + Q: Close active window
-    if modifiers.logo
-        && !modifiers.shift
-        && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q)
-    {
+    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q) {
         return Some(KeyboardAction::CloseActiveWindow);
     }
 
     // 3. Super (Win) + T OR Super + Return: Spawn new terminal window
     if modifiers.logo
-        && (sym == keysyms::KEY_t
-            || sym == keysyms::KEY_T
-            || sym == keysyms::KEY_Return)
+        && (sym == keysyms::KEY_t || sym == keysyms::KEY_T || sym == keysyms::KEY_Return)
     {
         return Some(KeyboardAction::SpawnTerminal);
     }
 
     // 4. Super + L: Lock the current session
-    if modifiers.logo
-        && !modifiers.shift
-        && (sym == keysyms::KEY_l || sym == keysyms::KEY_L)
-    {
+    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_l || sym == keysyms::KEY_L) {
         return Some(KeyboardAction::LockScreen);
     }
 
     // 5. Alt + Tab: choose a window, then focus it when Alt is released
-    if modifiers.alt
-        && (sym == keysyms::KEY_Tab || sym == keysyms::KEY_ISO_Left_Tab)
-    {
+    if modifiers.alt && (sym == keysyms::KEY_Tab || sym == keysyms::KEY_ISO_Left_Tab) {
         let backwards = modifiers.shift || sym == keysyms::KEY_ISO_Left_Tab;
         return Some(KeyboardAction::AltTabStep { backwards });
     }
 
     // 5. Super + B: Toggle blur on the active window
-    if modifiers.logo
-        && (sym == keysyms::KEY_b || sym == keysyms::KEY_B)
-    {
+    if modifiers.logo && (sym == keysyms::KEY_b || sym == keysyms::KEY_B) {
         return Some(KeyboardAction::ToggleBlur);
     }
 
     // 6. Super + M: Maximize/Restore active window
-    if modifiers.logo
-        && !modifiers.shift
-        && (sym == keysyms::KEY_m || sym == keysyms::KEY_M)
-    {
+    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_m || sym == keysyms::KEY_M) {
         return Some(KeyboardAction::ToggleMaximize);
     }
 
     // 7. Super + H: Minimize active window
-    if modifiers.logo
-        && !modifiers.shift
-        && (sym == keysyms::KEY_h || sym == keysyms::KEY_H)
-    {
+    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_h || sym == keysyms::KEY_H) {
         return Some(KeyboardAction::Minimize);
     }
 
     // 8. Super + F: Toggle fullscreen on the active window
-    if modifiers.logo
-        && !modifiers.shift
-        && (sym == keysyms::KEY_f || sym == keysyms::KEY_F)
-    {
+    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_f || sym == keysyms::KEY_F) {
         return Some(KeyboardAction::ToggleFullscreen);
     }
 
@@ -146,11 +120,7 @@ pub(crate) fn check_key_shortcut(
 /// * `state` - Mutable reference to [`BabydraState`].
 /// * `action` - The [`KeyboardAction`] to perform.
 /// * `serial` - Serial identifier associated with the keyboard event.
-pub(crate) fn execute_action(
-    state: &mut BabydraState,
-    action: KeyboardAction,
-    serial: Serial,
-) {
+pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, serial: Serial) {
     match action {
         KeyboardAction::QuitCompositor => {
             info!("Quit shortcut pressed: Stopping BabyDraDE compositor...");
@@ -224,4 +194,3 @@ pub(crate) fn execute_action(
         }
     }
 }
-

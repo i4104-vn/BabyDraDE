@@ -64,8 +64,7 @@ impl PillSlider {
         container.append(&scale);
 
         let silent = Rc::new(Cell::new(false));
-        let change_callbacks: SliderCallbacks =
-            Rc::new(RefCell::new(vec![Rc::new(on_change)]));
+        let change_callbacks: SliderCallbacks = Rc::new(RefCell::new(vec![Rc::new(on_change)]));
 
         let silent_c = silent.clone();
         let callbacks_c = change_callbacks.clone();
@@ -90,11 +89,9 @@ impl PillSlider {
     /// Binds a label to show `{:.0}%` whenever the slider value changes.
     pub fn bind_label(&self, label: &gtk4::Label) {
         let lbl = label.clone();
-        self.change_callbacks
-            .borrow_mut()
-            .push(Rc::new(move |val| {
-                lbl.set_text(&format!("{:.0}%", val));
-            }));
+        self.change_callbacks.borrow_mut().push(Rc::new(move |val| {
+            lbl.set_text(&format!("{:.0}%", val));
+        }));
     }
 
     /// Connects a debounced callback that fires `ms` milliseconds after the user stops moving the slider.
@@ -118,12 +115,13 @@ impl PillSlider {
             let cb = callback_rc.clone();
             let slot = source_slot.clone();
 
-            let id = glib::timeout_add_local(std::time::Duration::from_millis(ms as u64), move || {
-                let val = sc.value();
-                cb(val);
-                *slot.borrow_mut() = None;
-                glib::ControlFlow::Break
-            });
+            let id =
+                glib::timeout_add_local(std::time::Duration::from_millis(ms as u64), move || {
+                    let val = sc.value();
+                    cb(val);
+                    *slot.borrow_mut() = None;
+                    glib::ControlFlow::Break
+                });
 
             *source_slot.borrow_mut() = Some(id);
         });
@@ -166,4 +164,3 @@ impl PillSlider {
         self.scale.value()
     }
 }
-

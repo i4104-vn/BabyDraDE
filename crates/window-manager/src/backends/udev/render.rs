@@ -129,9 +129,9 @@ pub fn setup_render_loop(
 
                     let output = &surface_data.output;
                     let blur_engine = Some(&state.blur_engine);
-                    let oriented_size = output.current_mode().map(|mode| {
-                        output.current_transform().transform_size(mode.size)
-                    });
+                    let oriented_size = output
+                        .current_mode()
+                        .map(|mode| output.current_transform().transform_size(mode.size));
 
                     // 2. Render Overlay & Top layer surfaces (topbar, dynamic island, notification popups)
                     render_elements.extend(render_layer_surfaces(

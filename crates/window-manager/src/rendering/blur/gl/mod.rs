@@ -5,4 +5,3 @@ pub(crate) mod shaders;
 
 pub use pipeline::BlurPipeline;
 pub use projection::project_rect_to_gl;
-

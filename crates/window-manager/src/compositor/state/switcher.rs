@@ -131,7 +131,11 @@ impl BabydraState {
                 let original_size = Some(window.geometry().size);
                 let was_maximized = window
                     .toplevel()
-                    .map(|t| t.current_state().states.contains(xdg_toplevel::State::Maximized))
+                    .map(|t| {
+                        t.current_state()
+                            .states
+                            .contains(xdg_toplevel::State::Maximized)
+                    })
                     .unwrap_or(false);
                 let was_minimized = window_state(window).lock().unwrap().is_minimized;
 

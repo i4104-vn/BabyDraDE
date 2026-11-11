@@ -153,7 +153,12 @@ impl XdgShellHandler for BabydraState {
 pub(super) fn handle_commit(popups: &mut PopupManager, space: &Space<Window>, surface: &WlSurface) {
     if let Some(window) = space
         .elements()
-        .find(|window| window.toplevel().map(|t| t.wl_surface() == surface).unwrap_or(false))
+        .find(|window| {
+            window
+                .toplevel()
+                .map(|t| t.wl_surface() == surface)
+                .unwrap_or(false)
+        })
         .cloned()
     {
         window.on_commit();

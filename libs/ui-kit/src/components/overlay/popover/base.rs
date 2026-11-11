@@ -50,7 +50,11 @@ impl FluentPopover {
     }
 
     /// Creates a new styled Popover with custom CSS classes.
-    pub fn with_css_class(parent: &impl IsA<Widget>, position: PositionType, css_class: &str) -> Self {
+    pub fn with_css_class(
+        parent: &impl IsA<Widget>,
+        position: PositionType,
+        css_class: &str,
+    ) -> Self {
         let popover = create_popover(parent, position, css_class);
         let container = Box::new(Orientation::Vertical, 4);
         popover.set_child(Some(&container));
@@ -116,4 +120,3 @@ impl FluentPopover {
         &self.container
     }
 }
-

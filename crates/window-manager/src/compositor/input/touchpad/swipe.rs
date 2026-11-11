@@ -6,9 +6,7 @@ use smithay::{
         GestureBeginEvent, GestureEndEvent, GestureSwipeBeginEvent as SwipeBegin,
         GestureSwipeEndEvent as SwipeEnd, GestureSwipeUpdateEvent as SwipeUpdate, InputBackend,
     },
-    input::pointer::{
-        GestureSwipeBeginEvent, GestureSwipeEndEvent, GestureSwipeUpdateEvent,
-    },
+    input::pointer::{GestureSwipeBeginEvent, GestureSwipeEndEvent, GestureSwipeUpdateEvent},
     utils::{Point, SERIAL_COUNTER},
 };
 
@@ -138,11 +136,8 @@ where
                 cfg.swipe_threshold
             };
 
-            let direction = SwipeDirection::from_delta(
-                gesture.total_delta.x,
-                gesture.total_delta.y,
-                threshold,
-            );
+            let direction =
+                SwipeDirection::from_delta(gesture.total_delta.x, gesture.total_delta.y, threshold);
 
             if let Some(dir) = direction {
                 let consumed = match gesture.fingers {

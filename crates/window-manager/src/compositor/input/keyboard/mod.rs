@@ -63,9 +63,7 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
 
             if switcher_active
                 && event.state() == KeyState::Released
-                && (!modifiers.alt
-                    || sym == keysyms::KEY_Alt_L
-                    || sym == keysyms::KEY_Alt_R)
+                && (!modifiers.alt || sym == keysyms::KEY_Alt_L || sym == keysyms::KEY_Alt_R)
             {
                 action_to_execute = Some(KeyboardAction::AltTabCommit);
             }

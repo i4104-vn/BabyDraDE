@@ -96,7 +96,10 @@ pub(crate) fn configure_mouse(
     if device.config_accel_is_available() {
         if let Some(speed) = config.speed {
             if let Err(err) = device.config_accel_set_speed(speed) {
-                warn!("Failed to set speed {} on mouse '{}': {:?}", speed, name, err);
+                warn!(
+                    "Failed to set speed {} on mouse '{}': {:?}",
+                    speed, name, err
+                );
             }
         }
     }

@@ -57,9 +57,10 @@ pub(crate) fn handle_window_drag(
 
         let new_loc = move_state.initial_window_location
             + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
-        state.space.map_element(move_state.window.clone(), new_loc, false);
+        state
+            .space
+            .map_element(move_state.window.clone(), new_loc, false);
         return true;
     }
     false
 }
-

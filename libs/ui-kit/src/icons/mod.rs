@@ -9,15 +9,16 @@ use gtk4::gio::prelude::*;
 use gtk4::gio::MemoryInputStream;
 use gtk4::glib;
 
-pub use resolver::resolve_icon_pair;
 pub use crate::theme::is_dark_mode;
+pub use resolver::resolve_icon_pair;
 
 /// Converts SVG string content into a `gtk4::Image` at the requested pixel size.
 pub fn get_icon_from_svg(svg_content: &str, size: i32) -> gtk4::Image {
     let bytes = glib::Bytes::from(svg_content.as_bytes());
     let stream = MemoryInputStream::from_bytes(&bytes);
 
-    let pixbuf = Pixbuf::from_stream_at_scale(&stream, size, size, true, gtk4::gio::Cancellable::NONE);
+    let pixbuf =
+        Pixbuf::from_stream_at_scale(&stream, size, size, true, gtk4::gio::Cancellable::NONE);
 
     match pixbuf {
         Ok(pb) => {
@@ -59,9 +60,15 @@ pub fn get_icon_colored(name: &str, size: i32, color_hex: &str) -> gtk4::Image {
     let final_color = if !is_dark_mode() {
         let normalized = color_hex.replace(' ', "");
         match normalized.as_str() {
-            "rgba(255,255,255,0.8)" | "rgba(255,255,255,0.80)" => "rgba(28, 28, 30, 0.85)".to_string(),
-            "rgba(255,255,255,0.7)" | "rgba(255,255,255,0.70)" => "rgba(28, 28, 30, 0.75)".to_string(),
-            "rgba(255,255,255,0.6)" | "rgba(255,255,255,0.60)" => "rgba(28, 28, 30, 0.65)".to_string(),
+            "rgba(255,255,255,0.8)" | "rgba(255,255,255,0.80)" => {
+                "rgba(28, 28, 30, 0.85)".to_string()
+            }
+            "rgba(255,255,255,0.7)" | "rgba(255,255,255,0.70)" => {
+                "rgba(28, 28, 30, 0.75)".to_string()
+            }
+            "rgba(255,255,255,0.6)" | "rgba(255,255,255,0.60)" => {
+                "rgba(28, 28, 30, 0.65)".to_string()
+            }
             _ => color_hex.to_string(),
         }
     } else {
@@ -110,7 +117,9 @@ fn register_icon_watcher(img: &gtk4::Image, name: &str, size: i32) {
         });
 
         ICON_WATCHERS.with(|watchers| {
-            watchers.borrow_mut().push((img.downgrade(), name.to_string(), size));
+            watchers
+                .borrow_mut()
+                .push((img.downgrade(), name.to_string(), size));
         });
     }
 }

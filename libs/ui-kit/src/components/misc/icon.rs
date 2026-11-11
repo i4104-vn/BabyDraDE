@@ -1,6 +1,6 @@
-use std::path::Path;
 use gtk4::prelude::*;
 use gtk4::{Image, Label, Widget};
+use std::path::Path;
 
 /// Helper to construct icons from SVG files or Unicode font glyphs
 pub struct Icon;
@@ -17,4 +17,3 @@ impl Icon {
         }
     }
 }
-

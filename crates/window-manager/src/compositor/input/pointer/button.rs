@@ -51,11 +51,9 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 let logical_w = (size.w as f64 / scale.x).max(1.0);
                 let logical_h = (size.h as f64 / scale.y).max(1.0);
 
-                if let Some(layout) = crate::rendering::switcher::view::compute_layout(
-                    switcher,
-                    logical_w,
-                    logical_h,
-                ) {
+                if let Some(layout) =
+                    crate::rendering::switcher::view::compute_layout(switcher, logical_w, logical_h)
+                {
                     let px = state.pointer_location.x;
                     let py = state.pointer_location.y;
                     let in_rect = |r: &crate::rendering::switcher::draw::Rect| {
@@ -64,7 +62,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     let clicked_idx = layout
                         .dock_items
                         .iter()
-                        .find(|(_, item)| in_rect(&item.card))
+                        .find(|(_, item)| in_rect(&layout.dock_viewport) && in_rect(&item.card))
                         .map(|(idx, _)| *idx)
                         .or_else(|| {
                             if in_rect(&layout.stage.1.card) {
@@ -188,4 +186,3 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
     );
     pointer.frame(state);
 }
-

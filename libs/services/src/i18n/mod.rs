@@ -115,9 +115,11 @@ pub fn watch_locale_changes() -> mpsc::Receiver<String> {
         .name("babydra-locale-watcher".into())
         .spawn(move || {
             let (event_tx, event_rx) = mpsc::channel();
-            let Ok(mut watcher): Result<RecommendedWatcher, _> = notify::recommended_watcher(move |_| {
-                let _ = event_tx.send(());
-            }) else {
+            let Ok(mut watcher): Result<RecommendedWatcher, _> =
+                notify::recommended_watcher(move |_| {
+                    let _ = event_tx.send(());
+                })
+            else {
                 return;
             };
             if watcher.watch(&path, RecursiveMode::NonRecursive).is_err() {

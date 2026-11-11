@@ -1,6 +1,9 @@
 use glow::HasContext;
 
-pub(crate) fn gl_object<T>(value: i32, create: impl FnOnce(std::num::NonZeroU32) -> T) -> Option<T> {
+pub(crate) fn gl_object<T>(
+    value: i32,
+    create: impl FnOnce(std::num::NonZeroU32) -> T,
+) -> Option<T> {
     std::num::NonZeroU32::new(value as u32).map(create)
 }
 

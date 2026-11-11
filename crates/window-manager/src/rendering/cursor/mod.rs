@@ -41,9 +41,9 @@ impl Cursor {
             let _ = context.draw(|buf| {
                 for (idx, &pixel_type) in CURSOR_PIXELS.iter().enumerate() {
                     let pixel = match pixel_type {
-                        1 => [0, 0, 0, 255],           // Black outline
-                        2 => [230, 248, 255, 255],     // Bright cyan-white body
-                        _ => [0, 0, 0, 0],             // Transparent
+                        1 => [0, 0, 0, 255],       // Black outline
+                        2 => [230, 248, 255, 255], // Bright cyan-white body
+                        _ => [0, 0, 0, 0],         // Transparent
                     };
                     buf[idx * 4..idx * 4 + 4].copy_from_slice(&pixel);
                 }
@@ -77,4 +77,3 @@ impl Cursor {
         .map(CustomRenderElements::Memory)
     }
 }
-

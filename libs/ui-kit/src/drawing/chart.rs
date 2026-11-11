@@ -14,13 +14,7 @@ fn hex_to_rgb(hex: &str) -> (f64, f64, f64) {
     }
 }
 
-pub fn draw_metric_chart(
-    cr: &cairo::Context,
-    w: f64,
-    h: f64,
-    history: &[f64],
-    color_hex: &str,
-) {
+pub fn draw_metric_chart(cr: &cairo::Context, w: f64, h: f64, history: &[f64], color_hex: &str) {
     if history.is_empty() {
         return;
     }
@@ -72,4 +66,3 @@ pub fn draw_metric_chart(
     cr.set_line_width(2.0);
     let _ = cr.stroke();
 }
-

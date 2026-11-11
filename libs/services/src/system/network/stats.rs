@@ -61,7 +61,8 @@ impl NetworkReader {
         let mut rx_speed_bps = 0.0f32;
         let mut tx_speed_bps = 0.0f32;
 
-        if let (Some(last_time), Some((prev_rx, prev_tx))) = (self.last_read_time, self.last_totals) {
+        if let (Some(last_time), Some((prev_rx, prev_tx))) = (self.last_read_time, self.last_totals)
+        {
             let elapsed_secs = (now - last_time).as_secs_f32();
             if elapsed_secs > 0.001 {
                 rx_speed_bps = (total_rx.saturating_sub(prev_rx) as f32) / elapsed_secs;

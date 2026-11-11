@@ -7,8 +7,8 @@ use smithay::{
         GesturePinchEndEvent as PinchEnd, GesturePinchUpdateEvent as PinchUpdate, InputBackend,
     },
     input::pointer::{
-        GestureHoldBeginEvent, GestureHoldEndEvent, GesturePinchBeginEvent,
-        GesturePinchEndEvent, GesturePinchUpdateEvent,
+        GestureHoldBeginEvent, GestureHoldEndEvent, GesturePinchBeginEvent, GesturePinchEndEvent,
+        GesturePinchUpdateEvent,
     },
     utils::SERIAL_COUNTER,
 };
@@ -130,4 +130,3 @@ where
         );
     }
 }
-

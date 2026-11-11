@@ -1,20 +1,19 @@
 use cairo::{Context, Format, ImageSurface};
 use smithay::{
+    backend::renderer::element::utils::{ConstrainAlign, ConstrainScaleBehavior},
     backend::renderer::{
         element::{
             memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
+            utils::CropRenderElement,
             Kind,
         },
         glow::GlowRenderer,
     },
     desktop::{
-        space::{
-            constrain_space_element, ConstrainBehavior, ConstrainReference,
-        },
+        space::{constrain_space_element, ConstrainBehavior, ConstrainReference},
         Window,
     },
     utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Size, Transform},
-    backend::renderer::element::utils::{ConstrainAlign, ConstrainScaleBehavior},
 };
 
 use crate::compositor::AltTabSwitcher;
@@ -24,6 +23,8 @@ use super::{
     draw::Rect,
     view::{compute_layout, draw_switcher_foreground},
 };
+
+use crate::rendering::elements::types::ConstrainedSurface;
 
 #[derive(Default)]
 pub struct SwitcherOverlay {
@@ -113,27 +114,51 @@ impl SwitcherOverlay {
         // 2. Center window preview. Its size and opacity animate during selection.
         let (front_idx, front_layout) = &layout.stage;
         if let Some(entry) = switcher.entries.get(*front_idx) {
-            elements.extend(render_window_preview(
-                renderer,
-                &entry.window,
-                front_layout.preview,
-                scale,
-                front_layout.opacity as f32,
-                ConstrainScaleBehavior::Stretch,
-            ));
+            elements.extend(
+                render_window_preview(
+                    renderer,
+                    &entry.window,
+                    front_layout.preview,
+                    scale,
+                    front_layout.opacity as f32,
+                    ConstrainScaleBehavior::Stretch,
+                )
+                .into_iter()
+                .map(CustomRenderElements::Constrained),
+            );
         }
 
         // 3. Dock thumbnails stay stationary with their aspect ratios preserved.
+        let dock_crop = Rectangle::<i32, Physical>::new(
+            Point::<i32, Physical>::from((
+                (layout.dock_viewport.x * scale.x).floor() as i32,
+                (layout.dock_viewport.y * scale.y).floor() as i32,
+            )),
+            Size::<i32, Physical>::from((
+                ((layout.dock_viewport.x + layout.dock_viewport.width) * scale.x).ceil() as i32
+                    - (layout.dock_viewport.x * scale.x).floor() as i32,
+                ((layout.dock_viewport.y + layout.dock_viewport.height) * scale.y).ceil() as i32
+                    - (layout.dock_viewport.y * scale.y).floor() as i32,
+            )),
+        );
+
         for (dock_idx, dock_layout) in &layout.dock_items {
             if let Some(entry) = switcher.entries.get(*dock_idx) {
-                elements.extend(render_window_preview(
-                    renderer,
-                    &entry.window,
-                    dock_layout.preview,
-                    scale,
-                    (0.95 * dock_layout.opacity) as f32,
-                    ConstrainScaleBehavior::Fit,
-                ));
+                elements.extend(
+                    render_window_preview(
+                        renderer,
+                        &entry.window,
+                        dock_layout.preview,
+                        scale,
+                        (0.95 * dock_layout.opacity) as f32,
+                        ConstrainScaleBehavior::Fit,
+                    )
+                    .into_iter()
+                    .filter_map(|preview| {
+                        CropRenderElement::from_element(preview, scale, dock_crop)
+                            .map(CustomRenderElements::DockClipped)
+                    }),
+                );
             }
         }
 
@@ -156,7 +181,7 @@ fn render_window_preview(
     output_scale: Scale<f64>,
     alpha: f32,
     scale_behavior: ConstrainScaleBehavior,
-) -> Vec<CustomRenderElements> {
+) -> Vec<ConstrainedSurface> {
     // Guard: window must have a valid bounding-box so constrain can compute scale.
     let bbox = window.bbox();
     if bbox.size.w <= 0 || bbox.size.h <= 0 {
@@ -169,10 +194,7 @@ fn render_window_preview(
 
     // The constrain rect in logical coordinates (what the layout computed).
     let constrain = Rectangle::<i32, Logical>::new(
-        Point::<i32, Logical>::from((
-            target_rect.x.round() as i32,
-            target_rect.y.round() as i32,
-        )),
+        Point::<i32, Logical>::from((target_rect.x.round() as i32, target_rect.y.round() as i32)),
         Size::<i32, Logical>::from((
             (target_rect.width.round() as i32).max(4),
             (target_rect.height.round() as i32).max(4),
@@ -191,7 +213,7 @@ fn render_window_preview(
         align: ConstrainAlign::CENTER,
     };
 
-    constrain_space_element::<GlowRenderer, Window, CustomRenderElements>(
+    constrain_space_element::<GlowRenderer, Window, ConstrainedSurface>(
         renderer,
         window,
         location,
@@ -203,12 +225,7 @@ fn render_window_preview(
     .collect()
 }
 
-fn render_pixels<F>(
-    width: i32,
-    height: i32,
-    scale: Scale<f64>,
-    draw_fn: F,
-) -> Option<Vec<u8>>
+fn render_pixels<F>(width: i32, height: i32, scale: Scale<f64>, draw_fn: F) -> Option<Vec<u8>>
 where
     F: FnOnce(&Context) -> Result<(), cairo::Error>,
 {

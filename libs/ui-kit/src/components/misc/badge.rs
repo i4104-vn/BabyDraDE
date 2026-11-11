@@ -8,10 +8,7 @@ pub struct Badge {
 
 impl Badge {
     pub fn new(text: &str) -> Self {
-        let label = Label::builder()
-            .label(text)
-            .css_classes(["badge"])
-            .build();
+        let label = Label::builder().label(text).css_classes(["badge"]).build();
 
         Self { label }
     }
@@ -30,4 +27,3 @@ impl Badge {
         &self.label
     }
 }
-

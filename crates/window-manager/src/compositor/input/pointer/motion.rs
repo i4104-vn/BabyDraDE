@@ -6,9 +6,9 @@ use smithay::{
     utils::SERIAL_COUNTER,
 };
 
+use super::drag::handle_window_drag;
 use crate::compositor::input::common::transform_absolute_position;
 use crate::compositor::state::BabydraState;
-use super::drag::handle_window_drag;
 
 /// Handles relative pointer motion events (such as mice and touchpad cursor movements).
 ///
@@ -93,4 +93,3 @@ pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositio
     );
     pointer.frame(state);
 }
-

@@ -1,8 +1,10 @@
 use smithay::backend::renderer::{
     element::{
-        memory::MemoryRenderBufferRenderElement, render_elements,
-        surface::WaylandSurfaceRenderElement, Id,
+        memory::MemoryRenderBufferRenderElement,
+        render_elements,
+        surface::WaylandSurfaceRenderElement,
         utils::{CropRenderElement, RelocateRenderElement, RescaleRenderElement},
+        Id,
     },
     glow::GlowRenderer,
 };
@@ -18,6 +20,7 @@ pub(crate) struct LayerBlurId(pub(crate) Id);
 pub type ConstrainedSurface = CropRenderElement<
     RelocateRenderElement<RescaleRenderElement<WaylandSurfaceRenderElement<GlowRenderer>>>,
 >;
+pub type DockClippedSurface = CropRenderElement<ConstrainedSurface>;
 
 render_elements! {
     pub CustomRenderElements<=GlowRenderer>;
@@ -25,5 +28,5 @@ render_elements! {
     Memory=MemoryRenderBufferRenderElement<GlowRenderer>,
     Blur=BlurRenderElement,
     Constrained=ConstrainedSurface,
+    DockClipped=DockClippedSurface,
 }
-

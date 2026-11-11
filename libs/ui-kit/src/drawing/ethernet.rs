@@ -102,4 +102,3 @@ pub fn draw_cairo_ethernet_desktop(
     draw_led(dot_cx, top_dot_cy, (0.96, 0.62, 0.04), tx_lit);
     draw_led(dot_cx, bot_dot_cy, (0.13, 0.77, 0.36), rx_lit);
 }
-

@@ -105,7 +105,11 @@ pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
 
         match command.spawn() {
             Ok(child) => {
-                info!("Started test app: {} (PID: {})", app.to_string_lossy(), child.id());
+                info!(
+                    "Started test app: {} (PID: {})",
+                    app.to_string_lossy(),
+                    child.id()
+                );
                 spawned_children.push(child);
             }
             Err(err) => warn!(
@@ -187,7 +191,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                     println!("    -h, --help             Show this help message");
                     println!();
                     println!("Shortcuts:");
-                    println!("    Super + B              Toggle blur on the currently active window");
+                    println!(
+                        "    Super + B              Toggle blur on the currently active window"
+                    );
                     println!();
                     println!("Environment variables:");
                     println!("    BABYDRADE_BLUR_APPS    Comma-separated list of app IDs to blur");
@@ -201,14 +207,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Some("--app") => {
                     app = args.next();
                     if app.is_none() {
-                        return Err(std::io::Error::other("--app requires an executable name").into());
+                        return Err(
+                            std::io::Error::other("--app requires an executable name").into()
+                        );
                     }
                 }
                 Some("--blur-apps") => {
                     if let Some(apps) = args.next() {
                         std::env::set_var("BABYDRADE_BLUR_APPS", apps);
                     } else {
-                        return Err(std::io::Error::other("--blur-apps requires a comma-separated list of apps").into());
+                        return Err(std::io::Error::other(
+                            "--blur-apps requires a comma-separated list of apps",
+                        )
+                        .into());
                     }
                 }
                 Some("--blur-all") => {
@@ -235,4 +246,3 @@ fn main() -> Result<(), Box<dyn Error>> {
         run(None)
     }
 }
-

@@ -11,4 +11,3 @@ pub use items::{
     create_menu_sep, create_menu_shortcut, create_menu_text, create_submenu_item,
     create_submenu_popover, resolve_icon,
 };
-

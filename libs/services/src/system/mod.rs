@@ -8,17 +8,25 @@ pub mod volume;
 pub mod vpn;
 pub mod window;
 
-pub use dbus_menu::{activate_dbus_menu_item, fetch_dbus_menu, find_app_menu_service, DbusMenuItem};
+pub use dbus_menu::{
+    activate_dbus_menu_item, fetch_dbus_menu, find_app_menu_service, DbusMenuItem,
+};
 pub use window::{
     close_window_by_app, get_active_window, get_app_display_name, maximize_active_window,
     minimize_active_window, read_and_clear_window_action, save_active_window, send_window_action,
     toggle_fullscreen_active_window, ActiveWindowInfo,
 };
 
-pub use hardware::{BacklightInfo, BacklightReader, BatteryInfo, BatteryReader, BatteryStatus, ThermalInfo, ThermalReader, ThermalZone};
+pub use hardware::{
+    BacklightInfo, BacklightReader, BatteryInfo, BatteryReader, BatteryStatus, ThermalInfo,
+    ThermalReader, ThermalZone,
+};
 pub use host::{UptimeInfo, UptimeReader};
 pub use monitor::{get_monitor_snapshot, MonitorSnapshot};
-pub use network::{format_speed, get_active_network_info, ActiveNetworkInfo, ActiveNetworkType, InterfaceStats, NetworkInfo, NetworkReader};
+pub use network::{
+    format_speed, get_active_network_info, ActiveNetworkInfo, ActiveNetworkType, InterfaceStats,
+    NetworkInfo, NetworkReader,
+};
 pub use resources::{CpuInfo, CpuReader, DiskInfo, DiskReader, MemoryInfo, MemoryReader};
 pub use volume::{get_active_output_name, get_volume_state, set_muted, set_volume, AudioBackend};
 pub use vpn::is_vpn_active;

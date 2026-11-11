@@ -10,7 +10,9 @@ pub struct CursorThemeInfo {
 
 pub fn read_active_cursor_theme() -> CursorThemeInfo {
     // 1. Check environment variables
-    let env_name = std::env::var("XCURSOR_THEME").ok().filter(|s| !s.is_empty());
+    let env_name = std::env::var("XCURSOR_THEME")
+        .ok()
+        .filter(|s| !s.is_empty());
     let env_size = std::env::var("XCURSOR_SIZE")
         .ok()
         .and_then(|s| s.parse::<u32>().ok());
@@ -30,7 +32,10 @@ pub fn read_active_cursor_theme() -> CursorThemeInfo {
 
 pub fn read_default_index_theme() -> Option<String> {
     let home = std::env::var("HOME").ok()?;
-    let path = PathBuf::from(home).join(".icons").join("default").join("index.theme");
+    let path = PathBuf::from(home)
+        .join(".icons")
+        .join("default")
+        .join("index.theme");
     let content = fs::read_to_string(path).ok()?;
 
     for line in content.lines() {

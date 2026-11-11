@@ -3,10 +3,10 @@
 //! Provides real-time detection of the currently focused application and window lifecycle actions
 //! (close, minimize, fullscreen).
 
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ActiveWindowInfo {
@@ -91,7 +91,10 @@ fn query_wlrctl_active_window() -> Option<ActiveWindowInfo> {
 
 /// Formats a user-friendly application display name from app_id and title
 pub fn get_app_display_name(app_id: &str, title: &str) -> String {
-    let trimmed_id = app_id.trim().strip_suffix(".desktop").unwrap_or(app_id.trim());
+    let trimmed_id = app_id
+        .trim()
+        .strip_suffix(".desktop")
+        .unwrap_or(app_id.trim());
     if !trimmed_id.is_empty() {
         // Reverse domain name handling: "org.gnome.TextEditor" -> "TextEditor"
         let name = if let Some(last) = trimmed_id.split('.').next_back() {

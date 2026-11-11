@@ -53,7 +53,10 @@ delegate_layer_shell!(BabydraState);
 pub fn handle_commit(state: &BabydraState, surface: &WlSurface) {
     for output in state.space.outputs() {
         let mut layer_map = layer_map_for_output(output);
-        if let Some(layer) = layer_map.layer_for_surface(surface, WindowSurfaceType::ALL).cloned() {
+        if let Some(layer) = layer_map
+            .layer_for_surface(surface, WindowSurfaceType::ALL)
+            .cloned()
+        {
             layer_map.arrange();
             if layer.layer_surface().has_pending_changes() {
                 layer.layer_surface().send_configure();

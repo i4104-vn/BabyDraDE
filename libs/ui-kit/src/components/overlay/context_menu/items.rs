@@ -60,10 +60,7 @@ pub fn create_menu_box(width: i32) -> Box {
 }
 
 /// Creates the popover that hosts a submenu, attached to its parent item button.
-pub fn create_submenu_popover(
-    parent: &impl IsA<gtk4::Widget>,
-    extra_class: &str,
-) -> Popover {
+pub fn create_submenu_popover(parent: &impl IsA<gtk4::Widget>, extra_class: &str) -> Popover {
     let sub_popover = Popover::builder()
         .has_arrow(false)
         .autohide(false)
@@ -277,4 +274,3 @@ pub fn build_menu_button(hbox: Box, is_destructive: bool, is_sensitive: bool) ->
     btn.set_cursor_from_name(Some("pointer"));
     btn
 }
-

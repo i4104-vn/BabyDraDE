@@ -109,7 +109,9 @@ impl CpuReader {
                 "cpu" => {
                     overall = Self::parse_cpu_line(line);
                 }
-                word if word.starts_with("cpu") && word[3..].chars().all(|c| c.is_ascii_digit()) => {
+                word if word.starts_with("cpu")
+                    && word[3..].chars().all(|c| c.is_ascii_digit()) =>
+                {
                     if let Some(snapshot) = Self::parse_cpu_line(line) {
                         per_core.push(snapshot);
                     }
@@ -170,7 +172,9 @@ impl CpuReader {
 
     fn read_cur_freq_mhz() -> Option<u32> {
         let khz_str = fs::read_to_string("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
-            .or_else(|_| fs::read_to_string("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq"))
+            .or_else(|_| {
+                fs::read_to_string("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq")
+            })
             .ok()?;
 
         let khz: u32 = khz_str.trim().parse().ok()?;

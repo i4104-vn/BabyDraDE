@@ -10,7 +10,10 @@ pub fn find_gtk4_css_path() -> Option<PathBuf> {
     }
 
     if let Ok(home) = std::env::var("HOME") {
-        let p = PathBuf::from(home).join(".config").join("gtk-4.0").join("gtk.css");
+        let p = PathBuf::from(home)
+            .join(".config")
+            .join("gtk-4.0")
+            .join("gtk.css");
         if p.is_file() {
             return Some(p);
         }

@@ -87,4 +87,3 @@ pub fn render_window(
 
     elements
 }
-

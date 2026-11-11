@@ -14,12 +14,8 @@ use smithay::{
 
 use crate::rendering::Cursor;
 
-pub type UdevDrmCompositor = DrmCompositor<
-    GbmAllocator<DrmDeviceFd>,
-    GbmFramebufferExporter<DrmDeviceFd>,
-    (),
-    DrmDeviceFd,
->;
+pub type UdevDrmCompositor =
+    DrmCompositor<GbmAllocator<DrmDeviceFd>, GbmFramebufferExporter<DrmDeviceFd>, (), DrmDeviceFd>;
 
 pub struct SurfaceData {
     pub compositor: UdevDrmCompositor,
@@ -44,4 +40,3 @@ impl Drop for UdevState {
         self._drm_device.pause();
     }
 }
-

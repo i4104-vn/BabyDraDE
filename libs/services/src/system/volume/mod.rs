@@ -62,9 +62,7 @@ pub fn get_volume_state() -> (f64, bool) {
             }
             (vol, is_muted)
         }
-        AudioBackend::Amixer => {
-            (80.0, false)
-        }
+        AudioBackend::Amixer => (80.0, false),
     }
 }
 
@@ -74,12 +72,20 @@ pub fn set_volume(pct: f64) {
         AudioBackend::Wpctl => {
             let frac = clamped / 100.0;
             let _ = Command::new("wpctl")
-                .args(["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{:.2}", frac)])
+                .args([
+                    "set-volume",
+                    "@DEFAULT_AUDIO_SINK@",
+                    &format!("{:.2}", frac),
+                ])
                 .output();
         }
         AudioBackend::Pactl => {
             let _ = Command::new("pactl")
-                .args(["set-sink-volume", "@DEFAULT_SINK@", &format!("{:.0}%", clamped)])
+                .args([
+                    "set-sink-volume",
+                    "@DEFAULT_SINK@",
+                    &format!("{:.0}%", clamped),
+                ])
                 .output();
         }
         AudioBackend::Amixer => {
@@ -106,9 +112,7 @@ pub fn set_muted(muted: bool) {
         }
         AudioBackend::Amixer => {
             let val = if muted { "mute" } else { "unmute" };
-            let _ = Command::new("amixer")
-                .args(["set", "Master", val])
-                .output();
+            let _ = Command::new("amixer").args(["set", "Master", val]).output();
         }
     }
 }
@@ -117,7 +121,13 @@ pub fn get_active_output_name() -> Option<String> {
     if let Ok(output) = Command::new("wpctl").args(["status"]).output() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines() {
-            if line.contains('*') && (line.contains("Sink") || line.contains("Audio/Sink") || line.contains("Built-in") || line.contains("HDMI") || line.contains("Headset")) {
+            if line.contains('*')
+                && (line.contains("Sink")
+                    || line.contains("Audio/Sink")
+                    || line.contains("Built-in")
+                    || line.contains("HDMI")
+                    || line.contains("Headset"))
+            {
                 let trimmed = line.trim_start_matches([' ', '*', '.']);
                 return Some(trimmed.to_string());
             }
@@ -125,4 +135,3 @@ pub fn get_active_output_name() -> Option<String> {
     }
     None
 }
-

@@ -3,4 +3,3 @@ pub mod element;
 pub(crate) mod view;
 
 pub use element::SwitcherOverlay;
-

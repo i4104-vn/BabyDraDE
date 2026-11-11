@@ -9,16 +9,10 @@ use services::theme::DesktopTheme;
 use smithay::reexports::calloop::EventLoop;
 use tracing::info;
 
-use crate::{
-    compositor::CalloopData,
-    rendering::Cursor,
-};
+use crate::{compositor::CalloopData, rendering::Cursor};
 
 use self::{
-    gpu::scan_and_init_gpu,
-    render::setup_render_loop,
-    session::UdevSession,
-    surface::UdevState,
+    gpu::scan_and_init_gpu, render::setup_render_loop, session::UdevSession, surface::UdevState,
 };
 
 pub(crate) fn init(
@@ -59,4 +53,3 @@ pub(crate) fn init(
     info!("BabyDraDE Udev/DRM backend initialized successfully. Hardware scanout active.");
     Ok(())
 }
-

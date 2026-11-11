@@ -46,7 +46,8 @@ pub(crate) fn transform_absolute_position<B: InputBackend, T: AbsolutePositionEv
         .unwrap_or_else(|| transform.transform_size(output_geometry.size));
 
     let raw_point = event.position_transformed(raw_logical_size);
-    let area_f64 = Size::<f64, Logical>::from((raw_logical_size.w as f64, raw_logical_size.h as f64));
+    let area_f64 =
+        Size::<f64, Logical>::from((raw_logical_size.w as f64, raw_logical_size.h as f64));
     let oriented_point = transform.transform_point_in(raw_point, &area_f64);
 
     let mut position = oriented_point + output_geometry.loc.to_f64();

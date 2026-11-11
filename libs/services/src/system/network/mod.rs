@@ -39,7 +39,11 @@ pub fn get_active_network_info() -> ActiveNetworkInfo {
     if let Ok(entries) = fs::read_dir("/sys/class/net") {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name == "lo" || name.starts_with("docker") || name.starts_with("veth") || name.starts_with("virbr") {
+            if name == "lo"
+                || name.starts_with("docker")
+                || name.starts_with("veth")
+                || name.starts_with("virbr")
+            {
                 continue;
             }
 
@@ -91,7 +95,10 @@ pub fn get_active_network_info() -> ActiveNetworkInfo {
 }
 
 fn get_interface_ip(iface: &str) -> Option<String> {
-    if let Ok(output) = Command::new("ip").args(["-4", "addr", "show", iface]).output() {
+    if let Ok(output) = Command::new("ip")
+        .args(["-4", "addr", "show", iface])
+        .output()
+    {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines() {
             let trimmed = line.trim();
