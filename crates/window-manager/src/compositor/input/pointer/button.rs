@@ -37,15 +37,24 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
 
             if let Some(switcher) = state.alt_tab_switcher.as_ref() {
                 let output = state.space.outputs().next().cloned();
-                let size = output
+                let (size, scale) = output
                     .as_ref()
-                    .and_then(|o| o.current_mode())
-                    .map(|m| m.size)
-                    .unwrap_or((1920, 1080).into());
+                    .and_then(|o| {
+                        let mode = o.current_mode()?;
+                        let transform = o.current_transform();
+                        let size = transform.transform_size(mode.size);
+                        let scale = o.current_scale().fractional_scale();
+                        Some((size, smithay::utils::Scale::from(scale)))
+                    })
+                    .unwrap_or(((1920, 1080).into(), smithay::utils::Scale::from(1.0)));
+
+                let logical_w = (size.w as f64 / scale.x).max(1.0);
+                let logical_h = (size.h as f64 / scale.y).max(1.0);
+
                 if let Some(layout) = crate::rendering::switcher::view::compute_layout(
                     switcher,
-                    size.w as f64,
-                    size.h as f64,
+                    logical_w,
+                    logical_h,
                 ) {
                     let px = state.pointer_location.x;
                     let py = state.pointer_location.y;
@@ -58,15 +67,8 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                         .find(|(_, item)| in_rect(&item.card))
                         .map(|(idx, _)| *idx)
                         .or_else(|| {
-                            layout
-                                .stage_peek
-                                .as_ref()
-                                .filter(|(_, peek)| in_rect(&peek.card))
-                                .map(|(idx, _)| *idx)
-                        })
-                        .or_else(|| {
-                            if in_rect(&layout.stage_front.1.card) {
-                                Some(layout.stage_front.0)
+                            if in_rect(&layout.stage.1.card) {
+                                Some(layout.stage.0)
                             } else {
                                 None
                             }

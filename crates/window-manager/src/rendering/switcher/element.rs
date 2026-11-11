@@ -5,15 +5,16 @@ use smithay::{
         renderer::{
             element::{
                 memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
-                utils::{
-                    constrain_as_render_elements, ConstrainAlign, ConstrainScaleBehavior,
-                },
+                utils::{ConstrainAlign, ConstrainScaleBehavior},
                 Kind,
             },
             glow::GlowRenderer,
         },
     },
-    desktop::Window,
+    desktop::{
+        space::{constrain_space_element, ConstrainBehavior, ConstrainReference},
+        Window,
+    },
     utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Size, Transform},
 };
 
@@ -72,7 +73,10 @@ impl SwitcherOverlay {
             self.last_rendered = None;
         }
 
-        let Some(layout) = compute_layout(switcher, width as f64, height as f64) else {
+        let logical_w = (width as f64 / scale.x).max(1.0);
+        let logical_h = (height as f64 / scale.y).max(1.0);
+
+        let Some(layout) = compute_layout(switcher, logical_w, logical_h) else {
             return Vec::new();
         };
 
@@ -81,7 +85,7 @@ impl SwitcherOverlay {
 
         if animation_active || self.last_rendered != Some(render_key) {
             if let Some(bg_buf) = self.bg_buffer.as_mut() {
-                if let Some(pixels) = render_pixels(width, height, |ctx| {
+                if let Some(pixels) = render_pixels(width, height, scale, |ctx| {
                     draw_switcher_background(ctx, switcher, &layout)
                 }) {
                     let mut context = bg_buf.render();
@@ -99,7 +103,7 @@ impl SwitcherOverlay {
             }
 
             if let Some(fg_buf) = self.fg_buffer.as_mut() {
-                if let Some(pixels) = render_pixels(width, height, |ctx| {
+                if let Some(pixels) = render_pixels(width, height, scale, |ctx| {
                     draw_switcher_foreground(ctx, switcher, &layout)
                 }) {
                     let mut context = fg_buf.render();
@@ -136,8 +140,8 @@ impl SwitcherOverlay {
             }
         }
 
-        // 2. Active Stage window preview
-        let (front_idx, front_layout) = &layout.stage_front;
+        // 2. Active Stage window preview (ONLY 1 APP in center)
+        let (front_idx, front_layout) = &layout.stage;
         if let Some(entry) = switcher.entries.get(*front_idx) {
             elements.extend(render_window_preview(
                 renderer,
@@ -148,20 +152,7 @@ impl SwitcherOverlay {
             ));
         }
 
-        // 3. Peek Stage window preview (if 3+ windows, peeking behind front window)
-        if let Some((peek_idx, peek_layout)) = &layout.stage_peek {
-            if let Some(entry) = switcher.entries.get(*peek_idx) {
-                elements.extend(render_window_preview(
-                    renderer,
-                    &entry.window,
-                    peek_layout.preview,
-                    scale,
-                    (0.85 * layout.alpha) as f32,
-                ));
-            }
-        }
-
-        // 4. Dock thumbnail window previews (left strip)
+        // 3. Dock thumbnail window previews (ALL existing apps on left strip)
         for (dock_idx, dock_layout) in &layout.dock_items {
             if let Some(entry) = switcher.entries.get(*dock_idx) {
                 elements.extend(render_window_preview(
@@ -174,7 +165,7 @@ impl SwitcherOverlay {
             }
         }
 
-        // 5. Background overlay (drop shadows, dark glass card backgrounds, ambient tint)
+        // 4. Background overlay (drop shadows, dark glass card backgrounds, ambient tint)
         if let Some(bg_buf) = self.bg_buffer.as_mut() {
             if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
                 renderer,
@@ -212,57 +203,53 @@ fn render_window_preview(
     scale: Scale<f64>,
     alpha: f32,
 ) -> Vec<CustomRenderElements> {
-    let geo = window.geometry();
     let bbox = window.bbox();
-    let size = if geo.size.w > 0 && geo.size.h > 0 {
-        geo.size
-    } else if bbox.size.w > 0 && bbox.size.h > 0 {
-        bbox.size
-    } else {
-        (800, 600).into()
-    };
+    if bbox.size.w <= 0 || bbox.size.h <= 0 {
+        return Vec::new();
+    }
 
-    let ref_size: Size<i32, Physical> = size.to_physical_precise_round(scale);
-    let reference = Rectangle::new(
-        (0, 0).into(),
-        (ref_size.w.max(10), ref_size.h.max(10)).into(),
+    let constrain = Rectangle::new(
+        Point::<i32, Logical>::from((
+            preview_rect.x.round() as i32,
+            preview_rect.y.round() as i32,
+        )),
+        Size::<i32, Logical>::from((
+            (preview_rect.width.round() as i32).max(10),
+            (preview_rect.height.round() as i32).max(10),
+        )),
     );
 
-    let loc = Point::<f64, Logical>::from((-geo.loc.x as f64, -geo.loc.y as f64));
-    let loc_phys: Point<i32, Physical> = loc.to_physical_precise_round(scale);
+    let behavior = ConstrainBehavior {
+        reference: ConstrainReference::BoundingBox,
+        behavior: ConstrainScaleBehavior::Fit,
+        align: ConstrainAlign::CENTER,
+    };
 
-    let constrain_loc: Point<i32, Physical> = Point::from((
-        preview_rect.x.round() as i32,
-        preview_rect.y.round() as i32,
-    ));
-    let constrain_size: Size<i32, Physical> = (
-        (preview_rect.width.round() as i32).max(10),
-        (preview_rect.height.round() as i32).max(10),
-    )
-        .into();
-    let constrain = Rectangle::new(constrain_loc, constrain_size);
-
-    constrain_as_render_elements::<GlowRenderer, Window, CustomRenderElements>(
-        window,
+    constrain_space_element::<GlowRenderer, Window, CustomRenderElements>(
         renderer,
-        loc_phys,
+        window,
+        constrain.loc,
         alpha,
-        constrain,
-        reference,
-        ConstrainScaleBehavior::Fit,
-        ConstrainAlign::CENTER,
         scale,
+        constrain,
+        behavior,
     )
     .collect()
 }
 
-fn render_pixels<F>(width: i32, height: i32, draw_fn: F) -> Option<Vec<u8>>
+fn render_pixels<F>(
+    width: i32,
+    height: i32,
+    scale: Scale<f64>,
+    draw_fn: F,
+) -> Option<Vec<u8>>
 where
     F: FnOnce(&Context) -> Result<(), cairo::Error>,
 {
     let mut surface = ImageSurface::create(Format::ARgb32, width, height).ok()?;
     {
         let context = Context::new(&surface).ok()?;
+        context.scale(scale.x, scale.y);
         draw_fn(&context).ok()?;
     }
     surface.flush();
