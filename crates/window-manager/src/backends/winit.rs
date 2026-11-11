@@ -24,10 +24,7 @@ pub(crate) fn init(
 ) -> Result<(), Box<dyn Error>> {
     let (mut backend, winit) = winit::init::<GlowRenderer>().map_err(|err| {
         std::io::Error::other(format!(
-            "Failed to initialize graphical window (Winit backend): {}\n\
-             Ensure a Wayland host is running, or if running directly on TTY, run via:\n\
-               WLR_RENDERER=pixman cage -- cargo run\n\
-             or run ./start.sh",
+            "Failed to initialize graphical window (Winit backend): {}",
             err
         ))
     })?;
