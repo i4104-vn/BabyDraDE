@@ -5,8 +5,8 @@ use cairo::{Context, Operator};
 use crate::compositor::AltTabSwitcher;
 
 use super::draw::{
-    draw_app_badge, draw_card_background, draw_card_border, draw_dots_header, draw_shadow,
-    draw_stage_header_pill, Rect,
+    draw_app_badge, draw_card_border, draw_dots_header, draw_shadow, draw_stage_header_pill,
+    rounded_rect, Rect,
 };
 
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(260);
@@ -33,19 +33,13 @@ pub(crate) fn compute_layout(
         return None;
     }
 
-    let progress = (switcher.transition_started.elapsed().as_secs_f64()
-        / ANIMATION_DURATION.as_secs_f64())
-    .clamp(0.0, 1.0);
-    let eased = 1.0 - (1.0 - progress).powi(3);
-    let alpha = (eased * 1.3).min(1.0);
-
     let n = switcher.entries.len();
     let sel = switcher.selected_index.min(n - 1);
 
-    // Left Dock: ALL existing apps are displayed
-    let dock_x = 24.0 - (1.0 - eased) * 40.0;
-    let top_margin = 40.0;
-    let bottom_margin = 40.0;
+    // Left Dock: Fixed position (no flickering/jumping when switching tabs)
+    let dock_x = 24.0;
+    let top_margin = 32.0;
+    let bottom_margin = 32.0;
     let avail_dock_h = (screen_h - top_margin - bottom_margin).max(120.0);
     let gap = if n <= 4 {
         16.0
@@ -56,18 +50,30 @@ pub(crate) fn compute_layout(
     };
 
     let max_per_item_h = ((avail_dock_h - (n.saturating_sub(1) as f64) * gap) / n as f64).floor();
-    let thumb_h = max_per_item_h.clamp(55.0, 115.0);
-    let thumb_w = (thumb_h / 0.62).clamp(90.0, 180.0);
-    let thumb_radius = (thumb_h * 0.12).clamp(8.0, 14.0);
+    let base_thumb_h = max_per_item_h.clamp(52.0, 115.0);
+    let base_thumb_w = (base_thumb_h / 0.62).clamp(84.0, 175.0);
     let thumb_pad = 3.0;
 
-    let total_dock_h = n as f64 * thumb_h + (n.saturating_sub(1) as f64) * gap;
+    let total_dock_h = n as f64 * base_thumb_h + (n.saturating_sub(1) as f64) * gap;
     let dock_start_y = ((screen_h - total_dock_h) / 2.0).max(top_margin);
 
     let dock_items: Vec<(usize, CardLayout)> = (0..n)
         .map(|idx| {
-            let card_y = dock_start_y + idx as f64 * (thumb_h + gap);
-            let card = Rect::new(dock_x, card_y, thumb_w, thumb_h);
+            let is_sel = idx == sel;
+            let card_y = dock_start_y + idx as f64 * (base_thumb_h + gap);
+            // Active item pops out bigger (1.10x scale and +6px offset)
+            let (thumb_w, thumb_h, card_x, card_y_adj) = if is_sel {
+                let w = base_thumb_w * 1.10;
+                let h = base_thumb_h * 1.10;
+                let x = dock_x + 6.0;
+                let y = card_y - (h - base_thumb_h) / 2.0;
+                (w, h, x, y)
+            } else {
+                (base_thumb_w, base_thumb_h, dock_x, card_y)
+            };
+
+            let card = Rect::new(card_x, card_y_adj, thumb_w, thumb_h);
+            let radius = (thumb_h * 0.13).clamp(8.0, 14.0);
             let preview = Rect::new(
                 card.x + thumb_pad,
                 card.y + thumb_pad,
@@ -79,17 +85,17 @@ pub(crate) fn compute_layout(
                 CardLayout {
                     card,
                     preview,
-                    radius: thumb_radius,
+                    radius,
                 },
             )
         })
         .collect();
 
-    // Center Stage: ONLY 1 APP (the currently tabbed-to app, no stacking)
-    let stage_min_x = dock_x + thumb_w + 36.0;
-    let stage_max_x = screen_w - 36.0;
+    // Center Stage: MUCH LARGER - occupying most of the remaining screen area
+    let stage_min_x = dock_x + base_thumb_w * 1.10 + 28.0;
+    let stage_max_x = screen_w - 24.0;
     let avail_w = (stage_max_x - stage_min_x).max(240.0);
-    let avail_h = (screen_h - 110.0).max(200.0);
+    let avail_h = (screen_h - 48.0).max(200.0);
 
     let sel_win = &switcher.entries[sel].window;
     let geo_size = sel_win.geometry().size;
@@ -101,10 +107,11 @@ pub(crate) fn compute_layout(
     } else {
         (1280, 800).into()
     };
-    let aspect = (size.w as f64 / size.h as f64).clamp(0.65, 2.2);
+    let aspect = (size.w as f64 / size.h as f64).clamp(0.65, 2.3);
 
-    let max_stage_w = (avail_w * 0.88).clamp(380.0, 1050.0);
-    let max_stage_h = (avail_h * 0.84).clamp(300.0, 720.0);
+    // Occupy 96% of available width and 94% of available height
+    let max_stage_w = (avail_w * 0.96).max(400.0);
+    let max_stage_h = (avail_h * 0.94).max(300.0);
     let mut stage_w = max_stage_w;
     let mut stage_h = stage_w / aspect;
     if stage_h > max_stage_h {
@@ -112,20 +119,17 @@ pub(crate) fn compute_layout(
         stage_w = stage_h * aspect;
     }
 
-    let anim_scale = 0.94 + 0.06 * eased;
-    let final_stage_w = stage_w * anim_scale;
-    let final_stage_h = stage_h * anim_scale;
-    let stage_x = stage_min_x + (avail_w - final_stage_w) / 2.0;
-    let stage_y = ((screen_h - final_stage_h) / 2.0).max(48.0);
+    let stage_x = stage_min_x + (avail_w - stage_w) / 2.0;
+    let stage_y = ((screen_h - stage_h) / 2.0).max(36.0);
 
     let header_h = 24.0;
     let stage_pad = 4.0;
-    let stage_card = Rect::new(stage_x, stage_y, final_stage_w, final_stage_h);
+    let stage_card = Rect::new(stage_x, stage_y, stage_w, stage_h);
     let stage_preview = Rect::new(
         stage_x + stage_pad,
         stage_y + header_h,
-        final_stage_w - 2.0 * stage_pad,
-        final_stage_h - header_h - stage_pad,
+        stage_w - 2.0 * stage_pad,
+        stage_h - header_h - stage_pad,
     );
     let stage = (
         sel,
@@ -139,7 +143,7 @@ pub(crate) fn compute_layout(
     Some(SwitcherLayout {
         stage,
         dock_items,
-        alpha,
+        alpha: 1.0,
     })
 }
 
@@ -153,32 +157,35 @@ pub(crate) fn draw_switcher_background(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    // Subtle translucent backdrop tint over desktop wallpaper
-    context.set_source_rgba(0.015, 0.02, 0.05, 0.14 * layout.alpha);
-    context.paint()?;
-
-    // 1. Dock thumbnail backgrounds (ALL apps)
+    // 1. Dock thumbnail drop shadows
     for (idx, item) in &layout.dock_items {
         let is_selected = *idx == switcher.selected_index;
-        draw_shadow(
-            context,
-            item.card.x,
-            item.card.y,
-            item.card.width,
-            item.card.height,
-            item.radius,
-            if is_selected { 20.0 } else { 14.0 },
-            if is_selected { 0.55 * layout.alpha } else { 0.40 * layout.alpha },
-        )?;
-        draw_card_background(
-            context,
-            item.card,
-            item.radius,
-            if is_selected { 0.92 * layout.alpha } else { 0.84 * layout.alpha },
-        )?;
+        if is_selected {
+            draw_shadow(
+                context,
+                item.card.x,
+                item.card.y,
+                item.card.width,
+                item.card.height,
+                item.radius,
+                24.0,
+                0.65,
+            )?;
+        } else {
+            draw_shadow(
+                context,
+                item.card.x,
+                item.card.y,
+                item.card.width,
+                item.card.height,
+                item.radius,
+                14.0,
+                0.35,
+            )?;
+        }
     }
 
-    // 2. Center stage card background (ONLY 1 APP)
+    // 2. Center stage deep soft shadow for the large real app window
     let (_, front) = &layout.stage;
     draw_shadow(
         context,
@@ -187,10 +194,9 @@ pub(crate) fn draw_switcher_background(
         front.card.width,
         front.card.height,
         front.radius,
-        32.0,
-        0.65 * layout.alpha,
+        38.0,
+        0.60,
     )?;
-    draw_card_background(context, front.card, front.radius, 0.94 * layout.alpha)?;
 
     Ok(())
 }
@@ -205,34 +211,87 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    // 1. Center stage card border & header (ONLY 1 APP)
+    // 1. Center stage: prominent active border, header dots & title pill above real window
     let (sel_idx, front) = &layout.stage;
-    draw_card_border(context, front.card, front.radius, true, layout.alpha)?;
+
+    // Glowing active border: outer blue glow ring + inner crisp white border
+    rounded_rect(
+        context,
+        front.card.x - 1.5,
+        front.card.y - 1.5,
+        front.card.width + 3.0,
+        front.card.height + 3.0,
+        front.radius + 1.5,
+    );
+    context.set_source_rgba(0.38, 0.68, 1.0, 0.45);
+    context.set_line_width(3.0);
+    context.stroke()?;
+
+    rounded_rect(
+        context,
+        front.card.x,
+        front.card.y,
+        front.card.width,
+        front.card.height,
+        front.radius,
+    );
+    context.set_source_rgba(1.0, 1.0, 1.0, 0.85);
+    context.set_line_width(1.8);
+    context.stroke()?;
+
     draw_dots_header(
         context,
         front.card.center_x(),
         front.card.y + 11.0,
-        layout.alpha,
+        1.0,
     )?;
 
     if let Some(entry) = switcher.entries.get(*sel_idx) {
-        let pill_y = (front.card.y - 36.0).max(10.0);
+        let pill_y = (front.card.y - 34.0).max(6.0);
         draw_stage_header_pill(
             context,
             entry,
             front.card.center_x(),
             pill_y,
             front.card.width,
-            layout.alpha,
+            1.0,
         )?;
     }
 
-    // 2. Dock thumbnails: borders & app icon badges (ALL apps)
+    // 2. Dock thumbnails: borders & app icon badges (active item pops out with glowing active border)
     for (entry_idx, item) in &layout.dock_items {
         let is_selected = *entry_idx == switcher.selected_index;
-        draw_card_border(context, item.card, item.radius, is_selected, layout.alpha)?;
+        if is_selected {
+            // Prominent active border: outer blue glow + crisp bright inner line
+            rounded_rect(
+                context,
+                item.card.x - 1.5,
+                item.card.y - 1.5,
+                item.card.width + 3.0,
+                item.card.height + 3.0,
+                item.radius + 1.5,
+            );
+            context.set_source_rgba(0.35, 0.65, 1.0, 0.65);
+            context.set_line_width(3.0);
+            context.stroke()?;
+
+            rounded_rect(
+                context,
+                item.card.x,
+                item.card.y,
+                item.card.width,
+                item.card.height,
+                item.radius,
+            );
+            context.set_source_rgba(1.0, 1.0, 1.0, 0.95);
+            context.set_line_width(2.0);
+            context.stroke()?;
+        } else {
+            draw_card_border(context, item.card, item.radius, false, 1.0)?;
+        }
+
         if let Some(entry) = switcher.entries.get(*entry_idx) {
-            let badge_size = (item.card.height * 0.32).clamp(20.0, 28.0);
+            let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
             let badge_x = item.card.x + 4.0;
             let badge_y = item.card.y + item.card.height - badge_size - 4.0;
             draw_app_badge(
@@ -241,7 +300,7 @@ pub(crate) fn draw_switcher_foreground(
                 badge_x,
                 badge_y,
                 badge_size,
-                layout.alpha,
+                1.0,
             )?;
         }
     }

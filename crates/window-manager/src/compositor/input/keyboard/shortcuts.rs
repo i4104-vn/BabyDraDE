@@ -209,17 +209,16 @@ pub(crate) fn execute_action(
             state.cycle_alt_tab(backwards);
         }
         KeyboardAction::AltTabCancel => {
-            state.alt_tab_switcher = None;
+            if let Some(switcher) = state.alt_tab_switcher.take() {
+                state.restore_alt_tab_windows(&switcher);
+            }
         }
         KeyboardAction::AltTabCommit => {
             if let Some(switcher) = state.alt_tab_switcher.take() {
-                if let Some(window) = switcher
-                    .entries
-                    .get(switcher.selected_index)
-                    .map(|entry| &entry.window)
-                {
-                    state.unminimize_window(window);
-                    focus_window(state, window.clone(), serial);
+                state.restore_alt_tab_windows(&switcher);
+                if let Some(entry) = switcher.entries.get(switcher.selected_index) {
+                    state.unminimize_window(&entry.window);
+                    focus_window(state, entry.window.clone(), serial);
                 }
             }
         }

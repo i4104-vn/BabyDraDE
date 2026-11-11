@@ -75,6 +75,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                         });
 
                     if let Some(switcher) = state.alt_tab_switcher.take() {
+                        state.restore_alt_tab_windows(&switcher);
                         if let Some(idx) = clicked_idx {
                             if let Some(entry) = switcher.entries.get(idx) {
                                 let window = entry.window.clone();

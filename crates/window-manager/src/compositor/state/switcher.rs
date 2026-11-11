@@ -1,13 +1,22 @@
 use std::time::Instant;
 
-use smithay::{desktop::Window, wayland::compositor::with_states};
+use smithay::{
+    desktop::Window,
+    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel,
+    utils::{Logical, Point, Size},
+    wayland::compositor::with_states,
+};
 
-use super::BabydraState;
+use super::{window_ops::window_state, BabydraState};
 
 pub(crate) struct AltTabEntry {
     pub(crate) window: Window,
     pub(crate) app_name: String,
     pub(crate) title: String,
+    pub(crate) original_location: Option<Point<i32, Logical>>,
+    pub(crate) original_size: Option<Size<i32, Logical>>,
+    pub(crate) was_maximized: bool,
+    pub(crate) was_minimized: bool,
 }
 
 pub(crate) struct AltTabSwitcher {
@@ -17,6 +26,34 @@ pub(crate) struct AltTabSwitcher {
 }
 
 impl BabydraState {
+    pub(crate) fn restore_alt_tab_windows(&mut self, switcher: &AltTabSwitcher) {
+        for entry in &switcher.entries {
+            if let Some(loc) = entry.original_location {
+                if !entry.was_minimized {
+                    self.space.map_element(entry.window.clone(), loc, false);
+                }
+            }
+            if entry.was_maximized {
+                if let Some(toplevel) = entry.window.toplevel() {
+                    toplevel.with_pending_state(|state| {
+                        state.states.set(xdg_toplevel::State::Maximized);
+                        state.size = entry.original_size;
+                    });
+                    toplevel.send_configure();
+                }
+            } else if let Some(orig_size) = entry.original_size {
+                if let Some(toplevel) = entry.window.toplevel() {
+                    toplevel.with_pending_state(|state| {
+                        state.states.unset(xdg_toplevel::State::Maximized);
+                        state.size = Some(orig_size);
+                    });
+                    toplevel.send_configure();
+                }
+            }
+        }
+        self.space.refresh();
+    }
+
     pub(crate) fn cycle_alt_tab(&mut self, backwards: bool) {
         if let Some(mut switcher) = self.alt_tab_switcher.take() {
             let selected_window = switcher
@@ -90,10 +127,22 @@ impl BabydraState {
                     title
                 };
 
+                let original_location = self.space.element_location(window);
+                let original_size = Some(window.geometry().size);
+                let was_maximized = window
+                    .toplevel()
+                    .map(|t| t.current_state().states.contains(xdg_toplevel::State::Maximized))
+                    .unwrap_or(false);
+                let was_minimized = window_state(window).lock().unwrap().is_minimized;
+
                 Some(AltTabEntry {
                     window: window.clone(),
                     app_name,
                     title,
+                    original_location,
+                    original_size,
+                    was_maximized,
+                    was_minimized,
                 })
             })
             .collect::<Vec<_>>();

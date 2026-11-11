@@ -5,17 +5,14 @@ use smithay::{
         renderer::{
             element::{
                 memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
-                utils::{ConstrainAlign, ConstrainScaleBehavior},
-                Kind,
+                surface::WaylandSurfaceRenderElement,
+                AsRenderElements, Kind,
             },
             glow::GlowRenderer,
         },
     },
-    desktop::{
-        space::{constrain_space_element, ConstrainBehavior, ConstrainReference},
-        Window,
-    },
-    utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Size, Transform},
+    desktop::Window,
+    utils::{Buffer, Physical, Point, Rectangle, Scale, Transform},
 };
 
 use crate::compositor::AltTabSwitcher;
@@ -140,10 +137,10 @@ impl SwitcherOverlay {
             }
         }
 
-        // 2. Active Stage window preview (ONLY 1 APP in center)
+        // 2. Active Stage window (ONLY 1 REAL APP in center, rendered directly with native Wayland surfaces!)
         let (front_idx, front_layout) = &layout.stage;
         if let Some(entry) = switcher.entries.get(*front_idx) {
-            elements.extend(render_window_preview(
+            elements.extend(render_scaled_window(
                 renderer,
                 &entry.window,
                 front_layout.preview,
@@ -152,10 +149,10 @@ impl SwitcherOverlay {
             ));
         }
 
-        // 3. Dock thumbnail window previews (ALL existing apps on left strip)
+        // 3. Dock thumbnail windows (ALL existing apps on left strip, rendered directly with native Wayland surfaces!)
         for (dock_idx, dock_layout) in &layout.dock_items {
             if let Some(entry) = switcher.entries.get(*dock_idx) {
-                elements.extend(render_window_preview(
+                elements.extend(render_scaled_window(
                     renderer,
                     &entry.window,
                     dock_layout.preview,
@@ -165,7 +162,7 @@ impl SwitcherOverlay {
             }
         }
 
-        // 4. Background overlay (drop shadows, dark glass card backgrounds, ambient tint)
+        // 4. Background overlay (drop shadows under windows)
         if let Some(bg_buf) = self.bg_buffer.as_mut() {
             if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
                 renderer,
@@ -196,45 +193,54 @@ impl SwitcherOverlay {
     }
 }
 
-fn render_window_preview(
+fn render_scaled_window(
     renderer: &mut GlowRenderer,
     window: &Window,
-    preview_rect: Rect,
-    scale: Scale<f64>,
+    target_rect: Rect,
+    output_scale: Scale<f64>,
     alpha: f32,
 ) -> Vec<CustomRenderElements> {
+    let geo = window.geometry();
     let bbox = window.bbox();
-    if bbox.size.w <= 0 || bbox.size.h <= 0 {
+    let win_size = if geo.size.w > 0 && geo.size.h > 0 {
+        geo.size
+    } else if bbox.size.w > 0 && bbox.size.h > 0 {
+        bbox.size
+    } else {
         return Vec::new();
-    }
-
-    let constrain = Rectangle::new(
-        Point::<i32, Logical>::from((
-            preview_rect.x.round() as i32,
-            preview_rect.y.round() as i32,
-        )),
-        Size::<i32, Logical>::from((
-            (preview_rect.width.round() as i32).max(10),
-            (preview_rect.height.round() as i32).max(10),
-        )),
-    );
-
-    let behavior = ConstrainBehavior {
-        reference: ConstrainReference::BoundingBox,
-        behavior: ConstrainScaleBehavior::Fit,
-        align: ConstrainAlign::CENTER,
     };
 
-    constrain_space_element::<GlowRenderer, Window, CustomRenderElements>(
-        renderer,
-        window,
-        constrain.loc,
-        alpha,
-        scale,
-        constrain,
-        behavior,
-    )
-    .collect()
+    let scale_x = target_rect.width / win_size.w as f64;
+    let scale_y = target_rect.height / win_size.h as f64;
+    let fit_scale = scale_x.min(scale_y);
+    let scaled_w = win_size.w as f64 * fit_scale;
+    let scaled_h = win_size.h as f64 * fit_scale;
+
+    let fit_x = target_rect.x + (target_rect.width - scaled_w) / 2.0;
+    let fit_y = target_rect.y + (target_rect.height - scaled_h) / 2.0;
+
+    let eff_scale = Scale::from((
+        output_scale.x * fit_scale,
+        output_scale.y * fit_scale,
+    ));
+
+    let root_loc_x = fit_x - geo.loc.x as f64 * fit_scale;
+    let root_loc_y = fit_y - geo.loc.y as f64 * fit_scale;
+    let phys_loc: Point<i32, Physical> = Point::from((
+        (root_loc_x * output_scale.x).round() as i32,
+        (root_loc_y * output_scale.y).round() as i32,
+    ));
+
+    window
+        .render_elements::<WaylandSurfaceRenderElement<GlowRenderer>>(
+            renderer,
+            phys_loc,
+            eff_scale,
+            alpha,
+        )
+        .into_iter()
+        .map(CustomRenderElements::Surface)
+        .collect()
 }
 
 fn render_pixels<F>(

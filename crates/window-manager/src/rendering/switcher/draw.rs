@@ -119,6 +119,7 @@ pub(crate) fn draw_shadow(
     Ok(())
 }
 
+#[allow(dead_code)]
 pub(crate) fn draw_card_background(
     context: &Context,
     rect: Rect,
