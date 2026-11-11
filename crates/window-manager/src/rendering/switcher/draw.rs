@@ -23,23 +23,6 @@ impl Rect {
     pub(crate) fn center_x(&self) -> f64 {
         self.x + self.width / 2.0
     }
-
-    #[allow(dead_code)]
-    pub(crate) fn center_y(&self) -> f64 {
-        self.y + self.height / 2.0
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn inset(&self, dx: f64, dy: f64) -> Self {
-        let w = (self.width - 2.0 * dx).max(1.0);
-        let h = (self.height - 2.0 * dy).max(1.0);
-        Self::new(self.x + dx, self.y + dy, w, h)
-    }
-}
-
-#[allow(dead_code)]
-pub(crate) fn lerp(from: f64, to: f64, progress: f64) -> f64 {
-    from + (to - from) * progress
 }
 
 pub(crate) fn rounded_rect(
@@ -119,23 +102,6 @@ pub(crate) fn draw_shadow(
     Ok(())
 }
 
-#[allow(dead_code)]
-pub(crate) fn draw_card_background(
-    context: &Context,
-    rect: Rect,
-    radius: f64,
-    alpha: f64,
-) -> Result<(), cairo::Error> {
-    if alpha <= 0.01 {
-        return Ok(());
-    }
-    rounded_rect(context, rect.x, rect.y, rect.width, rect.height, radius);
-    // Dark sleek translucent glass plate
-    context.set_source_rgba(0.08, 0.09, 0.13, 0.90 * alpha);
-    context.fill()?;
-    Ok(())
-}
-
 pub(crate) fn draw_card_border(
     context: &Context,
     rect: Rect,
@@ -155,32 +121,6 @@ pub(crate) fn draw_card_border(
         context.set_line_width(1.0);
     }
     context.stroke()?;
-    Ok(())
-}
-
-pub(crate) fn draw_dots_header(
-    context: &Context,
-    center_x: f64,
-    center_y: f64,
-    alpha: f64,
-) -> Result<(), cairo::Error> {
-    if alpha <= 0.01 {
-        return Ok(());
-    }
-    let radius = 2.0;
-    let spacing = 5.5;
-    for &offset in &[-spacing, 0.0, spacing] {
-        context.new_path();
-        context.arc(
-            center_x + offset,
-            center_y,
-            radius,
-            0.0,
-            2.0 * std::f64::consts::PI,
-        );
-        context.set_source_rgba(0.9, 0.9, 0.95, 0.55 * alpha);
-        context.fill()?;
-    }
     Ok(())
 }
 

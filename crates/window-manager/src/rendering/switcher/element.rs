@@ -184,18 +184,6 @@ impl SwitcherOverlay {
 
         elements
     }
-
-    #[allow(dead_code)]
-    pub(crate) fn element(
-        &mut self,
-        renderer: &mut GlowRenderer,
-        switcher: Option<&AltTabSwitcher>,
-        size: (i32, i32),
-    ) -> Option<CustomRenderElements> {
-        self.render(renderer, switcher, size, Scale::from(1.0))
-            .into_iter()
-            .next()
-    }
 }
 
 /// Render a window scaled into `target_rect` (logical coordinates).

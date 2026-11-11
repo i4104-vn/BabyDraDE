@@ -5,7 +5,7 @@ use cairo::{Context, Operator};
 use crate::compositor::AltTabSwitcher;
 
 use super::draw::{
-    draw_app_badge, draw_card_border, draw_dots_header, draw_shadow, draw_stage_header_pill,
+    draw_app_badge, draw_card_border, draw_shadow, draw_stage_header_pill,
     rounded_rect, Rect,
 };
 
@@ -225,8 +225,6 @@ pub(crate) fn draw_switcher_foreground(
     context.set_line_width(1.8);
     context.stroke()?;
 
-    draw_dots_header(context, front.card.center_x(), front.card.y + 11.0, 1.0)?;
-
     if let Some(entry) = switcher.entries.get(*sel_idx) {
         let pill_y = (front.card.y - 34.0).max(6.0);
         draw_stage_header_pill(
@@ -296,13 +294,4 @@ mod tests {
         assert!(compute_layout(&switcher, 1920.0, 1080.0).is_none());
     }
 
-    #[test]
-    fn test_card_rect_inset() {
-        let rect = Rect::new(10.0, 20.0, 100.0, 80.0);
-        let inset = rect.inset(5.0, 10.0);
-        assert_eq!(inset.x, 15.0);
-        assert_eq!(inset.y, 30.0);
-        assert_eq!(inset.width, 90.0);
-        assert_eq!(inset.height, 60.0);
-    }
 }
