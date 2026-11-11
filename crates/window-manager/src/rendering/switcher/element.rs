@@ -23,13 +23,12 @@ use super::{
     super::CustomRenderElements,
     draw::Rect,
     view::{
-        compute_layout, draw_switcher_background, draw_switcher_foreground, ANIMATION_DURATION,
+        compute_layout, draw_switcher_foreground, ANIMATION_DURATION,
     },
 };
 
 #[derive(Default)]
 pub struct SwitcherOverlay {
-    bg_buffer: Option<MemoryRenderBuffer>,
     fg_buffer: Option<MemoryRenderBuffer>,
     size: (i32, i32),
     last_rendered: Option<(std::time::Instant, usize)>,
@@ -54,13 +53,6 @@ impl SwitcherOverlay {
 
         let (width, height) = (size.0.max(1), size.1.max(1));
         if self.size != (width, height) {
-            self.bg_buffer = Some(MemoryRenderBuffer::new(
-                smithay::backend::allocator::Fourcc::Argb8888,
-                (width, height),
-                1,
-                Transform::Normal,
-                None,
-            ));
             self.fg_buffer = Some(MemoryRenderBuffer::new(
                 smithay::backend::allocator::Fourcc::Argb8888,
                 (width, height),
@@ -83,24 +75,6 @@ impl SwitcherOverlay {
         let render_key = (switcher.transition_started, switcher.selected_index);
 
         if animation_active || self.last_rendered != Some(render_key) {
-            if let Some(bg_buf) = self.bg_buffer.as_mut() {
-                if let Some(pixels) = render_pixels(width, height, scale, |ctx| {
-                    draw_switcher_background(ctx, switcher, &layout)
-                }) {
-                    let mut context = bg_buf.render();
-                    let _ = context.draw(|buf| {
-                        if buf.len() == pixels.len() {
-                            buf.copy_from_slice(&pixels);
-                            Ok(vec![Rectangle::<i32, Buffer>::from_size(
-                                (width, height).into(),
-                            )])
-                        } else {
-                            Err(())
-                        }
-                    });
-                }
-            }
-
             if let Some(fg_buf) = self.fg_buffer.as_mut() {
                 if let Some(pixels) = render_pixels(width, height, scale, |ctx| {
                     draw_switcher_foreground(ctx, switcher, &layout)
@@ -148,7 +122,7 @@ impl SwitcherOverlay {
                 &entry.window,
                 front_layout.preview,
                 scale,
-                layout.alpha as f32,
+                front_layout.opacity as f32,
                 ConstrainScaleBehavior::Stretch,
             ));
         }
@@ -161,24 +135,9 @@ impl SwitcherOverlay {
                     &entry.window,
                     dock_layout.preview,
                     scale,
-                    (0.95 * layout.alpha) as f32,
+                    (0.95 * dock_layout.opacity) as f32,
                     ConstrainScaleBehavior::Fit,
                 ));
-            }
-        }
-
-        // 4. Background overlay (drop shadows under windows, painted below everything else).
-        if let Some(bg_buf) = self.bg_buffer.as_mut() {
-            if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
-                renderer,
-                Point::<f64, Physical>::from((0.0, 0.0)),
-                bg_buf,
-                None,
-                None,
-                None,
-                Kind::Unspecified,
-            ) {
-                elements.push(CustomRenderElements::Memory(elem));
             }
         }
 

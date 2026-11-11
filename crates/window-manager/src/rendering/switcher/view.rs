@@ -5,11 +5,10 @@ use cairo::{Context, Operator};
 use crate::compositor::AltTabSwitcher;
 
 use super::draw::{
-    draw_app_badge, draw_card_border, draw_shadow, draw_stage_header_pill,
-    rounded_rect, Rect,
+    draw_app_badge, draw_card_border, draw_stage_header_pill, rounded_rect, Rect,
 };
 
-pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(260);
+pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
 
 // The switcher is a layout, not a collection of windows laid out at their
 // native sizes. Keeping these values independent from the selected window
@@ -26,12 +25,13 @@ pub(crate) struct CardLayout {
     pub(crate) card: Rect,
     pub(crate) preview: Rect,
     pub(crate) radius: f64,
+    pub(crate) opacity: f64,
 }
 
 pub(crate) struct SwitcherLayout {
     pub(crate) stage: (usize, CardLayout),
     pub(crate) dock_items: Vec<(usize, CardLayout)>,
-    pub(crate) alpha: f64,
+    pub(crate) pulse: f64,
 }
 
 pub(crate) fn compute_layout(
@@ -45,6 +45,9 @@ pub(crate) fn compute_layout(
 
     let n = switcher.entries.len();
     let sel = switcher.selected_index.min(n - 1);
+    let elapsed = switcher.transition_started.elapsed().as_secs_f64();
+    let progress = ease_out_cubic((elapsed / ANIMATION_DURATION.as_secs_f64()).clamp(0.0, 1.0));
+    let pulse = (progress * std::f64::consts::PI).sin().max(0.0);
 
     // Left dock: every card has the same geometry. Selection is indicated by
     // its border only, so changing the selected app cannot reflow the dock.
@@ -76,12 +79,31 @@ pub(crate) fn compute_layout(
                 card.width - 2.0 * thumb_pad,
                 card.height - 2.0 * thumb_pad,
             );
+
+            // Stagger the dock from top to bottom. Each preview slides in from
+            // the left and settles with a small spring-like lift when selected.
+            let item_elapsed = (elapsed - idx as f64 * 0.028).max(0.0);
+            let item_progress = ease_out_cubic((item_elapsed / 0.30).clamp(0.0, 1.0));
+            let selected_lift = if idx == sel {
+                0.035 * (item_progress * std::f64::consts::PI).sin().max(0.0)
+            } else {
+                0.0
+            };
+            let scale = 0.94 + 0.06 * item_progress + selected_lift;
+            let center = (card.center_x(), card.y + card.height / 2.0);
+            let mut card = scale_rect_around(card, center, scale);
+            let mut preview = scale_rect_around(preview, center, scale);
+            let slide_x = -26.0 * (1.0 - item_progress);
+            card.x += slide_x;
+            preview.x += slide_x;
+
             (
                 idx,
                 CardLayout {
                     card,
                     preview,
                     radius,
+                    opacity: 0.16 + 0.84 * item_progress,
                 },
             )
         })
@@ -117,74 +139,40 @@ pub(crate) fn compute_layout(
         stage_w - 2.0 * stage_pad,
         stage_h - header_h - stage_pad,
     );
+    let stage_center = (stage_card.center_x(), stage_card.y + stage_card.height / 2.0);
+    let stage_scale = 0.965 + 0.035 * progress;
+    let stage_card = scale_rect_around(stage_card, stage_center, stage_scale);
+    let stage_preview = scale_rect_around(stage_preview, stage_center, stage_scale);
     let stage = (
         sel,
         CardLayout {
             card: stage_card,
             preview: stage_preview,
             radius: 18.0,
+            opacity: 0.28 + 0.72 * progress,
         },
     );
 
     Some(SwitcherLayout {
         stage,
         dock_items,
-        alpha: 1.0,
+        pulse,
     })
 }
 
-pub(crate) fn draw_switcher_background(
-    context: &Context,
-    switcher: &AltTabSwitcher,
-    layout: &SwitcherLayout,
-) -> Result<(), cairo::Error> {
-    context.set_operator(Operator::Source);
-    context.set_source_rgba(0.0, 0.0, 0.0, 0.0);
-    context.paint()?;
-    context.set_operator(Operator::Over);
+fn ease_out_cubic(value: f64) -> f64 {
+    1.0 - (1.0 - value).powi(3)
+}
 
-    // 1. Dock thumbnail drop shadows
-    for (idx, item) in &layout.dock_items {
-        let is_selected = *idx == switcher.selected_index;
-        if is_selected {
-            draw_shadow(
-                context,
-                item.card.x,
-                item.card.y,
-                item.card.width,
-                item.card.height,
-                item.radius,
-                24.0,
-                0.65,
-            )?;
-        } else {
-            draw_shadow(
-                context,
-                item.card.x,
-                item.card.y,
-                item.card.width,
-                item.card.height,
-                item.radius,
-                14.0,
-                0.35,
-            )?;
-        }
-    }
-
-    // 2. Center stage deep soft shadow for the large real app window
-    let (_, front) = &layout.stage;
-    draw_shadow(
-        context,
-        front.card.x,
-        front.card.y,
-        front.card.width,
-        front.card.height,
-        front.radius,
-        38.0,
-        0.60,
-    )?;
-
-    Ok(())
+fn scale_rect_around(rect: Rect, center: (f64, f64), scale: f64) -> Rect {
+    let width = rect.width * scale;
+    let height = rect.height * scale;
+    Rect::new(
+        center.0 - width / 2.0,
+        center.1 - height / 2.0,
+        width,
+        height,
+    )
 }
 
 pub(crate) fn draw_switcher_foreground(
@@ -209,8 +197,8 @@ pub(crate) fn draw_switcher_foreground(
         front.card.height + 3.0,
         front.radius + 1.5,
     );
-    context.set_source_rgba(0.38, 0.68, 1.0, 0.45);
-    context.set_line_width(3.0);
+    context.set_source_rgba(0.38, 0.68, 1.0, (0.32 + 0.36 * layout.pulse) * front.opacity);
+    context.set_line_width(2.4 + 1.8 * layout.pulse);
     context.stroke()?;
 
     rounded_rect(
@@ -221,7 +209,7 @@ pub(crate) fn draw_switcher_foreground(
         front.card.height,
         front.radius,
     );
-    context.set_source_rgba(1.0, 1.0, 1.0, 0.85);
+    context.set_source_rgba(1.0, 1.0, 1.0, 0.85 * front.opacity);
     context.set_line_width(1.8);
     context.stroke()?;
 
@@ -233,7 +221,7 @@ pub(crate) fn draw_switcher_foreground(
             front.card.center_x(),
             pill_y,
             front.card.width,
-            1.0,
+            front.opacity,
         )?;
     }
 
@@ -250,8 +238,13 @@ pub(crate) fn draw_switcher_foreground(
                 item.card.height + 3.0,
                 item.radius + 1.5,
             );
-            context.set_source_rgba(0.35, 0.65, 1.0, 0.65);
-            context.set_line_width(3.0);
+            context.set_source_rgba(
+                0.35,
+                0.65,
+                1.0,
+                (0.48 + 0.32 * layout.pulse) * item.opacity,
+            );
+            context.set_line_width(2.4 + 1.6 * layout.pulse);
             context.stroke()?;
 
             rounded_rect(
@@ -262,18 +255,18 @@ pub(crate) fn draw_switcher_foreground(
                 item.card.height,
                 item.radius,
             );
-            context.set_source_rgba(1.0, 1.0, 1.0, 0.95);
+            context.set_source_rgba(1.0, 1.0, 1.0, 0.95 * item.opacity);
             context.set_line_width(2.0);
             context.stroke()?;
         } else {
-            draw_card_border(context, item.card, item.radius, false, 1.0)?;
+            draw_card_border(context, item.card, item.radius, false, item.opacity)?;
         }
 
         if let Some(entry) = switcher.entries.get(*entry_idx) {
             let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
             let badge_x = item.card.x + 4.0;
             let badge_y = item.card.y + item.card.height - badge_size - 4.0;
-            draw_app_badge(context, entry, badge_x, badge_y, badge_size, 1.0)?;
+            draw_app_badge(context, entry, badge_x, badge_y, badge_size, item.opacity)?;
         }
     }
 
