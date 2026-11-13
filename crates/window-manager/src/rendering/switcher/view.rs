@@ -212,29 +212,27 @@ pub(crate) fn draw_switcher_foreground(
     );
     context.clip();
 
-    // ── Per-card: colored border + app badge ───────────────────────────────────
+    // ── Per-card: tilted border + app badge ───────────────────────────────────
+    // Each card is rotated ~4° counter-clockwise around its own centre to give
+    // a "leaning left" perspective depth effect.
+    const TILT_ANGLE: f64 = -0.07; // radians ≈ –4°
+
     for (entry_idx, item) in &layout.dock_items {
         let is_selected = *entry_idx == switcher.selected_index;
+
+        // Rotate each card individually around its centre.
+        context.save()?;
+        let cx = item.card.x + item.card.width / 2.0;
+        let cy = item.card.y + item.card.height / 2.0;
+        context.translate(cx, cy);
+        context.rotate(TILT_ANGLE);
+        context.translate(-cx, -cy);
 
         if let Some(entry) = switcher.entries.get(*entry_idx) {
             let (r, g, b) = app_color(&entry.app_name);
 
             if is_selected {
-                // Active: outer glow ring in app color, inner bright line.
-                // Outer glow — slightly expanded, translucent.
-                rounded_rect(
-                    context,
-                    item.card.x - 2.0,
-                    item.card.y - 2.0,
-                    item.card.width + 4.0,
-                    item.card.height + 4.0,
-                    item.radius + 2.0,
-                );
-                context.set_source_rgba(r, g, b, 0.55);
-                context.set_line_width(3.5);
-                context.stroke()?;
-
-                // Inner crisp border.
+                // Active: single crisp app-colored border (no glow ring).
                 rounded_rect(
                     context,
                     item.card.x,
@@ -244,12 +242,12 @@ pub(crate) fn draw_switcher_foreground(
                     item.radius,
                 );
                 context.set_source_rgba(
-                    (r + 0.4).min(1.0),
-                    (g + 0.4).min(1.0),
-                    (b + 0.4).min(1.0),
+                    (r + 0.35).min(1.0),
+                    (g + 0.35).min(1.0),
+                    (b + 0.35).min(1.0),
                     0.95,
                 );
-                context.set_line_width(2.0);
+                context.set_line_width(2.2);
                 context.stroke()?;
             } else {
                 // Inactive: subtle app-tinted border.
@@ -261,7 +259,7 @@ pub(crate) fn draw_switcher_foreground(
                     item.card.height,
                     item.radius,
                 );
-                context.set_source_rgba(r, g, b, 0.35);
+                context.set_source_rgba(r, g, b, 0.38);
                 context.set_line_width(1.2);
                 context.stroke()?;
             }
@@ -272,41 +270,45 @@ pub(crate) fn draw_switcher_foreground(
             let badge_y = item.card.y + item.card.height - badge_size - 4.0;
             draw_app_badge(context, entry, badge_x, badge_y, badge_size, 1.0)?;
         } else {
-            // Fallback if entry not found: plain white border.
             draw_card_border(context, item.card, item.radius, is_selected, 1.0)?;
         }
+
+        context.restore()?;
     }
 
-    context.restore()?;
+    context.restore()?; // end dock clip
 
-    // ── Scroll fade gradients at top and bottom of dock ────────────────────────
-    // These paint over the clipped cards to suggest more items above/below.
-    let vp = layout.dock_viewport;
-    let fade_h = (vp.height * 0.14).clamp(16.0, 48.0);
-
-    // Top fade: dark → transparent going downward.
+    // ── Scroll fade gradients ──────────────────────────────────────────────────
+    // Anchored to the actual items list boundaries (not the full viewport) so
+    // the dark band always sits right at the edge of the visible cards.
+    if let (Some((_, first)), Some((_, last))) =
+        (layout.dock_items.first(), layout.dock_items.last())
     {
-        let grad = cairo::LinearGradient::new(0.0, vp.y, 0.0, vp.y + fade_h);
-        grad.add_color_stop_rgba(0.0, 0.03, 0.04, 0.07, 0.82);
-        grad.add_color_stop_rgba(1.0, 0.03, 0.04, 0.07, 0.0);
-        context.rectangle(vp.x, vp.y, vp.width, fade_h);
-        context.set_source(&grad)?;
-        context.fill()?;
-    }
+        let items_top = first.card.y;
+        let items_bottom = last.card.y + last.card.height;
+        let fade_h = (DOCK_THUMBNAIL_HEIGHT * 0.22).clamp(14.0, 32.0);
+        let vp = layout.dock_viewport;
 
-    // Bottom fade: transparent → dark going downward.
-    {
-        let grad = cairo::LinearGradient::new(
-            0.0,
-            vp.y + vp.height - fade_h,
-            0.0,
-            vp.y + vp.height,
-        );
-        grad.add_color_stop_rgba(0.0, 0.03, 0.04, 0.07, 0.0);
-        grad.add_color_stop_rgba(1.0, 0.03, 0.04, 0.07, 0.82);
-        context.rectangle(vp.x, vp.y + vp.height - fade_h, vp.width, fade_h);
-        context.set_source(&grad)?;
-        context.fill()?;
+        // Top fade: solid → transparent, anchored to first card's top edge.
+        {
+            let grad = cairo::LinearGradient::new(0.0, items_top, 0.0, items_top + fade_h);
+            grad.add_color_stop_rgba(0.0, 0.04, 0.05, 0.08, 0.80);
+            grad.add_color_stop_rgba(1.0, 0.04, 0.05, 0.08, 0.0);
+            context.rectangle(vp.x, items_top, vp.width, fade_h);
+            context.set_source(&grad)?;
+            context.fill()?;
+        }
+
+        // Bottom fade: transparent → solid, anchored to last card's bottom edge.
+        {
+            let grad =
+                cairo::LinearGradient::new(0.0, items_bottom - fade_h, 0.0, items_bottom);
+            grad.add_color_stop_rgba(0.0, 0.04, 0.05, 0.08, 0.0);
+            grad.add_color_stop_rgba(1.0, 0.04, 0.05, 0.08, 0.80);
+            context.rectangle(vp.x, items_bottom - fade_h, vp.width, fade_h);
+            context.set_source(&grad)?;
+            context.fill()?;
+        }
     }
 
     Ok(())
