@@ -198,43 +198,16 @@ impl BlurEngine {
         info!("BabyDraDE BlurEngine: blur_all set to {}", blur_all);
     }
 
-    /// Checks whether a usable backdrop cache exists for the given element.
+    /// Render Dual Kawase blur over the destination physical rectangle.
     ///
-    /// The blur element uses this to decide whether it has to force a redraw of
-    /// its region. Without a cache the background below the element would still
-    /// hold the result of the previous frame, so the whole region has to be
-    /// rendered again before it can be captured.
-    pub fn has_backdrop_cache(&self, id: &Id, region: Rectangle<i32, Physical>) -> bool {
-        // Without a working blur there is no backdrop to refresh. Returning
-        // `true` keeps the element from damaging its whole region every frame
-        // on GPUs/drivers that cannot run the blur pipeline at all.
-        if !self.params.enabled || self.pipeline_failed {
-            return true;
-        }
-
-        self.backdrops
-            .get(id)
-            .map(|cache| {
-                cache
-                    .as_ref()
-                    .map(|cache| cache.region == region)
-                    // The offscreen target of this element could not be
-                    // created, nothing will ever be composited.
-                    .unwrap_or(true)
-            })
-            .unwrap_or(false)
-    }
-
-    /// Render Dual Kawase blur over the destination physical rectangle
-    ///
-    /// Only the damaged parts of the region are captured and re-composited, the
-    /// rest of the region keeps the result of the previous frame.
+    /// Captures the framebuffer background, blurs it, and composites the result
+    /// on every call. GPU texture objects are cached per element Id so that the
+    /// allocation cost is paid only once per blurred window.
     pub fn render_blur(
         &mut self,
         gl: &glow::Context,
         id: &Id,
         dst: Rectangle<i32, Physical>,
-        damage: &[Rectangle<i32, Physical>],
         corner_radius: f32,
         projection: [f32; 9],
     ) {
@@ -269,8 +242,6 @@ impl BlurEngine {
                 Ok(cache) => Some(cache),
                 Err(err) => {
                     error!("Failed to create the BabyDraDE blur cache: {err}");
-                    // Remember the failure so the element stops forcing full
-                    // redraws. Other elements can still use their own caches.
                     None
                 }
             };
@@ -287,7 +258,6 @@ impl BlurEngine {
             pipeline.render_blur(
                 gl,
                 dst,
-                damage,
                 corner_radius,
                 projection,
                 &self.params,

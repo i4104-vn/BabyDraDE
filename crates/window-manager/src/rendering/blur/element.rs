@@ -66,34 +66,13 @@ impl Element for BlurRenderElement {
     fn damage_since(
         &self,
         scale: Scale<f64>,
-        commit: Option<CommitCounter>,
+        _commit: Option<CommitCounter>,
     ) -> DamageSet<i32, Physical> {
-        // The blur is not a surface of its own, it renders whatever is drawn
-        // below it. Reporting damage on every frame would force the whole output
-        // to be redrawn - and re-blurred - 60 times per second, which makes the
-        // compositor (and with it the whole system) crawl.
-        //
-        // The element therefore only reports damage when the region has to be
-        // rendered from scratch anyway, i.e. when the element is drawn for the
-        // first time or when its background cache is gone. In that case the whole
-        // region is damaged, so that the background below the element is drawn
-        // again and can be captured without any leftovers.
-        //
-        // Every other frame the element is drawn with the partial damage of the
-        // region, so only the parts that actually changed are re-blurred.
-        let geometry = self.geometry(scale);
-
-        let cached = self
-            .blur_engine
-            .lock()
-            .map(|engine| engine.has_backdrop_cache(&self.id, geometry))
-            .unwrap_or(false);
-
-        if commit.is_none() || !cached {
-            DamageSet::from_slice(&[Rectangle::from_size(geometry.size)])
-        } else {
-            DamageSet::default()
-        }
+        // Blur reads whatever is currently below it in the framebuffer, so it
+        // must always be rendered — it cannot skip frames like a static surface
+        // can. Report the full geometry as damage every frame so that Smithay's
+        // damage tracker always calls draw() for this element.
+        DamageSet::from_slice(&[Rectangle::from_size(self.geometry(scale).size)])
     }
 
     fn opaque_regions(&self, _scale: Scale<f64>) -> OpaqueRegions<i32, Physical> {
@@ -116,7 +95,7 @@ impl RenderElement<GlowRenderer> for BlurRenderElement {
         frame: &mut GlowFrame<'_, '_>,
         _src: Rectangle<f64, Buffer>,
         dst: Rectangle<i32, Physical>,
-        damage: &[Rectangle<i32, Physical>],
+        _damage: &[Rectangle<i32, Physical>],
         _opaque_regions: &[Rectangle<i32, Physical>],
     ) -> Result<(), GlesError> {
         let projection: [f32; 9] = {
@@ -124,25 +103,12 @@ impl RenderElement<GlowRenderer> for BlurRenderElement {
             *gles.projection()
         };
 
-        // The damage is relative to the element, the blur works with absolute
-        // framebuffer coordinates.
-        let absolute_damage: Vec<Rectangle<i32, Physical>> = damage
-            .iter()
-            .map(|rect| {
-                Rectangle::new(
-                    (dst.loc.x + rect.loc.x, dst.loc.y + rect.loc.y).into(),
-                    rect.size,
-                )
-            })
-            .collect();
-
         frame.with_context(|glow| {
             if let Ok(mut engine) = self.blur_engine.lock() {
                 engine.render_blur(
                     glow,
                     &self.id,
                     dst,
-                    &absolute_damage,
                     self.corner_radius,
                     projection,
                 );

@@ -306,12 +306,11 @@ impl BlurPipeline {
         framebuffers_complete
     }
 
-    /// Renders the Dual Kawase blur backdrop over the damaged part of `dst`.
+    /// Renders the Dual Kawase blur backdrop over `dst`.
     ///
-    /// Only the parts of the region that actually changed are captured and
-    /// re-composited. Everything else keeps the result of the previous frame,
-    /// which is both faster and, more importantly, leaves the pixels of the
-    /// elements in front of the blur (the window) untouched.
+    /// Every call captures the current framebuffer content, blurs it, and
+    /// composites the result. This keeps the blur correct even when only a
+    /// small part of the region changes on a given frame.
     ///
     /// # Safety
     ///
@@ -321,16 +320,12 @@ impl BlurPipeline {
         &mut self,
         gl: &glow::Context,
         dst: Rectangle<i32, Physical>,
-        damage: &[Rectangle<i32, Physical>],
         corner_radius: f32,
         projection: [f32; 9],
         params: &BlurParams,
         cache: &mut BlurCache,
     ) {
         if dst.size.w <= 8 || dst.size.h <= 8 || !params.enabled {
-            // There is nothing to blur for this region. Remember it anyway, so
-            // that `damage_since` does not keep damaging the full region on
-            // every frame for an element that can never be blurred.
             cache.region = dst;
             return;
         }
@@ -357,10 +352,9 @@ impl BlurPipeline {
         // Offscreen passes must not inherit the compositor's output damage scissor.
         gl.disable(glow::SCISSOR_TEST);
 
-        // The region of the element in physical framebuffer coordinates.
+        // The region in physical framebuffer coordinates.
         let (raw_x, raw_y, raw_w, raw_h) = project_rect_to_gl(dst, &projection, screen_w, screen_h);
 
-        // Clip against physical framebuffer bounds
         let x0 = raw_x.max(0);
         let y0 = raw_y.max(0);
         let x1 = (raw_x + raw_w).min(screen_w);
@@ -369,85 +363,41 @@ impl BlurPipeline {
         let region_h = y1 - y0;
 
         if region_w <= 8 || region_h <= 8 {
-            // The visible part is too small to blur. Mark the region as cached
-            // so that the element does not force a redraw of the whole output
-            // on every frame while it is (almost) offscreen.
             cache.region = dst;
             return;
         }
 
-        // The cache has to match the region, otherwise the whole region has to be
-        // captured again.
-        let region_changed = cache.region != dst || cache.size != (region_w, region_h);
-        if region_changed {
+        // Resize per-element textures when the region changes size.
+        if cache.region != dst || cache.size != (region_w, region_h) {
             if !cache.resize(gl, region_w, region_h) {
-                // The driver rejected the offscreen target, the blur has to be
-                // skipped instead of compositing an uninitialized texture.
-                // The region is still recorded, otherwise `damage_since` would
-                // damage the whole element again on every single frame.
                 cache.region = dst;
                 return;
             }
             cache.region = dst;
         }
 
-        // The part of the region that has to be recomputed.
-        let dirty: GlRect = if region_changed {
-            (x0, y0, region_w, region_h)
-        } else {
-            match dirty_region(
-                damage,
-                &projection,
-                screen_w,
-                screen_h,
-                (x0, y0, region_w, region_h),
-            ) {
-                Some(rect) => rect,
-                None => return,
-            }
-        };
-
-        if dirty.2 <= 0 || dirty.3 <= 0 {
+        // Shared pass textures must be large enough for this region.
+        if !self.ensure_texture_sizes(gl, region_w, region_h) {
             return;
         }
 
-        if region_changed {
-            // Do not composite an uninitialized texture if the driver rejects one
-            // of the offscreen targets. The normal surface render must remain
-            // visible instead of being covered by a black quad.
-            if !self.ensure_texture_sizes(gl, region_w, region_h) {
-                return;
-            }
+        // 1. Capture the full background behind the element.
+        //    Always read a fresh copy so there is no feedback loop where the
+        //    blurred result gets blurred again on subsequent frames.
+        gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+        gl.bind_texture(glow::TEXTURE_2D, Some(cache.backdrop));
+        gl.copy_tex_sub_image_2d(glow::TEXTURE_2D, 0, 0, 0, x0, y0, region_w, region_h);
+        gl.bind_texture(glow::TEXTURE_2D, None);
 
-            // 1. Capture the background behind the element into the cached backdrop.
-            //    Only when the region changes (window mapped, moved, resized) do we
-            //    capture the full background. Partial damage within an existing
-            //    window region reuses the existing blurred cache, preventing feedback
-            //    loops and mosaic tile artifacts.
-            gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
-            gl.bind_texture(glow::TEXTURE_2D, Some(cache.backdrop));
-            gl.copy_tex_sub_image_2d(
-                glow::TEXTURE_2D,
-                0,
-                0,
-                0,
-                x0,
-                y0,
-                region_w,
-                region_h,
-            );
-            gl.bind_texture(glow::TEXTURE_2D, None);
+        // 2. Blur the captured backdrop into cache.blurred.
+        self.blur_backdrop(gl, region_w, region_h, params, cache);
 
-            // 2. Blur the cached backdrop.
-            self.blur_backdrop(gl, region_w, region_h, params, cache);
-        }
-
-        // 3. Composite the result, but only over the damaged part of the region.
+        // 3. Composite the blurred result over the full region.
         self.composite(
             gl,
             saved_fbo,
             (x0, y0, region_w, region_h),
-            dirty,
+            (x0, y0, region_w, region_h),
             corner_radius,
             params,
             cache,
