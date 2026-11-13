@@ -17,6 +17,7 @@ const DOCK_BOTTOM_MARGIN: f64 = 32.0;
 const DOCK_THUMBNAIL_WIDTH: f64 = 175.0;
 const DOCK_THUMBNAIL_HEIGHT: f64 = 115.0;
 const DOCK_GAP: f64 = 12.0;
+const DOCK_MAX_VISIBLE_ITEMS: usize = 5;
 const STAGE_SIDE_GAP: f64 = 28.0;
 const STAGE_RIGHT_MARGIN: f64 = 24.0;
 const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
@@ -106,6 +107,13 @@ fn compute_dock_layout(
     selected_index: usize,
     screen_h: f64,
 ) -> (Rect, Vec<(usize, CardLayout)>) {
+    if entry_count == 0 {
+        return (
+            Rect::new(DOCK_X, 0.0, DOCK_THUMBNAIL_WIDTH, 0.0),
+            Vec::new(),
+        );
+    }
+
     let viewport_y = DOCK_TOP_MARGIN.min((screen_h - 1.0).max(0.0));
     let viewport_bottom = (screen_h - DOCK_BOTTOM_MARGIN).max(viewport_y + 1.0);
     let viewport = Rect::new(
@@ -115,37 +123,54 @@ fn compute_dock_layout(
         viewport_bottom - viewport_y,
     );
 
-    let thumb_pad = 3.0;
-    let item_step = DOCK_THUMBNAIL_HEIGHT + DOCK_GAP;
-    let selected_y = viewport.y + (viewport.height - DOCK_THUMBNAIL_HEIGHT) / 2.0;
-    let first_item_y = selected_y - selected_index as f64 * item_step;
-    let viewport_bottom = viewport.y + viewport.height;
+    let visible_count = entry_count.min(DOCK_MAX_VISIBLE_ITEMS);
+    let desired_height = visible_count as f64 * DOCK_THUMBNAIL_HEIGHT
+        + visible_count.saturating_sub(1) as f64 * DOCK_GAP;
+    let scale = (viewport.height / desired_height).min(1.0);
+    let thumbnail_width = DOCK_THUMBNAIL_WIDTH * scale;
+    let thumbnail_height = DOCK_THUMBNAIL_HEIGHT * scale;
+    let gap = DOCK_GAP * scale;
+    let item_step = thumbnail_height + gap;
+    let items_height =
+        visible_count as f64 * thumbnail_height + visible_count.saturating_sub(1) as f64 * gap;
+    let first_item_y = viewport.y + (viewport.height - items_height) / 2.0;
+    let thumb_pad = 3.0 * scale;
+    let thumbnail_x = DOCK_X + (DOCK_THUMBNAIL_WIDTH - thumbnail_width) / 2.0;
 
-    let dock_items = (0..entry_count)
-        .filter_map(|idx| {
-            let card_y = first_item_y + idx as f64 * item_step;
-            let card_bottom = card_y + DOCK_THUMBNAIL_HEIGHT;
-            if card_bottom <= viewport.y || card_y >= viewport_bottom {
-                return None;
-            }
+    // Keep a circular slice around the selection. This makes the entries at
+    // either end of the Alt+Tab list adjacent in the dock as well.
+    let before_count = visible_count / 2;
+    let first_index = if selected_index >= before_count {
+        selected_index - before_count
+    } else {
+        entry_count - (before_count - selected_index)
+    };
 
-            let card = Rect::new(DOCK_X, card_y, DOCK_THUMBNAIL_WIDTH, DOCK_THUMBNAIL_HEIGHT);
+    let dock_items = (0..visible_count)
+        .map(|slot| {
+            let idx = (first_index + slot) % entry_count;
+            let card = Rect::new(
+                thumbnail_x,
+                first_item_y + slot as f64 * item_step,
+                thumbnail_width,
+                thumbnail_height,
+            );
             let preview = Rect::new(
                 card.x + thumb_pad,
                 card.y + thumb_pad,
-                card.width - 2.0 * thumb_pad,
-                card.height - 2.0 * thumb_pad,
+                (card.width - 2.0 * thumb_pad).max(0.0),
+                (card.height - 2.0 * thumb_pad).max(0.0),
             );
 
-            Some((
+            (
                 idx,
                 CardLayout {
                     card,
                     preview,
-                    radius: (DOCK_THUMBNAIL_HEIGHT * 0.13).clamp(8.0, 14.0),
+                    radius: (thumbnail_height * 0.13).clamp(4.0, 14.0),
                     opacity: 1.0,
                 },
-            ))
+            )
         })
         .collect();
 
