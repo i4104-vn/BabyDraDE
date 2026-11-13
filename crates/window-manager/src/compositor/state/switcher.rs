@@ -11,6 +11,7 @@ use super::{window_ops::window_state, BabydraState};
 
 pub(crate) struct AltTabEntry {
     pub(crate) window: Window,
+    pub(crate) app_id: String,
     pub(crate) app_name: String,
     pub(crate) title: String,
     pub(crate) original_location: Option<Point<i32, Logical>>,
@@ -141,6 +142,7 @@ impl BabydraState {
 
                 Some(AltTabEntry {
                     window: window.clone(),
+                    app_id,
                     app_name,
                     title,
                     original_location,
