@@ -411,34 +411,36 @@ impl BlurPipeline {
             return;
         }
 
-        // Do not composite an uninitialized texture if the driver rejects one
-        // of the offscreen targets. The normal surface render must remain
-        // visible instead of being covered by a black quad.
-        if !self.ensure_texture_sizes(gl, region_w, region_h) {
-            return;
+        if region_changed {
+            // Do not composite an uninitialized texture if the driver rejects one
+            // of the offscreen targets. The normal surface render must remain
+            // visible instead of being covered by a black quad.
+            if !self.ensure_texture_sizes(gl, region_w, region_h) {
+                return;
+            }
+
+            // 1. Capture the background behind the element into the cached backdrop.
+            //    Only when the region changes (window mapped, moved, resized) do we
+            //    capture the full background. Partial damage within an existing
+            //    window region reuses the existing blurred cache, preventing feedback
+            //    loops and mosaic tile artifacts.
+            gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+            gl.bind_texture(glow::TEXTURE_2D, Some(cache.backdrop));
+            gl.copy_tex_sub_image_2d(
+                glow::TEXTURE_2D,
+                0,
+                0,
+                0,
+                x0,
+                y0,
+                region_w,
+                region_h,
+            );
+            gl.bind_texture(glow::TEXTURE_2D, None);
+
+            // 2. Blur the cached backdrop.
+            self.blur_backdrop(gl, region_w, region_h, params, cache);
         }
-
-        // 1. Capture the background behind the element into the cached backdrop.
-        //    Only the damaged part is refreshed, the rest is still valid.
-        //    `resize` and the offscreen passes restore the framebuffer, but be
-        //    explicit here: the copy has to read the output target, which is not
-        //    necessarily the default framebuffer (offscreen renderers use FBOs).
-        gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
-        gl.bind_texture(glow::TEXTURE_2D, Some(cache.backdrop));
-        gl.copy_tex_sub_image_2d(
-            glow::TEXTURE_2D,
-            0,
-            dirty.0 - x0,
-            dirty.1 - y0,
-            dirty.0,
-            dirty.1,
-            dirty.2,
-            dirty.3,
-        );
-        gl.bind_texture(glow::TEXTURE_2D, None);
-
-        // 2. Blur the cached backdrop.
-        self.blur_backdrop(gl, region_w, region_h, params, cache);
 
         // 3. Composite the result, but only over the damaged part of the region.
         self.composite(
