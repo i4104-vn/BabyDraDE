@@ -237,3 +237,129 @@ pub fn get_theme_or_svg_icon(name: &str, size: i32) -> gtk4::Image {
 
     get_icon(name, size)
 }
+
+/// Resolves an app_id to its icon name using gio::AppInfo desktop files.
+pub fn resolve_app_icon_name(app_id: &str) -> Option<String> {
+    let clean_id = app_id
+        .trim()
+        .strip_suffix(".desktop")
+        .unwrap_or(app_id.trim());
+
+    if clean_id.is_empty() {
+        return None;
+    }
+
+    for info in gtk4::gio::AppInfo::all() {
+        if let Some(id) = info.id() {
+            let id_clean = id.strip_suffix(".desktop").unwrap_or(id.as_str());
+            if id_clean.eq_ignore_ascii_case(clean_id) {
+                if let Some(icon) = info.icon() {
+                    if let Ok(themed) = icon.clone().downcast::<gtk4::gio::ThemedIcon>() {
+                        if let Some(first) = themed.names().first() {
+                            return Some(first.to_string());
+                        }
+                    }
+                    if let Ok(file_icon) = icon.clone().downcast::<gtk4::gio::FileIcon>() {
+                        if let Some(path) = file_icon.file().path() {
+                            return Some(path.to_string_lossy().to_string());
+                        }
+                    }
+                    if let Some(to_str) = icon.to_string() {
+                        if !to_str.is_empty() {
+                            return Some(to_str.to_string());
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    Some(clean_id.to_string())
+}
+
+/// Retrieves a Pixbuf for an app by app_id, looking up via AppInfo and GtkIconTheme.
+pub fn get_app_icon_pixbuf(app_id: &str, size: i32) -> Option<Pixbuf> {
+    let icon_name = resolve_app_icon_name(app_id)?;
+    get_theme_icon_pixbuf(&icon_name, size)
+}
+
+/// Retrieves a Pixbuf for an icon name or path, prioritizing system GtkIconTheme.
+pub fn get_theme_icon_pixbuf(name: &str, size: i32) -> Option<Pixbuf> {
+    let path = std::path::Path::new(name);
+    if path.is_absolute() && path.is_file() {
+        return Pixbuf::from_file_at_scale(path, size, size, true).ok();
+    }
+
+    let display = gtk4::gdk::Display::default();
+    let theme = if let Some(ref disp) = display {
+        gtk4::IconTheme::for_display(disp)
+    } else {
+        gtk4::IconTheme::new()
+    };
+
+    let clean = name
+        .strip_suffix(".png")
+        .or_else(|| name.strip_suffix(".svg"))
+        .unwrap_or(name);
+
+    if theme.has_icon(clean) {
+        let paintable = theme.lookup_icon(
+            clean,
+            &[],
+            size,
+            1,
+            gtk4::TextDirection::None,
+            gtk4::IconLookupFlags::empty(),
+        );
+        if let Some(file) = paintable.file() {
+            if let Some(path) = file.path() {
+                if let Ok(pb) = Pixbuf::from_file_at_scale(&path, size, size, true) {
+                    return Some(pb);
+                }
+            }
+        }
+    }
+
+    // Fallback: check pixmaps
+    for ext in &[".png", ".svg"] {
+        let p = std::path::PathBuf::from(format!("/usr/share/pixmaps/{}{}", clean, ext));
+        if p.is_file() {
+            if let Ok(pb) = Pixbuf::from_file_at_scale(&p, size, size, true) {
+                return Some(pb);
+            }
+        }
+    }
+
+    // Fallback: resolve local SVG in ui-kit
+    if let Some((dark_svg, light_svg)) = resolve_icon_pair(clean) {
+        let is_dark = is_dark_mode();
+        let svg = if is_dark { dark_svg } else { light_svg };
+        let bytes = glib::Bytes::from(svg.as_bytes());
+        let stream = MemoryInputStream::from_bytes(&bytes);
+        return Pixbuf::from_stream_at_scale(&stream, size, size, true, gtk4::gio::Cancellable::NONE).ok();
+    }
+
+    // Generic fallback icon
+    for fallback in &["application-x-executable", "image-missing"] {
+        if theme.has_icon(fallback) {
+            let paintable = theme.lookup_icon(
+                fallback,
+                &[],
+                size,
+                1,
+                gtk4::TextDirection::None,
+                gtk4::IconLookupFlags::empty(),
+            );
+            if let Some(file) = paintable.file() {
+                if let Some(path) = file.path() {
+                    if let Ok(pb) = Pixbuf::from_file_at_scale(&path, size, size, true) {
+                        return Some(pb);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}

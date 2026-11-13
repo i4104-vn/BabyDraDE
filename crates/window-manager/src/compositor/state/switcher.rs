@@ -13,6 +13,7 @@ pub(crate) struct AltTabEntry {
     pub(crate) window: Window,
     pub(crate) app_id: String,
     pub(crate) app_name: String,
+    #[allow(dead_code)]
     pub(crate) title: String,
     pub(crate) original_location: Option<Point<i32, Logical>>,
     pub(crate) original_size: Option<Size<i32, Logical>>,

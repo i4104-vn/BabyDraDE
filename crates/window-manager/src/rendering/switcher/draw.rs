@@ -1,11 +1,9 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 
 use cairo::{Context, FontSlant, FontWeight};
 use gtk4::gdk::prelude::GdkCairoContextExt;
 use gtk4::gdk_pixbuf::Pixbuf;
-use gtk4::gio::prelude::*;
 
 use crate::compositor::AltTabEntry;
 
@@ -13,156 +11,17 @@ thread_local! {
     static ICON_CACHE: RefCell<HashMap<(String, i32), Option<Pixbuf>>> = RefCell::new(HashMap::new());
 }
 
-pub(crate) fn resolve_app_icon(app_id: &str, app_name: &str, size: i32) -> Option<Pixbuf> {
+pub(crate) fn resolve_app_icon(app_id: &str, size: i32) -> Option<Pixbuf> {
     let key = (app_id.to_string(), size);
     ICON_CACHE.with(|cache| {
         let mut map = cache.borrow_mut();
         if let Some(cached) = map.get(&key) {
             return cached.clone();
         }
-        let pixbuf = load_app_icon_pixbuf(app_id, app_name, size);
+        let pixbuf = ui_kit::icons::get_app_icon_pixbuf(app_id, size);
         map.insert(key, pixbuf.clone());
         pixbuf
     })
-}
-
-fn load_app_icon_pixbuf(app_id: &str, app_name: &str, size: i32) -> Option<Pixbuf> {
-    let clean_id = app_id
-        .trim()
-        .strip_suffix(".desktop")
-        .unwrap_or(app_id.trim());
-
-    let mut candidates = Vec::new();
-
-    // 1. Look up via gio::AppInfo (matches against system .desktop files)
-    if !clean_id.is_empty() {
-        for info in gtk4::gio::AppInfo::all() {
-            if let Some(id) = info.id() {
-                let id_clean = id.strip_suffix(".desktop").unwrap_or(id.as_str());
-                if id_clean.eq_ignore_ascii_case(clean_id) {
-                    if let Some(icon) = info.icon() {
-                        if let Ok(themed) = icon.clone().downcast::<gtk4::gio::ThemedIcon>() {
-                            for name in themed.names() {
-                                candidates.push(name.to_string());
-                            }
-                        }
-                        if let Ok(file_icon) = icon.clone().downcast::<gtk4::gio::FileIcon>() {
-                            if let Some(path) = file_icon.file().path() {
-                                candidates.push(path.to_string_lossy().to_string());
-                            }
-                        }
-                        if let Some(to_str) = icon.to_string() {
-                            if !to_str.is_empty() {
-                                candidates.push(to_str.to_string());
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    // 2. Direct app_id and name candidates
-    if !clean_id.is_empty() {
-        candidates.push(clean_id.to_string());
-        candidates.push(clean_id.to_lowercase());
-        if let Some(last) = clean_id.split('.').next_back() {
-            candidates.push(last.to_string());
-            candidates.push(last.to_lowercase());
-        }
-    }
-    let clean_name = app_name.trim();
-    if !clean_name.is_empty() {
-        candidates.push(clean_name.to_lowercase());
-    }
-
-    // 3. Direct absolute paths (e.g. Icon=/usr/share/babydra/logo.png)
-    for c in &candidates {
-        if c.starts_with('/') {
-            let p = Path::new(c);
-            if p.is_file() {
-                if let Ok(pb) = Pixbuf::from_file_at_scale(p, size, size, true) {
-                    return Some(pb);
-                }
-            }
-        }
-    }
-
-    // 4. Look up in active system icon theme
-    let theme = if let Some(display) = gtk4::gdk::Display::default() {
-        gtk4::IconTheme::for_display(&display)
-    } else {
-        let t = gtk4::IconTheme::new();
-        let theme_name = services::theme::gtk::read_gtk_settings().icon_theme;
-        if !theme_name.is_empty() {
-            t.set_theme_name(Some(&theme_name));
-        }
-        t
-    };
-
-    for c in &candidates {
-        if c.starts_with('/') {
-            continue;
-        }
-        let clean = c
-            .strip_suffix(".png")
-            .or_else(|| c.strip_suffix(".svg"))
-            .unwrap_or(c);
-
-        let paintable = theme.lookup_icon(
-            clean,
-            &[],
-            size,
-            1,
-            gtk4::TextDirection::None,
-            gtk4::IconLookupFlags::empty(),
-        );
-        if let Some(file) = paintable.file() {
-            if let Some(path) = file.path() {
-                if let Ok(pb) = Pixbuf::from_file_at_scale(&path, size, size, true) {
-                    return Some(pb);
-                }
-            }
-        }
-    }
-
-    // 5. Look up in /usr/share/pixmaps
-    for c in &candidates {
-        let clean = c
-            .strip_suffix(".png")
-            .or_else(|| c.strip_suffix(".svg"))
-            .unwrap_or(c);
-        for ext in &[".png", ".svg"] {
-            let p = PathBuf::from(format!("/usr/share/pixmaps/{}{}", clean, ext));
-            if p.is_file() {
-                if let Ok(pb) = Pixbuf::from_file_at_scale(&p, size, size, true) {
-                    return Some(pb);
-                }
-            }
-        }
-    }
-
-    // 6. Theme generic fallbacks
-    for fallback in &["application-x-executable", "image-missing"] {
-        let paintable = theme.lookup_icon(
-            fallback,
-            &[],
-            size,
-            1,
-            gtk4::TextDirection::None,
-            gtk4::IconLookupFlags::empty(),
-        );
-        if let Some(file) = paintable.file() {
-            if let Some(path) = file.path() {
-                if let Ok(pb) = Pixbuf::from_file_at_scale(&path, size, size, true) {
-                    return Some(pb);
-                }
-            }
-        }
-    }
-
-    None
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -234,27 +93,6 @@ pub(crate) fn rounded_rect(
     context.close_path();
 }
 
-pub(crate) fn draw_card_border(
-    context: &Context,
-    rect: Rect,
-    radius: f64,
-    is_active: bool,
-    alpha: f64,
-) -> Result<(), cairo::Error> {
-    if alpha <= 0.01 {
-        return Ok(());
-    }
-    rounded_rect(context, rect.x, rect.y, rect.width, rect.height, radius);
-    if is_active {
-        context.set_source_rgba(1.0, 1.0, 1.0, 0.35 * alpha);
-        context.set_line_width(1.6);
-    } else {
-        context.set_source_rgba(1.0, 1.0, 1.0, 0.15 * alpha);
-        context.set_line_width(1.0);
-    }
-    context.stroke()?;
-    Ok(())
-}
 
 pub(crate) fn draw_app_badge(
     context: &Context,
@@ -269,7 +107,7 @@ pub(crate) fn draw_app_badge(
     }
 
     let target_size = size.round().max(16.0) as i32;
-    if let Some(pixbuf) = resolve_app_icon(&entry.app_id, &entry.app_name, target_size) {
+    if let Some(pixbuf) = resolve_app_icon(&entry.app_id, target_size) {
         context.save()?;
         // Soft drop shadow behind icon
         let corner = size * 0.22;
@@ -335,6 +173,34 @@ pub(crate) fn draw_text(
     context.set_source_rgba(color.0, color.1, color.2, color.3);
     context.move_to(x, y);
     context.show_text(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ui_kit_app_icon_and_cairo() {
+        let _ = gtk4::init();
+
+        let pb1 = ui_kit::icons::get_app_icon_pixbuf("chromium", 24);
+        assert!(pb1.is_some(), "chromium icon should be resolved");
+
+        let pb2 = ui_kit::icons::get_app_icon_pixbuf("kitty", 24);
+        assert!(pb2.is_some(), "kitty icon should be resolved");
+
+        if let Some(pb) = pb1 {
+            let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 100, 100).unwrap();
+            let ctx = cairo::Context::new(&surface).unwrap();
+            ctx.save().unwrap();
+            let pw = pb.width() as f64;
+            let ph = pb.height() as f64;
+            ctx.scale(24.0 / pw, 24.0 / ph);
+            ctx.set_source_pixbuf(&pb, 10.0, 10.0);
+            ctx.paint_with_alpha(1.0).unwrap();
+            ctx.restore().unwrap();
+        }
+    }
 }
 
 pub(crate) fn app_color(name: &str) -> (f64, f64, f64) {

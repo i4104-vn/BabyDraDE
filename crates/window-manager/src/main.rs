@@ -31,6 +31,7 @@ fn ensure_runtime_dir() {
 
 pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
     ensure_runtime_dir();
+    let _ = gtk4::init();
     services::config::ensure_babydra_dirs();
 
     std::thread::Builder::new()

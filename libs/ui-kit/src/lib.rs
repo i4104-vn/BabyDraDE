@@ -10,8 +10,9 @@ pub mod theme;
 pub use components::*;
 pub use drawing::*;
 pub use icons::{
-    get_fallback_icon, get_icon, get_icon_colored, get_logo_png, get_theme_or_svg_icon,
-    set_fallback_icon, set_image_from_icon,
+    get_app_icon_pixbuf, get_fallback_icon, get_icon, get_icon_colored, get_logo_png,
+    get_theme_icon_pixbuf, get_theme_or_svg_icon, resolve_app_icon_name, set_fallback_icon,
+    set_image_from_icon,
 };
 pub use locale::watch_locale_change;
 pub use services::i18n;
