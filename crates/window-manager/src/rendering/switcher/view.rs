@@ -4,7 +4,7 @@ use cairo::{Context, Operator};
 
 use crate::compositor::AltTabSwitcher;
 
-use super::draw::{draw_app_badge, draw_card_border, Rect};
+use super::draw::{app_color, draw_app_badge, draw_card_border, rounded_rect, Rect};
 
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
 
@@ -202,8 +202,7 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    // Clip dock decorations to the same viewport used by its previews and
-    // pointer hit-testing.
+    // ── Clip to dock viewport ──────────────────────────────────────────────────
     context.save()?;
     context.rectangle(
         layout.dock_viewport.x,
@@ -213,19 +212,103 @@ pub(crate) fn draw_switcher_foreground(
     );
     context.clip();
 
+    // ── Per-card: colored border + app badge ───────────────────────────────────
     for (entry_idx, item) in &layout.dock_items {
         let is_selected = *entry_idx == switcher.selected_index;
-        draw_card_border(context, item.card, item.radius, is_selected, 1.0)?;
 
         if let Some(entry) = switcher.entries.get(*entry_idx) {
+            let (r, g, b) = app_color(&entry.app_name);
+
+            if is_selected {
+                // Active: outer glow ring in app color, inner bright line.
+                // Outer glow — slightly expanded, translucent.
+                rounded_rect(
+                    context,
+                    item.card.x - 2.0,
+                    item.card.y - 2.0,
+                    item.card.width + 4.0,
+                    item.card.height + 4.0,
+                    item.radius + 2.0,
+                );
+                context.set_source_rgba(r, g, b, 0.55);
+                context.set_line_width(3.5);
+                context.stroke()?;
+
+                // Inner crisp border.
+                rounded_rect(
+                    context,
+                    item.card.x,
+                    item.card.y,
+                    item.card.width,
+                    item.card.height,
+                    item.radius,
+                );
+                context.set_source_rgba(
+                    (r + 0.4).min(1.0),
+                    (g + 0.4).min(1.0),
+                    (b + 0.4).min(1.0),
+                    0.95,
+                );
+                context.set_line_width(2.0);
+                context.stroke()?;
+            } else {
+                // Inactive: subtle app-tinted border.
+                rounded_rect(
+                    context,
+                    item.card.x,
+                    item.card.y,
+                    item.card.width,
+                    item.card.height,
+                    item.radius,
+                );
+                context.set_source_rgba(r, g, b, 0.35);
+                context.set_line_width(1.2);
+                context.stroke()?;
+            }
+
+            // App badge at bottom-left corner of card.
             let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
             let badge_x = item.card.x + 4.0;
             let badge_y = item.card.y + item.card.height - badge_size - 4.0;
             draw_app_badge(context, entry, badge_x, badge_y, badge_size, 1.0)?;
+        } else {
+            // Fallback if entry not found: plain white border.
+            draw_card_border(context, item.card, item.radius, is_selected, 1.0)?;
         }
     }
 
     context.restore()?;
+
+    // ── Scroll fade gradients at top and bottom of dock ────────────────────────
+    // These paint over the clipped cards to suggest more items above/below.
+    let vp = layout.dock_viewport;
+    let fade_h = (vp.height * 0.14).clamp(16.0, 48.0);
+
+    // Top fade: dark → transparent going downward.
+    {
+        let grad = cairo::LinearGradient::new(0.0, vp.y, 0.0, vp.y + fade_h);
+        grad.add_color_stop_rgba(0.0, 0.03, 0.04, 0.07, 0.82);
+        grad.add_color_stop_rgba(1.0, 0.03, 0.04, 0.07, 0.0);
+        context.rectangle(vp.x, vp.y, vp.width, fade_h);
+        context.set_source(&grad)?;
+        context.fill()?;
+    }
+
+    // Bottom fade: transparent → dark going downward.
+    {
+        let grad = cairo::LinearGradient::new(
+            0.0,
+            vp.y + vp.height - fade_h,
+            0.0,
+            vp.y + vp.height,
+        );
+        grad.add_color_stop_rgba(0.0, 0.03, 0.04, 0.07, 0.0);
+        grad.add_color_stop_rgba(1.0, 0.03, 0.04, 0.07, 0.82);
+        context.rectangle(vp.x, vp.y + vp.height - fade_h, vp.width, fade_h);
+        context.set_source(&grad)?;
+        context.fill()?;
+    }
+
     Ok(())
 }
 
