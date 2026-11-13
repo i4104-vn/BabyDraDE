@@ -204,7 +204,6 @@ pub(crate) fn draw_switcher_foreground(
 
     let vp = layout.dock_viewport;
 
-    // ── Per-card decorations (clipped to viewport) ─────────────────────────────
     context.save()?;
     context.rectangle(vp.x, vp.y, vp.width, vp.height);
     context.clip();
@@ -213,65 +212,21 @@ pub(crate) fn draw_switcher_foreground(
         let is_selected = *entry_idx == switcher.selected_index;
         let p = item.preview;
 
-        // Perspective depth gradient: transparent on the left (near side),
-        // dark on the right (far side) — the right edge recedes to a vanishing
-        // point. Left edge appears taller because the right corners are clipped
-        // by the trapezoidal shape.
-        {
-            let persp = (p.height * 0.10).clamp(6.0, 16.0);
-
-            // Clip gradient to trapezoid: left side full height, right shorter.
-            context.save()?;
-            context.new_path();
-            context.move_to(p.x, p.y);
-            context.line_to(p.x + p.width, p.y + persp);
-            context.line_to(p.x + p.width, p.y + p.height - persp);
-            context.line_to(p.x, p.y + p.height);
-            context.close_path();
-            context.clip();
-
-            // Horizontal dark gradient: clear on left, dark on right.
-            let grad = cairo::LinearGradient::new(p.x, 0.0, p.x + p.width, 0.0);
-            grad.add_color_stop_rgba(0.0, 0.0, 0.0, 0.0, 0.0);
-            grad.add_color_stop_rgba(0.45, 0.0, 0.0, 0.0, 0.0);
-            grad.add_color_stop_rgba(0.80, 0.0, 0.0, 0.0, 0.28);
-            grad.add_color_stop_rgba(1.0, 0.0, 0.0, 0.0, 0.65);
-            context.rectangle(p.x, p.y, p.width, p.height);
-            context.set_source(&grad)?;
-            context.fill()?;
-            context.restore()?;
-
-            // Thin bright highlight on the left edge: near-side lighting.
-            let hi = cairo::LinearGradient::new(p.x, 0.0, p.x + 12.0, 0.0);
-            hi.add_color_stop_rgba(0.0, 1.0, 1.0, 1.0, 0.20);
-            hi.add_color_stop_rgba(1.0, 1.0, 1.0, 1.0, 0.0);
-            context.rectangle(p.x, p.y, 12.0, p.height);
-            context.set_source(&hi)?;
-            context.fill()?;
-        }
-
-        // Active card: trapezoidal border tight around preview. No container.
         if is_selected {
+            // Active: flat border tight around preview, app color, no glow.
             if let Some(entry) = switcher.entries.get(*entry_idx) {
                 let (r, g, b) = app_color(&entry.app_name);
-                let persp = (p.height * 0.10).clamp(6.0, 16.0);
-
                 context.new_path();
-                context.move_to(p.x, p.y);
-                context.line_to(p.x + p.width, p.y + persp);
-                context.line_to(p.x + p.width, p.y + p.height - persp);
-                context.line_to(p.x, p.y + p.height);
-                context.close_path();
+                context.rectangle(p.x, p.y, p.width, p.height);
                 context.set_source_rgba(
                     (r + 0.35).min(1.0),
                     (g + 0.35).min(1.0),
                     (b + 0.35).min(1.0),
                     0.95,
                 );
-                context.set_line_width(2.2);
+                context.set_line_width(2.0);
                 context.stroke()?;
 
-                // Badge only on active card.
                 let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
                 draw_app_badge(
                     context,
@@ -283,7 +238,7 @@ pub(crate) fn draw_switcher_foreground(
                 )?;
             }
         } else if let Some(entry) = switcher.entries.get(*entry_idx) {
-            // Inactive: faint badge so the user can still identify the app.
+            // Inactive: faint badge only, no border.
             let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
             draw_app_badge(
                 context,
@@ -296,43 +251,7 @@ pub(crate) fn draw_switcher_foreground(
         }
     }
 
-    context.restore()?; // end dock clip
-
-    // ── Scroll fade gradients at actual items list boundaries ──────────────────
-    // Multi-stop smooth gradient anchored to first/last card edge.
-    if let (Some((_, first)), Some((_, last))) =
-        (layout.dock_items.first(), layout.dock_items.last())
-    {
-        let top_y = first.card.y;
-        let bottom_y = last.card.y + last.card.height;
-        // Covers ~half a card for a smooth, gradual feel.
-        let fade_h = (DOCK_THUMBNAIL_HEIGHT * 0.55).clamp(36.0, 72.0);
-
-        // Top: opaque at first card edge → transparent half-a-card down.
-        {
-            let grad = cairo::LinearGradient::new(0.0, top_y, 0.0, top_y + fade_h);
-            grad.add_color_stop_rgba(0.0, 0.03, 0.03, 0.06, 0.95);
-            grad.add_color_stop_rgba(0.30, 0.03, 0.03, 0.06, 0.55);
-            grad.add_color_stop_rgba(0.65, 0.03, 0.03, 0.06, 0.12);
-            grad.add_color_stop_rgba(1.0, 0.03, 0.03, 0.06, 0.0);
-            context.rectangle(vp.x, top_y, vp.width, fade_h);
-            context.set_source(&grad)?;
-            context.fill()?;
-        }
-
-        // Bottom: transparent half-a-card up → opaque at last card edge.
-        {
-            let grad =
-                cairo::LinearGradient::new(0.0, bottom_y - fade_h, 0.0, bottom_y);
-            grad.add_color_stop_rgba(0.0, 0.03, 0.03, 0.06, 0.0);
-            grad.add_color_stop_rgba(0.35, 0.03, 0.03, 0.06, 0.12);
-            grad.add_color_stop_rgba(0.70, 0.03, 0.03, 0.06, 0.55);
-            grad.add_color_stop_rgba(1.0, 0.03, 0.03, 0.06, 0.95);
-            context.rectangle(vp.x, bottom_y - fade_h, vp.width, fade_h);
-            context.set_source(&grad)?;
-            context.fill()?;
-        }
-    }
+    context.restore()?;
 
     Ok(())
 }
