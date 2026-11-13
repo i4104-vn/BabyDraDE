@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use gtk4::gdk_pixbuf::Pixbuf;
 use smithay::{
     desktop::Window,
     reexports::wayland_protocols::xdg::shell::server::xdg_toplevel,
@@ -9,12 +10,18 @@ use smithay::{
 
 use super::{window_ops::window_state, BabydraState};
 
+/// One entry in the Alt+Tab switcher list.
+/// `icon_pixbuf` is resolved eagerly when the switcher opens so that
+/// the render path never has to call into GTK/GIO.
 pub(crate) struct AltTabEntry {
     pub(crate) window: Window,
+    /// Wayland app_id (e.g. "org.mozilla.firefox"). Kept for debugging and
+    /// potential future use; icon resolution happens at construction time.
+    #[allow(dead_code)]
     pub(crate) app_id: String,
     pub(crate) app_name: String,
-    #[allow(dead_code)]
-    pub(crate) title: String,
+    /// Pre-loaded icon, or `None` if the app has no resolvable icon.
+    pub(crate) icon_pixbuf: Option<Pixbuf>,
     pub(crate) original_location: Option<Point<i32, Logical>>,
     pub(crate) original_size: Option<Size<i32, Logical>>,
     pub(crate) was_maximized: bool,
@@ -123,11 +130,10 @@ impl BabydraState {
                 } else {
                     app_name
                 };
-                let title = if title.trim().is_empty() {
-                    app_name.clone()
-                } else {
-                    title
-                };
+
+                // Resolve the icon eagerly here (on the event-loop thread, before any
+                // rendering happens) so the render path never has to call into GTK/GIO.
+                let icon_pixbuf = ui_kit::icons::get_app_icon_pixbuf(&app_id, 32);
 
                 let original_location = self.space.element_location(window);
                 let original_size = Some(window.geometry().size);
@@ -145,7 +151,7 @@ impl BabydraState {
                     window: window.clone(),
                     app_id,
                     app_name,
-                    title,
+                    icon_pixbuf,
                     original_location,
                     original_size,
                     was_maximized,
