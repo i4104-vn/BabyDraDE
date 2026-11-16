@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::sync::mpsc::{self, Receiver};
-use std::thread;
+use std::time::{Duration, Instant};
 
 use smithay::{
     backend::renderer::element::Id,
@@ -10,7 +9,7 @@ use smithay::{
 };
 use tracing::{error, info};
 
-use super::{config, config::BlurParams, gl::BlurCache, gl::BlurPipeline};
+use super::{config, config::BlurParams, gl::BlurCache, gl::BlurPipeline, worker::ConfigWorker};
 
 /// Number of frames a cached backdrop is kept around before it is dropped.
 const CACHE_LIFETIME: u64 = 600;
@@ -38,7 +37,10 @@ pub struct BlurEngine {
     /// Configuration is loaded off the compositor call loop. Until it arrives,
     /// the engine uses the cheap built-in defaults and keeps rendering disabled
     /// only according to those defaults.
-    config_rx: Option<Receiver<BlurParams>>,
+    config_worker: Option<ConfigWorker>,
+    ready_at: Instant,
+    startup_observed: bool,
+    active: bool,
 }
 
 impl std::fmt::Debug for BlurEngine {
@@ -60,40 +62,58 @@ impl Default for BlurEngine {
 
 impl BlurEngine {
     pub fn new() -> Self {
-        let (tx, rx) = mpsc::channel();
-        thread::Builder::new()
-            .name("babydra-blur-config".into())
-            .spawn(move || {
-                let _ = tx.send(config::load());
-            })
-            .ok();
         Self {
             params: BlurParams::default(),
             pipeline: None,
             pipeline_failed: false,
             backdrops: HashMap::new(),
             frame: 0,
-            config_rx: Some(rx),
+            // Let desktop, topbar and other layer-shell widgets settle first.
+            ready_at: Instant::now() + Duration::from_secs(3),
+            startup_observed: false,
+            active: false,
+            config_worker: None,
         }
     }
 
     fn refresh_config(&mut self) {
-        let Some(rx) = self.config_rx.as_ref() else {
-            return;
-        };
-        match rx.try_recv() {
-            Ok(params) => {
-                self.params = params;
-                self.config_rx = None;
+        #[cfg(test)]
+        let _ = self.ready_at;
+        #[cfg(test)]
+        {
+            // Unit tests exercise matching synchronously without a compositor
+            // startup phase, so they may activate the engine immediately.
+            self.ready_at = Instant::now();
+            self.startup_observed = true;
+        }
+        if !self.startup_observed {
+            // The first render pass is the point at which desktop/topbar and
+            // layer-shell widgets have actually been submitted. Start the
+            // grace period from there, not from struct construction time.
+            self.ready_at = Instant::now() + Duration::from_secs(3);
+            self.startup_observed = true;
+        }
+        if !self.active {
+            if Instant::now() < self.ready_at {
+                return;
             }
-            Err(mpsc::TryRecvError::Disconnected) => self.config_rx = None,
-            Err(mpsc::TryRecvError::Empty) => {}
+            self.active = true;
+            self.config_worker = Some(ConfigWorker::start());
+        }
+        if let Some(worker) = self.config_worker.as_mut() {
+            if let Some(params) = worker.try_finish() {
+                self.params = params;
+                self.config_worker = None;
+            }
         }
     }
 
     /// Check if a window should have background blur applied
     pub fn matches_window(&mut self, window: &Window) -> bool {
         self.refresh_config();
+        if !self.active {
+            return false;
+        }
         if !self.params.enabled {
             return false;
         }
@@ -111,6 +131,9 @@ impl BlurEngine {
     /// Check if a LayerShell surface namespace should have background blur applied
     pub fn matches_layer(&mut self, namespace: &str) -> bool {
         self.refresh_config();
+        if !self.active {
+            return false;
+        }
         if !self.params.enabled {
             return false;
         }
@@ -241,6 +264,9 @@ impl BlurEngine {
         projection: [f32; 9],
     ) {
         self.refresh_config();
+        if !self.active {
+            return;
+        }
         if !self.params.enabled || self.pipeline_failed {
             return;
         }
