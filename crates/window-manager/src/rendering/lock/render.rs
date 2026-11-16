@@ -1,12 +1,14 @@
 //! Lock screen UI components, window creation, and blur transitions.
 
+use animation::{Easing, Tween, FRAME_INTERVAL};
+
 use super::auth::verify_password;
 use gtk4::prelude::*;
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const BLUR_DIVISORS: [i32; 3] = [8, 16, 28];
 
@@ -298,12 +300,11 @@ fn schedule_reverse_blur_step(transition: LockTransition, on_complete: Rc<dyn Fn
 }
 
 fn fade_out_reverse_transition(transition: LockTransition, on_complete: Rc<dyn Fn()>) {
-    let started = Instant::now();
-    glib::timeout_add_local(Duration::from_millis(16), move || {
-        let progress = (started.elapsed().as_secs_f64() / 0.12).clamp(0.0, 1.0);
-        transition.window.set_opacity(1.0 - progress);
+    let fade = Tween::new(1.0, 0.0, Duration::from_millis(120), Easing::EaseOutCubic);
+    glib::timeout_add_local(FRAME_INTERVAL, move || {
+        transition.window.set_opacity(fade.value());
 
-        if progress >= 1.0 {
+        if !fade.is_animating() {
             transition.window.set_visible(false);
             on_complete();
             glib::ControlFlow::Break
@@ -371,16 +372,15 @@ fn blur_transition_frame(
 }
 
 fn fade_out_transition(transition: LockTransition) {
-    let started = Instant::now();
-    glib::timeout_add_local(Duration::from_millis(16), move || {
+    let fade = Tween::new(1.0, 0.0, Duration::from_millis(160), Easing::EaseOutCubic);
+    glib::timeout_add_local(FRAME_INTERVAL, move || {
         if transition.cancelled.get() {
             return glib::ControlFlow::Break;
         }
 
-        let progress = (started.elapsed().as_secs_f64() / 0.16).clamp(0.0, 1.0);
-        transition.stack.set_opacity(1.0 - progress);
+        transition.stack.set_opacity(fade.value());
 
-        if progress >= 1.0 {
+        if !fade.is_animating() {
             transition.stack.set_visible(false);
             glib::ControlFlow::Break
         } else {

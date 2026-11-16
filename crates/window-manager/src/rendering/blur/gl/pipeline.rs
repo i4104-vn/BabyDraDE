@@ -180,8 +180,8 @@ impl BlurCache {
         // the size makes sure a later call cannot mistake a partially
         // allocated texture for a valid cache.
         self.size = (0, 0);
-        self.bytes =
-            width as usize * height as usize * 4 + result_width as usize * result_height as usize * 4;
+        self.bytes = width as usize * height as usize * 4
+            + result_width as usize * result_height as usize * 4;
         if !complete {
             self.failed_size = Some((width, height));
             return false;
@@ -604,5 +604,3 @@ impl BlurPipeline {
         gl.disable_vertex_attrib_array(self.composite_prog.a_position);
     }
 }
-
-

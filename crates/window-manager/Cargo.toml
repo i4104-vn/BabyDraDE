@@ -27,6 +27,7 @@ smithay = { version = "=0.7.0", default-features = false, features = [
 smithay-drm-extras = { version = "0.1", default-features = false }
 wayland-sys = { version = "0.31", features = ["dlopen"] }
 services = { path = "../../libs/services" }
+animation = { path = "../../libs/animation" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 libc = "0.2"

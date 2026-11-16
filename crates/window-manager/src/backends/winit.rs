@@ -18,6 +18,8 @@ use crate::{
     },
 };
 
+const OUTPUT_REFRESH_MHZ: i32 = animation::TARGET_FPS as i32 * 1000;
+
 pub(crate) fn init(
     event_loop: &mut EventLoop<CalloopData>,
     data: &mut CalloopData,
@@ -45,7 +47,7 @@ pub(crate) fn init(
     );
     let mode = Mode {
         size: backend.window_size(),
-        refresh: 60_000,
+        refresh: OUTPUT_REFRESH_MHZ,
     };
     let _output_global = output.create_global::<BabydraState>(&data.display_handle);
     let transform = match std::env::var("BABYDRADE_TRANSFORM").as_deref() {
@@ -75,7 +77,7 @@ pub(crate) fn init(
                     output.change_current_state(
                         Some(Mode {
                             size,
-                            refresh: 60_000,
+                            refresh: OUTPUT_REFRESH_MHZ,
                         }),
                         None,
                         None,

@@ -1,5 +1,4 @@
-use std::time::{Duration, Instant};
-
+use animation::{Easing, Tween, DEFAULT_DURATION};
 use gtk4::gdk_pixbuf::Pixbuf;
 use smithay::{
     desktop::Window,
@@ -9,18 +8,6 @@ use smithay::{
 };
 
 use super::{window_ops::window_state, BabydraState};
-
-/// Thời gian của một bước chuyển (mở switcher hoặc đổi app).
-pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
-
-/// Easing khởi đầu và kết thúc đều chậm, không giật.
-pub(crate) fn ease_in_out_cubic(value: f64) -> f64 {
-    if value < 0.5 {
-        4.0 * value * value * value
-    } else {
-        1.0 - (-2.0 * value + 2.0).powi(3) / 2.0
-    }
-}
 
 /// One entry in the Alt+Tab switcher list.
 /// `icon_pixbuf` is resolved eagerly when the switcher opens so that
@@ -43,23 +30,31 @@ pub(crate) struct AltTabEntry {
 pub(crate) struct AltTabSwitcher {
     pub(crate) entries: Vec<AltTabEntry>,
     pub(crate) selected_index: usize,
-    pub(crate) transition_started: Instant,
+    /// Vị trí cuộn carousel (đơn vị slot, có phần lẻ) của dock bên trái.
+    /// Dùng `Tween` để mọi lần bấm Tab cộng dồn mượt mà ở mọi tần số quét.
+    pub(crate) scroll: Tween,
+    /// Tiến trình 0..1 của hiệu ứng stage (scale + trượt ngang).
+    pub(crate) stage: Tween,
     /// +1.0 khi chọn app kế tiếp, -1.0 khi Shift+Tab lùi lại.
     /// Dùng để animation stage trượt đúng hướng.
     pub(crate) scroll_direction: f64,
-    /// Vị trí cuộn liên tục (đơn vị: slot) tại thời điểm bắt đầu animation.
-    pub(crate) scroll_from: f64,
-    /// Đích cuộn liên tục. Khác `selected_index` khi animation đang chạy.
-    pub(crate) scroll_target: f64,
 }
 
 impl AltTabSwitcher {
     /// Vị trí chọn liên tục (có phần lẻ) dùng cho carousel bên trái.
     pub(crate) fn visual_selection(&self) -> f64 {
-        let raw = (self.transition_started.elapsed().as_secs_f64()
-            / ANIMATION_DURATION.as_secs_f64())
-        .clamp(0.0, 1.0);
-        self.scroll_from + (self.scroll_target - self.scroll_from) * ease_in_out_cubic(raw)
+        self.scroll.value()
+    }
+
+    /// Tiến trình 0..1 của animation stage.
+    pub(crate) fn stage_progress(&self) -> f64 {
+        self.stage.value()
+    }
+
+    /// Chạy lại pulse của stage từ 0 -> 1.
+    fn restart_stage(&mut self) {
+        self.stage
+            .restart(0.0, 1.0, DEFAULT_DURATION, Easing::EaseInOutCubic);
     }
 }
 
@@ -94,9 +89,6 @@ impl BabydraState {
 
     pub(crate) fn cycle_alt_tab(&mut self, backwards: bool) {
         if let Some(mut switcher) = self.alt_tab_switcher.take() {
-            // Lấy vị trí cuộn hiện tại trước khi thay đổi danh sách/mục chọn,
-            // để nhiều lần bấm Tab liên tiếp vẫn nối tiếp mượt mà.
-            let visual_before = switcher.visual_selection();
             let entries_before = switcher.entries.len();
             let selected_window = switcher
                 .entries
@@ -117,10 +109,9 @@ impl BabydraState {
 
             if switcher.entries.len() == 1 {
                 switcher.selected_index = 0;
-                switcher.transition_started = Instant::now();
+                switcher.scroll.snap_to(0.0);
                 switcher.scroll_direction = direction;
-                switcher.scroll_from = 0.0;
-                switcher.scroll_target = 0.0;
+                switcher.restart_stage();
                 self.alt_tab_switcher = Some(switcher);
                 return;
             }
@@ -142,16 +133,17 @@ impl BabydraState {
             if entries_changed {
                 // Danh sách entry đã đổi (có cửa sổ đóng/mở): căn lại để
                 // tránh cuộn tới một item không còn tồn tại.
-                switcher.scroll_from = switcher.selected_index as f64;
-                switcher.scroll_target = switcher.selected_index as f64;
+                switcher.scroll.snap_to(switcher.selected_index as f64);
             } else {
                 // Cộng dồn vào đích thay vì vị trí hiện tại, nhờ vậy bấm Tab
                 // liên tiếp không bị nhảy lùi về đầu bước trước.
-                switcher.scroll_from = visual_before;
-                switcher.scroll_target += direction;
+                let target = switcher.scroll.target() + direction;
+                switcher
+                    .scroll
+                    .retarget(target, DEFAULT_DURATION, Easing::EaseInOutCubic);
             }
-            switcher.transition_started = Instant::now();
             switcher.scroll_direction = direction;
+            switcher.restart_stage();
             self.alt_tab_switcher = Some(switcher);
             return;
         }
@@ -228,14 +220,12 @@ impl BabydraState {
         } else {
             1
         };
-        let scroll = selected_index as f64;
         self.alt_tab_switcher = Some(AltTabSwitcher {
             entries,
             selected_index,
-            transition_started: Instant::now(),
+            scroll: Tween::settled(selected_index as f64),
+            stage: Tween::new(0.0, 1.0, DEFAULT_DURATION, Easing::EaseInOutCubic),
             scroll_direction: if backwards { -1.0 } else { 1.0 },
-            scroll_from: scroll,
-            scroll_target: scroll,
         });
     }
 }

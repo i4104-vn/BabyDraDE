@@ -255,14 +255,7 @@ impl BlurEngine {
         cache.last_used = frame;
 
         unsafe {
-            pipeline.render_blur(
-                gl,
-                dst,
-                corner_radius,
-                projection,
-                &self.params,
-                cache,
-            );
+            pipeline.render_blur(gl, dst, corner_radius, projection, &self.params, cache);
         }
 
         self.pipeline = Some(pipeline);

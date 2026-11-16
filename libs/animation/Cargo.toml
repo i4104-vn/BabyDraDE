@@ -1,0 +1,9 @@
+[package]
+name = "animation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Frame-rate independent animation primitives shared by BabyDraDE UI and compositor"
+
+[dependencies]

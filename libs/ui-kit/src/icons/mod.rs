@@ -349,7 +349,14 @@ pub fn get_theme_icon_pixbuf(name: &str, size: i32) -> Option<Pixbuf> {
         let svg = if is_dark { dark_svg } else { light_svg };
         let bytes = glib::Bytes::from(svg.as_bytes());
         let stream = MemoryInputStream::from_bytes(&bytes);
-        return Pixbuf::from_stream_at_scale(&stream, size, size, true, gtk4::gio::Cancellable::NONE).ok();
+        return Pixbuf::from_stream_at_scale(
+            &stream,
+            size,
+            size,
+            true,
+            gtk4::gio::Cancellable::NONE,
+        )
+        .ok();
     }
 
     // Generic fallback icon

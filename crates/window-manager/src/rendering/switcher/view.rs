@@ -1,6 +1,6 @@
 use cairo::{Context, Operator};
 
-use crate::compositor::{ease_in_out_cubic, AltTabSwitcher, ANIMATION_DURATION};
+use crate::compositor::AltTabSwitcher;
 
 use super::draw::{draw_app_badge, rounded_rect, Rect};
 
@@ -48,10 +48,7 @@ pub(crate) fn compute_layout(
 
     let n = switcher.entries.len();
     let sel = switcher.selected_index.min(n - 1);
-    let raw_progress = (switcher.transition_started.elapsed().as_secs_f64()
-        / ANIMATION_DURATION.as_secs_f64())
-    .clamp(0.0, 1.0);
-    let progress = ease_in_out_cubic(raw_progress);
+    let progress = switcher.stage_progress();
 
     // Dock is a continuous carousel: `visual_selection` may be fractional,
     // and entries are positioned relative to it. This makes the list scroll
@@ -90,8 +87,8 @@ pub(crate) fn compute_layout(
         stage_card.center_x(),
         stage_card.y + stage_card.height / 2.0,
     );
-    // Chuyển app: stage hơi thu nhỏ, trượt nhẹ theo hướng điều hướng và mờ dần
-    // vào, rồi trở về đúng kích thước. Nhẹ và chậm, không giật.
+    // Chuyển app: stage hơi thu nhỏ, trượt nhẹ theo hướng điều hướng rồi trở
+    // về đúng kích thước. Không đổi opacity để tránh cảm giác nhấp nháy.
     let stage_scale = 0.965 + 0.035 * progress;
     let stage_slide = switcher.scroll_direction * (1.0 - progress) * STAGE_SLIDE_DISTANCE;
     let stage_card = scale_rect_around(stage_card, stage_center, stage_scale);
@@ -400,6 +397,8 @@ pub(crate) fn draw_switcher_foreground(
 
 #[cfg(test)]
 mod tests {
+    use animation::Tween;
+
     use super::*;
 
     #[test]
@@ -407,21 +406,11 @@ mod tests {
         let switcher = AltTabSwitcher {
             entries: Vec::new(),
             selected_index: 0,
-            transition_started: std::time::Instant::now(),
+            scroll: Tween::settled(0.0),
+            stage: Tween::settled(1.0),
             scroll_direction: 1.0,
-            scroll_from: 0.0,
-            scroll_target: 0.0,
         };
         assert!(compute_layout(&switcher, 1920.0, 1080.0).is_none());
-    }
-
-    #[test]
-    fn easing_is_smooth_and_returns_to_rest() {
-        assert_eq!(ease_in_out_cubic(0.0), 0.0);
-        assert_eq!(ease_in_out_cubic(0.5), 0.5);
-        assert_eq!(ease_in_out_cubic(1.0), 1.0);
-        assert!(ease_in_out_cubic(0.25) < 0.25);
-        assert!(ease_in_out_cubic(0.75) > 0.75);
     }
 
     #[test]

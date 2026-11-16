@@ -1,5 +1,6 @@
 use std::{cell::RefCell, error::Error, rc::Rc, time::Duration};
 
+use animation::FRAME_INTERVAL;
 use smithay::{
     backend::{
         drm::{compositor::FrameFlags, DrmEvent},
@@ -91,7 +92,7 @@ pub fn setup_render_loop(
             std::io::Error::other(format!("Failed to insert udev event source: {err}"))
         })?;
 
-    // 4. Frame Render Loop — driven by 16ms timer (~60 FPS)
+    // 4. Frame Render Loop — paced for 120 FPS via the shared frame budget.
     let state_render = state;
     let mut switcher_overlay = SwitcherOverlay::default();
     let timer = Timer::immediate();
@@ -228,7 +229,7 @@ pub fn setup_render_loop(
                 let _ = display_handle.flush_clients();
             }
 
-            TimeoutAction::ToDuration(Duration::from_millis(16))
+            TimeoutAction::ToDuration(FRAME_INTERVAL)
         })
         .map_err(|err| std::io::Error::other(format!("Failed to insert frame timer: {err}")))?;
 
