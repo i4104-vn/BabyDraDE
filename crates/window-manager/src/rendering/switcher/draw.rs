@@ -72,51 +72,6 @@ pub(crate) fn rounded_rect(
     context.close_path();
 }
 
-/// Vẽ một icon app đơn lẻ (không bo tròn nền, không chữ) tại vị trí chỉ định.
-pub(crate) fn draw_app_icon_at(
-    context: &Context,
-    entry: &AltTabEntry,
-    x: f64,
-    y: f64,
-    size: f64,
-    alpha: f64,
-) -> Result<(), cairo::Error> {
-    if alpha <= 0.01 {
-        return Ok(());
-    }
-
-    if let Some(ref pixbuf) = entry.icon_pixbuf {
-        let pw = pixbuf.width() as f64;
-        let ph = pixbuf.height() as f64;
-        if pw > 0.0 && ph > 0.0 {
-            context.save()?;
-            context.translate(x, y);
-            context.scale(size / pw, size / ph);
-            context.set_source_pixbuf(pixbuf, 0.0, 0.0);
-            context.paint_with_alpha(alpha)?;
-            context.restore()?;
-            return Ok(());
-        }
-    }
-
-    // Fallback: chữ cái đơn sắc
-    let color = app_color(&entry.app_name);
-    context.set_source_rgba(color.0, color.1, color.2, alpha);
-    context.select_font_face("Sans", FontSlant::Normal, FontWeight::Bold);
-    context.set_font_size(size * 0.55);
-    let initial = entry
-        .app_name
-        .chars()
-        .next()
-        .unwrap_or('A')
-        .to_uppercase()
-        .to_string();
-    let extents = context.text_extents(&initial)?;
-    let tx = x + (size - extents.x_advance()) / 2.0 - extents.x_bearing();
-    let ty = y + (size - extents.height()) / 2.0 - extents.y_bearing();
-    draw_text(context, &initial, tx, ty, (1.0, 1.0, 1.0, alpha))
-}
-
 /// Vẽ badge app bo góc, gắn sát góc dưới-trái của preview, không có padding thừa.
 pub(crate) fn draw_app_badge(
     context: &Context,

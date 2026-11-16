@@ -4,7 +4,7 @@ use cairo::{Context, Operator};
 
 use crate::compositor::AltTabSwitcher;
 
-use super::draw::{app_color, draw_app_badge, draw_app_icon_at, rounded_rect, Rect};
+use super::draw::{app_color, draw_app_badge, rounded_rect, Rect};
 
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
 
@@ -223,14 +223,6 @@ pub(crate) fn draw_switcher_foreground(
                 context.set_source_rgba(0.14, 0.14, 0.18, 0.60);
             }
             context.fill()?;
-            context.restore()?;
-
-            // Preview fit hoàn toàn bên trong card, bo góc, không bị padding hay thừa góc.
-            context.save()?;
-            rounded_rect(context, p.x, p.y, p.width, p.height, p.height * 0.10);
-            context.clip();
-            // Vẽ icon app làm preview (fill toàn bộ preview area).
-            draw_app_icon_at(context, entry, p.x, p.y, p.width.min(p.height), 1.0)?;
             context.restore()?;
 
             // Badge bo góc, gắn sát góc dưới-trái của preview, không padding thừa.
