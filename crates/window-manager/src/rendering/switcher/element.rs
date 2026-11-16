@@ -16,12 +16,12 @@ use smithay::{
     utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Size, Transform},
 };
 
-use crate::compositor::AltTabSwitcher;
+use crate::compositor::{AltTabSwitcher, ANIMATION_DURATION};
 
 use super::{
     super::CustomRenderElements,
     draw::Rect,
-    view::{compute_layout, draw_switcher_foreground, ANIMATION_DURATION},
+    view::{compute_layout, draw_switcher_foreground},
 };
 
 use crate::rendering::elements::types::ConstrainedSurface;

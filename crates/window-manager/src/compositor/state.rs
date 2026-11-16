@@ -30,7 +30,7 @@ mod hit_test;
 mod switcher;
 mod window_ops;
 
-pub(crate) use switcher::{AltTabEntry, AltTabSwitcher};
+pub(crate) use switcher::{ease_in_out_cubic, AltTabEntry, AltTabSwitcher, ANIMATION_DURATION};
 
 pub(crate) struct CalloopData {
     pub(crate) state: BabydraState,

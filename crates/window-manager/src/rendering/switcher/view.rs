@@ -1,12 +1,8 @@
-use std::time::Duration;
-
 use cairo::{Context, Operator};
 
-use crate::compositor::AltTabSwitcher;
+use crate::compositor::{ease_in_out_cubic, AltTabSwitcher, ANIMATION_DURATION};
 
-use super::draw::{app_color, draw_app_badge, rounded_rect, Rect};
-
-pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
+use super::draw::{draw_app_badge, rounded_rect, Rect};
 
 // The switcher is a layout, not a collection of windows laid out at their
 // native sizes. Keeping these values independent from the selected window
@@ -21,8 +17,6 @@ const DOCK_MAX_VISIBLE_ITEMS: usize = 5;
 const STAGE_SIDE_GAP: f64 = 28.0;
 const STAGE_RIGHT_MARGIN: f64 = 24.0;
 const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
-/// Độ trượt nhẹ của danh sách dock mỗi lần đổi app (pixel logic).
-const DOCK_SETTLE_DISTANCE: f64 = 10.0;
 /// Độ trượt ngang nhẹ của stage khi chuyển app.
 const STAGE_SLIDE_DISTANCE: f64 = 14.0;
 
@@ -38,9 +32,9 @@ pub(crate) struct SwitcherLayout {
     pub(crate) stage: (usize, CardLayout),
     pub(crate) dock_viewport: Rect,
     pub(crate) dock_items: Vec<(usize, CardLayout)>,
-    /// Animation progress 0.0→1.0 since switcher opened / selection changed.
-    /// Dùng để animate hiệu ứng cuộn dock và chuyển stage mượt mà.
-    pub(crate) progress: f64,
+    /// Khung target cố định ở giữa dock. Không di chuyển, không đổi màu —
+    /// các item cuộn qua bên dưới nó.
+    pub(crate) dock_target: Rect,
 }
 
 pub(crate) fn compute_layout(
@@ -54,26 +48,18 @@ pub(crate) fn compute_layout(
 
     let n = switcher.entries.len();
     let sel = switcher.selected_index.min(n - 1);
-    let elapsed = switcher.transition_started.elapsed().as_secs_f64();
-    let progress = ease_in_out_cubic((elapsed / ANIMATION_DURATION.as_secs_f64()).clamp(0.0, 1.0));
+    let raw_progress = (switcher.transition_started.elapsed().as_secs_f64()
+        / ANIMATION_DURATION.as_secs_f64())
+    .clamp(0.0, 1.0);
+    let progress = ease_in_out_cubic(raw_progress);
 
-    // The dock has a bounded viewport. Cards keep a fixed size, and the
-    // selected entry stays centered while the list moves vertically.
-    let (dock_viewport, mut dock_items) = compute_dock_layout(n, sel, screen_h);
+    // Dock is a continuous carousel: `visual_selection` may be fractional,
+    // and entries are positioned relative to it. This makes the list scroll
+    // smoothly instead of swapping content in fixed slots.
+    let visual_selection = switcher.visual_selection();
+    let (dock_viewport, dock_items, dock_target) =
+        compute_dock_layout_animated(n, visual_selection, screen_h);
     let base_thumb_w = DOCK_THUMBNAIL_WIDTH;
-
-    // Gentle dock scroll: cards start slightly offset against the travel
-    // direction and ease back into place with a small per-slot lag, so the
-    // list visibly scrolls on every Tab press. The offset lives in the layout
-    // (not only in the Cairo overlay) so live previews move together with
-    // their cards.
-    for (slot, (_, item)) in dock_items.iter_mut().enumerate() {
-        let lag = slot as f64 * 0.07;
-        let item_progress = ((progress - lag) / (1.0 - lag).max(f64::EPSILON)).clamp(0.0, 1.0);
-        let offset = switcher.scroll_direction * (1.0 - item_progress) * DOCK_SETTLE_DISTANCE;
-        item.card.y += offset;
-        item.preview.y += offset;
-    }
 
     // Center stage: a fixed 16:9 presentation area. The selected app is fit
     // into this area by the renderer below; its native aspect ratio must not
@@ -126,7 +112,9 @@ pub(crate) fn compute_layout(
             card: stage_card,
             preview: stage_preview,
             radius: 18.0,
-            opacity: 0.75 + 0.25 * progress,
+            // Không fade để tránh cảm giác nhấp nháy; hiệu ứng chuyển app
+            // nằm ở chuyển động scale/trượt nhẹ phía trên.
+            opacity: 1.0,
         },
     );
 
@@ -134,22 +122,21 @@ pub(crate) fn compute_layout(
         stage,
         dock_viewport,
         dock_items,
-        progress,
+        dock_target,
     })
 }
 
-fn compute_dock_layout(
-    entry_count: usize,
-    selected_index: usize,
-    screen_h: f64,
-) -> (Rect, Vec<(usize, CardLayout)>) {
-    if entry_count == 0 {
-        return (
-            Rect::new(DOCK_X, 0.0, DOCK_THUMBNAIL_WIDTH, 0.0),
-            Vec::new(),
-        );
-    }
+struct DockMetrics {
+    viewport: Rect,
+    center_y: f64,
+    item_step: f64,
+    thumbnail_x: f64,
+    thumbnail_width: f64,
+    thumbnail_height: f64,
+    thumb_pad: f64,
+}
 
+fn compute_dock_metrics(entry_count: usize, screen_h: f64) -> DockMetrics {
     let viewport_y = DOCK_TOP_MARGIN.min((screen_h - 1.0).max(0.0));
     let viewport_bottom = (screen_h - DOCK_BOTTOM_MARGIN).max(viewport_y + 1.0);
     let viewport = Rect::new(
@@ -159,7 +146,7 @@ fn compute_dock_layout(
         viewport_bottom - viewport_y,
     );
 
-    let visible_count = entry_count.min(DOCK_MAX_VISIBLE_ITEMS);
+    let visible_count = entry_count.min(DOCK_MAX_VISIBLE_ITEMS).max(1);
     let desired_height = visible_count as f64 * DOCK_THUMBNAIL_HEIGHT
         + visible_count.saturating_sub(1) as f64 * DOCK_GAP;
     let scale = (viewport.height / desired_height).min(1.0);
@@ -167,58 +154,103 @@ fn compute_dock_layout(
     let thumbnail_height = DOCK_THUMBNAIL_HEIGHT * scale;
     let gap = DOCK_GAP * scale;
     let item_step = thumbnail_height + gap;
-    let items_height =
-        visible_count as f64 * thumbnail_height + visible_count.saturating_sub(1) as f64 * gap;
-    let first_item_y = viewport.y + (viewport.height - items_height) / 2.0;
     let thumb_pad = 3.0 * scale;
     let thumbnail_x = DOCK_X + (DOCK_THUMBNAIL_WIDTH - thumbnail_width) / 2.0;
+    let center_y = viewport.y + viewport.height / 2.0;
 
-    // Keep a circular slice around the selection. This makes the entries at
-    // either end of the Alt+Tab list adjacent in the dock as well.
-    let before_count = visible_count / 2;
-    let first_index = if selected_index >= before_count {
-        selected_index - before_count
-    } else {
-        entry_count - (before_count - selected_index)
-    };
-
-    let dock_items = (0..visible_count)
-        .map(|slot| {
-            let idx = (first_index + slot) % entry_count;
-            let card = Rect::new(
-                thumbnail_x,
-                first_item_y + slot as f64 * item_step,
-                thumbnail_width,
-                thumbnail_height,
-            );
-            let preview = Rect::new(
-                card.x + thumb_pad,
-                card.y + thumb_pad,
-                (card.width - 2.0 * thumb_pad).max(0.0),
-                (card.height - 2.0 * thumb_pad).max(0.0),
-            );
-
-            (
-                idx,
-                CardLayout {
-                    card,
-                    preview,
-                    radius: (thumbnail_height * 0.13).clamp(4.0, 14.0),
-                    opacity: 1.0,
-                },
-            )
-        })
-        .collect();
-
-    (viewport, dock_items)
+    DockMetrics {
+        viewport,
+        center_y,
+        item_step,
+        thumbnail_x,
+        thumbnail_width,
+        thumbnail_height,
+        thumb_pad,
+    }
 }
 
-fn ease_in_out_cubic(value: f64) -> f64 {
-    if value < 0.5 {
-        4.0 * value * value * value
-    } else {
-        1.0 - (-2.0 * value + 2.0).powi(3) / 2.0
+fn dock_card(metrics: &DockMetrics, slot: f64, opacity: f64) -> CardLayout {
+    let card = Rect::new(
+        metrics.thumbnail_x,
+        metrics.center_y + slot * metrics.item_step - metrics.thumbnail_height / 2.0,
+        metrics.thumbnail_width,
+        metrics.thumbnail_height,
+    );
+    let preview = Rect::new(
+        card.x + metrics.thumb_pad,
+        card.y + metrics.thumb_pad,
+        (card.width - 2.0 * metrics.thumb_pad).max(0.0),
+        (card.height - 2.0 * metrics.thumb_pad).max(0.0),
+    );
+
+    CardLayout {
+        card,
+        preview,
+        radius: (metrics.thumbnail_height * 0.13).clamp(4.0, 14.0),
+        opacity,
     }
+}
+
+/// Khoảng cách ngắn nhất (theo vòng tròn) giữa entry và tâm carousel.
+fn circular_slot_delta(index: usize, center: f64, count: usize) -> f64 {
+    let count_f = count as f64;
+    let mut delta = (index as f64 - center).rem_euclid(count_f);
+    if delta > count_f / 2.0 {
+        delta -= count_f;
+    }
+    delta
+}
+
+fn compute_dock_items(
+    metrics: &DockMetrics,
+    entry_count: usize,
+    center: f64,
+) -> Vec<(usize, CardLayout)> {
+    let mut items = (0..entry_count)
+        .filter_map(|index| {
+            let slot = circular_slot_delta(index, center, entry_count);
+            // Năm slot lõi nằm trong [-2, 2]. Item mới đi vào / item cũ đi ra
+            // mờ dần trong đúng một slot kế tiếp, nên không bao giờ "pop"
+            // hoặc nhấp nháy khi bắt đầu/kết thúc cuộn.
+            let fade = (3.0 - slot.abs()).clamp(0.0, 1.0);
+            if fade <= 0.001 {
+                return None;
+            }
+            Some((index, dock_card(metrics, slot, fade)))
+        })
+        .collect::<Vec<_>>();
+
+    items.sort_by(|a, b| a.1.card.y.total_cmp(&b.1.card.y));
+    items
+}
+
+fn compute_dock_layout_animated(
+    entry_count: usize,
+    center: f64,
+    screen_h: f64,
+) -> (Rect, Vec<(usize, CardLayout)>, Rect) {
+    if entry_count == 0 {
+        let empty = Rect::new(DOCK_X, 0.0, DOCK_THUMBNAIL_WIDTH, 0.0);
+        return (empty, Vec::new(), empty);
+    }
+
+    let metrics = compute_dock_metrics(entry_count, screen_h);
+    let items = compute_dock_items(&metrics, entry_count, center);
+    // Target luôn ở slot 0 (giữa) và không phụ thuộc vào animation.
+    let target = dock_card(&metrics, 0.0, 1.0).preview;
+
+    (metrics.viewport, items, target)
+}
+
+#[cfg(test)]
+fn compute_dock_layout(
+    entry_count: usize,
+    selected_index: usize,
+    screen_h: f64,
+) -> (Rect, Vec<(usize, CardLayout)>) {
+    let (viewport, items, _) =
+        compute_dock_layout_animated(entry_count, selected_index as f64, screen_h);
+    (viewport, items)
 }
 
 fn scale_rect_around(rect: Rect, center: (f64, f64), scale: f64) -> Rect {
@@ -248,8 +280,31 @@ pub(crate) fn draw_switcher_foreground(
     context.rectangle(vp.x, vp.y, vp.width, vp.height);
     context.clip();
 
+    let target = layout.dock_target;
+    let target_radius = target.height * 0.10;
+
+    // Vùng target tĩnh: nền rất nhẹ để mắt bám vào đích đến, nhưng không đổi
+    // màu và không di chuyển nên không gây nhấp nháy.
+    context.save()?;
+    rounded_rect(
+        context,
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        target_radius,
+    );
+    context.set_source_rgba(1.0, 1.0, 1.0, 0.045);
+    context.fill()?;
+    context.restore()?;
+
+    // Các card trượt qua bên dưới target.
     for (entry_idx, item) in &layout.dock_items {
-        let is_selected = *entry_idx == switcher.selected_index;
+        let opacity = item.opacity;
+        if opacity <= 0.01 {
+            continue;
+        }
+
         let c = item.card;
         let p = item.preview;
 
@@ -257,11 +312,7 @@ pub(crate) fn draw_switcher_foreground(
             // Nền card bo tròn, lấp đầy toàn bộ vùng item.
             context.save()?;
             rounded_rect(context, c.x, c.y, c.width, c.height, c.height * 0.12);
-            if is_selected {
-                context.set_source_rgba(0.22, 0.22, 0.27, 0.85);
-            } else {
-                context.set_source_rgba(0.14, 0.14, 0.18, 0.60);
-            }
+            context.set_source_rgba(0.14, 0.14, 0.18, 0.60 * opacity);
             context.fill()?;
             context.restore()?;
 
@@ -273,25 +324,25 @@ pub(crate) fn draw_switcher_foreground(
                 p.x,
                 p.y + p.height - badge_size,
                 badge_size,
-                if is_selected { 1.0 } else { 0.55 },
+                0.85 * opacity,
             )?;
-
-            // Viền chọn bo góc, mịn, màu app; sáng dần theo animation.
-            if is_selected {
-                let (r, g, b) = app_color(&entry.app_name);
-                context.new_path();
-                rounded_rect(context, p.x, p.y, p.width, p.height, p.height * 0.10);
-                context.set_source_rgba(
-                    (r + 0.35).min(1.0),
-                    (g + 0.35).min(1.0),
-                    (b + 0.35).min(1.0),
-                    0.70 + 0.30 * layout.progress,
-                );
-                context.set_line_width(2.0);
-                context.stroke()?;
-            }
         }
     }
+
+    // Viền target luôn nằm trên cùng, cố định ở giữa.
+    context.save()?;
+    rounded_rect(
+        context,
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        target_radius,
+    );
+    context.set_source_rgba(0.88, 0.92, 1.0, 0.90);
+    context.set_line_width(2.0);
+    context.stroke()?;
+    context.restore()?;
 
     context.restore()?;
 
@@ -309,6 +360,8 @@ mod tests {
             selected_index: 0,
             transition_started: std::time::Instant::now(),
             scroll_direction: 1.0,
+            scroll_from: 0.0,
+            scroll_target: 0.0,
         };
         assert!(compute_layout(&switcher, 1920.0, 1080.0).is_none());
     }
@@ -359,5 +412,35 @@ mod tests {
         assert!(items
             .windows(2)
             .all(|pair| { pair[0].0 < pair[1].0 && pair[0].1.card.y < pair[1].1.card.y }));
+    }
+
+    #[test]
+    fn dock_scroll_moves_entries_up_by_one_slot() {
+        let (_, before, _) = compute_dock_layout_animated(30, 12.0, 1080.0);
+        let (_, after, _) = compute_dock_layout_animated(30, 13.0, 1080.0);
+        let y_before = before.iter().find(|(idx, _)| *idx == 13).unwrap().1.card.y;
+        let y_after = after.iter().find(|(idx, _)| *idx == 13).unwrap().1.card.y;
+
+        // Ở 1080p, 5 item vừa đủ nên scale = 1: bước = 115 + 12.
+        assert!((y_before - y_after - 127.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn target_frame_stays_fixed_while_dock_scrolls() {
+        let (_, _, target_at_rest) = compute_dock_layout_animated(30, 12.0, 1080.0);
+        let (_, _, target_mid_scroll) = compute_dock_layout_animated(30, 12.5, 1080.0);
+
+        assert_eq!(target_at_rest, target_mid_scroll);
+    }
+
+    #[test]
+    fn entering_item_fades_instead_of_popping() {
+        let (_, items, _) = compute_dock_layout_animated(30, 12.5, 1080.0);
+        let (_, entering) = items
+            .iter()
+            .find(|(idx, _)| *idx == 15)
+            .expect("item below the target should be entering");
+
+        assert!(entering.opacity > 0.0 && entering.opacity < 1.0);
     }
 }
