@@ -158,6 +158,7 @@ pub fn setup_render_loop(
                                     loc,
                                     scale,
                                     blur_engine,
+                                    state.pointer_location,
                                 ));
                             }
                         }

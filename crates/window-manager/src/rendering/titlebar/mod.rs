@@ -35,15 +35,22 @@ pub fn hit_test(
     point: Point<f64, Logical>,
 ) -> Option<Action> {
     let state = window.toplevel()?.current_state();
-    if state.states.contains(
-        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
+    if state.decoration_mode != Some(
+        smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode::ServerSide,
     ) || state.states.contains(
         smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Fullscreen,
     ) {
         return None;
     }
+    let maximized = state.states.contains(
+        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
+    );
     let width = window.geometry().size.w as f64;
-    let y = location.y as f64 - HEIGHT as f64;
+    let y = if maximized {
+        location.y as f64
+    } else {
+        location.y as f64 - HEIGHT as f64
+    };
     if point.x < location.x as f64
         || point.x >= location.x as f64 + width
         || point.y < y
@@ -70,13 +77,20 @@ pub fn render(
     window: &Window,
     location: Point<i32, Logical>,
     scale: Scale<f64>,
+    pointer: Point<f64, Logical>,
 ) -> Option<CustomRenderElements> {
     let state = window.toplevel()?.current_state();
-    if state.states.contains(
-        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
+    if state.decoration_mode != Some(
+        smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode::ServerSide,
     ) || state.states.contains(
         smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Fullscreen,
     ) {
+        return None;
+    }
+    let maximized = state.states.contains(
+        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
+    );
+    if maximized && pointer.y > 6.0 {
         return None;
     }
     let width = (window.geometry().size.w as f64 * scale.x).round().max(1.0) as i32;
@@ -123,9 +137,14 @@ pub fn render(
             }
         })
         .ok()?;
+    let frame_y = if maximized {
+        location.y
+    } else {
+        location.y - HEIGHT
+    };
     let point = Point::<f64, smithay::utils::Physical>::from((
         (location.x as f64 * scale.x),
-        ((location.y - HEIGHT) as f64 * scale.y),
+        (frame_y as f64 * scale.y),
     ));
     MemoryRenderBufferRenderElement::from_buffer(
         renderer,

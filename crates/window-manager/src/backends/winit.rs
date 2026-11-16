@@ -133,6 +133,7 @@ pub(crate) fn init(
                                     loc,
                                     scale,
                                     blur_engine,
+                                    state.pointer_location,
                                 ));
                             }
                         }

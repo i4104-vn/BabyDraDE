@@ -14,13 +14,15 @@ impl XdgDecorationHandler for BabydraState {
         toplevel.send_configure();
     }
 
-    fn request_mode(&mut self, toplevel: ToplevelSurface, _mode: Mode) {
-        toplevel.with_pending_state(|state| state.decoration_mode = Some(Mode::ServerSide));
+    fn request_mode(&mut self, toplevel: ToplevelSurface, mode: Mode) {
+        // Respect client-side decoration for legacy/CSD applications.  Only apps
+        // that negotiate server-side decoration receive BabyDraDE's custom frame.
+        toplevel.with_pending_state(|state| state.decoration_mode = Some(mode));
         toplevel.send_configure();
     }
 
     fn unset_mode(&mut self, toplevel: ToplevelSurface) {
-        toplevel.with_pending_state(|state| state.decoration_mode = Some(Mode::ServerSide));
+        toplevel.with_pending_state(|state| state.decoration_mode = Some(Mode::ClientSide));
         toplevel.send_configure();
     }
 }

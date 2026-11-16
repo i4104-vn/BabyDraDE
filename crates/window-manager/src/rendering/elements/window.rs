@@ -43,6 +43,7 @@ pub fn render_window(
     location: Point<i32, Logical>,
     scale: Scale<f64>,
     blur_engine: Option<&Arc<Mutex<BlurEngine>>>,
+    pointer_location: Point<f64, Logical>,
 ) -> Vec<CustomRenderElements> {
     let (should_blur, opacity, configured_corner_radius) = if let Some(engine_lock) = blur_engine {
         if let Ok(engine) = engine_lock.lock() {
@@ -86,7 +87,7 @@ pub fn render_window(
     let mut elements = Vec::new();
 
     // The frame is drawn by the compositor, never by GTK/client-side decoration.
-    if let Some(frame) = titlebar::render(renderer, window, location, scale) {
+    if let Some(frame) = titlebar::render(renderer, window, location, scale, pointer_location) {
         elements.push(frame);
     }
     let render_loc = location - window.geometry().loc;
