@@ -90,7 +90,9 @@ pub fn render(
     let maximized = state.states.contains(
         smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
     );
-    if maximized && pointer.y > 6.0 {
+    // A maximized window can start below a desktop panel/topbar. Reveal the
+    // frame relative to the window's own top edge, not the output's y=0.
+    if maximized && (pointer.y < location.y as f64 || pointer.y > location.y as f64 + 8.0) {
         return None;
     }
     let width = (window.geometry().size.w as f64 * scale.x).round().max(1.0) as i32;
