@@ -16,7 +16,6 @@ mod tests {
     #[test]
     fn target_frame_rate_is_120_fps() {
         assert_eq!(TARGET_FPS, 120);
-        // 8.33 ms per frame, comfortably below the old 16 ms budget.
         assert!(FRAME_INTERVAL >= Duration::from_micros(8_333));
         assert!(FRAME_INTERVAL <= Duration::from_micros(8_334));
         assert!(DEFAULT_DURATION >= Duration::from_millis(100));

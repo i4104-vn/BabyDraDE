@@ -1,17 +1,12 @@
 use std::time::Instant;
 
 /// Monotonic microsecond tick since `started_at` at current wall-clock time.
-///
-/// Suitable as a render-cache key for anything animated by a clock rather
-/// than a fixed 16 ms frame counter.
 #[inline]
 pub fn tick_since(started_at: Instant) -> u64 {
     tick_between(started_at, Instant::now())
 }
 
 /// Monotonic microsecond tick between `started_at` and `now`.
-///
-/// Allows batching tick calculations using a single shared frame timestamp.
 #[inline]
 pub fn tick_between(started_at: Instant, now: Instant) -> u64 {
     now.saturating_duration_since(started_at)

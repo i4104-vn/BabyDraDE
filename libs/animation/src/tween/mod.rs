@@ -1,18 +1,10 @@
 use std::time::{Duration, Instant};
 
-use crate::clock::tick_between;
-use crate::constants::DEFAULT_DURATION;
-use crate::easing::Easing;
+use crate::curves::Easing;
+use crate::time::clock::tick_between;
+use crate::time::constants::DEFAULT_DURATION;
 
 /// A clock-driven interpolation between two `f64` values.
-///
-/// `Tween` is cheap to copy and intended to live next to UI state. Calling
-/// [`Tween::value`] computes the current value from the wall clock, so it can
-/// be sampled once per frame at any refresh rate.
-///
-/// For render loops managing many tweens simultaneously, methods with the `_at`
-/// suffix allow passing a pre-measured frame [`Instant`], eliminating redundant
-/// syscall overhead and ensuring all animations evaluate on the exact same frame time.
 #[derive(Clone, Copy, Debug)]
 pub struct Tween {
     started_at: Instant,
@@ -73,9 +65,6 @@ impl Tween {
     }
 
     /// Animate from the current value to `to`.
-    ///
-    /// If the value is already at the target the tween settles immediately,
-    /// which keeps render caches from waking up for a no-op animation.
     #[inline]
     pub fn retarget(&mut self, to: f64, duration: Duration, easing: Easing) {
         self.retarget_at(to, duration, easing, Instant::now());
@@ -105,9 +94,6 @@ impl Tween {
     }
 
     /// Restart with explicit endpoints, ignoring the current value.
-    ///
-    /// Useful for one-shot pulses such as a preview that briefly scales down
-    /// and back up on every selection change.
     #[inline]
     pub fn restart(&mut self, from: f64, to: f64, duration: Duration, easing: Easing) {
         *self = Self::new(from, to, duration, easing);
@@ -145,9 +131,6 @@ impl Tween {
     }
 
     /// Interpolated value evaluated at `now`.
-    ///
-    /// Guaranteed to return exactly `self.to` when the animation completes
-    /// or `self.from` when progress is zero, avoiding floating-point rounding errors.
     #[inline]
     pub fn value_at(&self, now: Instant) -> f64 {
         let p = self.eased_progress_at(now);
@@ -218,9 +201,6 @@ impl Tween {
     }
 
     /// Instant the current animation started.
-    ///
-    /// Together with [`Tween::frame_tick`] this forms a compact render-cache
-    /// key: a new animation or a new frame invalidates cached output.
     #[inline]
     pub fn started_at(&self) -> Instant {
         self.started_at
@@ -239,9 +219,6 @@ impl Tween {
     }
 
     /// Monotonic microsecond tick since the animation started.
-    ///
-    /// Microsecond precision is intentionally finer than a 120 fps frame
-    /// budget, so sampling at any refresh rate produces a distinct key.
     #[inline]
     pub fn frame_tick(&self) -> u64 {
         self.frame_tick_at(Instant::now())
@@ -281,7 +258,6 @@ mod tests {
         let before = tween.value();
         tween.retarget(20.0, Duration::from_secs(60), Easing::Linear);
 
-        // Immediately after retargeting the value must not jump.
         assert!((tween.value() - before).abs() < 1e-6);
         assert!((tween.from() - before).abs() < 1e-6);
         assert_eq!(tween.target(), 20.0);
@@ -311,8 +287,6 @@ mod tests {
             Easing::EaseInOutCubic,
         );
 
-        // Giống cách switcher cộng dồn mỗi lần bấm Tab: các lần bấm liên tiếp
-        // không được kéo đích lùi về giá trị cũ.
         assert_eq!(tween.target(), 4.0);
     }
 
@@ -334,7 +308,6 @@ mod tests {
 
     #[test]
     fn value_boundary_precision_avoids_drift() {
-        // Test that exact endpoints are preserved even with potential float inaccuracies
         let start = Instant::now();
         let tween = Tween::new_at(0.1, 0.7, Duration::from_millis(100), Easing::Linear, start);
         let end_time = start + Duration::from_millis(100);
