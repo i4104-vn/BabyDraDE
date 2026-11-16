@@ -21,7 +21,7 @@ use crate::compositor::AltTabSwitcher;
 use super::{
     super::CustomRenderElements,
     draw::Rect,
-    view::{compute_layout, draw_switcher_foreground},
+    view::{compute_layout, draw_switcher_foreground, ANIMATION_DURATION},
 };
 
 use crate::rendering::elements::types::ConstrainedSurface;
@@ -30,7 +30,7 @@ use crate::rendering::elements::types::ConstrainedSurface;
 pub struct SwitcherOverlay {
     fg_buffer: Option<MemoryRenderBuffer>,
     size: (i32, i32),
-    last_rendered: Option<(std::time::Instant, usize)>,
+    last_rendered: Option<(std::time::Instant, usize, u64)>,
 }
 
 impl SwitcherOverlay {
@@ -70,15 +70,26 @@ impl SwitcherOverlay {
             return Vec::new();
         };
 
-        let render_key = (switcher.transition_started, switcher.selected_index);
+        // Re-render the Cairo foreground while the open/selection animation is
+        // running, otherwise the dock decorations would freeze on their first
+        // frame. Once progress reaches 1.0 the last frame is cached.
+        let elapsed = switcher.transition_started.elapsed();
+        let animation_tick = if elapsed < ANIMATION_DURATION {
+            (elapsed.as_millis() / 16) as u64
+        } else {
+            u64::MAX
+        };
+        let render_key = (
+            switcher.transition_started,
+            switcher.selected_index,
+            animation_tick,
+        );
 
         if self.last_rendered != Some(render_key) {
             if let Some(fg_buf) = self.fg_buffer.as_mut() {
-                if let Some(pixels) =
-                    render_pixels(width, height, scale, |ctx| {
-                        draw_switcher_foreground(ctx, switcher, &layout)
-                    })
-                {
+                if let Some(pixels) = render_pixels(width, height, scale, |ctx| {
+                    draw_switcher_foreground(ctx, switcher, &layout)
+                }) {
                     let mut context = fg_buf.render();
                     let _ = context.draw(|buf| {
                         if buf.len() == pixels.len() {

@@ -21,6 +21,10 @@ const DOCK_MAX_VISIBLE_ITEMS: usize = 5;
 const STAGE_SIDE_GAP: f64 = 28.0;
 const STAGE_RIGHT_MARGIN: f64 = 24.0;
 const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
+/// Độ trượt nhẹ của danh sách dock mỗi lần đổi app (pixel logic).
+const DOCK_SETTLE_DISTANCE: f64 = 10.0;
+/// Độ trượt ngang nhẹ của stage khi chuyển app.
+const STAGE_SLIDE_DISTANCE: f64 = 14.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct CardLayout {
@@ -34,6 +38,9 @@ pub(crate) struct SwitcherLayout {
     pub(crate) stage: (usize, CardLayout),
     pub(crate) dock_viewport: Rect,
     pub(crate) dock_items: Vec<(usize, CardLayout)>,
+    /// Animation progress 0.0→1.0 since switcher opened / selection changed.
+    /// Dùng để animate hiệu ứng cuộn dock và chuyển stage mượt mà.
+    pub(crate) progress: f64,
 }
 
 pub(crate) fn compute_layout(
@@ -48,12 +55,25 @@ pub(crate) fn compute_layout(
     let n = switcher.entries.len();
     let sel = switcher.selected_index.min(n - 1);
     let elapsed = switcher.transition_started.elapsed().as_secs_f64();
-    let progress = ease_out_cubic((elapsed / ANIMATION_DURATION.as_secs_f64()).clamp(0.0, 1.0));
+    let progress = ease_in_out_cubic((elapsed / ANIMATION_DURATION.as_secs_f64()).clamp(0.0, 1.0));
 
     // The dock has a bounded viewport. Cards keep a fixed size, and the
     // selected entry stays centered while the list moves vertically.
-    let (dock_viewport, dock_items) = compute_dock_layout(n, sel, screen_h);
+    let (dock_viewport, mut dock_items) = compute_dock_layout(n, sel, screen_h);
     let base_thumb_w = DOCK_THUMBNAIL_WIDTH;
+
+    // Gentle dock scroll: cards start slightly offset against the travel
+    // direction and ease back into place with a small per-slot lag, so the
+    // list visibly scrolls on every Tab press. The offset lives in the layout
+    // (not only in the Cairo overlay) so live previews move together with
+    // their cards.
+    for (slot, (_, item)) in dock_items.iter_mut().enumerate() {
+        let lag = slot as f64 * 0.07;
+        let item_progress = ((progress - lag) / (1.0 - lag).max(f64::EPSILON)).clamp(0.0, 1.0);
+        let offset = switcher.scroll_direction * (1.0 - item_progress) * DOCK_SETTLE_DISTANCE;
+        item.card.y += offset;
+        item.preview.y += offset;
+    }
 
     // Center stage: a fixed 16:9 presentation area. The selected app is fit
     // into this area by the renderer below; its native aspect ratio must not
@@ -82,16 +102,31 @@ pub(crate) fn compute_layout(
         stage_card.center_x(),
         stage_card.y + stage_card.height / 2.0,
     );
+    // Chuyển app: stage hơi thu nhỏ, trượt nhẹ theo hướng điều hướng và mờ dần
+    // vào, rồi trở về đúng kích thước. Nhẹ và chậm, không giật.
     let stage_scale = 0.965 + 0.035 * progress;
+    let stage_slide = switcher.scroll_direction * (1.0 - progress) * STAGE_SLIDE_DISTANCE;
     let stage_card = scale_rect_around(stage_card, stage_center, stage_scale);
     let stage_preview = scale_rect_around(stage_preview, stage_center, stage_scale);
+    let stage_card = Rect::new(
+        stage_card.x + stage_slide,
+        stage_card.y,
+        stage_card.width,
+        stage_card.height,
+    );
+    let stage_preview = Rect::new(
+        stage_preview.x + stage_slide,
+        stage_preview.y,
+        stage_preview.width,
+        stage_preview.height,
+    );
     let stage = (
         sel,
         CardLayout {
             card: stage_card,
             preview: stage_preview,
             radius: 18.0,
-            opacity: 0.28 + 0.72 * progress,
+            opacity: 0.75 + 0.25 * progress,
         },
     );
 
@@ -99,6 +134,7 @@ pub(crate) fn compute_layout(
         stage,
         dock_viewport,
         dock_items,
+        progress,
     })
 }
 
@@ -177,8 +213,12 @@ fn compute_dock_layout(
     (viewport, dock_items)
 }
 
-fn ease_out_cubic(value: f64) -> f64 {
-    1.0 - (1.0 - value).powi(3)
+fn ease_in_out_cubic(value: f64) -> f64 {
+    if value < 0.5 {
+        4.0 * value * value * value
+    } else {
+        1.0 - (-2.0 * value + 2.0).powi(3) / 2.0
+    }
 }
 
 fn scale_rect_around(rect: Rect, center: (f64, f64), scale: f64) -> Rect {
@@ -236,23 +276,16 @@ pub(crate) fn draw_switcher_foreground(
                 if is_selected { 1.0 } else { 0.55 },
             )?;
 
-            // Viền chọn bo góc, mịn, màu app.
+            // Viền chọn bo góc, mịn, màu app; sáng dần theo animation.
             if is_selected {
                 let (r, g, b) = app_color(&entry.app_name);
                 context.new_path();
-                rounded_rect(
-                    context,
-                    p.x,
-                    p.y,
-                    p.width,
-                    p.height,
-                    p.height * 0.10,
-                );
+                rounded_rect(context, p.x, p.y, p.width, p.height, p.height * 0.10);
                 context.set_source_rgba(
                     (r + 0.35).min(1.0),
                     (g + 0.35).min(1.0),
                     (b + 0.35).min(1.0),
-                    0.95,
+                    0.70 + 0.30 * layout.progress,
                 );
                 context.set_line_width(2.0);
                 context.stroke()?;
@@ -275,8 +308,18 @@ mod tests {
             entries: Vec::new(),
             selected_index: 0,
             transition_started: std::time::Instant::now(),
+            scroll_direction: 1.0,
         };
         assert!(compute_layout(&switcher, 1920.0, 1080.0).is_none());
+    }
+
+    #[test]
+    fn easing_is_smooth_and_returns_to_rest() {
+        assert_eq!(ease_in_out_cubic(0.0), 0.0);
+        assert_eq!(ease_in_out_cubic(0.5), 0.5);
+        assert_eq!(ease_in_out_cubic(1.0), 1.0);
+        assert!(ease_in_out_cubic(0.25) < 0.25);
+        assert!(ease_in_out_cubic(0.75) > 0.75);
     }
 
     #[test]

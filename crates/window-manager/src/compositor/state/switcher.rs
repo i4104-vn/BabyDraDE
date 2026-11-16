@@ -32,6 +32,9 @@ pub(crate) struct AltTabSwitcher {
     pub(crate) entries: Vec<AltTabEntry>,
     pub(crate) selected_index: usize,
     pub(crate) transition_started: Instant,
+    /// +1.0 khi chọn app kế tiếp, -1.0 khi Shift+Tab lùi lại.
+    /// Dùng để animation dock và stage trượt đúng hướng.
+    pub(crate) scroll_direction: f64,
 }
 
 impl BabydraState {
@@ -82,6 +85,7 @@ impl BabydraState {
             if switcher.entries.len() == 1 {
                 switcher.selected_index = 0;
                 switcher.transition_started = Instant::now();
+                switcher.scroll_direction = if backwards { -1.0 } else { 1.0 };
                 self.alt_tab_switcher = Some(switcher);
                 return;
             }
@@ -100,6 +104,7 @@ impl BabydraState {
                 (selected_index + 1) % switcher.entries.len()
             };
             switcher.transition_started = Instant::now();
+            switcher.scroll_direction = if backwards { -1.0 } else { 1.0 };
             self.alt_tab_switcher = Some(switcher);
             return;
         }
@@ -180,6 +185,7 @@ impl BabydraState {
             entries,
             selected_index,
             transition_started: Instant::now(),
+            scroll_direction: if backwards { -1.0 } else { 1.0 },
         });
     }
 }
