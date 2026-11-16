@@ -5,8 +5,6 @@ pub mod gestures;
 pub mod scroll;
 pub mod swipe;
 
-#[allow(unused_imports)]
-pub use config::TouchpadConfig;
 pub(crate) use config::{handle_device_added, handle_device_removed};
 pub(crate) use gestures::{
     handle_hold_begin, handle_hold_end, handle_pinch_begin, handle_pinch_end, handle_pinch_update,
