@@ -4,7 +4,7 @@ use cairo::{Context, Operator};
 
 use crate::compositor::AltTabSwitcher;
 
-use super::draw::{app_color, draw_app_icon_at, rounded_rect, Rect};
+use super::draw::{app_color, draw_app_badge, draw_app_icon_at, rounded_rect, Rect};
 
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
 
@@ -214,82 +214,53 @@ pub(crate) fn draw_switcher_foreground(
         let p = item.preview;
 
         if let Some(entry) = switcher.entries.get(*entry_idx) {
-            // --- Icon bên trái (gắn sát mép trái card) ---
-            let icon_size = (c.height * 0.30).clamp(24.0, 40.0);
-            let icon_x = c.x + 8.0;
-            let icon_y = c.y + (c.height - icon_size) / 2.0;
-
-            // Nền bo tròn nhẹ cho icon
+            // Nền card bo tròn, lấp đầy toàn bộ vùng item.
             context.save()?;
-            rounded_rect(context, icon_x, icon_y, icon_size, icon_size, icon_size * 0.22);
+            rounded_rect(context, c.x, c.y, c.width, c.height, c.height * 0.12);
             if is_selected {
-                context.set_source_rgba(0.30, 0.30, 0.36, 0.90);
+                context.set_source_rgba(0.22, 0.22, 0.27, 0.85);
             } else {
-                context.set_source_rgba(0.18, 0.18, 0.22, 0.70);
+                context.set_source_rgba(0.14, 0.14, 0.18, 0.60);
             }
             context.fill()?;
             context.restore()?;
 
-            // Vẽ icon app (pixbuf hoặc chữ fallback)
-            draw_app_icon_at(
-                context,
-                entry,
-                icon_x,
-                icon_y,
-                icon_size,
-                if is_selected { 1.0 } else { 0.80 },
-            )?;
-
-            // --- Preview "hút" về bên phải (Stage Manager style) ---
-            // Preview kéo ra từ bên phải icon, co dãn theo trạng thái chọn
-            let pull = if is_selected { 1.0 } else { 0.55 };
-            let preview_w = p.width.max(80.0) * pull;
-            let preview_h = p.height.max(100.0) * pull;
-            let preview_x = icon_x + icon_size + 10.0;
-            let preview_y = c.y + (c.height - preview_h) / 2.0;
-
-            // Nền preview mờ
+            // Preview fit hoàn toàn bên trong card, bo góc, không bị padding hay thừa góc.
             context.save()?;
-            rounded_rect(context, preview_x, preview_y, preview_w, preview_h, 8.0);
-            context.set_source_rgba(
-                0.20,
-                0.20,
-                0.24,
-                if is_selected { 0.85 } else { 0.50 },
-            );
-            context.fill()?;
-            context.restore()?;
-
-            // Cửa sổ thu nhỏ (dùng icon app làm preview placeholder)
-            context.save()?;
-            context.rectangle(
-                preview_x + 4.0,
-                preview_y + 4.0,
-                preview_w - 8.0,
-                preview_h - 8.0,
-            );
+            rounded_rect(context, p.x, p.y, p.width, p.height, p.height * 0.10);
             context.clip();
-            let inner_size = (preview_w - 24.0).min(preview_h - 24.0).max(8.0);
-            draw_app_icon_at(
-                context,
-                entry,
-                preview_x + 4.0 + (preview_w - 8.0 - inner_size) / 2.0,
-                preview_y + 4.0 + (preview_h - 8.0 - inner_size) / 2.0,
-                inner_size,
-                if is_selected { 0.85 } else { 0.45 },
-            )?;
+            // Vẽ icon app làm preview (fill toàn bộ preview area).
+            draw_app_icon_at(context, entry, p.x, p.y, p.width.min(p.height), 1.0)?;
             context.restore()?;
 
-            // Viền chọn cho item active
+            // Badge bo góc, gắn sát góc dưới-trái của preview, không padding thừa.
+            let badge_size = (c.height * 0.30).clamp(20.0, 30.0);
+            draw_app_badge(
+                context,
+                entry,
+                p.x,
+                p.y + p.height - badge_size,
+                badge_size,
+                if is_selected { 1.0 } else { 0.55 },
+            )?;
+
+            // Viền chọn bo góc, mịn, màu app.
             if is_selected {
                 let (r, g, b) = app_color(&entry.app_name);
                 context.new_path();
-                context.rectangle(c.x, c.y, c.width, c.height);
+                rounded_rect(
+                    context,
+                    p.x,
+                    p.y,
+                    p.width,
+                    p.height,
+                    p.height * 0.10,
+                );
                 context.set_source_rgba(
                     (r + 0.35).min(1.0),
                     (g + 0.35).min(1.0),
                     (b + 0.35).min(1.0),
-                    0.90,
+                    0.95,
                 );
                 context.set_line_width(2.0);
                 context.stroke()?;
