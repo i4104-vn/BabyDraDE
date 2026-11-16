@@ -13,7 +13,7 @@ const DOCK_BOTTOM_MARGIN: f64 = 32.0;
 const DOCK_THUMBNAIL_WIDTH: f64 = 175.0;
 const DOCK_THUMBNAIL_HEIGHT: f64 = 115.0;
 const DOCK_GAP: f64 = 12.0;
-const DOCK_MAX_VISIBLE_ITEMS: usize = 5;
+pub(crate) const DOCK_MAX_VISIBLE_ITEMS: usize = 5;
 const STAGE_SIDE_GAP: f64 = 28.0;
 const STAGE_RIGHT_MARGIN: f64 = 24.0;
 const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
@@ -56,9 +56,11 @@ pub(crate) fn compute_layout(
     // Dock is a continuous carousel: `visual_selection` may be fractional,
     // and entries are positioned relative to it. This makes the list scroll
     // smoothly instead of swapping content in fixed slots.
+    // Với ít hơn 5 app, tất cả item đứng yên và khung active di chuyển tới
+    // item được chọn thay vì cuộn.
     let visual_selection = switcher.visual_selection();
     let (dock_viewport, dock_items, dock_target) =
-        compute_dock_layout_animated(n, visual_selection, screen_h);
+        compute_dock_layout_mode(n, sel, visual_selection, screen_h);
     let base_thumb_w = DOCK_THUMBNAIL_WIDTH;
 
     // Center stage: a fixed 16:9 presentation area. The selected app is fit
@@ -191,37 +193,84 @@ fn dock_card(metrics: &DockMetrics, slot: f64, opacity: f64) -> CardLayout {
     }
 }
 
-/// Khoảng cách ngắn nhất (theo vòng tròn) giữa entry và tâm carousel.
-fn circular_slot_delta(index: usize, center: f64, count: usize) -> f64 {
-    let count_f = count as f64;
-    let mut delta = (index as f64 - center).rem_euclid(count_f);
-    if delta > count_f / 2.0 {
-        delta -= count_f;
-    }
-    delta
-}
-
 fn compute_dock_items(
     metrics: &DockMetrics,
     entry_count: usize,
     center: f64,
 ) -> Vec<(usize, CardLayout)> {
-    let mut items = (0..entry_count)
-        .filter_map(|index| {
-            let slot = circular_slot_delta(index, center, entry_count);
-            // Năm slot lõi nằm trong [-2, 2]. Item mới đi vào / item cũ đi ra
-            // mờ dần trong đúng một slot kế tiếp, nên không bao giờ "pop"
-            // hoặc nhấp nháy khi bắt đầu/kết thúc cuộn.
-            let fade = (3.0 - slot.abs()).clamp(0.0, 1.0);
-            if fade <= 0.001 {
-                return None;
-            }
-            Some((index, dock_card(metrics, slot, fade)))
-        })
-        .collect::<Vec<_>>();
+    let count = entry_count as i64;
+    let base = center.floor() as i64;
+    let mut items = Vec::new();
+
+    // Enumerate by slot (not by entry) around the carousel centre. With a
+    // circular list of exactly 5 entries the item leaving the top and the one
+    // entering the bottom are the same entry; generating slots independently
+    // lets both copies exist at once, so the wrap is seamless instead of
+    // teleporting across the dock.
+    for offset in -3..=3 {
+        let unwrapped = base + offset;
+        let index = unwrapped.rem_euclid(count) as usize;
+        let slot = unwrapped as f64 - center;
+        // Năm slot lõi nằm trong [-2, 2]. Item mới đi vào / item cũ đi ra
+        // mờ dần trong đúng một slot kế tiếp, nên không bao giờ "pop"
+        // hoặc nhấp nháy khi bắt đầu/kết thúc cuộn.
+        let fade = (3.0 - slot.abs()).clamp(0.0, 1.0);
+        if fade <= 0.001 {
+            continue;
+        }
+        items.push((index, dock_card(metrics, slot, fade)));
+    }
 
     items.sort_by(|a, b| a.1.card.y.total_cmp(&b.1.card.y));
     items
+}
+
+/// Layout tĩnh cho trường hợp dưới 5 app: mọi item đứng yên, nhóm được căn
+/// giữa dock theo thứ tự 0..n.
+fn compute_static_dock_items(
+    metrics: &DockMetrics,
+    entry_count: usize,
+) -> Vec<(usize, CardLayout)> {
+    let center_slot = (entry_count as f64 - 1.0) / 2.0;
+    (0..entry_count)
+        .map(|index| (index, dock_card(metrics, index as f64 - center_slot, 1.0)))
+        .collect()
+}
+
+fn compute_dock_layout_static(
+    entry_count: usize,
+    selected_index: usize,
+    screen_h: f64,
+) -> (Rect, Vec<(usize, CardLayout)>, Rect) {
+    if entry_count == 0 {
+        let empty = Rect::new(DOCK_X, 0.0, DOCK_THUMBNAIL_WIDTH, 0.0);
+        return (empty, Vec::new(), empty);
+    }
+
+    let metrics = compute_dock_metrics(entry_count, screen_h);
+    let items = compute_static_dock_items(&metrics, entry_count);
+    let target = items
+        .iter()
+        .find(|(index, _)| *index == selected_index)
+        .map(|(_, item)| item.preview)
+        .unwrap_or_else(|| dock_card(&metrics, 0.0, 1.0).preview);
+
+    (metrics.viewport, items, target)
+}
+
+/// Chọn chế độ dock: từ 5 app trở lên cuộn như carousel, dưới 5 app thì
+/// hiển thị cố định và chỉ di chuyển khung active.
+fn compute_dock_layout_mode(
+    entry_count: usize,
+    selected_index: usize,
+    visual_selection: f64,
+    screen_h: f64,
+) -> (Rect, Vec<(usize, CardLayout)>, Rect) {
+    if entry_count >= DOCK_MAX_VISIBLE_ITEMS {
+        compute_dock_layout_animated(entry_count, visual_selection, screen_h)
+    } else {
+        compute_dock_layout_static(entry_count, selected_index, screen_h)
+    }
 }
 
 fn compute_dock_layout_animated(
@@ -249,7 +298,7 @@ fn compute_dock_layout(
     screen_h: f64,
 ) -> (Rect, Vec<(usize, CardLayout)>) {
     let (viewport, items, _) =
-        compute_dock_layout_animated(entry_count, selected_index as f64, screen_h);
+        compute_dock_layout_mode(entry_count, selected_index, selected_index as f64, screen_h);
     (viewport, items)
 }
 
@@ -442,5 +491,71 @@ mod tests {
             .expect("item below the target should be entering");
 
         assert!(entering.opacity > 0.0 && entering.opacity < 1.0);
+    }
+
+    #[test]
+    fn fewer_than_five_items_stay_static_and_active_frame_moves() {
+        let (_, items_first, target_first) = compute_dock_layout_mode(3, 0, 0.0, 1080.0);
+        let (_, items_last, target_last) = compute_dock_layout_mode(3, 2, 2.0, 1080.0);
+
+        // Vị trí từng item không đổi khi chọn item khác.
+        for ((first_index, first), (last_index, last)) in items_first.iter().zip(items_last.iter())
+        {
+            assert_eq!(first_index, last_index);
+            assert_eq!(first.card, last.card);
+            assert_eq!(first.preview, last.preview);
+        }
+
+        // Khung active di chuyển tới item đang chọn.
+        assert_eq!(target_first, items_first[0].1.preview);
+        assert_eq!(target_last, items_last[2].1.preview);
+        assert_ne!(target_first, target_last);
+    }
+
+    #[test]
+    fn static_dock_group_is_vertically_centered() {
+        let (viewport, items, _) = compute_dock_layout_mode(3, 1, 1.0, 1080.0);
+        let first = items.first().unwrap().1.card;
+        let last = items.last().unwrap().1.card;
+        let group_center = (first.y + last.y + last.height) / 2.0;
+        let viewport_center = viewport.y + viewport.height / 2.0;
+
+        assert!((group_center - viewport_center).abs() < 0.001);
+    }
+
+    #[test]
+    fn five_items_keep_the_scrolling_carousel_with_a_fixed_target() {
+        let (_, _, target_before) = compute_dock_layout_mode(5, 0, 0.0, 1080.0);
+        let (_, _, target_after) = compute_dock_layout_mode(5, 1, 1.0, 1080.0);
+
+        // Với 5 app, target vẫn cố định ở giữa và item sẽ cuộn qua.
+        assert_eq!(target_before, target_after);
+    }
+
+    #[test]
+    fn five_app_wrap_renders_both_edge_copies_mid_scroll() {
+        // Đúng 5 app: item rời mép trên và item vào mép dưới là cùng một item.
+        // Ở giữa bước cuộn phải có 2 bản sao để không bị teleport.
+        let (_, items, _) = compute_dock_layout_animated(5, 0.5, 1080.0);
+        let copies = items
+            .iter()
+            .filter(|(index, _)| *index == 3)
+            .map(|(_, item)| item.card.y)
+            .collect::<Vec<_>>();
+
+        assert_eq!(copies.len(), 2);
+        assert!(copies[0] < copies[1]);
+    }
+
+    #[test]
+    fn five_apps_at_rest_show_exactly_five_unique_items() {
+        let (_, items, _) = compute_dock_layout_animated(5, 0.0, 1080.0);
+        let mut indices = items.iter().map(|(index, _)| *index).collect::<Vec<_>>();
+        indices.sort_unstable();
+        indices.dedup();
+
+        assert_eq!(items.len(), 5);
+        assert_eq!(indices.len(), 5);
+        assert!(items.iter().all(|(_, item)| item.opacity >= 1.0));
     }
 }

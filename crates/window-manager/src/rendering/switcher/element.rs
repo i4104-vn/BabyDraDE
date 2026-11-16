@@ -21,7 +21,7 @@ use crate::compositor::{AltTabSwitcher, ANIMATION_DURATION};
 use super::{
     super::CustomRenderElements,
     draw::Rect,
-    view::{compute_layout, draw_switcher_foreground},
+    view::{compute_layout, draw_switcher_foreground, DOCK_MAX_VISIBLE_ITEMS},
 };
 
 use crate::rendering::elements::types::ConstrainedSurface;
@@ -70,11 +70,14 @@ impl SwitcherOverlay {
             return Vec::new();
         };
 
-        // Re-render the Cairo foreground while the open/selection animation is
-        // running, otherwise the dock decorations would freeze on their first
-        // frame. Once progress reaches 1.0 the last frame is cached.
+        // Re-render the Cairo foreground while the dock carousel is scrolling,
+        // otherwise the decorations would freeze on their first frame. With
+        // fewer than five apps the dock is static: the target moves once when
+        // `selected_index` changes (already part of the key), so extra frames
+        // would be identical.
         let elapsed = switcher.transition_started.elapsed();
-        let animation_tick = if elapsed < ANIMATION_DURATION {
+        let dock_scrolls = switcher.entries.len() >= DOCK_MAX_VISIBLE_ITEMS;
+        let animation_tick = if dock_scrolls && elapsed < ANIMATION_DURATION {
             (elapsed.as_millis() / 16) as u64
         } else {
             u64::MAX
