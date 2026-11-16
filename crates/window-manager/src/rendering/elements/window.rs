@@ -46,7 +46,7 @@ pub fn render_window(
     pointer_location: Point<f64, Logical>,
 ) -> Vec<CustomRenderElements> {
     let (should_blur, opacity, configured_corner_radius) = if let Some(engine_lock) = blur_engine {
-        if let Ok(engine) = engine_lock.lock() {
+        if let Ok(mut engine) = engine_lock.lock() {
             if engine.matches_window(window) {
                 (
                     true,

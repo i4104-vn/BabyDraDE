@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::sync::mpsc::{self, Receiver};
+use std::thread;
 
 use smithay::{
     backend::renderer::element::Id,
@@ -33,6 +35,10 @@ pub struct BlurEngine {
     backdrops: HashMap<Id, Option<BlurCache>>,
     /// Counter used to expire caches of elements that are gone.
     frame: u64,
+    /// Configuration is loaded off the compositor call loop. Until it arrives,
+    /// the engine uses the cheap built-in defaults and keeps rendering disabled
+    /// only according to those defaults.
+    config_rx: Option<Receiver<BlurParams>>,
 }
 
 impl std::fmt::Debug for BlurEngine {
@@ -54,18 +60,40 @@ impl Default for BlurEngine {
 
 impl BlurEngine {
     pub fn new() -> Self {
-        let params = config::load();
+        let (tx, rx) = mpsc::channel();
+        thread::Builder::new()
+            .name("babydra-blur-config".into())
+            .spawn(move || {
+                let _ = tx.send(config::load());
+            })
+            .ok();
         Self {
-            params,
+            params: BlurParams::default(),
             pipeline: None,
             pipeline_failed: false,
             backdrops: HashMap::new(),
             frame: 0,
+            config_rx: Some(rx),
+        }
+    }
+
+    fn refresh_config(&mut self) {
+        let Some(rx) = self.config_rx.as_ref() else {
+            return;
+        };
+        match rx.try_recv() {
+            Ok(params) => {
+                self.params = params;
+                self.config_rx = None;
+            }
+            Err(mpsc::TryRecvError::Disconnected) => self.config_rx = None,
+            Err(mpsc::TryRecvError::Empty) => {}
         }
     }
 
     /// Check if a window should have background blur applied
-    pub fn matches_window(&self, window: &Window) -> bool {
+    pub fn matches_window(&mut self, window: &Window) -> bool {
+        self.refresh_config();
         if !self.params.enabled {
             return false;
         }
@@ -81,7 +109,8 @@ impl BlurEngine {
     }
 
     /// Check if a LayerShell surface namespace should have background blur applied
-    pub fn matches_layer(&self, namespace: &str) -> bool {
+    pub fn matches_layer(&mut self, namespace: &str) -> bool {
+        self.refresh_config();
         if !self.params.enabled {
             return false;
         }
@@ -211,6 +240,7 @@ impl BlurEngine {
         corner_radius: f32,
         projection: [f32; 9],
     ) {
+        self.refresh_config();
         if !self.params.enabled || self.pipeline_failed {
             return;
         }

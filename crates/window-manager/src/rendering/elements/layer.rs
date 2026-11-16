@@ -36,7 +36,7 @@ pub fn render_layer_surfaces(
                     if layer.layer() == Layer::Background || layer.namespace().contains("topbar") {
                         false
                     } else if let Some(engine_lock) = blur_engine {
-                        if let Ok(engine) = engine_lock.lock() {
+                        if let Ok(mut engine) = engine_lock.lock() {
                             engine.matches_layer(layer.namespace())
                         } else {
                             false
