@@ -92,6 +92,7 @@ pub(crate) fn init(
                     if let Some(action) = services::system::window::read_and_clear_window_action() {
                         state.handle_window_action(&action);
                     }
+                    state.update_window_animations();
                     let size = backend.window_size();
 
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();

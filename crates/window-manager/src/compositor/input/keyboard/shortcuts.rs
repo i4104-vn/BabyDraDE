@@ -57,8 +57,10 @@ pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option
         return Some(KeyboardAction::QuitCompositor);
     }
 
-    // 2. Super + Q: Close active window
-    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q) {
+    // 2. Super + Q or Alt + F4: Close active window
+    if (modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q))
+        || (modifiers.alt && sym == keysyms::KEY_F4)
+    {
         return Some(KeyboardAction::CloseActiveWindow);
     }
 
@@ -127,11 +129,9 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
             state.loop_signal.stop();
         }
         KeyboardAction::CloseActiveWindow => {
-            if let Some(active_window) = state.space.elements().next_back() {
-                info!("Super+Q pressed: Closing active window");
-                active_window.toplevel().unwrap().send_close();
-                let next_top = state.space.elements().rev().nth(1).cloned();
-                state.update_active_window(next_top.as_ref());
+            if let Some(active_window) = state.active_window() {
+                info!("Close shortcut pressed: Closing active window with shrink & fade animation");
+                state.close_window(&active_window);
             }
         }
         KeyboardAction::SpawnTerminal => {

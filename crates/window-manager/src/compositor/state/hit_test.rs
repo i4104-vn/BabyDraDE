@@ -14,13 +14,18 @@ impl BabydraState {
     ) -> Option<(Window, Point<i32, Logical>)> {
         // 1. First check via Smithay's element_under (handles exact input regions)
         if let Some((window, _render_loc)) = self.space.element_under(point) {
-            if let Some(loc) = self.space.element_location(window) {
-                return Some((window.clone(), loc));
+            if !super::is_window_closing(window) {
+                if let Some(loc) = self.space.element_location(window) {
+                    return Some((window.clone(), loc));
+                }
             }
         }
 
         // 2. Fallback: check window bounding box and geometry in space
         for window in self.space.elements().rev() {
+            if super::is_window_closing(window) {
+                continue;
+            }
             if let Some(bbox) = self.space.element_bbox(window) {
                 if bbox.to_f64().contains(point) {
                     if let Some(loc) = self.space.element_location(window) {
@@ -57,10 +62,12 @@ impl BabydraState {
 
         // 2. Check normal desktop windows
         if let Some((window, location)) = self.space.element_under(position) {
-            if let Some((surface, point)) =
-                window.surface_under(position - location.to_f64(), WindowSurfaceType::ALL)
-            {
-                return Some((surface, (point + location).to_f64()));
+            if !super::is_window_closing(window) {
+                if let Some((surface, point)) =
+                    window.surface_under(position - location.to_f64(), WindowSurfaceType::ALL)
+                {
+                    return Some((surface, (point + location).to_f64()));
+                }
             }
         }
 

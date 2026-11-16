@@ -7,7 +7,7 @@ use smithay::{
     wayland::compositor::with_states,
 };
 
-use super::{window_ops::window_state, BabydraState};
+use super::{window_state, BabydraState};
 
 /// One entry in the Alt+Tab switcher list.
 /// `icon_pixbuf` is resolved eagerly when the switcher opens so that
@@ -153,6 +153,7 @@ impl BabydraState {
             .windows
             .iter()
             .rev()
+            .filter(|w| !super::is_window_closing(w))
             .filter_map(|window| {
                 let toplevel = window.toplevel()?;
                 let (app_id, title) = with_states(toplevel.wl_surface(), |states| {

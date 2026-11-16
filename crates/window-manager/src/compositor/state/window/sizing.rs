@@ -2,68 +2,15 @@ use smithay::{
     desktop::Window,
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
-        wayland_server::protocol::wl_output::WlOutput,
+        wayland_server::protocol::{wl_output::WlOutput, wl_surface::WlSurface},
     },
-    utils::{IsAlive, Logical, Point, Size, SERIAL_COUNTER},
-    wayland::shell::xdg::ToplevelSurface,
+    utils::{Point, SERIAL_COUNTER},
 };
 
-use super::BabydraState;
-
-#[derive(Default, Debug, Clone)]
-pub(crate) struct WindowStateData {
-    pub(crate) saved_location: Option<Point<i32, Logical>>,
-    pub(crate) saved_size: Option<Size<i32, Logical>>,
-    pub(crate) is_minimized: bool,
-}
-
-pub(crate) fn window_state(window: &Window) -> &std::sync::Mutex<WindowStateData> {
-    window.user_data().get_or_insert(Default::default)
-}
+use crate::compositor::state::BabydraState;
+use super::state_data::window_state;
 
 impl BabydraState {
-    pub(crate) fn cleanup_windows(&mut self) {
-        self.windows.retain(|w| w.alive());
-    }
-
-    /// Returns the topmost (most recently raised / focused) window, if any.
-    ///
-    /// The window list is maintained in Z-order: the last entry is the front-most
-    /// window.  Falls back to iterating `space.elements()` in reverse when the
-    /// internal list is empty.
-    ///
-    /// # Returns
-    ///
-    /// The front-most [`Window`], or `None` when no windows are open.
-    pub(crate) fn active_window(&self) -> Option<Window> {
-        self.windows
-            .iter()
-            .rev()
-            .find(|w| w.alive())
-            .cloned()
-            .or_else(|| self.space.elements().next_back().cloned())
-    }
-
-    pub(crate) fn raise_window(&mut self, window: &Window) {
-        if let Some(pos) = self.windows.iter().position(|w| w == window) {
-            let win = self.windows.remove(pos);
-            self.windows.push(win);
-        }
-    }
-
-    pub(crate) fn find_window_for_surface(&self, surface: &ToplevelSurface) -> Option<Window> {
-        self.windows
-            .iter()
-            .find(|w| w.toplevel().map(|t| t == surface).unwrap_or(false))
-            .cloned()
-            .or_else(|| {
-                self.space
-                    .elements()
-                    .find(|w| w.toplevel().map(|t| t == surface).unwrap_or(false))
-                    .cloned()
-            })
-    }
-
     pub(crate) fn maximize_window(&mut self, window: &Window) {
         let Some(toplevel) = window.toplevel() else {
             return;
@@ -183,7 +130,7 @@ impl BabydraState {
         } else if let Some(keyboard) = self.seat.get_keyboard() {
             keyboard.set_focus(
                 self,
-                Option::<smithay::reexports::wayland_server::protocol::wl_surface::WlSurface>::None,
+                Option::<WlSurface>::None,
                 SERIAL_COUNTER.next_serial(),
             );
         }
@@ -325,61 +272,5 @@ impl BabydraState {
         } else {
             self.fullscreen_window(window, None);
         }
-    }
-
-    pub(crate) fn close_window(&mut self, window: &Window) {
-        if let Some(toplevel) = window.toplevel() {
-            toplevel.send_close();
-        }
-    }
-
-    pub(crate) fn handle_window_action(&mut self, action: &str) {
-        let active = self.space.elements().next_back().cloned();
-        let Some(window) = active else {
-            return;
-        };
-        match action {
-            "minimize" => self.minimize_window(&window),
-            "maximize" => self.toggle_maximize(&window),
-            "fullscreen" => self.toggle_fullscreen(&window),
-            "close" => self.close_window(&window),
-            _ => {}
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_window_state_data_lifecycle() {
-        let mut state = WindowStateData::default();
-        assert!(!state.is_minimized);
-        assert!(state.saved_location.is_none());
-        assert!(state.saved_size.is_none());
-
-        // Maximize simulation: save floating location and size
-        let initial_loc = Point::<i32, Logical>::from((100, 150));
-        let initial_size = Size::<i32, Logical>::from((800, 600));
-        state.saved_location = Some(initial_loc);
-        state.saved_size = Some(initial_size);
-
-        assert_eq!(state.saved_location, Some(initial_loc));
-        assert_eq!(state.saved_size, Some(initial_size));
-
-        // Restore simulation: consume saved geometry
-        let restored_loc = state.saved_location.take();
-        let restored_size = state.saved_size.take();
-        assert_eq!(restored_loc, Some(initial_loc));
-        assert_eq!(restored_size, Some(initial_size));
-        assert!(state.saved_location.is_none());
-        assert!(state.saved_size.is_none());
-
-        // Minimize simulation
-        state.is_minimized = true;
-        assert!(state.is_minimized);
-        state.is_minimized = false;
-        assert!(!state.is_minimized);
     }
 }

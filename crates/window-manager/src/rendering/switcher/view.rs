@@ -145,7 +145,7 @@ fn compute_dock_metrics(entry_count: usize, screen_h: f64) -> DockMetrics {
         viewport_bottom - viewport_y,
     );
 
-    let visible_count = entry_count.min(DOCK_MAX_VISIBLE_ITEMS).max(1);
+    let visible_count = entry_count.clamp(1, DOCK_MAX_VISIBLE_ITEMS);
     let desired_height = visible_count as f64 * DOCK_THUMBNAIL_HEIGHT
         + visible_count.saturating_sub(1) as f64 * DOCK_GAP;
     let scale = (viewport.height / desired_height).min(1.0);

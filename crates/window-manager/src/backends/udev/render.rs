@@ -105,6 +105,7 @@ pub fn setup_render_loop(
                 if let Some(action) = services::system::window::read_and_clear_window_action() {
                     state.handle_window_action(&action);
                 }
+                state.update_window_animations();
                 let display_handle = &mut data.display_handle;
                 let scale = Scale::from(1.0);
 

@@ -9,12 +9,16 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale},
 };
 
+use crate::compositor::window_animation_factors;
+use crate::rendering::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::rendering::blur::{BlurEngine, BlurRenderElement};
 
 use super::types::{CustomRenderElements, WindowBlurId};
 
 /// Renders native Wayland client surface elements (including CSD/GTK titlebar & decorations)
 /// and attaches a Dual Kawase blur backdrop behind windows configured for blur.
+///
+/// Automatically delegates to [`render_animated_window`] when an opening or closing transition is active.
 pub fn render_window(
     renderer: &mut GlowRenderer,
     window: &Window,
@@ -22,9 +26,6 @@ pub fn render_window(
     scale: Scale<f64>,
     blur_engine: Option<&Arc<Mutex<BlurEngine>>>,
 ) -> Vec<CustomRenderElements> {
-    let mut elements = Vec::new();
-    let render_loc = location - window.geometry().loc;
-
     let (should_blur, opacity, corner_radius) = if let Some(engine_lock) = blur_engine {
         if let Ok(engine) = engine_lock.lock() {
             if engine.matches_window(window) {
@@ -42,6 +43,29 @@ pub fn render_window(
     } else {
         (false, 1.0, 0.0)
     };
+
+    // If window is animating (open zoom-in or close shrink-to-center + fade), delegate to animation renderer
+    let (scale_factor, alpha_factor) = window_animation_factors(window);
+    if scale_factor < 0.999 || alpha_factor < 0.999 {
+        return render_animated_window(
+            renderer,
+            window,
+            location,
+            scale,
+            blur_engine,
+            WindowAnimationRenderParams {
+                scale_factor,
+                alpha_factor,
+                base_opacity: opacity,
+                should_blur,
+                corner_radius,
+            },
+        );
+    }
+
+    // Fast path for static/unanimated windows
+    let mut elements = Vec::new();
+    let render_loc = location - window.geometry().loc;
 
     // 1. Wayland window surface elements (in front)
     let surfaces: Vec<CustomRenderElements> = window

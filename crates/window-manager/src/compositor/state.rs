@@ -28,9 +28,10 @@ mod active_window;
 mod blur;
 mod hit_test;
 mod switcher;
-mod window_ops;
+pub(crate) mod window;
 
 pub(crate) use switcher::{AltTabEntry, AltTabSwitcher};
+pub(crate) use window::*;
 
 pub(crate) struct CalloopData {
     pub(crate) state: BabydraState,

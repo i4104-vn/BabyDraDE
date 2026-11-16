@@ -162,6 +162,7 @@ pub(super) fn handle_commit(popups: &mut PopupManager, space: &Space<Window>, su
         .cloned()
     {
         window.on_commit();
+        crate::compositor::state::start_window_opening(&window);
         if let Some(toplevel) = window.toplevel() {
             let initial_configure_sent = with_states(surface, |states| {
                 states
