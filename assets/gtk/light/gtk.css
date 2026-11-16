@@ -16,6 +16,10 @@
 @define-color headerbar_fg_color #1b1b1b;
 @define-color headerbar_border_color #e5e5e5;
 
+@define-color titlebar_top_color #ffffff;
+@define-color titlebar_bottom_color #f4f5f7;
+@define-color titlebar_backdrop_color #f7f7f8;
+
 @define-color card_bg_color #ffffff;
 @define-color card_fg_color #1b1b1b;
 @define-color card_border_color #e5e5e5;
@@ -30,31 +34,48 @@
 window.background {
     background-color: @window_bg_color;
     color: @window_fg_color;
-    border-radius: 8px;
+    border-radius: 20px;
 }
 
-window.csd {
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08);
+window.csd,
+decoration {
+    border-radius: 20px;
+    box-shadow: 0 18px 44px rgba(31, 35, 43, 0.18),
+                0 4px 12px rgba(31, 35, 43, 0.10),
+                0 0 0 1px rgba(31, 35, 43, 0.10);
 }
 
-/* Headerbar / Titlebar */
+/* Headerbar / Titlebar — quiet glass, a finer divider, and room to breathe. */
+.titlebar:not(headerbar),
 headerbar {
     background-color: @headerbar_bg_color;
+    background-image: linear-gradient(to bottom, @titlebar_top_color, @titlebar_bottom_color);
     color: @headerbar_fg_color;
-    border-bottom: 1px solid @headerbar_border_color;
-    border-radius: 8px 8px 0 0;
-    min-height: 40px;
-    padding: 0 8px;
+    border-bottom: 1px solid rgba(31, 35, 43, 0.10);
+    border-radius: 20px 20px 0 0;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.88),
+                0 1px rgba(31, 35, 43, 0.03);
+    min-height: 46px;
+    padding: 0 12px;
 }
 
+.titlebar:not(headerbar):backdrop,
 headerbar:backdrop {
-    background-color: #f9f9f9;
-    color: #999999;
+    background-color: @titlebar_backdrop_color;
+    background-image: none;
+    border-bottom-color: rgba(31, 35, 43, 0.07);
+    color: #8a8d93;
+    box-shadow: none;
+}
+
+.titlebar:not(headerbar) .title,
+headerbar .title {
+    font-weight: 600;
+    letter-spacing: 0.01em;
 }
 
 headerbar windowhandle {
-    padding: 0 4px;
+    padding: 0 6px;
 }
 
 /* Buttons */
@@ -98,24 +119,93 @@ button.destructive-action:hover {
     background-color: #d13425;
 }
 
-/* Window Control Buttons (Minimize, Maximize, Close) */
+/*
+ * Native GTK window controls.  The layout in settings.ini puts this group at
+ * the trailing edge; the coloured discs echo macOS without changing actions.
+ */
+windowcontrols {
+    border-spacing: 5px;
+}
+
+windowcontrols button,
 headerbar button.titlebutton {
-    background-color: transparent;
+    background: none;
     border: none;
-    border-radius: 4px;
-    min-width: 32px;
-    min-height: 28px;
+    border-radius: 9999px;
+    box-shadow: none;
+    min-width: 16px;
+    min-height: 16px;
     padding: 0;
-    margin: 4px 2px;
+    margin: 0;
 }
 
-headerbar button.titlebutton:hover {
-    background-color: rgba(0, 0, 0, 0.06);
+windowcontrols button > image,
+headerbar button.titlebutton > image {
+    border-radius: 9999px;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.38),
+                0 0 0 1px rgba(34, 37, 43, 0.14);
+    color: transparent;
+    min-width: 14px;
+    min-height: 14px;
+    padding: 0;
 }
 
-headerbar button.titlebutton.close:hover {
-    background-color: #c42b1c;
-    color: #ffffff;
+windowcontrols button.minimize > image,
+headerbar button.titlebutton.minimize > image {
+    background-color: #ffbd2e;
+}
+
+windowcontrols button.maximize > image,
+headerbar button.titlebutton.maximize > image {
+    background-color: #28c840;
+}
+
+windowcontrols button.close > image,
+headerbar button.titlebutton.close > image {
+    background-color: #ff5f57;
+}
+
+windowcontrols button:hover,
+windowcontrols button:active,
+headerbar button.titlebutton:hover,
+headerbar button.titlebutton:active {
+    background: none;
+    box-shadow: none;
+}
+
+windowcontrols button:hover > image,
+headerbar button.titlebutton:hover > image {
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.24),
+                0 0 0 1px rgba(34, 37, 43, 0.20);
+    color: rgba(38, 41, 47, 0.72);
+}
+
+windowcontrols button:active > image,
+headerbar button.titlebutton:active > image {
+    box-shadow: inset 0 1px rgba(34, 37, 43, 0.18),
+                0 0 0 1px rgba(34, 37, 43, 0.22);
+}
+
+headerbar:backdrop windowcontrols button > image,
+headerbar:backdrop button.titlebutton > image {
+    opacity: 0.54;
+}
+
+/* Full-bleed states belong to the application: remove desktop framing. */
+window.maximized,
+window.fullscreen,
+.maximized decoration,
+.fullscreen decoration {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.maximized .titlebar:not(headerbar),
+.fullscreen .titlebar:not(headerbar),
+.maximized headerbar,
+.fullscreen headerbar {
+    border-radius: 0;
+    box-shadow: none;
 }
 
 /* Text Entries & Inputs */

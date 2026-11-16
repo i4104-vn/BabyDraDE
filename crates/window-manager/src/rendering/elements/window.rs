@@ -6,6 +6,7 @@ use smithay::{
         glow::GlowRenderer,
     },
     desktop::Window,
+    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel,
     utils::{Logical, Point, Rectangle, Scale},
 };
 
@@ -14,6 +15,22 @@ use crate::rendering::animation::{render_animated_window, WindowAnimationRenderP
 use crate::rendering::blur::{BlurEngine, BlurRenderElement};
 
 use super::types::{CustomRenderElements, WindowBlurId};
+
+/// Full-bleed windows must retain the application's own edge treatment.
+fn corner_radius_for_window(window: &Window, floating_radius: f32) -> f32 {
+    let Some(toplevel) = window.toplevel() else {
+        return floating_radius;
+    };
+
+    let states = toplevel.current_state().states;
+    if states.contains(xdg_toplevel::State::Maximized)
+        || states.contains(xdg_toplevel::State::Fullscreen)
+    {
+        0.0
+    } else {
+        floating_radius
+    }
+}
 
 /// Renders native Wayland client surface elements (including CSD/GTK titlebar & decorations)
 /// and attaches a Dual Kawase blur backdrop behind windows configured for blur.
@@ -26,7 +43,7 @@ pub fn render_window(
     scale: Scale<f64>,
     blur_engine: Option<&Arc<Mutex<BlurEngine>>>,
 ) -> Vec<CustomRenderElements> {
-    let (should_blur, opacity, corner_radius) = if let Some(engine_lock) = blur_engine {
+    let (should_blur, opacity, configured_corner_radius) = if let Some(engine_lock) = blur_engine {
         if let Ok(engine) = engine_lock.lock() {
             if engine.matches_window(window) {
                 (
@@ -43,6 +60,7 @@ pub fn render_window(
     } else {
         (false, 1.0, 0.0)
     };
+    let corner_radius = corner_radius_for_window(window, configured_corner_radius);
 
     // If window is animating (open zoom-in or close shrink-to-center + fade), delegate to animation renderer
     let (scale_factor, alpha_factor) = window_animation_factors(window);

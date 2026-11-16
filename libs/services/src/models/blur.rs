@@ -15,7 +15,7 @@ fn default_blur_passes() -> usize {
 }
 
 fn default_blur_corner_radius() -> f32 {
-    14.0
+    20.0
 }
 
 fn default_blur_window_opacity() -> f32 {
