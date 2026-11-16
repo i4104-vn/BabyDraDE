@@ -21,7 +21,7 @@ use crate::compositor::AltTabSwitcher;
 use super::{
     super::CustomRenderElements,
     draw::Rect,
-    view::{compute_layout, draw_switcher},
+    view::{compute_layout, draw_switcher_foreground},
 };
 
 use crate::rendering::elements::types::ConstrainedSurface;
@@ -73,12 +73,12 @@ impl SwitcherOverlay {
         let render_key = (switcher.transition_started, switcher.selected_index);
 
         if self.last_rendered != Some(render_key) {
-            let logical_w = (width as f64 / scale.x).max(1.0);
-            let logical_h = (height as f64 / scale.y).max(1.0);
             if let Some(fg_buf) = self.fg_buffer.as_mut() {
-                if let Some(pixels) = render_pixels(width, height, scale, |ctx| {
-                    draw_switcher(ctx, switcher, &layout, logical_w, logical_h)
-                }) {
+                if let Some(pixels) =
+                    render_pixels(width, height, scale, |ctx| {
+                        draw_switcher_foreground(ctx, switcher, &layout)
+                    })
+                {
                     let mut context = fg_buf.render();
                     let _ = context.draw(|buf| {
                         if buf.len() == pixels.len() {

@@ -1,4 +1,4 @@
-use cairo::{Context, FontSlant, FontWeight, Operator};
+use cairo::{Context, FontSlant, FontWeight};
 use gtk4::gdk::prelude::GdkCairoContextExt;
 
 use crate::compositor::AltTabEntry;
@@ -73,38 +73,9 @@ pub(crate) fn rounded_rect(
 }
 
 
-/// Vẽ nền tối mờ (backdrop) cho toàn bộ switcher panel — tạo hiệu ứng "side left"
-/// tương tự macOS/iOS switcher: nền tối, mờ, nổi bật các app card.
-pub(crate) fn draw_switcher_background(
-    context: &Context,
-    _screen_w: f64,
-    _screen_h: f64,
-    dock_viewport: &Rect,
-) -> Result<(), cairo::Error> {
-    context.set_operator(Operator::Source);
-    context.set_source_rgba(0.05, 0.05, 0.07, 0.72);
-    context.paint()?;
-    context.set_operator(Operator::Over);
-
-    // Viền bo tròn mờ xung quanh vùng dock bên trái.
-    let dock_x = dock_viewport.x - 16.0;
-    let dock_y = dock_viewport.y - 16.0;
-    let dock_w = dock_viewport.width + 32.0;
-    let dock_h = dock_viewport.height + 32.0;
-
-    context.save()?;
-    rounded_rect(context, dock_x, dock_y, dock_w, dock_h, 20.0);
-    context.set_source_rgba(0.12, 0.12, 0.16, 0.55);
-    context.fill_preserve()?;
-    context.set_source_rgba(0.35, 0.35, 0.45, 0.25);
-    context.set_line_width(1.5);
-    context.stroke()?;
-    context.restore()?;
-
-    Ok(())
-}
-
-pub(crate) fn draw_app_badge(
+/// Vẽ một icon app đơn lẻ (không bo tròn nền, không chữ) tại vị trí chỉ định.
+/// Dùng cho hiệu ứng "pull" Stage Manager: icon bên trái, preview kéo ra bên phải.
+pub(crate) fn draw_app_icon_at(
     context: &Context,
     entry: &AltTabEntry,
     x: f64,
@@ -116,18 +87,11 @@ pub(crate) fn draw_app_badge(
         return Ok(());
     }
 
-    // Use the pre-loaded pixbuf from the entry — no GTK calls in the render path.
     if let Some(ref pixbuf) = entry.icon_pixbuf {
         let pw = pixbuf.width() as f64;
         let ph = pixbuf.height() as f64;
         if pw > 0.0 && ph > 0.0 {
             context.save()?;
-            // Soft drop shadow
-            let corner = size * 0.22;
-            rounded_rect(context, x, y + 1.5, size, size, corner);
-            context.set_source_rgba(0.0, 0.0, 0.0, 0.35 * alpha);
-            context.fill()?;
-
             context.translate(x, y);
             context.scale(size / pw, size / ph);
             context.set_source_pixbuf(pixbuf, 0.0, 0.0);
@@ -137,24 +101,11 @@ pub(crate) fn draw_app_badge(
         }
     }
 
-    // Fallback: coloured letter badge when no icon is available.
-    let corner = size * 0.25;
-
-    rounded_rect(context, x, y + 2.0, size, size, corner);
-    context.set_source_rgba(0.0, 0.0, 0.0, 0.40 * alpha);
-    context.fill()?;
-
+    // Fallback: chữ cái đơn sắc
     let color = app_color(&entry.app_name);
-    rounded_rect(context, x, y, size, size, corner);
-    context.set_source_rgba(color.0, color.1, color.2, 0.98 * alpha);
-    context.fill_preserve()?;
-
-    context.set_source_rgba(1.0, 1.0, 1.0, 0.45 * alpha);
-    context.set_line_width(1.2);
-    context.stroke()?;
-
+    context.set_source_rgba(color.0, color.1, color.2, alpha);
     context.select_font_face("Sans", FontSlant::Normal, FontWeight::Bold);
-    context.set_font_size(size * 0.50);
+    context.set_font_size(size * 0.55);
     let initial = entry
         .app_name
         .chars()
@@ -165,7 +116,7 @@ pub(crate) fn draw_app_badge(
     let extents = context.text_extents(&initial)?;
     let tx = x + (size - extents.x_advance()) / 2.0 - extents.x_bearing();
     let ty = y + (size - extents.height()) / 2.0 - extents.y_bearing();
-    draw_text(context, &initial, tx, ty, (1.0, 1.0, 1.0, 0.98 * alpha))
+    draw_text(context, &initial, tx, ty, (1.0, 1.0, 1.0, alpha))
 }
 
 pub(crate) fn draw_text(

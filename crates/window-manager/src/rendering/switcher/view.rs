@@ -1,10 +1,10 @@
 use std::time::Duration;
 
-use cairo::Context;
+use cairo::{Context, Operator};
 
 use crate::compositor::AltTabSwitcher;
 
-use super::draw::{app_color, draw_app_badge, draw_switcher_background, rounded_rect, Rect};
+use super::draw::{app_color, draw_app_icon_at, rounded_rect, Rect};
 
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
 
@@ -192,16 +192,15 @@ fn scale_rect_around(rect: Rect, center: (f64, f64), scale: f64) -> Rect {
     )
 }
 
-/// Vẽ toàn bộ foreground của switcher (nền + các dock item).
-pub(crate) fn draw_switcher(
+pub(crate) fn draw_switcher_foreground(
     context: &Context,
     switcher: &AltTabSwitcher,
     layout: &SwitcherLayout,
-    screen_w: f64,
-    screen_h: f64,
 ) -> Result<(), cairo::Error> {
-    // 1. Nền tối mờ cho toàn bộ panel.
-    draw_switcher_background(context, screen_w, screen_h, &layout.dock_viewport)?;
+    context.set_operator(Operator::Source);
+    context.set_source_rgba(0.0, 0.0, 0.0, 0.0);
+    context.paint()?;
+    context.set_operator(Operator::Over);
 
     let vp = layout.dock_viewport;
 
@@ -214,70 +213,87 @@ pub(crate) fn draw_switcher(
         let c = item.card;
         let p = item.preview;
 
-        // Nền card bo tròn cho mỗi item.
-        context.save()?;
-        rounded_rect(context, c.x, c.y, c.width, c.height, c.height * 0.14);
-        if is_selected {
-            context.set_source_rgba(0.25, 0.25, 0.30, 0.85);
-        } else {
-            context.set_source_rgba(0.15, 0.15, 0.20, 0.60);
-        }
-        context.fill()?;
-        context.restore()?;
+        if let Some(entry) = switcher.entries.get(*entry_idx) {
+            // --- Icon bên trái (gắn sát mép trái card) ---
+            let icon_size = (c.height * 0.30).clamp(24.0, 40.0);
+            let icon_x = c.x + 8.0;
+            let icon_y = c.y + (c.height - icon_size) / 2.0;
 
-        if is_selected {
-            // Active: viền màu app, glow nhẹ, badge rõ nét.
-            if let Some(entry) = switcher.entries.get(*entry_idx) {
+            // Nền bo tròn nhẹ cho icon
+            context.save()?;
+            rounded_rect(context, icon_x, icon_y, icon_size, icon_size, icon_size * 0.22);
+            if is_selected {
+                context.set_source_rgba(0.30, 0.30, 0.36, 0.90);
+            } else {
+                context.set_source_rgba(0.18, 0.18, 0.22, 0.70);
+            }
+            context.fill()?;
+            context.restore()?;
+
+            // Vẽ icon app (pixbuf hoặc chữ fallback)
+            draw_app_icon_at(
+                context,
+                entry,
+                icon_x,
+                icon_y,
+                icon_size,
+                if is_selected { 1.0 } else { 0.80 },
+            )?;
+
+            // --- Preview "hút" về bên phải (Stage Manager style) ---
+            // Preview kéo ra từ bên phải icon, co dãn theo trạng thái chọn
+            let pull = if is_selected { 1.0 } else { 0.55 };
+            let preview_w = p.width.max(80.0) * pull;
+            let preview_h = p.height.max(100.0) * pull;
+            let preview_x = icon_x + icon_size + 10.0;
+            let preview_y = c.y + (c.height - preview_h) / 2.0;
+
+            // Nền preview mờ
+            context.save()?;
+            rounded_rect(context, preview_x, preview_y, preview_w, preview_h, 8.0);
+            context.set_source_rgba(
+                0.20,
+                0.20,
+                0.24,
+                if is_selected { 0.85 } else { 0.50 },
+            );
+            context.fill()?;
+            context.restore()?;
+
+            // Cửa sổ thu nhỏ (dùng icon app làm preview placeholder)
+            context.save()?;
+            context.rectangle(
+                preview_x + 4.0,
+                preview_y + 4.0,
+                preview_w - 8.0,
+                preview_h - 8.0,
+            );
+            context.clip();
+            let inner_size = (preview_w - 24.0).min(preview_h - 24.0).max(8.0);
+            draw_app_icon_at(
+                context,
+                entry,
+                preview_x + 4.0 + (preview_w - 8.0 - inner_size) / 2.0,
+                preview_y + 4.0 + (preview_h - 8.0 - inner_size) / 2.0,
+                inner_size,
+                if is_selected { 0.85 } else { 0.45 },
+            )?;
+            context.restore()?;
+
+            // Viền chọn cho item active
+            if is_selected {
                 let (r, g, b) = app_color(&entry.app_name);
-
-                // Glow mờ xung quanh card.
-                context.save()?;
-                rounded_rect(
-                    context,
-                    c.x - 6.0,
-                    c.y - 6.0,
-                    c.width + 12.0,
-                    c.height + 12.0,
-                    (c.height * 0.14) + 6.0,
-                );
-                context.set_source_rgba(r, g, b, 0.35);
-                context.set_line_width(4.0);
-                context.stroke()?;
-                context.restore()?;
-
-                // Viền chắc màu app quanh preview.
                 context.new_path();
-                context.rectangle(p.x, p.y, p.width, p.height);
+                context.rectangle(c.x, c.y, c.width, c.height);
                 context.set_source_rgba(
                     (r + 0.35).min(1.0),
                     (g + 0.35).min(1.0),
                     (b + 0.35).min(1.0),
-                    0.95,
+                    0.90,
                 );
-                context.set_line_width(2.5);
+                context.set_line_width(2.0);
                 context.stroke()?;
-
-                let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
-                draw_app_badge(
-                    context,
-                    entry,
-                    p.x + 4.0,
-                    p.y + p.height - badge_size - 4.0,
-                    badge_size,
-                    1.0,
-                )?;
             }
-        } else if let Some(entry) = switcher.entries.get(*entry_idx) {
-            // Inactive: badge mờ, không viền.
-            let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
-            draw_app_badge(
-                context,
-                entry,
-                p.x + 4.0,
-                p.y + p.height - badge_size - 4.0,
-                badge_size,
-                0.50,
-            )?;
         }
     }
 
