@@ -27,11 +27,10 @@ pub(crate) fn handle_window_drag(
     time: u32,
 ) -> bool {
     let pointer = state.seat.get_pointer().unwrap();
-    if let Some(ref mut move_state) = state.move_state {
+    if let Some(mut move_state) = state.move_state.take() {
         if !state.pointer_pressed_buttons.contains(&move_state.button)
             && state.pointer_pressed_buttons.is_empty()
         {
-            state.move_state = None;
             let under = state.surface_under(position);
             pointer.motion(
                 state,
@@ -51,7 +50,32 @@ pub(crate) fn handle_window_drag(
 
         // Require at least a 4-pixel movement threshold before window dragging starts
         if !move_state.has_dragged && dist_sq < 16.0 {
+            state.move_state = Some(move_state);
             return true;
+        }
+        if !move_state.has_dragged {
+            let is_maximized = move_state
+                .window
+                .toplevel()
+                .map(|top| {
+                    top.current_state().states.contains(
+                        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
+                    )
+                })
+                .unwrap_or(false);
+            if is_maximized {
+                let window = move_state.window.clone();
+                // Restore the saved normal geometry first, then place that
+                // geometry under the pointer so the drag feels continuous.
+                state.unmaximize_window(&window);
+                let size = window.geometry().size;
+                let desired = Point::from((
+                    position.x.round() as i32 - size.w / 2,
+                    position.y.round() as i32 - 12,
+                ));
+                move_state.initial_window_location = desired
+                    - Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
+            }
         }
         move_state.has_dragged = true;
 
@@ -60,6 +84,7 @@ pub(crate) fn handle_window_drag(
         state
             .space
             .map_element(move_state.window.clone(), new_loc, false);
+        state.move_state = Some(move_state);
         return true;
     }
     false
