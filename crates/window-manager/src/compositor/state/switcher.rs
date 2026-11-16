@@ -133,7 +133,12 @@ impl BabydraState {
 
                 // Resolve the icon eagerly here (on the event-loop thread, before any
                 // rendering happens) so the render path never has to call into GTK/GIO.
-                let icon_pixbuf = ui_kit::icons::get_app_icon_pixbuf(&app_id, 32);
+                // Wrapped in catch_unwind so a GTK/GIO panic inside icon resolution
+                // cannot take down the whole compositor — the switcher simply falls
+                // back to a coloured badge when the icon is unavailable.
+                let icon_pixbuf =
+                    std::panic::catch_unwind(|| ui_kit::icons::get_app_icon_pixbuf(&app_id, 32))
+                        .unwrap_or(None);
 
                 let original_location = self.space.element_location(window);
                 let original_size = Some(window.geometry().size);

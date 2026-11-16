@@ -31,7 +31,11 @@ fn ensure_runtime_dir() {
 
 pub fn run(test_app: Option<OsString>) -> Result<(), Box<dyn Error>> {
     ensure_runtime_dir();
-    let _ = gtk4::init();
+    if let Err(err) = gtk4::init() {
+        warn!("GTK4 initialization failed: {err}; app icons and GTK-based rendering will be unavailable.");
+    } else {
+        info!("GTK4 initialized.");
+    }
     services::config::ensure_babydra_dirs();
 
     std::thread::Builder::new()

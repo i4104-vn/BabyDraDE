@@ -285,18 +285,30 @@ pub fn get_app_icon_pixbuf(app_id: &str, size: i32) -> Option<Pixbuf> {
 }
 
 /// Retrieves a Pixbuf for an icon name or path, prioritizing system GtkIconTheme.
+///
+/// Returns `None` (never panics) when GTK is not initialized or there is no
+/// default GDK display, so callers such as the Alt+Tab switcher can degrade
+/// gracefully to a coloured badge instead of crashing the compositor.
 pub fn get_theme_icon_pixbuf(name: &str, size: i32) -> Option<Pixbuf> {
     let path = std::path::Path::new(name);
     if path.is_absolute() && path.is_file() {
         return Pixbuf::from_file_at_scale(path, size, size, true).ok();
     }
 
-    let display = gtk4::gdk::Display::default();
-    let theme = if let Some(ref disp) = display {
-        gtk4::IconTheme::for_display(disp)
-    } else {
-        gtk4::IconTheme::new()
+    // Without a default GDK display there is no icon theme to query.  Do not
+    // fall back to `IconTheme::new()` — a theme created without a display can
+    // make `has_icon`/`lookup_icon` crash on some GTK builds.
+    let disp = match gtk4::gdk::Display::default() {
+        Some(d) => d,
+        None => {
+            tracing::warn!(
+                "get_theme_icon_pixbuf: no default GDK display; icon '{}' unavailable",
+                name
+            );
+            return None;
+        }
     };
+    let theme = gtk4::IconTheme::for_display(&disp);
 
     let clean = name
         .strip_suffix(".png")
