@@ -1,4 +1,4 @@
-use cairo::{Context, FontSlant, FontWeight};
+use cairo::{Context, FontSlant, FontWeight, Operator};
 use gtk4::gdk::prelude::GdkCairoContextExt;
 
 use crate::compositor::AltTabEntry;
@@ -72,6 +72,37 @@ pub(crate) fn rounded_rect(
     context.close_path();
 }
 
+
+/// Vẽ nền tối mờ (backdrop) cho toàn bộ switcher panel — tạo hiệu ứng "side left"
+/// tương tự macOS/iOS switcher: nền tối, mờ, nổi bật các app card.
+pub(crate) fn draw_switcher_background(
+    context: &Context,
+    _screen_w: f64,
+    _screen_h: f64,
+    dock_viewport: &Rect,
+) -> Result<(), cairo::Error> {
+    context.set_operator(Operator::Source);
+    context.set_source_rgba(0.05, 0.05, 0.07, 0.72);
+    context.paint()?;
+    context.set_operator(Operator::Over);
+
+    // Viền bo tròn mờ xung quanh vùng dock bên trái.
+    let dock_x = dock_viewport.x - 16.0;
+    let dock_y = dock_viewport.y - 16.0;
+    let dock_w = dock_viewport.width + 32.0;
+    let dock_h = dock_viewport.height + 32.0;
+
+    context.save()?;
+    rounded_rect(context, dock_x, dock_y, dock_w, dock_h, 20.0);
+    context.set_source_rgba(0.12, 0.12, 0.16, 0.55);
+    context.fill_preserve()?;
+    context.set_source_rgba(0.35, 0.35, 0.45, 0.25);
+    context.set_line_width(1.5);
+    context.stroke()?;
+    context.restore()?;
+
+    Ok(())
+}
 
 pub(crate) fn draw_app_badge(
     context: &Context,

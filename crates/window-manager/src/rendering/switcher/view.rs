@@ -1,10 +1,10 @@
 use std::time::Duration;
 
-use cairo::{Context, Operator};
+use cairo::Context;
 
 use crate::compositor::AltTabSwitcher;
 
-use super::draw::{app_color, draw_app_badge, Rect};
+use super::draw::{app_color, draw_app_badge, draw_switcher_background, rounded_rect, Rect};
 
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(420);
 
@@ -192,15 +192,16 @@ fn scale_rect_around(rect: Rect, center: (f64, f64), scale: f64) -> Rect {
     )
 }
 
-pub(crate) fn draw_switcher_foreground(
+/// Vẽ toàn bộ foreground của switcher (nền + các dock item).
+pub(crate) fn draw_switcher(
     context: &Context,
     switcher: &AltTabSwitcher,
     layout: &SwitcherLayout,
+    screen_w: f64,
+    screen_h: f64,
 ) -> Result<(), cairo::Error> {
-    context.set_operator(Operator::Source);
-    context.set_source_rgba(0.0, 0.0, 0.0, 0.0);
-    context.paint()?;
-    context.set_operator(Operator::Over);
+    // 1. Nền tối mờ cho toàn bộ panel.
+    draw_switcher_background(context, screen_w, screen_h, &layout.dock_viewport)?;
 
     let vp = layout.dock_viewport;
 
@@ -210,12 +211,41 @@ pub(crate) fn draw_switcher_foreground(
 
     for (entry_idx, item) in &layout.dock_items {
         let is_selected = *entry_idx == switcher.selected_index;
+        let c = item.card;
         let p = item.preview;
 
+        // Nền card bo tròn cho mỗi item.
+        context.save()?;
+        rounded_rect(context, c.x, c.y, c.width, c.height, c.height * 0.14);
         if is_selected {
-            // Active: flat border tight around preview, app color, no glow.
+            context.set_source_rgba(0.25, 0.25, 0.30, 0.85);
+        } else {
+            context.set_source_rgba(0.15, 0.15, 0.20, 0.60);
+        }
+        context.fill()?;
+        context.restore()?;
+
+        if is_selected {
+            // Active: viền màu app, glow nhẹ, badge rõ nét.
             if let Some(entry) = switcher.entries.get(*entry_idx) {
                 let (r, g, b) = app_color(&entry.app_name);
+
+                // Glow mờ xung quanh card.
+                context.save()?;
+                rounded_rect(
+                    context,
+                    c.x - 6.0,
+                    c.y - 6.0,
+                    c.width + 12.0,
+                    c.height + 12.0,
+                    (c.height * 0.14) + 6.0,
+                );
+                context.set_source_rgba(r, g, b, 0.35);
+                context.set_line_width(4.0);
+                context.stroke()?;
+                context.restore()?;
+
+                // Viền chắc màu app quanh preview.
                 context.new_path();
                 context.rectangle(p.x, p.y, p.width, p.height);
                 context.set_source_rgba(
@@ -224,7 +254,7 @@ pub(crate) fn draw_switcher_foreground(
                     (b + 0.35).min(1.0),
                     0.95,
                 );
-                context.set_line_width(2.0);
+                context.set_line_width(2.5);
                 context.stroke()?;
 
                 let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
@@ -238,7 +268,7 @@ pub(crate) fn draw_switcher_foreground(
                 )?;
             }
         } else if let Some(entry) = switcher.entries.get(*entry_idx) {
-            // Inactive: faint badge only, no border.
+            // Inactive: badge mờ, không viền.
             let badge_size = (item.card.height * 0.32).clamp(20.0, 30.0);
             draw_app_badge(
                 context,
@@ -246,7 +276,7 @@ pub(crate) fn draw_switcher_foreground(
                 p.x + 4.0,
                 p.y + p.height - badge_size - 4.0,
                 badge_size,
-                0.55,
+                0.50,
             )?;
         }
     }
