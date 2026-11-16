@@ -18,7 +18,10 @@ use smithay::{
         output::OutputManagerState,
         pointer_gestures::PointerGesturesState,
         selection::data_device::DataDeviceState,
-        shell::{wlr_layer::WlrLayerShellState, xdg::XdgShellState},
+        shell::{
+            wlr_layer::WlrLayerShellState,
+            xdg::{decoration::XdgDecorationState, XdgShellState},
+        },
         shm::ShmState,
         socket::ListeningSocketSource,
     },
@@ -117,6 +120,7 @@ pub(crate) struct BabydraState {
 
     pub(crate) compositor_state: CompositorState,
     pub(crate) xdg_shell_state: XdgShellState,
+    pub(crate) _xdg_decoration_state: XdgDecorationState,
     pub(crate) wlr_layer_shell_state: WlrLayerShellState,
     pub(crate) _pointer_gestures_state: PointerGesturesState,
     pub(crate) shm_state: ShmState,
@@ -150,6 +154,7 @@ impl BabydraState {
         let display_handle = display.handle();
         let compositor_state = CompositorState::new::<Self>(&display_handle);
         let xdg_shell_state = XdgShellState::new::<Self>(&display_handle);
+        let xdg_decoration_state = XdgDecorationState::new::<Self>(&display_handle);
         let wlr_layer_shell_state = WlrLayerShellState::new::<Self>(&display_handle);
         let pointer_gestures_state = PointerGesturesState::new::<Self>(&display_handle);
         let shm_state = ShmState::new::<Self>(&display_handle, vec![]);
@@ -174,6 +179,7 @@ impl BabydraState {
             loop_signal: event_loop.get_signal(),
             compositor_state,
             xdg_shell_state,
+            _xdg_decoration_state: xdg_decoration_state,
             wlr_layer_shell_state,
             _pointer_gestures_state: pointer_gestures_state,
             shm_state,

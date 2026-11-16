@@ -4,6 +4,7 @@ pub mod cursor;
 pub mod elements;
 pub(crate) mod lock;
 pub mod switcher;
+pub mod titlebar;
 
 pub use animation::{render_animated_window, WindowAnimationRenderParams};
 pub use blur::{BlurEngine, BlurParams, BlurRenderElement};

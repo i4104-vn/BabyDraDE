@@ -106,6 +106,29 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     });
                     state.update_active_window(Some(&window));
 
+                    if let Some(action) = crate::rendering::titlebar::hit_test(
+                        &window,
+                        location,
+                        state.pointer_location,
+                    ) {
+                        use crate::rendering::titlebar::Action;
+                        match action {
+                            Action::Close => state.close_window(&window),
+                            Action::Minimize => state.minimize_window(&window),
+                            Action::Maximize => state.toggle_maximize(&window),
+                            Action::Move => {
+                                state.move_state = Some(MoveState {
+                                    window: window.clone(),
+                                    initial_window_location: location,
+                                    initial_pointer_location: state.pointer_location,
+                                    has_dragged: false,
+                                    button: button_code,
+                                });
+                            }
+                        }
+                        return;
+                    }
+
                     // Ensure pointer focus is updated to the raised window surface
                     let under = state.surface_under(state.pointer_location);
                     pointer.motion(

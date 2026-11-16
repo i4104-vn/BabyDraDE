@@ -1,13 +1,10 @@
 use std::time::Duration;
 
 use animation::{Easing, Tween};
-use smithay::{
-    desktop::Window,
-    utils::SERIAL_COUNTER,
-};
+use smithay::{desktop::Window, utils::SERIAL_COUNTER};
 
-use crate::compositor::state::BabydraState;
 use super::state_data::window_state;
+use crate::compositor::state::BabydraState;
 
 /// Tracks in-progress window transitions (open zoom-in, close zoom-out + fade).
 #[derive(Debug, Clone)]
@@ -142,8 +139,8 @@ impl BabydraState {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::state_data::WindowStateData;
+    use super::*;
 
     #[test]
     fn test_window_animation_factors_and_states() {

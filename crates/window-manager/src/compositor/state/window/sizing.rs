@@ -7,8 +7,8 @@ use smithay::{
     utils::{Point, SERIAL_COUNTER},
 };
 
-use crate::compositor::state::BabydraState;
 use super::state_data::window_state;
+use crate::compositor::state::BabydraState;
 
 impl BabydraState {
     pub(crate) fn maximize_window(&mut self, window: &Window) {

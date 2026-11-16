@@ -12,6 +12,14 @@ impl BabydraState {
         &self,
         point: Point<f64, Logical>,
     ) -> Option<(Window, Point<i32, Logical>)> {
+        // The compositor-owned frame sits just above the client surface.
+        for window in self.space.elements().rev() {
+            if let Some(location) = self.space.element_location(window) {
+                if crate::rendering::titlebar::hit_test(window, location, point).is_some() {
+                    return Some((window.clone(), location));
+                }
+            }
+        }
         // 1. First check via Smithay's element_under (handles exact input regions)
         if let Some((window, _render_loc)) = self.space.element_under(point) {
             if !super::is_window_closing(window) {

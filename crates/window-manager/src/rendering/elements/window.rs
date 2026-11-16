@@ -13,6 +13,7 @@ use smithay::{
 use crate::compositor::window_animation_factors;
 use crate::rendering::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::rendering::blur::{BlurEngine, BlurRenderElement};
+use crate::rendering::titlebar;
 
 use super::types::{CustomRenderElements, WindowBlurId};
 
@@ -83,6 +84,11 @@ pub fn render_window(
 
     // Fast path for static/unanimated windows
     let mut elements = Vec::new();
+
+    // The frame is drawn by the compositor, never by GTK/client-side decoration.
+    if let Some(frame) = titlebar::render(renderer, window, location, scale) {
+        elements.push(frame);
+    }
     let render_loc = location - window.geometry().loc;
 
     // 1. Wayland window surface elements (in front)

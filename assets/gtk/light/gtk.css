@@ -239,6 +239,12 @@ row {
     border-radius: 4px;
 }
 
+/* The compositor owns the frame; GTK must not paint a client-side titlebar. */
+window.csd > decoration,
+window.csd > decoration > headerbar,
+window.csd > decoration > .titlebar,
+windowcontrols { background: transparent; box-shadow: none; border: 0; }
+
 row:hover {
     background-color: rgba(0, 0, 0, 0.03);
 }

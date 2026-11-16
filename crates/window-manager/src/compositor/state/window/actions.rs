@@ -1,7 +1,7 @@
 use smithay::{desktop::Window, utils::IsAlive, wayland::shell::xdg::ToplevelSurface};
 
-use crate::compositor::state::BabydraState;
 use super::animation::is_window_closing;
+use crate::compositor::state::BabydraState;
 
 impl BabydraState {
     /// Removes dead windows from the tracking list.
