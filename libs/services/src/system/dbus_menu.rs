@@ -10,6 +10,8 @@ pub struct DbusMenuItem {
     pub enabled: bool,
     pub visible: bool,
     pub is_separator: bool,
+    /// True when the item is a menu container, even if its children are loaded lazily.
+    pub has_submenu: bool,
     pub toggle_type: Option<String>,
     pub toggle_state: Option<i32>,
     pub children: Vec<DbusMenuItem>,
@@ -18,7 +20,38 @@ pub struct DbusMenuItem {
 /// Fetches the hierarchical DBus menu from an application exporting `com.canonical.dbusmenu`
 pub fn fetch_dbus_menu(service: &str, path: &str) -> Option<Vec<DbusMenuItem>> {
     let conn = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
+    fetch_dbus_menu_with_connection(&conn, service, path)
+}
 
+/// Fetches a menu after asking the exporter to populate lazy submenus.
+///
+/// Many GTK, Qt, Electron, and Java app-menu exporters only provide the children of
+/// File/Edit/etc. after receiving the `AboutToShow` protocol event. Without this
+/// preparation the menu bar appears but its menus look empty or act like inert buttons.
+pub fn fetch_dbus_menu_with_prepared_submenus(
+    service: &str,
+    path: &str,
+) -> Option<Vec<DbusMenuItem>> {
+    let conn = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
+    // Some exporters lazily create the top-level categories as well.
+    let _ = about_to_show_with_connection(&conn, service, path, 0);
+    let initial_items = fetch_dbus_menu_with_connection(&conn, service, path)?;
+
+    let mut submenu_ids = Vec::new();
+    collect_submenu_ids(&initial_items, &mut submenu_ids);
+    for item_id in submenu_ids.into_iter().take(48) {
+        // A few exporters do not implement AboutToShow. Their static layout remains usable.
+        let _ = about_to_show_with_connection(&conn, service, path, item_id);
+    }
+
+    fetch_dbus_menu_with_connection(&conn, service, path).or(Some(initial_items))
+}
+
+fn fetch_dbus_menu_with_connection(
+    conn: &gio::DBusConnection,
+    service: &str,
+    path: &str,
+) -> Option<Vec<DbusMenuItem>> {
     // Read the complete tree so overflow menus and nested submenus have all entries available.
     let params = Variant::from((
         0i32,
@@ -56,6 +89,39 @@ pub fn fetch_dbus_menu(service: &str, path: &str) -> Option<Vec<DbusMenuItem>> {
     let root_layout = reply.child_value(1);
     let root_item = parse_layout_variant(&root_layout)?;
     Some(root_item.children)
+}
+
+fn about_to_show_with_connection(
+    conn: &gio::DBusConnection,
+    service: &str,
+    path: &str,
+    item_id: i32,
+) -> bool {
+    let params = Variant::from((item_id,));
+    conn.call_sync(
+        Some(service),
+        path,
+        "com.canonical.dbusmenu",
+        "AboutToShow",
+        Some(&params),
+        None,
+        gio::DBusCallFlags::NONE,
+        300,
+        gio::Cancellable::NONE,
+    )
+    .is_ok()
+}
+
+fn collect_submenu_ids(items: &[DbusMenuItem], ids: &mut Vec<i32>) {
+    for item in items {
+        // Older exporters omit `children-display` until a menu is first opened.
+        // AboutToShow is harmless for leaf entries and lets those menus reveal
+        // their children before the topbar decides whether to render a submenu.
+        if item.visible && !item.is_separator {
+            ids.push(item.id);
+        }
+        collect_submenu_ids(&item.children, ids);
+    }
 }
 
 /// Activates a menu item on the application's D-Bus service
@@ -148,8 +214,17 @@ pub fn find_app_menu_service(app_id: &str, process_id: Option<u32>) -> Option<(S
         }
     }
 
+    let registered_menus = find_registered_appmenus(&conn);
+
     if let Some(process_id) = process_id {
-        process_candidates.extend(find_registered_appmenus(&conn, process_id));
+        process_candidates.extend(
+            registered_menus
+                .iter()
+                .filter(|(service, _)| {
+                    get_connection_process_id(&conn, service) == Some(process_id)
+                })
+                .cloned(),
+        );
 
         // The focused Wayland client's PID is the strongest available association
         // between an xdg_toplevel and a D-Bus connection.
@@ -160,19 +235,26 @@ pub fn find_app_menu_service(app_id: &str, process_id: Option<u32>) -> Option<(S
         }
     }
 
+    // Some toolkits export their menu from a helper process. In that case the
+    // D-Bus PID differs from the Wayland client's PID, but its service still
+    // commonly identifies the app.
+    process_candidates.extend(
+        registered_menus
+            .into_iter()
+            .filter(|(service, _)| service_matches_app_id(service, app_id_trimmed)),
+    );
+
     let mut candidates = process_candidates;
     candidates.extend(
         exact_name_candidates
             .into_iter()
             .map(|service| (service, String::new())),
     );
-    if process_id.is_none() {
-        candidates.extend(
-            suffix_candidates
-                .into_iter()
-                .map(|service| (service, String::new())),
-        );
-    }
+    candidates.extend(
+        suffix_candidates
+            .into_iter()
+            .map(|service| (service, String::new())),
+    );
     let mut seen = std::collections::HashSet::new();
 
     for (service, registered_path) in candidates {
@@ -180,20 +262,18 @@ pub fn find_app_menu_service(app_id: &str, process_id: Option<u32>) -> Option<(S
             continue;
         }
 
-        if !registered_path.is_empty()
-            && fetch_dbus_menu(&service, &registered_path).is_some_and(|items| !items.is_empty())
-        {
+        if !registered_path.is_empty() && menu_has_visible_items(&service, &registered_path) {
             return Some((service, registered_path));
         }
 
         for path in CANDIDATE_PATHS {
-            if fetch_dbus_menu(&service, path).is_some_and(|items| !items.is_empty()) {
+            if menu_has_visible_items(&service, path) {
                 return Some((service, path.to_string()));
             }
         }
 
         if let Some(path) = find_dbusmenu_path(&conn, &service) {
-            if fetch_dbus_menu(&service, &path).is_some_and(|items| !items.is_empty()) {
+            if menu_has_visible_items(&service, &path) {
                 return Some((service, path));
             }
         }
@@ -202,7 +282,11 @@ pub fn find_app_menu_service(app_id: &str, process_id: Option<u32>) -> Option<(S
     None
 }
 
-fn find_registered_appmenus(conn: &gio::DBusConnection, process_id: u32) -> Vec<(String, String)> {
+fn menu_has_visible_items(service: &str, path: &str) -> bool {
+    fetch_dbus_menu_with_prepared_submenus(service, path).is_some_and(|items| !items.is_empty())
+}
+
+fn find_registered_appmenus(conn: &gio::DBusConnection) -> Vec<(String, String)> {
     let reply = match conn.call_sync(
         Some("com.canonical.AppMenu.Registrar"),
         "/com/canonical/AppMenu/Registrar",
@@ -230,13 +314,36 @@ fn find_registered_appmenus(conn: &gio::DBusConnection, process_id: u32) -> Vec<
         let service = menu.child_value(1).get::<String>();
         let path = menu.child_value(2).get::<String>();
         if let (Some(service), Some(path)) = (service, path) {
-            if get_connection_process_id(conn, &service) == Some(process_id) {
-                matches.push((service, path));
-            }
+            matches.push((service, path));
         }
     }
 
     matches
+}
+
+fn service_matches_app_id(service: &str, app_id: &str) -> bool {
+    let service = service.trim().to_ascii_lowercase();
+    let app_id = app_id
+        .trim()
+        .strip_suffix(".desktop")
+        .unwrap_or(app_id.trim())
+        .to_ascii_lowercase();
+    if service.is_empty() || app_id.is_empty() {
+        return false;
+    }
+    if service == app_id || service.ends_with(&format!(".{app_id}")) {
+        return true;
+    }
+
+    let normalized_service: String = service
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .collect();
+    let normalized_app: String = app_id.chars().filter(char::is_ascii_alphanumeric).collect();
+    normalized_app.len() >= 3
+        && (normalized_service == normalized_app
+            || normalized_service.starts_with(&normalized_app)
+            || normalized_service.ends_with(&normalized_app))
 }
 
 fn get_connection_process_id(conn: &gio::DBusConnection, name: &str) -> Option<u32> {
@@ -337,6 +444,7 @@ fn parse_layout_variant(var: &Variant) -> Option<DbusMenuItem> {
     let mut enabled = true;
     let mut visible = true;
     let mut is_separator = false;
+    let mut has_submenu = false;
     let mut toggle_type = None;
     let mut toggle_state = None;
 
@@ -366,6 +474,11 @@ fn parse_layout_variant(var: &Variant) -> Option<DbusMenuItem> {
             }
         }
 
+        if let Some(display_val) = props_map.get("children-display") {
+            has_submenu = extract_string(display_val)
+                .is_some_and(|display| matches!(display.as_str(), "submenu" | "section"));
+        }
+
         if let Some(t_val) = props_map.get("toggle-type") {
             toggle_type = extract_string(t_val);
         }
@@ -393,10 +506,30 @@ fn parse_layout_variant(var: &Variant) -> Option<DbusMenuItem> {
         enabled,
         visible,
         is_separator,
+        has_submenu,
         toggle_type,
         toggle_state,
         children,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::service_matches_app_id;
+
+    #[test]
+    fn service_matching_accepts_desktop_and_helper_name_variants() {
+        assert!(service_matches_app_id(
+            "org.gnome.Nautilus",
+            "org.gnome.Nautilus.desktop"
+        ));
+        assert!(service_matches_app_id("com.visualstudio.code", "code"));
+        assert!(service_matches_app_id("org.kde.kate_4578", "org.kde.kate"));
+        assert!(!service_matches_app_id(
+            "org.gnome.Terminal",
+            "org.gnome.Nautilus"
+        ));
+    }
 }
 
 fn extract_string(var: &Variant) -> Option<String> {

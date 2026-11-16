@@ -9,7 +9,8 @@ pub mod vpn;
 pub mod window;
 
 pub use dbus_menu::{
-    activate_dbus_menu_item, fetch_dbus_menu, find_app_menu_service, DbusMenuItem,
+    activate_dbus_menu_item, fetch_dbus_menu, fetch_dbus_menu_with_prepared_submenus,
+    find_app_menu_service, DbusMenuItem,
 };
 pub use window::{
     close_window_by_app, get_active_window, get_app_display_name, maximize_active_window,

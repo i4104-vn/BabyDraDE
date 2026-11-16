@@ -16,7 +16,7 @@ use menu::show_window_action_menu;
 use services::system::{get_active_window, get_app_display_name, ActiveWindowInfo};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub struct AppMenu {
     container: Box,
@@ -110,6 +110,8 @@ impl AppMenu {
         let service_poll = current_service.clone();
         let path_poll = current_menu_path.clone();
         let gen_poll = generation.clone();
+        let last_discovery = Rc::new(RefCell::new(None::<Instant>));
+        let last_discovery_poll = last_discovery.clone();
 
         // Initial D-Bus menu query if active window exists
         {
@@ -124,6 +126,7 @@ impl AppMenu {
                     service_poll.clone(),
                     path_poll.clone(),
                 );
+                *last_discovery.borrow_mut() = Some(Instant::now());
             }
         }
 
@@ -136,13 +139,21 @@ impl AppMenu {
                     || cur.process_id != latest.process_id
             };
 
+            let has_app = !latest.is_empty();
+            let discovery_retry_due = has_app
+                && !changed
+                && service_poll.borrow().is_none()
+                && last_discovery_poll
+                    .borrow()
+                    .is_none_or(|attempt| attempt.elapsed() >= Duration::from_secs(1));
+
             if changed {
                 *app_info_poll.borrow_mut() = latest.clone();
-                let has_app = !latest.is_empty();
                 container_poll.set_visible(has_app);
 
                 let next_gen = *gen_poll.borrow() + 1;
                 *gen_poll.borrow_mut() = next_gen;
+                clear_menubar(&menubar_poll, &service_poll, &path_poll);
 
                 if has_app {
                     let display_name = get_app_display_name(&latest.app_id, &latest.title);
@@ -157,10 +168,24 @@ impl AppMenu {
                         service_poll.clone(),
                         path_poll.clone(),
                     );
+                    *last_discovery_poll.borrow_mut() = Some(Instant::now());
                 } else {
                     label_poll.set_label("");
-                    clear_menubar(&menubar_poll, &service_poll, &path_poll);
+                    *last_discovery_poll.borrow_mut() = None;
                 }
+            } else if discovery_retry_due {
+                let next_gen = *gen_poll.borrow() + 1;
+                *gen_poll.borrow_mut() = next_gen;
+                trigger_dbus_menu_discovery(
+                    &latest.app_id,
+                    latest.process_id,
+                    next_gen,
+                    gen_poll.clone(),
+                    menubar_poll.clone(),
+                    service_poll.clone(),
+                    path_poll.clone(),
+                );
+                *last_discovery_poll.borrow_mut() = Some(Instant::now());
             }
 
             glib::ControlFlow::Continue
