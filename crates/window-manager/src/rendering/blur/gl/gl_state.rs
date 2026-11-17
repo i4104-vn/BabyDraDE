@@ -40,12 +40,17 @@ impl GlStateSnapshot<'_> {
             gl.get_parameter_i32(glow::TEXTURE_BINDING_2D),
             glow::NativeTexture,
         );
-        gl.active_texture(glow::TEXTURE0);
-        let texture0_binding = gl_object(
-            gl.get_parameter_i32(glow::TEXTURE_BINDING_2D),
-            glow::NativeTexture,
-        );
-        gl.active_texture(active_texture);
+        let texture0_binding = if active_texture == glow::TEXTURE0 {
+            active_texture_binding
+        } else {
+            gl.active_texture(glow::TEXTURE0);
+            let t0 = gl_object(
+                gl.get_parameter_i32(glow::TEXTURE_BINDING_2D),
+                glow::NativeTexture,
+            );
+            gl.active_texture(active_texture);
+            t0
+        };
 
         let mut vertex_attribs = Vec::with_capacity(locations.len());
         for location in locations {
