@@ -56,6 +56,12 @@ pub fn prepare_wallpaper_background(width: f64, height: f64, wallpaper_path: Opt
     }
 }
 
+pub fn cache_wallpaper(wallpaper_path: Option<PathBuf>, target_w: i32, target_h: i32, pb: Pixbuf) {
+    CACHED_WALLPAPER.with(|c| {
+        *c.borrow_mut() = Some((wallpaper_path, (target_w, target_h), pb));
+    });
+}
+
 fn wallpaper_pixbuf(wallpaper_path: Option<&Path>, target_w: i32, target_h: i32) -> Option<Pixbuf> {
     let current_path = wallpaper_path.map(Path::to_path_buf);
     let cached = CACHED_WALLPAPER.with(|c| {
@@ -111,7 +117,7 @@ pub fn render_wallpaper_reveal(
     let _ = cr.restore();
 }
 
-fn load_wallpaper_pixbuf(path: Option<&Path>, target_w: i32, target_h: i32) -> Option<Pixbuf> {
+pub fn load_wallpaper_pixbuf(path: Option<&Path>, target_w: i32, target_h: i32) -> Option<Pixbuf> {
     // 1. Try loading specified wallpaper from file
     if let Some(p) = path {
         if p.exists() {
