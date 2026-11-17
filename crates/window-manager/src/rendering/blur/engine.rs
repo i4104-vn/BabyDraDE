@@ -250,6 +250,22 @@ impl BlurEngine {
         info!("BabyDraDE BlurEngine: blur_all set to {}", blur_all);
     }
 
+    /// Initialize the blur pipeline shaders and pass targets on the OpenGL context
+    pub fn init_pipeline(&mut self, gl: &glow::Context) {
+        if self.pipeline.is_some() || self.pipeline_failed {
+            return;
+        }
+        unsafe {
+            match BlurPipeline::new(gl) {
+                Ok(p) => self.pipeline = Some(p),
+                Err(err) => {
+                    error!("Failed to initialize BabyDraDE BlurPipeline: {err}");
+                    self.pipeline_failed = true;
+                }
+            }
+        }
+    }
+
     /// Render Dual Kawase blur over the destination physical rectangle.
     ///
     /// Captures the framebuffer background, blurs it, and composites the result
@@ -268,15 +284,9 @@ impl BlurEngine {
         }
 
         if self.pipeline.is_none() {
-            unsafe {
-                match BlurPipeline::new(gl) {
-                    Ok(p) => self.pipeline = Some(p),
-                    Err(err) => {
-                        error!("Failed to initialize BabyDraDE BlurPipeline: {err}");
-                        self.pipeline_failed = true;
-                        return;
-                    }
-                }
+            self.init_pipeline(gl);
+            if self.pipeline.is_none() {
+                return;
             }
         }
 
