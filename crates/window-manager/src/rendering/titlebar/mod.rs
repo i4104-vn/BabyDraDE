@@ -121,14 +121,105 @@ pub fn render(
         ctx.set_source_rgba(1.0, 1.0, 1.0, 0.08);
         ctx.rectangle(0.0, HEIGHT as f64 - 1.0, width as f64 / scale.x, 1.0);
         ctx.fill().ok()?;
-        for (x, color) in [
-            (width as f64 / scale.x - 22.0, (0.95, 0.32, 0.30)),
-            (width as f64 / scale.x - 46.0, (0.98, 0.72, 0.25)),
-            (width as f64 / scale.x - 70.0, (0.30, 0.82, 0.45)),
-        ] {
-            ctx.set_source_rgb(color.0, color.1, color.2);
-            ctx.arc(x, HEIGHT as f64 / 2.0, 6.0, 0.0, std::f64::consts::TAU);
-            ctx.fill().ok()?;
+        let w_local = width as f64 / scale.x;
+        let cy = HEIGHT as f64 / 2.0;
+        let close_x = w_local - 22.0;
+        let max_x = w_local - 46.0;
+        let min_x = w_local - 70.0;
+
+        let frame_y = if maximized {
+            location.y as f64
+        } else {
+            location.y as f64 - HEIGHT as f64
+        };
+        let local_pointer = Point::<f64, Logical>::from((
+            pointer.x - location.x as f64,
+            pointer.y - frame_y,
+        ));
+
+        let in_cluster = local_pointer.x >= (min_x - BUTTON)
+            && local_pointer.x <= (close_x + BUTTON)
+            && local_pointer.y >= 0.0
+            && local_pointer.y <= HEIGHT as f64;
+
+        let hover_close = (local_pointer.x - close_x).hypot(local_pointer.y - cy) <= BUTTON;
+        let hover_max = (local_pointer.x - max_x).hypot(local_pointer.y - cy) <= BUTTON;
+        let hover_min = (local_pointer.x - min_x).hypot(local_pointer.y - cy) <= BUTTON;
+
+        // 1. Close button (Red)
+        ctx.arc(close_x, cy, 6.0, 0.0, std::f64::consts::TAU);
+        if hover_close {
+            ctx.set_source_rgb(1.0, 0.38, 0.35);
+        } else {
+            ctx.set_source_rgb(0.95, 0.32, 0.30);
+        }
+        ctx.fill().ok()?;
+
+        if in_cluster {
+            let alpha = if hover_close { 0.95 } else { 0.65 };
+            ctx.set_source_rgba(0.30, 0.0, 0.0, alpha);
+            ctx.set_line_width(1.2);
+            ctx.set_line_cap(cairo::LineCap::Round);
+
+            let offset = 2.4;
+            ctx.move_to(close_x - offset, cy - offset);
+            ctx.line_to(close_x + offset, cy + offset);
+            ctx.stroke().ok()?;
+
+            ctx.move_to(close_x + offset, cy - offset);
+            ctx.line_to(close_x - offset, cy + offset);
+            ctx.stroke().ok()?;
+        }
+
+        // 2. Maximize / Restore button (Yellow)
+        ctx.arc(max_x, cy, 6.0, 0.0, std::f64::consts::TAU);
+        if hover_max {
+            ctx.set_source_rgb(1.0, 0.78, 0.30);
+        } else {
+            ctx.set_source_rgb(0.98, 0.72, 0.25);
+        }
+        ctx.fill().ok()?;
+
+        if in_cluster {
+            let alpha = if hover_max { 0.95 } else { 0.65 };
+            ctx.set_source_rgba(0.35, 0.20, 0.0, alpha);
+            ctx.set_line_width(1.1);
+            ctx.set_line_cap(cairo::LineCap::Square);
+            ctx.set_line_join(cairo::LineJoin::Miter);
+
+            if maximized {
+                // Restore icon: two overlapping rectangles
+                ctx.rectangle(max_x - 1.2, cy - 3.2, 4.4, 4.4);
+                ctx.stroke().ok()?;
+                ctx.rectangle(max_x - 3.2, cy - 1.2, 4.4, 4.4);
+                ctx.stroke().ok()?;
+            } else {
+                // Maximize icon: single square
+                let s = 5.0;
+                ctx.rectangle(max_x - s / 2.0, cy - s / 2.0, s, s);
+                ctx.stroke().ok()?;
+            }
+        }
+
+        // 3. Minimize button (Green)
+        ctx.arc(min_x, cy, 6.0, 0.0, std::f64::consts::TAU);
+        if hover_min {
+            ctx.set_source_rgb(0.35, 0.88, 0.50);
+        } else {
+            ctx.set_source_rgb(0.30, 0.82, 0.45);
+        }
+        ctx.fill().ok()?;
+
+        if in_cluster {
+            let alpha = if hover_min { 0.95 } else { 0.65 };
+            ctx.set_source_rgba(0.05, 0.25, 0.10, alpha);
+            ctx.set_line_width(1.2);
+            ctx.set_line_cap(cairo::LineCap::Round);
+
+            let offset = 2.8;
+            ctx.move_to(min_x - offset, cy);
+            ctx.line_to(min_x + offset, cy);
+            ctx.stroke().ok()?;
         }
     }
     surface.flush();
