@@ -10,15 +10,9 @@ use tracing::{error, info};
 
 use super::{config, config::BlurParams, gl::BlurCache, gl::BlurPipeline};
 
-/// Number of frames a cached backdrop is kept around before it is dropped.
-const CACHE_LIFETIME: u64 = 600;
-
-/// Upper bound for the video memory used by the cached backdrops.
-///
-/// The caches hold the background and the blurred result of every blurred
-/// region, on devices with little memory the least recently used caches are
-/// dropped first.
-const MAX_CACHE_BYTES: usize = 96 * 1024 * 1024;
+use crate::enums::constants::{
+    BLUR_CACHE_LIFETIME as CACHE_LIFETIME, MAX_BLUR_CACHE_BYTES as MAX_CACHE_BYTES,
+};
 
 pub struct BlurEngine {
     pub params: BlurParams,

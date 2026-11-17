@@ -17,8 +17,7 @@ use services::config::load_gesture_config;
 
 // ----- constants ---------------------------------------------------------
 
-/// Linux button code for middle mouse button.
-const BTN_MIDDLE: u32 = 0x112;
+use crate::enums::constants::BTN_MIDDLE;
 
 // ----- down --------------------------------------------------------------
 

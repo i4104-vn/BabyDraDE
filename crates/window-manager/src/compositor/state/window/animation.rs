@@ -27,7 +27,7 @@ pub(crate) fn start_window_opening(window: &Window) {
         state_guard.animation = Some(WindowAnimation::Opening(Tween::new(
             0.0,
             1.0,
-            Duration::from_millis(220),
+            Duration::from_millis(crate::enums::constants::WINDOW_OPEN_ANIM_MS),
             Easing::EaseOutCubic,
         )));
     }
@@ -66,7 +66,7 @@ impl BabydraState {
             state_guard.animation = Some(WindowAnimation::Closing(Tween::new(
                 0.0,
                 1.0,
-                Duration::from_millis(200),
+                Duration::from_millis(crate::enums::constants::WINDOW_CLOSE_ANIM_MS),
                 Easing::EaseOutCubic,
             )));
         }

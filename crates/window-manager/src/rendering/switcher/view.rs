@@ -4,21 +4,11 @@ use crate::compositor::AltTabSwitcher;
 
 use super::draw::{draw_app_badge, rounded_rect, Rect};
 
-// The switcher is a layout, not a collection of windows laid out at their
-// native sizes. Keeping these values independent from the selected window
-// prevents the dock and the stage from moving while Alt+Tab is held.
-const DOCK_X: f64 = 24.0;
-const DOCK_TOP_MARGIN: f64 = 32.0;
-const DOCK_BOTTOM_MARGIN: f64 = 32.0;
-const DOCK_THUMBNAIL_WIDTH: f64 = 175.0;
-const DOCK_THUMBNAIL_HEIGHT: f64 = 115.0;
-const DOCK_GAP: f64 = 12.0;
-pub(crate) const DOCK_MAX_VISIBLE_ITEMS: usize = 5;
-const STAGE_SIDE_GAP: f64 = 28.0;
-const STAGE_RIGHT_MARGIN: f64 = 24.0;
-const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
-/// Độ trượt ngang nhẹ của stage khi chuyển app.
-const STAGE_SLIDE_DISTANCE: f64 = 14.0;
+pub(crate) use crate::enums::constants::DOCK_MAX_VISIBLE_ITEMS;
+use crate::enums::constants::{
+    DOCK_BOTTOM_MARGIN, DOCK_GAP, DOCK_THUMBNAIL_HEIGHT, DOCK_THUMBNAIL_WIDTH, DOCK_TOP_MARGIN,
+    DOCK_X, STAGE_ASPECT_RATIO, STAGE_RIGHT_MARGIN, STAGE_SIDE_GAP, STAGE_SLIDE_DISTANCE,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct CardLayout {
