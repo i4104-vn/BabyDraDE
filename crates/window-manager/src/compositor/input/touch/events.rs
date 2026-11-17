@@ -9,7 +9,7 @@ use smithay::{
     utils::SERIAL_COUNTER,
 };
 
-use super::drag::handle_touch_drag;
+use super::drag::{handle_touch_drag, handle_touch_resize};
 use crate::compositor::input::common::transform_absolute_position;
 use crate::compositor::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
 use crate::compositor::state::BabydraState;
@@ -41,7 +41,8 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
     let serial = SERIAL_COUNTER.next_serial();
     let keyboard = state.seat.get_keyboard().unwrap();
 
-    if let Some((window, _)) = state.window_under(position) {
+    // 1. Check window border for touch resizing
+    if let Some((window, loc, edge)) = state.window_border_under(position) {
         state.space.raise_element(&window, true);
         state.raise_window(&window);
         if let Some(toplevel) = window.toplevel() {
@@ -55,6 +56,81 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
             });
         }
         state.update_active_window(Some(&window));
+        let size = window.geometry().size;
+        state.resize_state = Some(crate::compositor::state::ResizeState {
+            window,
+            initial_window_location: loc,
+            initial_window_size: size,
+            initial_pointer_location: position,
+            edges: edge,
+            button: 0,
+        });
+        return;
+    }
+
+    // 2. Check window and titlebar
+    if let Some((window, location)) = state.window_under(position) {
+        state.space.raise_element(&window, true);
+        state.raise_window(&window);
+        if let Some(toplevel) = window.toplevel() {
+            keyboard.set_focus(state, Some(toplevel.wl_surface().clone()), serial);
+            state.space.elements().for_each(|w| {
+                let active = w == &window;
+                w.set_activated(active);
+                if let Some(top) = w.toplevel() {
+                    top.send_pending_configure();
+                }
+            });
+        }
+        state.update_active_window(Some(&window));
+
+        // Check titlebar action on touch
+        if let Some(action) = crate::rendering::titlebar::hit_test(&window, location, position) {
+            use crate::rendering::titlebar::Action;
+            match action {
+                Action::Close => {
+                    state.last_titlebar_click = None;
+                    state.close_window(&window);
+                }
+                Action::Minimize => {
+                    state.last_titlebar_click = None;
+                    state.minimize_window(&window);
+                }
+                Action::Maximize => {
+                    state.last_titlebar_click = None;
+                    state.toggle_maximize(&window);
+                }
+                Action::Move => {
+                    let now = std::time::Instant::now();
+                    let is_double_tap = if let Some((last_time, last_pos, ref last_win)) =
+                        state.last_titlebar_click.take()
+                    {
+                        let elapsed = now.duration_since(last_time).as_millis();
+                        let dx = position.x - last_pos.x;
+                        let dy = position.y - last_pos.y;
+                        last_win == &window && elapsed <= 350 && (dx * dx + dy * dy) <= 144.0
+                    } else {
+                        false
+                    };
+
+                    if is_double_tap {
+                        state.toggle_maximize(&window);
+                    } else {
+                        state.last_titlebar_click = Some((now, position, window.clone()));
+                        state.move_state = Some(crate::compositor::state::MoveState {
+                            window: window.clone(),
+                            initial_window_location: location,
+                            initial_pointer_location: position,
+                            has_dragged: false,
+                            button: 0,
+                        });
+                    }
+                }
+            }
+            return;
+        }
+
+        state.last_titlebar_click = None;
     }
 
     let under = state.surface_under(position);
@@ -95,6 +171,10 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
     // Update gesture tracking position for this slot.
     on_touch_motion(state, event.slot(), position);
 
+    if handle_touch_resize(state, position) {
+        return;
+    }
+
     if handle_touch_drag(state, position) {
         return;
     }
@@ -131,7 +211,23 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
 
     state.touch_slots.remove(&event.slot());
     if state.touch_slots.is_empty() {
-        state.move_state = None;
+        if let Some(move_state) = state.move_state.take() {
+            if move_state.has_dragged {
+                if let Some(toplevel) = move_state.window.toplevel() {
+                    toplevel.send_configure();
+                }
+            }
+        }
+        if let Some(resize_state) = state.resize_state.take() {
+            if let Some(toplevel) = resize_state.window.toplevel() {
+                toplevel.with_pending_state(|state| {
+                    state.states.unset(
+                        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Resizing,
+                    );
+                });
+                toplevel.send_configure();
+            }
+        }
     }
 
     let serial = SERIAL_COUNTER.next_serial();
@@ -162,7 +258,23 @@ pub(crate) fn handle_touch_cancel<B: InputBackend, T: TouchCancelEvent<B>>(
 ) {
     state.touch_slots.remove(&event.slot());
     if state.touch_slots.is_empty() {
-        state.move_state = None;
+        if let Some(move_state) = state.move_state.take() {
+            if move_state.has_dragged {
+                if let Some(toplevel) = move_state.window.toplevel() {
+                    toplevel.send_configure();
+                }
+            }
+        }
+        if let Some(resize_state) = state.resize_state.take() {
+            if let Some(toplevel) = resize_state.window.toplevel() {
+                toplevel.with_pending_state(|state| {
+                    state.states.unset(
+                        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Resizing,
+                    );
+                });
+                toplevel.send_configure();
+            }
+        }
     }
 
     if let Some(touch) = state.seat.get_touch() {
