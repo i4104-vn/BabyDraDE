@@ -65,19 +65,24 @@ pub(crate) fn handle_window_drag(
                 .unwrap_or(false);
             if is_maximized {
                 let window = move_state.window.clone();
+                let saved_size = crate::compositor::state::window::state_data::window_state(&window)
+                    .lock()
+                    .unwrap()
+                    .saved_size;
                 // Restore the saved normal geometry first, then place that
                 // geometry under the pointer so the drag feels continuous.
                 state.unmaximize_window(&window);
-                let size = window.geometry().size;
+                let size = saved_size.unwrap_or_else(|| window.geometry().size);
                 let desired = Point::from((
                     position.x.round() as i32 - size.w / 2,
-                    position.y.round() as i32 - 12,
+                    position.y.round() as i32 + crate::rendering::titlebar::HEIGHT / 2,
                 ));
                 move_state.initial_window_location = desired
                     - Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
             }
         }
         move_state.has_dragged = true;
+        state.last_titlebar_click = None;
 
         let new_loc = move_state.initial_window_location
             + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));

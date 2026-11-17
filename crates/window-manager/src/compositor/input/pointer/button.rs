@@ -113,21 +113,52 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     ) {
                         use crate::rendering::titlebar::Action;
                         match action {
-                            Action::Close => state.close_window(&window),
-                            Action::Minimize => state.minimize_window(&window),
-                            Action::Maximize => state.toggle_maximize(&window),
+                            Action::Close => {
+                                state.last_titlebar_click = None;
+                                state.close_window(&window);
+                            }
+                            Action::Minimize => {
+                                state.last_titlebar_click = None;
+                                state.minimize_window(&window);
+                            }
+                            Action::Maximize => {
+                                state.last_titlebar_click = None;
+                                state.toggle_maximize(&window);
+                            }
                             Action::Move => {
-                                state.move_state = Some(MoveState {
-                                    window: window.clone(),
-                                    initial_window_location: location,
-                                    initial_pointer_location: state.pointer_location,
-                                    has_dragged: false,
-                                    button: button_code,
-                                });
+                                let now = std::time::Instant::now();
+                                let is_double_click = if let Some((last_time, last_pos, ref last_win)) =
+                                    state.last_titlebar_click.take()
+                                {
+                                    let elapsed = now.duration_since(last_time).as_millis();
+                                    let dx = state.pointer_location.x - last_pos.x;
+                                    let dy = state.pointer_location.y - last_pos.y;
+                                    last_win == &window
+                                        && elapsed <= 350
+                                        && (dx * dx + dy * dy) <= 100.0
+                                } else {
+                                    false
+                                };
+
+                                if is_double_click {
+                                    state.toggle_maximize(&window);
+                                } else {
+                                    state.last_titlebar_click =
+                                        Some((now, state.pointer_location, window.clone()));
+                                    state.move_state = Some(MoveState {
+                                        window: window.clone(),
+                                        initial_window_location: location,
+                                        initial_pointer_location: state.pointer_location,
+                                        has_dragged: false,
+                                        button: button_code,
+                                    });
+                                }
                             }
                         }
                         return;
                     }
+
+                    state.last_titlebar_click = None;
 
                     // Ensure pointer focus is updated to the raised window surface
                     let under = state.surface_under(state.pointer_location);

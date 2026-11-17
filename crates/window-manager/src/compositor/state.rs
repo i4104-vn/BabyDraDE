@@ -131,6 +131,7 @@ pub(crate) struct BabydraState {
     pub(crate) seat: Seat<BabydraState>,
 
     pub(crate) move_state: Option<MoveState>,
+    pub(crate) last_titlebar_click: Option<(std::time::Instant, Point<f64, Logical>, Window)>,
     pub(crate) trackpad_swipe: Option<TrackpadSwipeBuffer>,
     pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
     pub(crate) blur_engine: std::sync::Arc<std::sync::Mutex<crate::rendering::blur::BlurEngine>>,
@@ -189,6 +190,7 @@ impl BabydraState {
             popups: PopupManager::default(),
             seat,
             move_state: None,
+            last_titlebar_click: None,
             trackpad_swipe: None,
             alt_tab_switcher: None,
             blur_engine: std::sync::Arc::new(std::sync::Mutex::new(
