@@ -70,6 +70,37 @@ pub fn render_wallpaper_background(
     let _ = cr.restore();
 }
 
+/// Paints the wallpaper through a growing circular reveal. The image itself
+/// remains cached by `render_wallpaper_background`, so animation frames only
+/// change the Cairo clip and never reload the bitmap.
+pub fn render_wallpaper_reveal(
+    cr: &cairo::Context,
+    width: f64,
+    height: f64,
+    wallpaper_path: Option<&Path>,
+    center: (f64, f64),
+    progress: f64,
+) {
+    cr.set_source_rgb(0.02, 0.025, 0.04);
+    let _ = cr.paint();
+    let max_radius = [center.0, width - center.0, center.1, height - center.1]
+        .into_iter()
+        .map(|v| v.abs())
+        .fold(0.0_f64, f64::max)
+        * 1.45;
+    let _ = cr.save();
+    cr.arc(
+        center.0,
+        center.1,
+        (max_radius * progress).max(1.0),
+        0.0,
+        std::f64::consts::TAU,
+    );
+    cr.clip();
+    render_wallpaper_background(cr, width, height, wallpaper_path);
+    let _ = cr.restore();
+}
+
 fn load_wallpaper_pixbuf(path: Option<&Path>, target_w: i32, target_h: i32) -> Option<Pixbuf> {
     // 1. Try loading specified wallpaper from file
     if let Some(p) = path {

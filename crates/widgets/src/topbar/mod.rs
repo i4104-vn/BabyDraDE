@@ -3,6 +3,7 @@ pub mod left;
 pub mod right;
 
 use center::DynamicIsland;
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, CenterBox};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
@@ -55,20 +56,21 @@ pub fn run() {
             .hexpand(true)
             .build();
 
-        // 1. Left Pill (Arch icon + | + Active App + 3 functions + more)
-        let left_pill = LeftPill::new();
-        center_box.set_start_widget(Some(left_pill.widget()));
-
-        // 2. Center Pill (Dynamic Island)
-        let dynamic_island = DynamicIsland::new();
-        center_box.set_center_widget(Some(dynamic_island.widget()));
-
-        // 3. Right Section (Tray + System Monitor + Status + Clock)
-        let right_section = create_right_section(&window);
-        center_box.set_end_widget(Some(&right_section));
-
         window.set_child(Some(&center_box));
         window.present();
+
+        // Present the shell surface first; tray discovery and status polling
+        // are constructed on the next main-loop turn.
+        let center_for_idle = center_box.clone();
+        let window_for_idle = window.clone();
+        glib::idle_add_local_once(move || {
+            let left_pill = LeftPill::new();
+            center_for_idle.set_start_widget(Some(left_pill.widget()));
+            let dynamic_island = DynamicIsland::new();
+            center_for_idle.set_center_widget(Some(dynamic_island.widget()));
+            let right_section = create_right_section(&window_for_idle);
+            center_for_idle.set_end_widget(Some(&right_section));
+        });
     });
 
     app.run_with_args::<&str>(&[]);
