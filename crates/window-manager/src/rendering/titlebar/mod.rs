@@ -46,15 +46,24 @@ pub fn hit_test(
         smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
     );
     let width = window.geometry().size.w as f64;
-    let y = if maximized {
-        location.y as f64
+    hit_test_geometry(maximized, location, width, point)
+}
+
+pub fn hit_test_geometry(
+    maximized: bool,
+    location: Point<i32, Logical>,
+    width: f64,
+    point: Point<f64, Logical>,
+) -> Option<Action> {
+    let (y_min, y_max) = if maximized {
+        (location.y as f64, location.y as f64 + HEIGHT as f64)
     } else {
-        location.y as f64 - HEIGHT as f64
+        (location.y as f64 - HEIGHT as f64, location.y as f64)
     };
     if point.x < location.x as f64
         || point.x >= location.x as f64 + width
-        || point.y < y
-        || point.y >= location.y as f64
+        || point.y < y_min
+        || point.y >= y_max
     {
         return None;
     }
@@ -90,9 +99,14 @@ pub fn render(
     let maximized = state.states.contains(
         smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
     );
-    // A maximized window can start below a desktop panel/topbar. Reveal the
-    // frame relative to the window's own top edge, not the output's y=0.
-    if maximized && (pointer.y < location.y as f64 || pointer.y > location.y as f64 + 25.0) {
+    let width_f = window.geometry().size.w as f64;
+    // When maximized, reveal the titlebar when the pointer hovers over its top edge area
+    if maximized
+        && (pointer.x < location.x as f64
+            || pointer.x >= location.x as f64 + width_f
+            || pointer.y < location.y as f64
+            || pointer.y >= location.y as f64 + HEIGHT as f64)
+    {
         return None;
     }
     let width = (window.geometry().size.w as f64 * scale.x).round().max(1.0) as i32;
@@ -159,4 +173,87 @@ pub fn render(
     )
     .ok()
     .map(CustomRenderElements::Memory)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_titlebar_hit_test_floating() {
+        let loc = Point::from((100, 200));
+        let width = 800.0;
+
+        // Titlebar is at y in [200 - 34, 200) = [166, 200)
+        // Buttons: close = 100 + 800 - 22 = 878
+        // max = 878 - 24 = 854
+        // min = 854 - 24 = 830
+        assert_eq!(
+            hit_test_geometry(false, loc, width, Point::from((878.0, 180.0))),
+            Some(Action::Close)
+        );
+        assert_eq!(
+            hit_test_geometry(false, loc, width, Point::from((854.0, 180.0))),
+            Some(Action::Maximize)
+        );
+        assert_eq!(
+            hit_test_geometry(false, loc, width, Point::from((830.0, 180.0))),
+            Some(Action::Minimize)
+        );
+        assert_eq!(
+            hit_test_geometry(false, loc, width, Point::from((300.0, 180.0))),
+            Some(Action::Move)
+        );
+
+        // Outside titlebar
+        assert_eq!(
+            hit_test_geometry(false, loc, width, Point::from((300.0, 150.0))),
+            None
+        );
+        assert_eq!(
+            hit_test_geometry(false, loc, width, Point::from((300.0, 205.0))),
+            None
+        );
+        assert_eq!(
+            hit_test_geometry(false, loc, width, Point::from((50.0, 180.0))),
+            None
+        );
+    }
+
+    #[test]
+    fn test_titlebar_hit_test_maximized() {
+        let loc = Point::from((0, 32)); // under topbar
+        let width = 1920.0;
+
+        // When maximized, titlebar is at y in [32, 32 + 34) = [32, 66)
+        // Buttons: close = 0 + 1920 - 22 = 1898
+        // max = 1898 - 24 = 1874
+        // min = 1874 - 24 = 1850
+        assert_eq!(
+            hit_test_geometry(true, loc, width, Point::from((1898.0, 48.0))),
+            Some(Action::Close)
+        );
+        assert_eq!(
+            hit_test_geometry(true, loc, width, Point::from((1874.0, 48.0))),
+            Some(Action::Maximize)
+        );
+        assert_eq!(
+            hit_test_geometry(true, loc, width, Point::from((1850.0, 48.0))),
+            Some(Action::Minimize)
+        );
+        assert_eq!(
+            hit_test_geometry(true, loc, width, Point::from((500.0, 48.0))),
+            Some(Action::Move)
+        );
+
+        // Outside maximized titlebar
+        assert_eq!(
+            hit_test_geometry(true, loc, width, Point::from((500.0, 20.0))),
+            None
+        );
+        assert_eq!(
+            hit_test_geometry(true, loc, width, Point::from((500.0, 70.0))),
+            None
+        );
+    }
 }
