@@ -653,7 +653,6 @@ BINARIES=(
     "babydra-topbar"
     "babydra-panel"
     "babydra-screenshot"
-    "babydra-widgets"
 )
 
 if [ -n "${USER_BIN_DIR}" ]; then
@@ -703,83 +702,17 @@ COMPOSITOR_BIN="$(find_babydra_bin "babydra-window-manager")"
 
 echo "[*] Selected BabyDraDE compositor binary: $COMPOSITOR_BIN"
 
-# Background launcher for desktop widgets (babydra-desktop & babydra-topbar)
-PARENT_WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}"
-WIDGET_LAUNCHER_PID=""
-
-launch_widgets_on_wayland() {
-    (
-        set +e
-        echo "[*] Background widget launcher waiting for Wayland compositor socket in $XDG_RUNTIME_DIR..."
-        local socket_found=""
-
-        # Poll for the new Wayland socket created by BabyDraDE (up to 5 seconds)
-        for _ in $(seq 1 100); do
-            for sock in "$XDG_RUNTIME_DIR"/wayland-[0-9]*; do
-                if [ -S "$sock" ]; then
-                    local sock_name
-                    sock_name="$(basename "$sock")"
-                    # In nested mode, ignore parent compositor socket
-                    if [ -n "$PARENT_WAYLAND_DISPLAY" ] && [ "$sock_name" = "$PARENT_WAYLAND_DISPLAY" ]; then
-                        continue
-                    fi
-                    socket_found="$sock_name"
-                    break 2
-                fi
-            done
-            sleep 0.05
-        done
-
-        if [ -z "$socket_found" ]; then
-            echo "[!] Timeout: Wayland compositor socket was not detected within 5 seconds."
-            exit 1
-        fi
-
-        echo "[*] Wayland socket detected: $socket_found. Setting up environment..."
-        export WAYLAND_DISPLAY="$socket_found"
-        export GDK_BACKEND="wayland"
-        export ELECTRON_OZONE_PLATFORM_HINT="auto"
-        export MOZ_ENABLE_WAYLAND="1"
-        export QT_QPA_PLATFORM="wayland;xcb"
-        export XDG_CURRENT_DESKTOP="BabyDra"
-        export XDG_SESSION_DESKTOP="BabyDra"
-        export XDG_SESSION_TYPE="wayland"
-
-        # Allow compositor event loop and Wayland globals to settle
-        sleep 0.2
-
-        DESKTOP_BIN="$(find_babydra_bin "babydra-desktop")"
-        TOPBAR_BIN="$(find_babydra_bin "babydra-topbar")"
-
-        echo "[*] Autostarting BabyDraDE desktop: $DESKTOP_BIN"
-        "$DESKTOP_BIN" &
-        DESKTOP_PID=$!
-
-        echo "[*] Autostarting BabyDraDE topbar: $TOPBAR_BIN"
-        "$TOPBAR_BIN" &
-        TOPBAR_PID=$!
-
-        # Wait for widget processes
-        wait "$DESKTOP_PID" "$TOPBAR_PID" 2>/dev/null || true
-    ) &
-    WIDGET_LAUNCHER_PID=$!
-}
-
 cleanup_session() {
     trap - EXIT INT TERM
     echo "[*] Cleaning up BabyDraDE widgets and session processes..."
-    if [ -n "${WIDGET_LAUNCHER_PID:-}" ]; then
-        kill "$WIDGET_LAUNCHER_PID" 2>/dev/null || true
-    fi
-    pkill -TERM -f "babydra-(desktop|topbar|panel|screenshot|keymap|widgets)" 2>/dev/null || true
+    pkill -TERM -f "babydra-(desktop|topbar|panel|screenshot|keymap)" 2>/dev/null || true
     sleep 0.2
-    pkill -9 -f "babydra-(desktop|topbar|panel|screenshot|keymap|widgets)" 2>/dev/null || true
+    pkill -9 -f "babydra-(desktop|topbar|panel|screenshot|keymap)" 2>/dev/null || true
 }
 
 trap cleanup_session EXIT INT TERM
 
-# Start the background widget launcher
-launch_widgets_on_wayland
+# Widgets and startup apps are launched directly by the compositor via [autostart] in babydra.conf
 
 # Run compositor in foreground (preserves TTY focus, KMS/DRM master, and signal delivery)
 echo "[*] Launching BabyDraDE compositor: $COMPOSITOR_BIN"

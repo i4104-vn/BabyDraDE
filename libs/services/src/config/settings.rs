@@ -1,7 +1,8 @@
 //! Configuration load/save logic for `~/.babydra/babydra.conf` matching babydra-core.
 
 use crate::models::{
-    BabyDraConfig, BlurConfig, DesktopConfig, GestureConfig, MouseConfig, TouchpadConfig,
+    AutostartConfig, BabyDraConfig, BlurConfig, DesktopConfig, GestureConfig, MouseConfig,
+    TouchpadConfig,
 };
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
@@ -253,5 +254,17 @@ pub fn load_mouse_config() -> MouseConfig {
 pub fn save_mouse_config(mouse: &MouseConfig) {
     let mut config = load_babydra_config();
     config.mouse = mouse.clone();
+    save_babydra_config(&config);
+}
+
+/// Loads autostart configuration from `~/.babydra/babydra.conf`.
+pub fn load_autostart_config() -> AutostartConfig {
+    load_babydra_config().autostart
+}
+
+/// Persists autostart configuration into `~/.babydra/babydra.conf`.
+pub fn save_autostart_config(autostart: &AutostartConfig) {
+    let mut config = load_babydra_config();
+    config.autostart = autostart.clone();
     save_babydra_config(&config);
 }

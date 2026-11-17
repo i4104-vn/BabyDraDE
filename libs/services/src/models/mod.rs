@@ -2,6 +2,7 @@
 //!
 //! Organized into granular submodules per desktop service.
 
+pub mod autostart;
 pub mod babydra;
 pub mod blur;
 pub mod clipboard;
@@ -15,6 +16,7 @@ pub mod power;
 pub mod touchpad;
 pub mod wallpaper;
 
+pub use autostart::AutostartConfig;
 pub use babydra::BabyDraConfig;
 pub use blur::BlurConfig;
 pub use clipboard::ClipboardConfig;

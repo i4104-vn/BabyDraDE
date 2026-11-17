@@ -147,6 +147,25 @@ pub(crate) fn draw_text(
     context.show_text(text)
 }
 
+pub(crate) fn app_color(name: &str) -> (f64, f64, f64) {
+    let hash = name.bytes().fold(0x811c9dc5_u32, |hash, byte| {
+        (hash ^ u32::from(byte)).wrapping_mul(0x01000193)
+    });
+    let hue = f64::from(hash % 360) / 360.0;
+    let chroma = 0.50;
+    let secondary = chroma * (1.0 - ((hue * 6.0) % 2.0 - 1.0).abs());
+    let (red, green, blue) = match (hue * 6.0).floor() as u8 {
+        0 => (chroma, secondary, 0.0),
+        1 => (secondary, chroma, 0.0),
+        2 => (0.0, chroma, secondary),
+        3 => (0.0, secondary, chroma),
+        4 => (secondary, 0.0, chroma),
+        _ => (chroma, 0.0, secondary),
+    };
+    let offset = 0.28;
+    (red + offset, green + offset, blue + offset)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,23 +192,4 @@ mod tests {
             ctx.restore().unwrap();
         }
     }
-}
-
-pub(crate) fn app_color(name: &str) -> (f64, f64, f64) {
-    let hash = name.bytes().fold(0x811c9dc5_u32, |hash, byte| {
-        (hash ^ u32::from(byte)).wrapping_mul(0x01000193)
-    });
-    let hue = f64::from(hash % 360) / 360.0;
-    let chroma = 0.50;
-    let secondary = chroma * (1.0 - ((hue * 6.0) % 2.0 - 1.0).abs());
-    let (red, green, blue) = match (hue * 6.0).floor() as u8 {
-        0 => (chroma, secondary, 0.0),
-        1 => (secondary, chroma, 0.0),
-        2 => (0.0, chroma, secondary),
-        3 => (0.0, secondary, chroma),
-        4 => (secondary, 0.0, chroma),
-        _ => (chroma, 0.0, secondary),
-    };
-    let offset = 0.28;
-    (red + offset, green + offset, blue + offset)
 }

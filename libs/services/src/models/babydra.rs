@@ -3,10 +3,10 @@
 use serde::{Deserialize, Serialize};
 
 use super::{
-    blur::BlurConfig, clipboard::ClipboardConfig, desktop::DesktopConfig, display::DisplayConfig,
-    gestures::GestureConfig, lockscreen::LockscreenConfig, mouse::MouseConfig,
-    notification::NotificationConfig, power::PowerConfig, touchpad::TouchpadConfig,
-    wallpaper::WallpaperConfig,
+    autostart::AutostartConfig, blur::BlurConfig, clipboard::ClipboardConfig,
+    desktop::DesktopConfig, display::DisplayConfig, gestures::GestureConfig,
+    lockscreen::LockscreenConfig, mouse::MouseConfig, notification::NotificationConfig,
+    power::PowerConfig, touchpad::TouchpadConfig, wallpaper::WallpaperConfig,
 };
 
 /// Master configuration model matching `~/.babydra/babydra.conf`.
@@ -15,6 +15,9 @@ pub struct BabyDraConfig {
     /// Flag indicating whether this is the initial first-time user login.
     #[serde(rename = "1st", default)]
     pub first_login: bool,
+    /// Autostart commands executed on compositor startup.
+    #[serde(default)]
+    pub autostart: AutostartConfig,
     /// Power profiles and battery threshold settings.
     #[serde(default)]
     pub power: PowerConfig,

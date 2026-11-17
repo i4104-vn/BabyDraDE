@@ -25,10 +25,6 @@ path = "src/bin/babydra-panel.rs"
 name = "babydra-screenshot"
 path = "src/bin/babydra-screenshot.rs"
 
-[[bin]]
-name = "babydra-widgets"
-path = "src/bin/babydra-widgets.rs"
-
 [dependencies]
 gtk4 = { version = "0.11" }
 gtk4-layer-shell = "0.8"

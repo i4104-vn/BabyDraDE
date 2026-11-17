@@ -513,6 +513,19 @@ fn parse_layout_variant(var: &Variant) -> Option<DbusMenuItem> {
     })
 }
 
+fn extract_string(var: &Variant) -> Option<String> {
+    if let Some(s) = var.get::<String>() {
+        return Some(s);
+    }
+    if let Some(s) = var.str() {
+        return Some(s.to_string());
+    }
+    if var.is_container() && var.type_().as_str() == "v" {
+        return extract_string(&var.child_value(0));
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::service_matches_app_id;
@@ -530,17 +543,4 @@ mod tests {
             "org.gnome.Nautilus"
         ));
     }
-}
-
-fn extract_string(var: &Variant) -> Option<String> {
-    if let Some(s) = var.get::<String>() {
-        return Some(s);
-    }
-    if let Some(s) = var.str() {
-        return Some(s.to_string());
-    }
-    if var.is_container() && var.type_().as_str() == "v" {
-        return extract_string(&var.child_value(0));
-    }
-    None
 }

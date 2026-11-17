@@ -79,7 +79,35 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         data.state.socket_name.to_string_lossy()
     );
 
-    event_loop.run(None, &mut data, |_| {})?;
+    // Spawn autostart commands configured in ~/.babydra/babydra.conf
+    let autostart_cfg = services::config::load_autostart_config();
+    let mut autostart_children: Vec<std::process::Child> = Vec::new();
+    for cmd_str in &autostart_cfg.commands {
+        let trimmed = cmd_str.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        info!("Spawning autostart command: {trimmed}");
+        match std::process::Command::new("sh")
+            .arg("-c")
+            .arg(trimmed)
+            .env("WAYLAND_DISPLAY", &data.state.socket_name)
+            .spawn()
+        {
+            Ok(child) => autostart_children.push(child),
+            Err(err) => warn!("Failed to spawn autostart command '{trimmed}': {err}"),
+        }
+    }
+
+    let run_res = event_loop.run(None, &mut data, |_| {});
+
+    info!("BabyDraDE compositor stopping, terminating autostart processes...");
+    for mut child in autostart_children {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    run_res?;
     Ok(())
 }
 
