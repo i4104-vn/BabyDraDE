@@ -3,7 +3,6 @@ pub mod left;
 pub mod right;
 
 use center::DynamicIsland;
-use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, CenterBox};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
@@ -56,21 +55,15 @@ pub fn run() {
             .hexpand(true)
             .build();
 
+        let left_pill = LeftPill::new();
+        center_box.set_start_widget(Some(left_pill.widget()));
+        let dynamic_island = DynamicIsland::new();
+        center_box.set_center_widget(Some(dynamic_island.widget()));
+        let right_section = create_right_section(&window);
+        center_box.set_end_widget(Some(&right_section));
+
         window.set_child(Some(&center_box));
         window.present();
-
-        // Present the shell surface first. A short timeout guarantees GTK gets
-        // one paint before tray discovery and status polling begin.
-        let center_for_idle = center_box.clone();
-        let window_for_idle = window.clone();
-        glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
-            let left_pill = LeftPill::new();
-            center_for_idle.set_start_widget(Some(left_pill.widget()));
-            let dynamic_island = DynamicIsland::new();
-            center_for_idle.set_center_widget(Some(dynamic_island.widget()));
-            let right_section = create_right_section(&window_for_idle);
-            center_for_idle.set_end_widget(Some(&right_section));
-        });
     });
 
     app.run_with_args::<&str>(&[]);
