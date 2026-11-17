@@ -77,6 +77,25 @@ pub fn hit_test_geometry(
     } else if point.x >= min - BUTTON && point.x <= min + BUTTON {
         Some(Action::Minimize)
     } else {
+        if !maximized {
+            let r = 20.0f64;
+            // Top-left curved corner
+            if point.x < location.x as f64 + r && point.y < y_min + r {
+                let dx = point.x - (location.x as f64 + r);
+                let dy = point.y - (y_min + r);
+                if dx * dx + dy * dy > r * r {
+                    return None;
+                }
+            }
+            // Top-right curved corner
+            if point.x > location.x as f64 + width - r && point.y < y_min + r {
+                let dx = point.x - (location.x as f64 + width - r);
+                let dy = point.y - (y_min + r);
+                if dx * dx + dy * dy > r * r {
+                    return None;
+                }
+            }
+        }
         Some(Action::Move)
     }
 }
@@ -115,13 +134,26 @@ pub fn render(
     {
         let ctx = Context::new(&surface).ok()?;
         ctx.scale(scale.x, scale.y);
-        ctx.set_source_rgba(0.10, 0.11, 0.14, 0.98);
-        ctx.rectangle(0.0, 0.0, width as f64 / scale.x, HEIGHT as f64);
-        ctx.fill().ok()?;
-        ctx.set_source_rgba(1.0, 1.0, 1.0, 0.08);
-        ctx.rectangle(0.0, HEIGHT as f64 - 1.0, width as f64 / scale.x, 1.0);
-        ctx.fill().ok()?;
         let w_local = width as f64 / scale.x;
+        let h_local = HEIGHT as f64;
+
+        ctx.set_source_rgba(0.10, 0.11, 0.14, 0.98);
+        if maximized {
+            ctx.rectangle(0.0, 0.0, w_local, h_local);
+        } else {
+            let r = 20.0f64.min(w_local / 2.0).min(h_local);
+            ctx.new_sub_path();
+            ctx.arc(w_local - r, r, r, -std::f64::consts::FRAC_PI_2, 0.0);
+            ctx.line_to(w_local, h_local);
+            ctx.line_to(0.0, h_local);
+            ctx.arc(r, r, r, std::f64::consts::PI, 3.0 * std::f64::consts::FRAC_PI_2);
+            ctx.close_path();
+        }
+        ctx.fill().ok()?;
+
+        ctx.set_source_rgba(1.0, 1.0, 1.0, 0.08);
+        ctx.rectangle(0.0, h_local - 1.0, w_local, 1.0);
+        ctx.fill().ok()?;
         let cy = HEIGHT as f64 / 2.0;
         let close_x = w_local - 22.0;
         let max_x = w_local - 46.0;
@@ -307,6 +339,12 @@ mod tests {
         );
         assert_eq!(
             hit_test_geometry(false, loc, width, Point::from((50.0, 180.0))),
+            None
+        );
+
+        // Rounded top-left corner should exclude points outside 20px arc
+        assert_eq!(
+            hit_test_geometry(false, loc, width, Point::from((102.0, 168.0))),
             None
         );
     }

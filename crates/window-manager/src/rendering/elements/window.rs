@@ -47,20 +47,17 @@ pub fn render_window(
 ) -> Vec<CustomRenderElements> {
     let (should_blur, opacity, configured_corner_radius) = if let Some(engine_lock) = blur_engine {
         if let Ok(mut engine) = engine_lock.lock() {
-            if engine.matches_window(window) {
-                (
-                    true,
-                    engine.params.window_opacity,
-                    engine.params.corner_radius,
-                )
-            } else {
-                (false, 1.0, 0.0)
-            }
+            let matched = engine.matches_window(window);
+            (
+                matched,
+                if matched { engine.params.window_opacity } else { 1.0 },
+                engine.params.corner_radius,
+            )
         } else {
-            (false, 1.0, 0.0)
+            (false, 1.0, 20.0)
         }
     } else {
-        (false, 1.0, 0.0)
+        (false, 1.0, 20.0)
     };
     let corner_radius = corner_radius_for_window(window, configured_corner_radius);
 
