@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
 
 use smithay::{
     backend::renderer::element::Id,
@@ -9,7 +8,7 @@ use smithay::{
 };
 use tracing::{error, info};
 
-use super::{config, config::BlurParams, gl::BlurCache, gl::BlurPipeline, worker::ConfigWorker};
+use super::{config, config::BlurParams, gl::BlurCache, gl::BlurPipeline};
 
 /// Number of frames a cached backdrop is kept around before it is dropped.
 const CACHE_LIFETIME: u64 = 600;
@@ -34,13 +33,6 @@ pub struct BlurEngine {
     backdrops: HashMap<Id, Option<BlurCache>>,
     /// Counter used to expire caches of elements that are gone.
     frame: u64,
-    /// Configuration is loaded off the compositor call loop. Until it arrives,
-    /// the engine uses the cheap built-in defaults and keeps rendering disabled
-    /// only according to those defaults.
-    config_worker: Option<ConfigWorker>,
-    ready_at: Instant,
-    startup_observed: bool,
-    active: bool,
 }
 
 impl std::fmt::Debug for BlurEngine {
@@ -63,57 +55,21 @@ impl Default for BlurEngine {
 impl BlurEngine {
     pub fn new() -> Self {
         Self {
-            params: BlurParams::default(),
+            params: config::load(),
             pipeline: None,
             pipeline_failed: false,
             backdrops: HashMap::new(),
             frame: 0,
-            // Let desktop, topbar and other layer-shell widgets settle first.
-            ready_at: Instant::now() + Duration::from_secs(3),
-            startup_observed: false,
-            active: false,
-            config_worker: None,
         }
     }
 
-    fn refresh_config(&mut self) {
-        #[cfg(test)]
-        let _ = self.ready_at;
-        #[cfg(test)]
-        {
-            // Unit tests exercise matching synchronously without a compositor
-            // startup phase, so they may activate the engine immediately.
-            self.ready_at = Instant::now();
-            self.startup_observed = true;
-        }
-        if !self.startup_observed {
-            // The first render pass is the point at which desktop/topbar and
-            // layer-shell widgets have actually been submitted. Start the
-            // grace period from there, not from struct construction time.
-            self.ready_at = Instant::now() + Duration::from_secs(3);
-            self.startup_observed = true;
-        }
-        if !self.active {
-            if Instant::now() < self.ready_at {
-                return;
-            }
-            self.active = true;
-            self.config_worker = Some(ConfigWorker::start());
-        }
-        if let Some(worker) = self.config_worker.as_mut() {
-            if let Some(params) = worker.try_finish() {
-                self.params = params;
-                self.config_worker = None;
-            }
-        }
+    /// Reload blur configuration from disk and environment variables
+    pub fn reload_config(&mut self) {
+        self.params = config::load();
     }
 
     /// Check if a window should have background blur applied
     pub fn matches_window(&mut self, window: &Window) -> bool {
-        self.refresh_config();
-        if !self.active {
-            return false;
-        }
         if !self.params.enabled {
             return false;
         }
@@ -130,10 +86,6 @@ impl BlurEngine {
 
     /// Check if a LayerShell surface namespace should have background blur applied
     pub fn matches_layer(&mut self, namespace: &str) -> bool {
-        self.refresh_config();
-        if !self.active {
-            return false;
-        }
         if !self.params.enabled {
             return false;
         }
@@ -263,10 +215,6 @@ impl BlurEngine {
         corner_radius: f32,
         projection: [f32; 9],
     ) {
-        self.refresh_config();
-        if !self.active {
-            return;
-        }
         if !self.params.enabled || self.pipeline_failed {
             return;
         }
