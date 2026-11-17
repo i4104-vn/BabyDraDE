@@ -83,14 +83,10 @@ impl BlurEngine {
         self.sync_rules();
     }
 
-    /// Check if a window should have background blur applied
+    /// Check if a window should have background blur applied (strictly matching apps recorded in config)
     pub fn matches_window(&mut self, window: &Window) -> bool {
         if !self.params.enabled {
             return false;
-        }
-
-        if self.params.blur_all {
-            return true;
         }
 
         if self.rules_lower.len() != self.params.app_rules.len() {

@@ -12,8 +12,8 @@ pub enum KeyboardAction {
     SpawnTerminal,
     /// Show the integrated lock screen.
     LockScreen,
-    /// Toggle background blur shader on the active window.
-    ToggleBlur,
+    /// Hot reload compositor and blur configuration from disk.
+    ReloadConfig,
     /// Toggle maximize state on the active window.
     ToggleMaximize,
     /// Minimize the active window.

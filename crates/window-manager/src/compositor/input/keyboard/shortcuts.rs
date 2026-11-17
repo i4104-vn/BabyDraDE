@@ -55,9 +55,9 @@ pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option
         return Some(KeyboardAction::AltTabStep { backwards });
     }
 
-    // 5. Super + B: Toggle blur on the active window
-    if modifiers.logo && (sym == keysyms::KEY_b || sym == keysyms::KEY_B) {
-        return Some(KeyboardAction::ToggleBlur);
+    // 5. Super (Win) + F5: Hot reload configuration from disk
+    if modifiers.logo && sym == keysyms::KEY_F5 {
+        return Some(KeyboardAction::ReloadConfig);
     }
 
     // 6. Super + M: Maximize/Restore active window
@@ -114,15 +114,8 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
             info!("Super+L pressed: locking the session");
             lock::spawn();
         }
-        KeyboardAction::ToggleBlur => {
-            if let Some((app_id, is_now_blurred)) = state.toggle_blur_active_window() {
-                info!(
-                    "Super+B pressed: Toggled blur on active app '{}': blur_enabled={}",
-                    app_id, is_now_blurred
-                );
-            } else {
-                info!("Super+B pressed: No active window found to toggle blur on");
-            }
+        KeyboardAction::ReloadConfig => {
+            state.reload_config();
         }
         KeyboardAction::ToggleMaximize => {
             let active = state.space.elements().next_back().cloned();
