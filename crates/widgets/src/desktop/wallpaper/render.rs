@@ -25,38 +25,14 @@ pub fn render_wallpaper_background(
         return;
     }
 
-    let current_path = wallpaper_path.map(|p| p.to_path_buf());
-
-    let cached = CACHED_WALLPAPER.with(|c| {
-        if let Some((ref p, (w, h), ref pixbuf)) = *c.borrow() {
-            if *p == current_path && w == target_w && h == target_h {
-                return Some(pixbuf.clone());
-            }
-        }
-        None
-    });
-
-    let pixbuf = if let Some(pb) = cached {
-        pb
-    } else {
-        let loaded = load_wallpaper_pixbuf(current_path.as_deref(), target_w, target_h);
-        if let Some(ref pb) = loaded {
-            CACHED_WALLPAPER.with(|c| {
-                *c.borrow_mut() = Some((current_path, (target_w, target_h), pb.clone()));
-            });
-        }
-        match loaded {
-            Some(pb) => pb,
-            None => {
-                // Default Fluent deep dark background fallback
-                let gradient = cairo::LinearGradient::new(0.0, 0.0, width, height);
-                gradient.add_color_stop_rgb(0.0, 0.08, 0.09, 0.12);
-                gradient.add_color_stop_rgb(1.0, 0.04, 0.05, 0.07);
-                cr.set_source(&gradient).ok();
-                let _ = cr.paint();
-                return;
-            }
-        }
+    let Some(pixbuf) = wallpaper_pixbuf(wallpaper_path, target_w, target_h) else {
+        // Default Fluent deep dark background fallback
+        let gradient = cairo::LinearGradient::new(0.0, 0.0, width, height);
+        gradient.add_color_stop_rgb(0.0, 0.08, 0.09, 0.12);
+        gradient.add_color_stop_rgb(1.0, 0.04, 0.05, 0.07);
+        cr.set_source(&gradient).ok();
+        let _ = cr.paint();
+        return;
     };
 
     let img_w = pixbuf.width() as f64;
@@ -68,6 +44,40 @@ pub fn render_wallpaper_background(
     cr.set_source_pixbuf(&pixbuf, offset_x, offset_y);
     let _ = cr.paint();
     let _ = cr.restore();
+}
+
+/// Decodes/scales the image once before the reveal begins. Subsequent frames
+/// only paint the cached pixbuf through a changing clip.
+pub fn prepare_wallpaper_background(width: f64, height: f64, wallpaper_path: Option<&Path>) {
+    let target_w = width.round() as i32;
+    let target_h = height.round() as i32;
+    if target_w > 0 && target_h > 0 {
+        let _ = wallpaper_pixbuf(wallpaper_path, target_w, target_h);
+    }
+}
+
+fn wallpaper_pixbuf(wallpaper_path: Option<&Path>, target_w: i32, target_h: i32) -> Option<Pixbuf> {
+    let current_path = wallpaper_path.map(Path::to_path_buf);
+    let cached = CACHED_WALLPAPER.with(|c| {
+        if let Some((ref p, (w, h), ref pixbuf)) = *c.borrow() {
+            if *p == current_path && w == target_w && h == target_h {
+                return Some(pixbuf.clone());
+            }
+        }
+        None
+    });
+
+    if let Some(pb) = cached {
+        Some(pb)
+    } else {
+        let loaded = load_wallpaper_pixbuf(current_path.as_deref(), target_w, target_h);
+        if let Some(ref pb) = loaded {
+            CACHED_WALLPAPER.with(|c| {
+                *c.borrow_mut() = Some((current_path, (target_w, target_h), pb.clone()));
+            });
+        }
+        loaded
+    }
 }
 
 /// Paints the wallpaper through a growing circular reveal. The image itself

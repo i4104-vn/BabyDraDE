@@ -21,13 +21,29 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
     let reveal_center = Rc::new(Cell::new(None::<(f64, f64)>));
     let wallpaper_path = Rc::new(RefCell::new(None::<Option<std::path::PathBuf>>));
     let wallpaper_ready = Rc::new(Cell::new(false));
-    let started = Instant::now();
+    let animation_started = Rc::new(Cell::new(None::<Instant>));
+    let image_prepared = Rc::new(Cell::new(false));
     let progress_for_draw = reveal_progress.clone();
     let center_for_draw = reveal_center.clone();
     let path_for_draw = wallpaper_path.clone();
     let ready_for_draw = wallpaper_ready.clone();
+    let animation_for_draw = animation_started.clone();
+    let prepared_for_draw = image_prepared.clone();
     drawing_area.set_draw_func(move |_, cr, width, height| {
         if !ready_for_draw.get() {
+            cr.set_source_rgb(0.02, 0.025, 0.04);
+            let _ = cr.paint();
+            return;
+        }
+        let path_ref = path_for_draw.borrow();
+        if !prepared_for_draw.get() {
+            render::prepare_wallpaper_background(
+                width as f64,
+                height as f64,
+                path_ref.as_ref().and_then(|p| p.as_deref()),
+            );
+            prepared_for_draw.set(true);
+            animation_for_draw.set(Some(Instant::now()));
             cr.set_source_rgb(0.02, 0.025, 0.04);
             let _ = cr.paint();
             return;
@@ -44,10 +60,6 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
             value
         });
         let progress = progress_for_draw.get();
-        if path_for_draw.borrow().is_none() {
-            *path_for_draw.borrow_mut() = Some(get_wallpaper());
-        }
-        let path_ref = path_for_draw.borrow();
         render::render_wallpaper_reveal(
             cr,
             width as f64,
@@ -70,7 +82,12 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
     });
 
     let animation_area = drawing_area.clone();
+    let animation_for_tick = animation_started.clone();
     glib::timeout_add_local(Duration::from_millis(16), move || {
+        let Some(started) = animation_for_tick.get() else {
+            animation_area.queue_draw();
+            return glib::ControlFlow::Continue;
+        };
         let progress = (started.elapsed().as_secs_f64() / 0.7).clamp(0.0, 1.0);
         reveal_progress.set(progress);
         animation_area.queue_draw();

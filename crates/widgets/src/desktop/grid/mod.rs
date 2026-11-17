@@ -69,11 +69,12 @@ pub fn create_desktop_grid(parent_window: &gtk4::ApplicationWindow) -> (Fixed, R
 
     *rebuild_holder.borrow_mut() = Some(rebuild_fn.clone());
 
-    // Let the layer-shell window map and paint its wallpaper first. Desktop
-    // icon discovery/GTK widget construction is intentionally deferred to the
-    // next main-loop turn so startup is visually immediate.
+    // The wallpaper reveal owns the first frames. Delay IO and widget creation
+    // until it has completed instead of competing for the GTK main loop.
     let initial_rebuild = rebuild_fn.clone();
-    glib::idle_add_local_once(move || initial_rebuild());
+    glib::timeout_add_local_once(std::time::Duration::from_millis(900), move || {
+        initial_rebuild()
+    });
 
     // Rebuild on window resize
     let rebuild_resize = rebuild_fn.clone();

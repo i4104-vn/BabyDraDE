@@ -59,11 +59,11 @@ pub fn run() {
         window.set_child(Some(&center_box));
         window.present();
 
-        // Present the shell surface first; tray discovery and status polling
-        // are constructed on the next main-loop turn.
+        // Present the shell surface first. A short timeout guarantees GTK gets
+        // one paint before tray discovery and status polling begin.
         let center_for_idle = center_box.clone();
         let window_for_idle = window.clone();
-        glib::idle_add_local_once(move || {
+        glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
             let left_pill = LeftPill::new();
             center_for_idle.set_start_widget(Some(left_pill.widget()));
             let dynamic_island = DynamicIsland::new();
