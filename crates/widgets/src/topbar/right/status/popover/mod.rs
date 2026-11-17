@@ -71,7 +71,6 @@ pub fn setup_status_popover(context: StatusPopoverContext<'_>) -> StatusPopovers
     let update_vol_t = update_volume_popover.clone();
     let update_bat_t = update_battery_popover.clone();
     let vpn_icon_timer = context.vpn_icon.clone();
-    let bat_widget_timer = context.battery.clone();
 
     glib::timeout_add_local(std::time::Duration::from_millis(2000), move || {
         if net_pop_t.is_visible() {
@@ -89,10 +88,6 @@ pub fn setup_status_popover(context: StatusPopoverContext<'_>) -> StatusPopovers
         let vpn_active = is_vpn_active();
         if vpn_icon_timer.is_visible() != vpn_active {
             vpn_icon_timer.set_visible(vpn_active);
-        }
-
-        if let Some(ref bat_area) = bat_widget_timer {
-            bat_area.queue_draw();
         }
 
         glib::ControlFlow::Continue
