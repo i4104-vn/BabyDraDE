@@ -22,6 +22,7 @@ const MAX_CACHE_BYTES: usize = 96 * 1024 * 1024;
 
 pub struct BlurEngine {
     pub params: BlurParams,
+    rules_lower: Vec<String>,
     pipeline: Option<BlurPipeline>,
     /// Set when the blur pipeline could not be created (shader compilation,
     /// missing GL features, ...). Blur is disabled in that case instead of
@@ -54,8 +55,16 @@ impl Default for BlurEngine {
 
 impl BlurEngine {
     pub fn new() -> Self {
+        let params = config::load();
+        let rules_lower = params
+            .app_rules
+            .iter()
+            .map(|r| r.trim().to_lowercase())
+            .filter(|r| !r.is_empty())
+            .collect();
         Self {
-            params: config::load(),
+            params,
+            rules_lower,
             pipeline: None,
             pipeline_failed: false,
             backdrops: HashMap::new(),
@@ -63,9 +72,21 @@ impl BlurEngine {
         }
     }
 
+    /// Rebuild lowercase cache of app_rules for fast matching
+    pub fn sync_rules(&mut self) {
+        self.rules_lower = self
+            .params
+            .app_rules
+            .iter()
+            .map(|r| r.trim().to_lowercase())
+            .filter(|r| !r.is_empty())
+            .collect();
+    }
+
     /// Reload blur configuration from disk and environment variables
     pub fn reload_config(&mut self) {
         self.params = config::load();
+        self.sync_rules();
     }
 
     /// Check if a window should have background blur applied
@@ -76,6 +97,10 @@ impl BlurEngine {
 
         if self.params.blur_all {
             return true;
+        }
+
+        if self.rules_lower.len() != self.params.app_rules.len() {
+            self.sync_rules();
         }
 
         let app_id = self.get_window_app_id(window);
@@ -98,31 +123,52 @@ impl BlurEngine {
             return false;
         }
 
-        self.params.app_rules.iter().any(|rule| {
-            let rule_lower = rule.to_lowercase();
-            ns_lower == rule_lower || ns_lower.contains(&rule_lower)
+        if self.rules_lower.len() != self.params.app_rules.len() {
+            self.sync_rules();
+        }
+
+        self.rules_lower.iter().any(|rule_lower| {
+            rule_lower == "*" || ns_lower == *rule_lower || ns_lower.contains(rule_lower)
         })
     }
 
     /// Check if an app_id or window title matches any configured blur rule
     pub fn matches_app_or_title(&self, app_id: Option<&str>, title: Option<&str>) -> bool {
-        for rule in &self.params.app_rules {
-            let rule_lower = rule.trim().to_lowercase();
-            if rule_lower == "*" {
-                return true;
-            }
+        let app_lower = app_id.map(str::to_lowercase);
+        let title_lower = title.map(str::to_lowercase);
 
-            if let Some(app) = app_id {
-                let app_lower = app.to_lowercase();
-                if app_lower == rule_lower || app_lower.contains(&rule_lower) {
+        let use_cached = self.rules_lower.len() == self.params.app_rules.len();
+        if use_cached {
+            for rule in &self.rules_lower {
+                if rule == "*" {
                     return true;
                 }
+                if let Some(ref app) = app_lower {
+                    if app == rule || app.contains(rule) {
+                        return true;
+                    }
+                }
+                if let Some(ref t) = title_lower {
+                    if t == rule || t.contains(rule) {
+                        return true;
+                    }
+                }
             }
-
-            if let Some(t) = title {
-                let t_lower = t.to_lowercase();
-                if t_lower == rule_lower || t_lower.contains(&rule_lower) {
+        } else {
+            for rule in &self.params.app_rules {
+                let rule_lower = rule.trim().to_lowercase();
+                if rule_lower == "*" {
                     return true;
+                }
+                if let Some(ref app) = app_lower {
+                    if app == &rule_lower || app.contains(&rule_lower) {
+                        return true;
+                    }
+                }
+                if let Some(ref t) = title_lower {
+                    if t == &rule_lower || t.contains(&rule_lower) {
+                        return true;
+                    }
                 }
             }
         }
@@ -164,6 +210,7 @@ impl BlurEngine {
         {
             info!("BabyDraDE BlurEngine: adding app rule '{}'", trimmed);
             self.params.app_rules.push(trimmed.to_string());
+            self.sync_rules();
             config::save(&self.params);
         }
     }
@@ -179,6 +226,7 @@ impl BlurEngine {
         {
             info!("BabyDraDE BlurEngine: removing app rule '{}'", trimmed);
             self.params.app_rules.remove(pos);
+            self.sync_rules();
             config::save(&self.params);
         }
     }
