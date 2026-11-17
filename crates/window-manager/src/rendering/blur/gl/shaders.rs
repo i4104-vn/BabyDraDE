@@ -106,11 +106,17 @@ float rounded_box_sdf(vec2 p, vec2 b, float r) {
     return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
 }
 
-// Robust pseudorandom hash that avoids fp16 overflow on mobile/tablet GPUs
-float rand(vec2 co) {
-    vec2 p = fract(co * vec2(443.897, 441.423));
-    p += dot(p, p.yx + 19.19);
-    return fract((p.x + p.y) * p.x);
+// High quality triangular dithering function that eliminates color banding without coarse grain
+float triangular_dither(vec2 p) {
+    vec2 p1 = fract(p * vec2(443.897, 441.423));
+    p1 += dot(p1, p1.yx + 19.19);
+    float r1 = fract((p1.x + p1.y) * p1.x);
+
+    vec2 p2 = fract(p * vec2(397.113, 467.779));
+    p2 += dot(p2, p2.yx + 31.37);
+    float r2 = fract((p2.x + p2.y) * p2.x);
+
+    return r1 + r2 - 1.0;
 }
 
 void main() {
@@ -129,7 +135,7 @@ void main() {
     color.rgb *= u_brightness;
     color.rgb = mix(color.rgb, u_tint.rgb, u_tint.a);
 
-    float n = (rand(v_norm_coord * u_rect_size) - 0.5) * u_noise;
+    float n = triangular_dither(v_norm_coord * u_rect_size) * u_noise * 0.5;
     color.rgb += vec3(n);
 
     gl_FragColor = vec4(color.rgb * alpha, alpha);

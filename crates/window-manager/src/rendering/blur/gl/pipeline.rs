@@ -474,7 +474,7 @@ impl BlurPipeline {
             );
             gl.uniform_1_f32(
                 Some(&self.downsample_prog.u_offset),
-                params.radius * (1_i32 << index) as f32 * 0.5,
+                params.radius * (1.0 + index as f32 * 0.5),
             );
             gl.uniform_2_f32(
                 Some(&self.downsample_prog.u_scale_uv),
@@ -522,7 +522,7 @@ impl BlurPipeline {
             );
             gl.uniform_1_f32(
                 Some(&self.upsample_prog.u_offset),
-                params.radius * (1_i32 << index) as f32,
+                params.radius * (1.0 + index as f32 * 0.5),
             );
             gl.uniform_2_f32(
                 Some(&self.upsample_prog.u_scale_uv),
