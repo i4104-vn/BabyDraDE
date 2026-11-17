@@ -5,7 +5,7 @@ use gtk4::prelude::*;
 use services::wallpaper::get_wallpaper;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
     let container = gtk4::Overlay::new();
@@ -81,21 +81,23 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
         load_area.queue_draw();
     });
 
-    let animation_area = drawing_area.clone();
+    // Smooth vsync-synced frame rendering via tick callback
     let animation_for_tick = animation_started.clone();
-    glib::timeout_add_local(Duration::from_millis(16), move || {
-        let Some(started) = animation_for_tick.get() else {
-            animation_area.queue_draw();
-            return glib::ControlFlow::Continue;
-        };
-        let progress = (started.elapsed().as_secs_f64() / 0.7).clamp(0.0, 1.0);
-        reveal_progress.set(progress);
-        animation_area.queue_draw();
-        if progress >= 1.0 {
-            glib::ControlFlow::Break
-        } else {
-            glib::ControlFlow::Continue
+    let reveal_progress_tick = reveal_progress.clone();
+    drawing_area.add_tick_callback(move |widget, _| {
+        if let Some(started) = animation_for_tick.get() {
+            let elapsed = started.elapsed().as_secs_f64() / 0.6;
+            let linear_p = elapsed.clamp(0.0, 1.0);
+            // Ease-out cubic: 1 - (1 - t)^3 for silky smooth reveal
+            let progress = 1.0 - (1.0 - linear_p).powi(3);
+            reveal_progress_tick.set(progress);
+            widget.queue_draw();
+
+            if linear_p >= 1.0 {
+                return glib::ControlFlow::Break;
+            }
         }
+        glib::ControlFlow::Continue
     });
 
     container.set_child(Some(&drawing_area));
