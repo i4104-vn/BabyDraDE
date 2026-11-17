@@ -6,7 +6,7 @@ use smithay::{
     utils::SERIAL_COUNTER,
 };
 
-use super::drag::handle_window_drag;
+use super::drag::{handle_window_drag, handle_window_resize};
 use crate::compositor::input::common::transform_absolute_position;
 use crate::compositor::state::BabydraState;
 
@@ -38,6 +38,10 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
     }
 
     state.pointer_location = position;
+
+    if handle_window_resize(state, position) {
+        return;
+    }
 
     if handle_window_drag(state, position, event.time_msec()) {
         return;
@@ -76,6 +80,10 @@ pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositio
     let pointer = state.seat.get_pointer().unwrap();
 
     state.pointer_location = position;
+
+    if handle_window_resize(state, position) {
+        return;
+    }
 
     if handle_window_drag(state, position, event.time_msec()) {
         return;

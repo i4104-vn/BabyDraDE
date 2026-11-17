@@ -51,6 +51,47 @@ pub(crate) struct MoveState {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct ResizeState {
+    pub(crate) window: Window,
+    pub(crate) initial_window_location: Point<i32, Logical>,
+    pub(crate) initial_window_size: smithay::utils::Size<i32, Logical>,
+    pub(crate) initial_pointer_location: Point<f64, Logical>,
+    pub(crate) edges: smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
+    pub(crate) button: u32,
+}
+
+impl ResizeState {
+    pub(crate) fn resizes_left(&self) -> bool {
+        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
+        matches!(
+            self.edges,
+            ResizeEdge::Left | ResizeEdge::TopLeft | ResizeEdge::BottomLeft
+        )
+    }
+    pub(crate) fn resizes_right(&self) -> bool {
+        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
+        matches!(
+            self.edges,
+            ResizeEdge::Right | ResizeEdge::TopRight | ResizeEdge::BottomRight
+        )
+    }
+    pub(crate) fn resizes_top(&self) -> bool {
+        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
+        matches!(
+            self.edges,
+            ResizeEdge::Top | ResizeEdge::TopLeft | ResizeEdge::TopRight
+        )
+    }
+    pub(crate) fn resizes_bottom(&self) -> bool {
+        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
+        matches!(
+            self.edges,
+            ResizeEdge::Bottom | ResizeEdge::BottomLeft | ResizeEdge::BottomRight
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct TrackpadSwipeBuffer {
     pub(crate) fingers: u32,
     pub(crate) time: u32,
@@ -131,6 +172,7 @@ pub(crate) struct BabydraState {
     pub(crate) seat: Seat<BabydraState>,
 
     pub(crate) move_state: Option<MoveState>,
+    pub(crate) resize_state: Option<ResizeState>,
     pub(crate) last_titlebar_click: Option<(std::time::Instant, Point<f64, Logical>, Window)>,
     pub(crate) trackpad_swipe: Option<TrackpadSwipeBuffer>,
     pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
@@ -190,6 +232,7 @@ impl BabydraState {
             popups: PopupManager::default(),
             seat,
             move_state: None,
+            resize_state: None,
             last_titlebar_click: None,
             trackpad_swipe: None,
             alt_tab_switcher: None,

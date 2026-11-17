@@ -94,3 +94,74 @@ pub(crate) fn handle_window_drag(
     }
     false
 }
+
+/// Processes active interactive window resizing while a pointer button is held down.
+pub(crate) fn handle_window_resize(
+    state: &mut BabydraState,
+    position: Point<f64, smithay::utils::Logical>,
+) -> bool {
+    if let Some(resize_state) = state.resize_state.take() {
+        if !state.pointer_pressed_buttons.contains(&resize_state.button)
+            && state.pointer_pressed_buttons.is_empty()
+        {
+            if let Some(toplevel) = resize_state.window.toplevel() {
+                toplevel.with_pending_state(|state| {
+                    state.states.unset(
+                        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Resizing,
+                    );
+                });
+                toplevel.send_configure();
+            }
+            return false;
+        }
+
+        let dx = (position.x - resize_state.initial_pointer_location.x).round() as i32;
+        let dy = (position.y - resize_state.initial_pointer_location.y).round() as i32;
+
+        let init_loc = resize_state.initial_window_location;
+        let init_size = resize_state.initial_window_size;
+
+        let (min_w, min_h, max_w, max_h) = (150, 100, i32::MAX, i32::MAX);
+
+        let mut new_x = init_loc.x;
+        let mut new_y = init_loc.y;
+        let mut new_w = init_size.w;
+        let mut new_h = init_size.h;
+
+        if resize_state.resizes_left() {
+            let target_w = (init_size.w - dx).clamp(min_w, max_w);
+            new_w = target_w;
+            new_x = init_loc.x + (init_size.w - target_w);
+        } else if resize_state.resizes_right() {
+            new_w = (init_size.w + dx).clamp(min_w, max_w);
+        }
+
+        if resize_state.resizes_top() {
+            let target_h = (init_size.h - dy).clamp(min_h, max_h);
+            new_h = target_h;
+            new_y = init_loc.y + (init_size.h - target_h);
+        } else if resize_state.resizes_bottom() {
+            new_h = (init_size.h + dy).clamp(min_h, max_h);
+        }
+
+        if let Some(toplevel) = resize_state.window.toplevel() {
+            toplevel.with_pending_state(|state| {
+                state.states.set(
+                    smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Resizing,
+                );
+                state.size = Some((new_w, new_h).into());
+            });
+            toplevel.send_configure();
+        }
+
+        if new_x != init_loc.x || new_y != init_loc.y {
+            state
+                .space
+                .map_element(resize_state.window.clone(), (new_x, new_y), false);
+        }
+
+        state.resize_state = Some(resize_state);
+        return true;
+    }
+    false
+}

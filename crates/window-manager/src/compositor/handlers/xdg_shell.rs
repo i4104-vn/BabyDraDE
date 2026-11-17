@@ -102,6 +102,48 @@ impl XdgShellHandler for BabydraState {
         }
     }
 
+    fn resize_request(
+        &mut self,
+        surface: ToplevelSurface,
+        _seat: wl_seat::WlSeat,
+        _serial: Serial,
+        edges: smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
+    ) {
+        if self.pointer_pressed_buttons.is_empty() && self.touch_slots.is_empty() {
+            return;
+        }
+
+        let target_window = self.find_window_for_surface(&surface);
+        if let Some(window) = target_window {
+            if let Some(toplevel) = window.toplevel() {
+                if toplevel.current_state().states.contains(
+                    smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
+                ) {
+                    return;
+                }
+            }
+
+            if let Some(loc) = self.space.element_location(&window) {
+                self.space.raise_element(&window, true);
+                let drag_button = self
+                    .pointer_pressed_buttons
+                    .iter()
+                    .copied()
+                    .next()
+                    .unwrap_or(272);
+                let size = window.geometry().size;
+                self.resize_state = Some(crate::compositor::state::ResizeState {
+                    window,
+                    initial_window_location: loc,
+                    initial_window_size: size,
+                    initial_pointer_location: self.pointer_location,
+                    edges,
+                    button: drag_button,
+                });
+            }
+        }
+    }
+
     fn maximize_request(&mut self, surface: ToplevelSurface) {
         if let Some(window) = self.find_window_for_surface(&surface) {
             self.maximize_window(&window);

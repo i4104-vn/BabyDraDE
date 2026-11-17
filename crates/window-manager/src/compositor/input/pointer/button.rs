@@ -89,6 +89,37 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
             }
 
             if !pointer.is_grabbed() {
+                // 1. Check window border for interactive resize
+                if button_code == 272 {
+                    if let Some((window, loc, edge)) = state.window_border_under(state.pointer_location) {
+                        state.space.raise_element(&window, true);
+                        state.raise_window(&window);
+                        keyboard.set_focus(
+                            state,
+                            Some(window.toplevel().unwrap().wl_surface().clone()),
+                            serial,
+                        );
+                        state.space.elements().for_each(|w| {
+                            let active = w == &window;
+                            w.set_activated(active);
+                            if let Some(top) = w.toplevel() {
+                                top.send_pending_configure();
+                            }
+                        });
+                        state.update_active_window(Some(&window));
+                        let size = window.geometry().size;
+                        state.resize_state = Some(crate::compositor::state::ResizeState {
+                            window,
+                            initial_window_location: loc,
+                            initial_window_size: size,
+                            initial_pointer_location: state.pointer_location,
+                            edges: edge,
+                            button: button_code,
+                        });
+                        return;
+                    }
+                }
+
                 if let Some((window, location)) = state.window_under(state.pointer_location) {
                     state.space.raise_element(&window, true);
                     state.raise_window(&window);
@@ -173,17 +204,30 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     );
                     pointer.frame(state);
 
-                    // Drag window from anywhere if holding Super (Win) key
+                    // Drag or resize window from anywhere if holding Super (Win) key
                     let mods = keyboard.modifier_state();
                     if mods.logo {
-                        state.move_state = Some(MoveState {
-                            window: window.clone(),
-                            initial_window_location: location,
-                            initial_pointer_location: state.pointer_location,
-                            has_dragged: false,
-                            button: button_code,
-                        });
-                        return;
+                        if button_code == 273 {
+                            let size = window.geometry().size;
+                            state.resize_state = Some(crate::compositor::state::ResizeState {
+                                window: window.clone(),
+                                initial_window_location: location,
+                                initial_window_size: size,
+                                initial_pointer_location: state.pointer_location,
+                                edges: smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge::BottomRight,
+                                button: button_code,
+                            });
+                            return;
+                        } else {
+                            state.move_state = Some(MoveState {
+                                window: window.clone(),
+                                initial_window_location: location,
+                                initial_pointer_location: state.pointer_location,
+                                has_dragged: false,
+                                button: button_code,
+                            });
+                            return;
+                        }
                     }
                 } else {
                     let clicked_layer = state.layer_under(state.pointer_location);
@@ -207,6 +251,17 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
         }
         ButtonState::Released => {
             state.pointer_pressed_buttons.remove(&button_code);
+
+            if let Some(resize_state) = state.resize_state.take() {
+                if let Some(toplevel) = resize_state.window.toplevel() {
+                    toplevel.with_pending_state(|state| {
+                        state.states.unset(
+                            smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Resizing,
+                        );
+                    });
+                    toplevel.send_configure();
+                }
+            }
 
             if let Some(move_state) = state.move_state.take() {
                 if move_state.has_dragged {

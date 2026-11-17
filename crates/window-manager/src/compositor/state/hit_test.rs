@@ -125,4 +125,101 @@ impl BabydraState {
         }
         None
     }
+
+    pub(crate) fn window_border_under(
+        &self,
+        point: Point<f64, Logical>,
+    ) -> Option<(
+        Window,
+        Point<i32, Logical>,
+        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
+    )> {
+        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::{
+            ResizeEdge, State,
+        };
+
+        const BORDER_MARGIN: f64 = 8.0;
+
+        for window in self.space.elements().rev() {
+            if super::is_window_closing(window) {
+                continue;
+            }
+
+            let Some(toplevel) = window.toplevel() else {
+                continue;
+            };
+            let current_state = toplevel.current_state();
+
+            // Cannot resize maximized or fullscreen windows
+            if current_state.states.contains(State::Maximized)
+                || current_state.states.contains(State::Fullscreen)
+            {
+                continue;
+            }
+
+            let Some(loc) = self.space.element_location(window) else {
+                continue;
+            };
+            let geo = window.geometry();
+            let w = geo.size.w as f64;
+            let h = geo.size.h as f64;
+            let x = loc.x as f64;
+            let y = loc.y as f64;
+
+            let has_ssd = current_state.decoration_mode
+                == Some(
+                    smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode::ServerSide,
+                );
+            let top_y = if has_ssd {
+                y - crate::rendering::titlebar::HEIGHT as f64
+            } else {
+                y
+            };
+            let total_h = if has_ssd {
+                h + crate::rendering::titlebar::HEIGHT as f64
+            } else {
+                h
+            };
+
+            // Outer boundary with border margin
+            if point.x < x - BORDER_MARGIN
+                || point.x > x + w + BORDER_MARGIN
+                || point.y < top_y - BORDER_MARGIN
+                || point.y > top_y + total_h + BORDER_MARGIN
+            {
+                continue;
+            }
+
+            // Exclude titlebar buttons from top-edge resizing so clicks hit Close/Max/Min
+            if has_ssd
+                && point.x >= x + w - 85.0
+                && point.x <= x + w
+                && point.y >= top_y
+                && point.y <= y
+            {
+                continue;
+            }
+
+            let on_left = point.x <= x + BORDER_MARGIN;
+            let on_right = point.x >= x + w - BORDER_MARGIN;
+            let on_top = point.y <= top_y + BORDER_MARGIN;
+            let on_bottom = point.y >= top_y + total_h - BORDER_MARGIN;
+
+            let edge = match (on_left, on_right, on_top, on_bottom) {
+                (true, _, true, _) => ResizeEdge::TopLeft,
+                (_, true, true, _) => ResizeEdge::TopRight,
+                (true, _, _, true) => ResizeEdge::BottomLeft,
+                (_, true, _, true) => ResizeEdge::BottomRight,
+                (true, _, _, _) => ResizeEdge::Left,
+                (_, true, _, _) => ResizeEdge::Right,
+                (_, _, true, _) => ResizeEdge::Top,
+                (_, _, _, true) => ResizeEdge::Bottom,
+                _ => continue,
+            };
+
+            return Some((window.clone(), loc, edge));
+        }
+
+        None
+    }
 }
