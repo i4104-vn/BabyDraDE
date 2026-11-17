@@ -47,6 +47,8 @@ pub fn create_sys_monitor_w() -> gtk4::Box {
     let sys_service = Rc::new(RefCell::new(SystemService::new()));
     let sys_svc_timer = sys_service.clone();
 
+    let popover_poll = popover.clone();
+
     // Polling timer every 2 seconds
     glib::timeout_add_seconds_local(2, move || {
         let snapshot = get_monitor_snapshot(&mut sys_svc_timer.borrow_mut());
@@ -56,13 +58,16 @@ pub fn create_sys_monitor_w() -> gtk4::Box {
             snapshot.cpu_percent, snapshot.ram_percent
         ));
 
-        cpu_label_clone.set_text(&format!("CPU Usage: {:.1}%", snapshot.cpu_percent));
-        ram_label_clone.set_text(&format!("RAM Usage: {:.1}%", snapshot.ram_percent));
-        ram_detail_clone.set_text(&format!(
-            "{:.2} GB / {:.2} GB",
-            snapshot.ram_used_gb, snapshot.ram_total_gb
-        ));
-        gpu_label_clone.set_text(&format!("GPU Usage: {:.1}%", snapshot.gpu_percent));
+        let is_visible = popover_poll.is_visible();
+        if is_visible {
+            cpu_label_clone.set_text(&format!("CPU Usage: {:.1}%", snapshot.cpu_percent));
+            ram_label_clone.set_text(&format!("RAM Usage: {:.1}%", snapshot.ram_percent));
+            ram_detail_clone.set_text(&format!(
+                "{:.2} GB / {:.2} GB",
+                snapshot.ram_used_gb, snapshot.ram_total_gb
+            ));
+            gpu_label_clone.set_text(&format!("GPU Usage: {:.1}%", snapshot.gpu_percent));
+        }
 
         for (hist_rc, chart, val) in [
             (&cpu_history_loop, &cpu_chart_loop, snapshot.cpu_percent),
@@ -72,7 +77,9 @@ pub fn create_sys_monitor_w() -> gtk4::Box {
             let mut hist = hist_rc.borrow_mut();
             hist.pop_front();
             hist.push_back(val);
-            chart.queue_draw();
+            if is_visible {
+                chart.queue_draw();
+            }
         }
 
         glib::ControlFlow::Continue
