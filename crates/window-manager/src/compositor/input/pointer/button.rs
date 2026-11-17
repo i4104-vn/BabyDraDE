@@ -90,7 +90,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
 
             if !pointer.is_grabbed() {
                 // 1. Check window border for interactive resize
-                if button_code == 272 {
+                if button_code == crate::enums::BTN_LEFT {
                     if let Some((window, loc, edge)) = state.window_border_under(state.pointer_location) {
                         state.space.raise_element(&window, true);
                         state.raise_window(&window);
@@ -165,8 +165,8 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                                     let dx = state.pointer_location.x - last_pos.x;
                                     let dy = state.pointer_location.y - last_pos.y;
                                     last_win == &window
-                                        && elapsed <= 350
-                                        && (dx * dx + dy * dy) <= 100.0
+                                        && elapsed <= crate::enums::DOUBLE_CLICK_TIMEOUT_MS
+                                        && (dx * dx + dy * dy) <= crate::enums::DOUBLE_CLICK_DISTANCE_SQ
                                 } else {
                                     false
                                 };
@@ -207,7 +207,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     // Drag or resize window from anywhere if holding Super (Win) key
                     let mods = keyboard.modifier_state();
                     if mods.logo {
-                        if button_code == 273 {
+                        if button_code == crate::enums::BTN_RIGHT {
                             let size = window.geometry().size;
                             state.resize_state = Some(crate::compositor::state::ResizeState {
                                 window: window.clone(),

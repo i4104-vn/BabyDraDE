@@ -18,16 +18,10 @@ use smithay::{
 
 use super::elements::types::CustomRenderElements;
 
-pub const HEIGHT: i32 = 34;
-const BUTTON: f64 = 12.0;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Action {
-    Close,
-    Minimize,
-    Maximize,
-    Move,
-}
+pub use crate::enums::Action;
+pub use crate::enums::constants::{
+    CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT,
+};
 
 pub fn hit_test(
     window: &Window,
@@ -78,7 +72,7 @@ pub fn hit_test_geometry(
         Some(Action::Minimize)
     } else {
         if !maximized {
-            let r = 20.0f64;
+            let r = CORNER_RADIUS;
             // Top-left curved corner
             if point.x < location.x as f64 + r && point.y < y_min + r {
                 let dx = point.x - (location.x as f64 + r);
@@ -141,7 +135,7 @@ pub fn render(
         if maximized {
             ctx.rectangle(0.0, 0.0, w_local, h_local);
         } else {
-            let r = 20.0f64.min(w_local / 2.0).min(h_local);
+            let r = CORNER_RADIUS.min(w_local / 2.0).min(h_local);
             ctx.new_sub_path();
             ctx.arc(w_local - r, r, r, -std::f64::consts::FRAC_PI_2, 0.0);
             ctx.line_to(w_local, h_local);

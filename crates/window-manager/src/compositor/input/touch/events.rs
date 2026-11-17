@@ -108,7 +108,9 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
                         let elapsed = now.duration_since(last_time).as_millis();
                         let dx = position.x - last_pos.x;
                         let dy = position.y - last_pos.y;
-                        last_win == &window && elapsed <= 350 && (dx * dx + dy * dy) <= 144.0
+                        last_win == &window
+                            && elapsed <= crate::enums::DOUBLE_CLICK_TIMEOUT_MS
+                            && (dx * dx + dy * dy) <= crate::enums::DOUBLE_CLICK_DISTANCE_SQ
                     } else {
                         false
                     };

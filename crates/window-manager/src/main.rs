@@ -3,6 +3,8 @@ mod compositor;
 mod keymap;
 pub mod rendering;
 
+pub use common as enums;
+
 use std::{error::Error, ffi::OsString, process::Command};
 
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};

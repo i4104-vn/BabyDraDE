@@ -54,10 +54,10 @@ pub fn render_window(
                 engine.params.corner_radius,
             )
         } else {
-            (false, 1.0, 20.0)
+            (false, 1.0, crate::enums::CORNER_RADIUS_F32)
         }
     } else {
-        (false, 1.0, 20.0)
+        (false, 1.0, crate::enums::CORNER_RADIUS_F32)
     };
     let corner_radius = corner_radius_for_window(window, configured_corner_radius);
 

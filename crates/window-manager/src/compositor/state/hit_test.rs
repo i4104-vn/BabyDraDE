@@ -138,7 +138,7 @@ impl BabydraState {
             ResizeEdge, State,
         };
 
-        const BORDER_MARGIN: f64 = 8.0;
+        use crate::enums::BORDER_MARGIN;
 
         for window in self.space.elements().rev() {
             if super::is_window_closing(window) {

@@ -99,38 +99,7 @@ pub(crate) struct TrackpadSwipeBuffer {
     pub(crate) updates: Vec<(Point<f64, Logical>, u32)>,
 }
 
-/// Direction resolved from an accumulated gesture delta.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SwipeDirection {
-    Left,
-    Right,
-    Up,
-    Down,
-}
-
-impl SwipeDirection {
-    /// Resolves the dominant direction from a 2-D accumulated delta.
-    ///
-    /// Returns `None` when neither axis exceeds `threshold`.
-    ///
-    /// # Arguments
-    ///
-    /// * `dx` - Total horizontal displacement (positive = right).
-    /// * `dy` - Total vertical displacement (positive = down).
-    /// * `threshold` - Minimum absolute displacement to consider a direction.
-    pub(crate) fn from_delta(dx: f64, dy: f64, threshold: f64) -> Option<Self> {
-        let ax = dx.abs();
-        let ay = dy.abs();
-        if ax < threshold && ay < threshold {
-            return None;
-        }
-        if ax >= ay {
-            Some(if dx < 0.0 { Self::Left } else { Self::Right })
-        } else {
-            Some(if dy < 0.0 { Self::Up } else { Self::Down })
-        }
-    }
-}
+pub(crate) use crate::enums::SwipeDirection;
 
 /// Per-slot data accumulated while tracking a multi-touch gesture on a touchscreen.
 #[derive(Debug, Clone)]
