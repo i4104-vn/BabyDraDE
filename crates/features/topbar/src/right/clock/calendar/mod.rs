@@ -2,7 +2,9 @@
 
 pub mod render;
 
-use crate::right::control_center::setup_click_outside_dismiss;
+use crate::right::control_center::{
+    register_panel, setup_click_outside_dismiss, unregister_panel,
+};
 use chrono::Local;
 use gtk4::prelude::*;
 use services::i18n::trans;
@@ -73,13 +75,18 @@ pub fn show_calendar_window(
     setup_click_outside_dismiss(&c_win, &blur_host);
 
     let cw_inner = cw_clone;
+    let c_win_weak_close = c_win.downgrade();
     c_win.connect_close_request(move |_| {
+        if let Some(win) = c_win_weak_close.upgrade() {
+            unregister_panel(&win);
+        }
         if let Ok(mut borrow) = cw_inner.try_borrow_mut() {
             *borrow = None;
         }
         glib::Propagation::Proceed
     });
 
+    register_panel(&c_win);
     c_win.present();
     c_win
 }

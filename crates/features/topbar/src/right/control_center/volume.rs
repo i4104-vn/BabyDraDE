@@ -106,6 +106,7 @@ pub fn create_volume_row(
 
     // Audio devices popover
     let popover = create_popover(&menu_btn, gtk4::PositionType::Bottom, "audio-menu-popover");
+    popover.set_offset(0, 8);
     let dev_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
     dev_box.set_size_request(240, -1);
     dev_box.set_margin_start(4);

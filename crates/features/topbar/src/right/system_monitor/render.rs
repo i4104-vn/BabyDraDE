@@ -30,6 +30,7 @@ pub fn build_sys_monitor(
         .autohide(false)
         .css_classes(["sys-monitor-popover", "status-popover"])
         .build();
+    popover.set_offset(0, 8);
     popover.set_parent(capsule);
 
     let popover_box = gtk4::Box::new(gtk4::Orientation::Vertical, 10);

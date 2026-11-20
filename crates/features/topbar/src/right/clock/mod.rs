@@ -1,15 +1,11 @@
 pub mod calendar;
 mod render;
 
-use crate::right::control_center::WindowSlot;
+use crate::right::control_center::{close_all_panels, WindowSlot};
 use gtk4::glib;
 use gtk4::prelude::*;
 
-pub fn create_clock_widget(
-    app: &gtk4::Application,
-    cc_slot: WindowSlot,
-    cal_slot: WindowSlot,
-) -> gtk4::Button {
+pub fn create_clock_widget(app: &gtk4::Application, cal_slot: WindowSlot) -> gtk4::Button {
     let (clock_button, clock_label, _red_dot, _bell_box) = render::build_clock_ui();
 
     let update_clock = {
@@ -29,19 +25,17 @@ pub fn create_clock_widget(
     glib::timeout_add_seconds_local(1, update_clock);
 
     let app_c = app.clone();
-    let cc_inner = cc_slot;
     let cal_inner = cal_slot;
     clock_button.connect_clicked(move |_| {
-        if let Some(win) = cc_inner.borrow().clone() {
-            win.close();
+        let was_open = cal_inner.borrow().is_some();
+        // Closing all panels first guarantees they never stack on top of each other.
+        close_all_panels();
+        if was_open {
+            return;
         }
-        if let Some(win) = cal_inner.borrow().clone() {
-            win.close();
-        } else {
-            let new_win = calendar::show_calendar_window(&app_c, cal_inner.clone());
-            if let Ok(mut borrow) = cal_inner.try_borrow_mut() {
-                *borrow = Some(new_win);
-            }
+        let new_win = calendar::show_calendar_window(&app_c, cal_inner.clone());
+        if let Ok(mut borrow) = cal_inner.try_borrow_mut() {
+            *borrow = Some(new_win);
         }
     });
 

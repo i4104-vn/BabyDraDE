@@ -38,14 +38,8 @@ pub fn setup_status_popover(context: StatusPopoverContext<'_>) -> StatusPopovers
     let net_tooltip = TooltipPopover::new(context.network_container, gtk4::PositionType::Bottom);
     let vol_tooltip = TooltipPopover::new(context.volume_icon, gtk4::PositionType::Bottom);
 
-    // Nudge the cards slightly further below their status icons.
-    for tooltip in [&vpn_tooltip, &net_tooltip, &vol_tooltip] {
-        tooltip.set_offset(0, 8);
-    }
-
     let (bat_tooltip_opt, bat_popover_opt) = if let Some(bat_area) = context.battery {
         let bat_pop = TooltipPopover::new(bat_area, gtk4::PositionType::Bottom);
-        bat_pop.set_offset(0, 8);
         let pop = bat_pop.popover.clone();
         (Some(bat_pop), Some(pop))
     } else {

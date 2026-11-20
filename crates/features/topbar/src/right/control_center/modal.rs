@@ -15,6 +15,26 @@ pub type WindowSlot = Rc<RefCell<Option<gtk4::ApplicationWindow>>>;
 
 thread_local! {
     static ACTIVE_CC_SYNC: RefCell<Option<ActiveCcSync>> = const { RefCell::new(None) };
+    /// All currently open topbar panel windows (control center, calendar, ...).
+    static OPEN_PANELS: RefCell<Vec<gtk4::ApplicationWindow>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Closes every open panel. Used when switching to another panel.
+pub fn close_all_panels() {
+    let windows = OPEN_PANELS.with(|panels| std::mem::take(&mut *panels.borrow_mut()));
+    for window in windows {
+        window.close();
+    }
+}
+
+/// Registers a newly opened panel, dismissing any panel that is already open.
+pub fn register_panel(window: &gtk4::ApplicationWindow) {
+    close_all_panels();
+    OPEN_PANELS.with(|panels| panels.borrow_mut().push(window.clone()));
+}
+
+pub fn unregister_panel(window: &gtk4::ApplicationWindow) {
+    OPEN_PANELS.with(|panels| panels.borrow_mut().retain(|w| w != window));
 }
 
 struct ActiveCcSync {
@@ -191,8 +211,12 @@ pub fn create_cc_window(
     });
 
     let ccw_inner = control_center_window;
+    let q_win_weak_close = q_win.downgrade();
     q_win.connect_close_request(move |_| {
         clear_cc_sync();
+        if let Some(win) = q_win_weak_close.upgrade() {
+            unregister_panel(&win);
+        }
         if let Ok(mut borrow) = ccw_inner.try_borrow_mut() {
             *borrow = None;
         }
@@ -203,6 +227,7 @@ pub fn create_cc_window(
         clear_cc_sync();
     });
 
+    register_panel(&q_win);
     q_win.present();
     q_win
 }

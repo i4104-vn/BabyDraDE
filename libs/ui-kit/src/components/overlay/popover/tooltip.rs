@@ -53,6 +53,8 @@ impl TooltipPopover {
             .position(position)
             .css_classes(["status-popover", "tooltip-popover"])
             .build();
+        // Keep every tooltip consistently below its anchor.
+        popover.set_offset(0, 8);
         popover.set_parent(parent.as_ref());
 
         Self {

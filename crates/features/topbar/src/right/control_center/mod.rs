@@ -12,5 +12,6 @@ pub mod vpn;
 pub mod wifi;
 
 pub use modal::{
-    create_cc_window, setup_click_outside_dismiss, sync_cc_brightness, sync_cc_volume, WindowSlot,
+    close_all_panels, create_cc_window, register_panel, setup_click_outside_dismiss,
+    sync_cc_brightness, sync_cc_volume, unregister_panel, WindowSlot,
 };

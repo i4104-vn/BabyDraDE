@@ -2,7 +2,7 @@ pub mod indicators;
 pub mod popover;
 pub mod render;
 
-use crate::right::control_center::{create_cc_window, WindowSlot};
+use crate::right::control_center::{close_all_panels, create_cc_window, WindowSlot};
 use gtk4::prelude::*;
 use popover::{setup_status_popover, StatusPopoverContext};
 
@@ -23,27 +23,24 @@ pub fn create_status_icons(
 
     let app_c = app.clone();
     let cc_inner = cc_slot.clone();
-    let cal_inner = cal_slot.clone();
     let vol_icon_c = vol_icon.clone();
     let popovers_c = popovers;
 
     status_button.connect_clicked(move |_| {
         popovers_c.popdown_all();
-
-        if let Some(win) = cal_inner.borrow().clone() {
-            win.close();
+        let was_open = cc_inner.borrow().is_some();
+        // Closing all panels first guarantees they never stack on top of each other.
+        close_all_panels();
+        if was_open {
+            return;
         }
-        if let Some(win) = cc_inner.borrow().clone() {
-            win.close();
-        } else {
-            let new_win = create_cc_window(&app_c, cc_inner.clone(), vol_icon_c.clone());
-            if let Ok(mut borrow) = cc_inner.try_borrow_mut() {
-                *borrow = Some(new_win);
-            }
+        let new_win = create_cc_window(&app_c, cc_inner.clone(), vol_icon_c.clone());
+        if let Ok(mut borrow) = cc_inner.try_borrow_mut() {
+            *borrow = Some(new_win);
         }
     });
 
-    let clock_button = super::clock::create_clock_widget(app, cc_slot, cal_slot);
+    let clock_button = super::clock::create_clock_widget(app, cal_slot);
 
     status_box.append(&status_button);
     status_box.append(&separator);

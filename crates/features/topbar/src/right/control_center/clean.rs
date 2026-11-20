@@ -112,6 +112,7 @@ pub fn create_clean_tile(on_popover_toggled: Option<Rc<dyn Fn(bool) + 'static>>)
         gtk4::PositionType::Bottom,
         "clean-popover media-popover control-popover",
     );
+    popover.set_offset(0, 8);
 
     setup_clean_popover(&popover);
 

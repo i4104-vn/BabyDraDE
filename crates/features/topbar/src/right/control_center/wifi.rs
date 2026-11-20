@@ -110,6 +110,7 @@ pub fn create_wifi_tile(on_popover_toggled: Option<Rc<dyn Fn(bool) + 'static>>) 
         gtk4::PositionType::Right,
         "wifi-popover control-popover",
     );
+    popover.set_offset(0, 8);
 
     setup_wifi_popover(&popover);
 
