@@ -1,20 +1,23 @@
 //! Compositor-owned titlebar rendering and hit testing.
 
+mod color;
+mod hit_test;
 pub mod input;
 
 use cairo::{Context, Format, ImageSurface};
 use smithay::{
-    backend::allocator::Fourcc,
-    backend::renderer::{
-        element::{
-            memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
-            Kind,
+    backend::{
+        allocator::Fourcc,
+        renderer::{
+            element::{
+                memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
+                Kind,
+            },
+            glow::GlowRenderer,
         },
-        glow::GlowRenderer,
     },
     desktop::Window,
     utils::{Logical, Point, Scale, Transform},
-    wayland::compositor::with_states,
 };
 
 use super::elements::types::CustomRenderElements;
@@ -23,208 +26,14 @@ pub use crate::enums::constants::{
     CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT,
 };
 pub use crate::enums::Action;
+pub use hit_test::{hit_test, hit_test_geometry};
 
-/// Return the representative color from pixels read from the client surface.
-///
-/// Grouping near-identical pixels prevents a glyph, icon, or antialiased edge
-/// from becoming the titlebar color.  Unlike choosing the darkest pixel, this
-/// also preserves light application themes.
-fn pick_dominant_color(samples: &[[f64; 3]]) -> Option<[f64; 3]> {
-    samples.iter().copied().max_by_key(|candidate| {
-        samples
-            .iter()
-            .filter(|sample| {
-                let dr = candidate[0] - sample[0];
-                let dg = candidate[1] - sample[1];
-                let db = candidate[2] - sample[2];
-                dr * dr + dg * dg + db * db < 0.008
-            })
-            .count()
-    })
-}
-
-/// Read representative pixels from a GPU-backed client buffer.
-fn sample_dmabuf_color(window: &Window) -> Option<[f64; 3]> {
-    let toplevel = window.toplevel()?;
-    with_states(toplevel.wl_surface(), |states| {
-        let surface_state = states
-            .data_map
-            .get::<smithay::backend::renderer::utils::RendererSurfaceStateUserData>(
-        )?;
-        let state = surface_state.lock().ok()?;
-        let buffer = state.buffer()?;
-        let dmabuf = smithay::wayland::dmabuf::get_dmabuf(buffer).ok()?;
-
-        use smithay::backend::allocator::Buffer as _;
-        let size = dmabuf.size();
-        if size.w <= 0 || size.h <= 0 {
-            return None;
-        }
-        let stride = dmabuf.strides().next()? as usize;
-        let format = dmabuf.format();
-        let mapping = dmabuf
-            .map_plane(
-                0,
-                smithay::backend::allocator::dmabuf::DmabufMappingMode::READ,
-            )
-            .ok()?;
-        let pixels =
-            unsafe { std::slice::from_raw_parts(mapping.ptr() as *const u8, mapping.length()) };
-        let samples = sample_pixels(pixels, size.w, size.h, stride, format.code);
-        pick_dominant_color(&samples)
-    })
-}
-
-fn sample_pixels(
-    pixels: &[u8],
-    width: i32,
-    height: i32,
-    stride: usize,
-    format: Fourcc,
-) -> Vec<[f64; 3]> {
-    let points = [
-        (8.min(width / 4), 8.min(height / 4)),
-        (width / 2, 8.min(height / 4)),
-        (width - 1 - 8.min(width / 4), 8.min(height / 4)),
-        (width / 2, height / 2),
-        (8.min(width / 4), height / 2),
-    ];
-    points
-        .iter()
-        .filter_map(|&(x, y)| {
-            let offset = y as usize * stride + x as usize * 4;
-            let pixel = pixels.get(offset..offset + 4)?;
-            let rgb = match format {
-                Fourcc::Argb8888 | Fourcc::Xrgb8888 => [pixel[2], pixel[1], pixel[0]],
-                Fourcc::Abgr8888 | Fourcc::Xbgr8888 => [pixel[0], pixel[1], pixel[2]],
-                _ => return None,
-            };
-            Some(rgb.map(|channel| channel as f64 / 255.0))
-        })
-        .collect()
-}
-
-/// Read representative pixels from a CPU-backed client buffer.
-fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
-    let toplevel = window.toplevel()?;
-    with_states(toplevel.wl_surface(), |states| {
-        let ud = states
-            .data_map
-            .get::<smithay::backend::renderer::utils::RendererSurfaceStateUserData>()?;
-        let state = ud.lock().ok()?;
-        let buffer = state.buffer()?;
-        smithay::wayland::shm::with_buffer_contents(buffer, |ptr, len, data| {
-            if data.width <= 0 || data.height <= 0 || len < 4 {
-                return None;
-            }
-            let pixels = unsafe { std::slice::from_raw_parts(ptr, len) };
-            let format = smithay::wayland::shm::shm_format_to_fourcc(data.format)?;
-            pick_dominant_color(&sample_pixels(
-                pixels,
-                data.width,
-                data.height,
-                data.stride as usize,
-                format,
-            ))
-        })
-        .ok()?
-    })
-}
-
-/// Resolve the titlebar color only from the contents actually rendered by the
-/// application. GPU clients are sampled first; SHM clients use the same logic.
-fn resolve_color(window: &Window) -> Option<[f64; 3]> {
-    sample_dmabuf_color(window).or_else(|| sample_shm_color(window))
-}
-
-/// Get the titlebar color from the client's currently committed buffer.
-///
-/// A maximized client commonly commits a differently sized buffer after the
-/// configure event. Sampling on every titlebar render prevents that new buffer
-/// from inheriting a color captured while the window was floating.
 pub fn get_or_sample_color(window: &Window) -> [f64; 3] {
-    if let Some(color) = resolve_color(window) {
-        return color;
-    }
-
-    // The client has not committed a readable buffer yet. This temporary value
-    // is not retained, so it is replaced as soon as one becomes available.
-    [0.0, 0.0, 0.0]
+    color::current_color(window)
 }
 
 // Keep old public name as an alias for external callers / tests
 pub use get_or_sample_color as sample_window_color_cached;
-
-pub fn hit_test(
-    window: &Window,
-    location: Point<i32, Logical>,
-    point: Point<f64, Logical>,
-) -> Option<Action> {
-    let state = window.toplevel()?.current_state();
-    if state.decoration_mode != Some(
-        smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode::ServerSide,
-    ) || state.states.contains(
-        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Fullscreen,
-    ) {
-        return None;
-    }
-    let maximized = state.states.contains(
-        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
-    );
-    let width = window.geometry().size.w as f64;
-    hit_test_geometry(maximized, location, width, point)
-}
-
-pub fn hit_test_geometry(
-    maximized: bool,
-    location: Point<i32, Logical>,
-    width: f64,
-    point: Point<f64, Logical>,
-) -> Option<Action> {
-    let (y_min, y_max) = if maximized {
-        (location.y as f64, location.y as f64 + HEIGHT as f64)
-    } else {
-        (location.y as f64 - HEIGHT as f64, location.y as f64)
-    };
-    if point.x < location.x as f64
-        || point.x >= location.x as f64 + width
-        || point.y < y_min
-        || point.y >= y_max
-    {
-        return None;
-    }
-    let close = location.x as f64 + width - 22.0;
-    let max = close - 24.0;
-    let min = max - 24.0;
-    if point.x >= close - BUTTON && point.x <= close + BUTTON {
-        Some(Action::Close)
-    } else if point.x >= max - BUTTON && point.x <= max + BUTTON {
-        Some(Action::Maximize)
-    } else if point.x >= min - BUTTON && point.x <= min + BUTTON {
-        Some(Action::Minimize)
-    } else {
-        if !maximized {
-            let r = CORNER_RADIUS;
-            // Top-left curved corner
-            if point.x < location.x as f64 + r && point.y < y_min + r {
-                let dx = point.x - (location.x as f64 + r);
-                let dy = point.y - (y_min + r);
-                if dx * dx + dy * dy > r * r {
-                    return None;
-                }
-            }
-            // Top-right curved corner
-            if point.x > location.x as f64 + width - r && point.y < y_min + r {
-                let dx = point.x - (location.x as f64 + width - r);
-                let dy = point.y - (y_min + r);
-                if dx * dx + dy * dy > r * r {
-                    return None;
-                }
-            }
-        }
-        Some(Action::Move)
-    }
-}
 
 pub fn render(
     renderer: &mut GlowRenderer,
@@ -454,104 +263,4 @@ pub fn render(
     )
     .ok()
     .map(CustomRenderElements::Memory)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_pick_dominant_color_preserves_light_theme() {
-        let samples = [
-            [0.95, 0.95, 0.95],
-            [0.96, 0.96, 0.96],
-            [0.94, 0.94, 0.94],
-            [0.1, 0.1, 0.1],
-        ];
-        assert!(pick_dominant_color(&samples).unwrap()[0] > 0.9);
-    }
-
-    #[test]
-    fn test_titlebar_hit_test_floating() {
-        let loc = Point::from((100, 200));
-        let width = 800.0;
-
-        // Titlebar is at y in [200 - 34, 200) = [166, 200)
-        // Buttons: close = 100 + 800 - 22 = 878
-        // max = 878 - 24 = 854
-        // min = 854 - 24 = 830
-        assert_eq!(
-            hit_test_geometry(false, loc, width, Point::from((878.0, 180.0))),
-            Some(Action::Close)
-        );
-        assert_eq!(
-            hit_test_geometry(false, loc, width, Point::from((854.0, 180.0))),
-            Some(Action::Maximize)
-        );
-        assert_eq!(
-            hit_test_geometry(false, loc, width, Point::from((830.0, 180.0))),
-            Some(Action::Minimize)
-        );
-        assert_eq!(
-            hit_test_geometry(false, loc, width, Point::from((300.0, 180.0))),
-            Some(Action::Move)
-        );
-
-        // Outside titlebar
-        assert_eq!(
-            hit_test_geometry(false, loc, width, Point::from((300.0, 150.0))),
-            None
-        );
-        assert_eq!(
-            hit_test_geometry(false, loc, width, Point::from((300.0, 205.0))),
-            None
-        );
-        assert_eq!(
-            hit_test_geometry(false, loc, width, Point::from((50.0, 180.0))),
-            None
-        );
-
-        // Rounded top-left corner should exclude points outside 20px arc
-        assert_eq!(
-            hit_test_geometry(false, loc, width, Point::from((102.0, 168.0))),
-            None
-        );
-    }
-
-    #[test]
-    fn test_titlebar_hit_test_maximized() {
-        let loc = Point::from((0, 32)); // under topbar
-        let width = 1920.0;
-
-        // When maximized, titlebar is at y in [32, 32 + 34) = [32, 66)
-        // Buttons: close = 0 + 1920 - 22 = 1898
-        // max = 1898 - 24 = 1874
-        // min = 1874 - 24 = 1850
-        assert_eq!(
-            hit_test_geometry(true, loc, width, Point::from((1898.0, 48.0))),
-            Some(Action::Close)
-        );
-        assert_eq!(
-            hit_test_geometry(true, loc, width, Point::from((1874.0, 48.0))),
-            Some(Action::Maximize)
-        );
-        assert_eq!(
-            hit_test_geometry(true, loc, width, Point::from((1850.0, 48.0))),
-            Some(Action::Minimize)
-        );
-        assert_eq!(
-            hit_test_geometry(true, loc, width, Point::from((500.0, 48.0))),
-            Some(Action::Move)
-        );
-
-        // Outside maximized titlebar
-        assert_eq!(
-            hit_test_geometry(true, loc, width, Point::from((500.0, 20.0))),
-            None
-        );
-        assert_eq!(
-            hit_test_geometry(true, loc, width, Point::from((500.0, 70.0))),
-            None
-        );
-    }
 }

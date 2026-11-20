@@ -21,10 +21,12 @@ pub type ConstrainedSurface = CropRenderElement<
     RelocateRenderElement<RescaleRenderElement<WaylandSurfaceRenderElement<GlowRenderer>>>,
 >;
 pub type DockClippedSurface = CropRenderElement<ConstrainedSurface>;
+pub type RoundedSurface = CropRenderElement<WaylandSurfaceRenderElement<GlowRenderer>>;
 
 render_elements! {
     pub CustomRenderElements<=GlowRenderer>;
     Surface=WaylandSurfaceRenderElement<GlowRenderer>,
+    RoundedSurface=RoundedSurface,
     Memory=MemoryRenderBufferRenderElement<GlowRenderer>,
     Blur=BlurRenderElement,
     Constrained=ConstrainedSurface,
