@@ -112,5 +112,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
     let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
 
+    // The screenshot editor needs a GTK main context of its own. Running it in
+    // a thread of the compositor process is impossible because the default
+    // GLib main context is already acquired there, so it runs in a subprocess.
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() == 3 && args[1] == "--screenshot-editor" {
+        extensions::screenshot::open_editor(args[2].clone());
+        return Ok(());
+    }
+
     run()
 }

@@ -176,11 +176,20 @@ pub(crate) fn init(
                     };
 
                     if crate::extensions::screenshot::capture::take_requested() {
+                        // Offscreen capture binds an FBO, which leaves the EGL
+                        // context current *without* the window surface. Restore
+                        // it or the following swap_buffers() fails with BadAlloc
+                        // and takes down the compositor.
+                        let surface = backend.egl_surface() as *const _;
                         let _ = crate::extensions::screenshot::capture::capture_screen(
                             backend.renderer(),
                             &render_elements,
                             &output,
                         );
+                        let renderer = backend.renderer();
+                        unsafe {
+                            let _ = renderer.egl_context().make_current_with_surface(&*surface);
+                        }
                     }
 
                     backend
