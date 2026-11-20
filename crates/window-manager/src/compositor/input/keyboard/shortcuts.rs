@@ -30,6 +30,27 @@ pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option
         return Some(KeyboardAction::QuitCompositor);
     }
 
+    // Super + Space: toggle the quick application launcher.
+    if modifiers.logo
+        && !modifiers.shift
+        && !modifiers.ctrl
+        && !modifiers.alt
+        && sym == keysyms::KEY_space
+    {
+        return Some(KeyboardAction::ToggleLauncher);
+    }
+
+    // Super + Shift + S: capture the screen. The configurable shortcut list
+    // cannot remap this compositor action.
+    if modifiers.logo
+        && modifiers.shift
+        && !modifiers.ctrl
+        && !modifiers.alt
+        && (sym == keysyms::KEY_s || sym == keysyms::KEY_S)
+    {
+        return Some(KeyboardAction::Screenshot);
+    }
+
     // 2. Super + Q or Alt + F4: Close active window
     if (modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q))
         || (modifiers.alt && sym == keysyms::KEY_F4)
@@ -115,7 +136,16 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
             lock::spawn();
         }
         KeyboardAction::ReloadConfig => {
+            crate::keymap::reload();
             state.reload_config();
+        }
+        KeyboardAction::ToggleLauncher => {
+            info!("Super+Space pressed: toggling quick launcher");
+            crate::keymap::spawn_command("babydra-launcher".to_string());
+        }
+        KeyboardAction::Screenshot => {
+            info!("Super+Shift+S pressed: taking screenshot");
+            crate::extensions::screenshot::trigger();
         }
         KeyboardAction::ToggleMaximize => {
             let active = state.space.elements().next_back().cloned();
