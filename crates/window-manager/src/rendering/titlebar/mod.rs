@@ -3,6 +3,7 @@
 pub mod input;
 
 use cairo::{Context, Format, ImageSurface};
+use glow::HasContext;
 use smithay::{
     backend::allocator::Fourcc,
     backend::renderer::{
@@ -11,6 +12,8 @@ use smithay::{
             Kind,
         },
         glow::GlowRenderer,
+        utils::{import_surface_tree, with_renderer_surface_state},
+        Renderer, Texture,
     },
     desktop::Window,
     utils::{Logical, Point, Scale, Transform},
@@ -18,10 +21,115 @@ use smithay::{
 
 use super::elements::types::CustomRenderElements;
 
-pub use crate::enums::Action;
 pub use crate::enums::constants::{
     CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT,
 };
+pub use crate::enums::Action;
+
+/// Cached background color extracted from the client window surface.
+#[derive(Clone, Copy, Debug)]
+pub struct WindowTitlebarColor(pub [f64; 3]);
+
+/// Extracts the background color from the top edge of the window's client surface.
+///
+/// Uses an OpenGL FBO to read a single pixel near the top edge of the client buffer.
+/// Restores the previously bound framebuffer so that the compositor render pipeline is undisturbed.
+pub fn sample_window_color(renderer: &mut GlowRenderer, window: &Window) -> Option<[f64; 3]> {
+    let toplevel = window.toplevel()?;
+    let surface = toplevel.wl_surface();
+
+    // Ensure surface textures are imported into the renderer
+    let _ = import_surface_tree(renderer, surface);
+
+    let context_id = renderer.context_id();
+    let (tex_id, size, y_inverted) = with_renderer_surface_state(surface, |state| {
+        let tex = state.texture(context_id)?;
+        Some((tex.tex_id(), tex.size(), tex.is_y_inverted()))
+    })??;
+
+    if size.w <= 0 || size.h <= 0 {
+        return None;
+    }
+
+    // Inset from corners to avoid borders, shadows or window icons
+    let sample_x = 30.min(size.w / 2).max(0);
+    let sample_y = if y_inverted {
+        4.min(size.h - 1)
+    } else {
+        (size.h - 1 - 4).max(0)
+    };
+
+    let glow_tex = std::num::NonZeroU32::new(tex_id).map(glow::NativeTexture)?;
+
+    renderer
+        .with_context(|gl| unsafe {
+            let saved_fbo = gl.get_parameter_i32(glow::FRAMEBUFFER_BINDING).max(0) as u32;
+            let saved_fbo = std::num::NonZeroU32::new(saved_fbo).map(glow::NativeFramebuffer);
+
+            let fbo = match gl.create_framebuffer() {
+                Ok(fbo) => fbo,
+                Err(_) => return None,
+            };
+
+            gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
+            gl.framebuffer_texture_2d(
+                glow::FRAMEBUFFER,
+                glow::COLOR_ATTACHMENT0,
+                glow::TEXTURE_2D,
+                Some(glow_tex),
+                0,
+            );
+
+            let color = if gl.check_framebuffer_status(glow::FRAMEBUFFER) == glow::FRAMEBUFFER_COMPLETE
+            {
+                let mut pixel = [0u8; 4];
+                gl.read_pixels(
+                    sample_x,
+                    sample_y,
+                    1,
+                    1,
+                    glow::RGBA,
+                    glow::UNSIGNED_BYTE,
+                    glow::PixelPackData::Slice(Some(&mut pixel)),
+                );
+
+                // Ignore completely transparent pixels (unrendered initial buffer)
+                if pixel[3] > 0 {
+                    Some([
+                        pixel[0] as f64 / 255.0,
+                        pixel[1] as f64 / 255.0,
+                        pixel[2] as f64 / 255.0,
+                    ])
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+            gl.delete_framebuffer(fbo);
+            color
+        })
+        .ok()?
+}
+
+/// Retrieves the cached titlebar color or samples it once from the client buffer.
+pub fn get_or_sample_color(renderer: &mut GlowRenderer, window: &Window) -> [f64; 3] {
+    if let Some(cached) = window.user_data().get::<WindowTitlebarColor>() {
+        return cached.0;
+    }
+
+    if let Some(color) = sample_window_color(renderer, window) {
+        window
+            .user_data()
+            .insert_if_missing(|| WindowTitlebarColor(color));
+        color
+    } else {
+        // Default fallback (Catppuccin Frappé base #232634) until the first non-empty frame is committed
+        [0.137, 0.149, 0.204]
+    }
+}
 
 pub fn hit_test(
     window: &Window,
@@ -129,25 +237,45 @@ pub fn render(
         let ctx = Context::new(&surface).ok()?;
         ctx.scale(scale.x, scale.y);
         let w_local = width as f64 / scale.x;
-        let h_local = HEIGHT as f64;
 
-        ctx.set_source_rgba(0.10, 0.11, 0.14, 0.98);
-        if maximized {
-            ctx.rectangle(0.0, 0.0, w_local, h_local);
-        } else {
+        let color = get_or_sample_color(renderer, window);
+
+        // Clear surface to ensure transparency outside rounded corners
+        ctx.set_operator(cairo::Operator::Clear);
+        ctx.paint().ok()?;
+        ctx.set_operator(cairo::Operator::Over);
+
+        // Paint the background matching the app's sampled color with frosted-glass translucency
+        let h_local = HEIGHT as f64;
+        if !maximized {
             let r = CORNER_RADIUS.min(w_local / 2.0).min(h_local);
             ctx.new_sub_path();
-            ctx.arc(w_local - r, r, r, -std::f64::consts::FRAC_PI_2, 0.0);
-            ctx.line_to(w_local, h_local);
-            ctx.line_to(0.0, h_local);
+            // Top-left rounded corner
             ctx.arc(r, r, r, std::f64::consts::PI, 3.0 * std::f64::consts::FRAC_PI_2);
+            // Top-right rounded corner
+            ctx.arc(w_local - r, r, r, -std::f64::consts::FRAC_PI_2, 0.0);
+            // Bottom-right corner (straight)
+            ctx.line_to(w_local, h_local);
+            // Bottom-left corner (straight)
+            ctx.line_to(0.0, h_local);
             ctx.close_path();
+        } else {
+            ctx.rectangle(0.0, 0.0, w_local, h_local);
         }
+        ctx.set_source_rgba(color[0], color[1], color[2], 0.82);
         ctx.fill().ok()?;
 
-        ctx.set_source_rgba(1.0, 1.0, 1.0, 0.08);
+        // Subtle 1px bottom separator adapting to dark/light background
+        let luminance = 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2];
+        let (sep_r, sep_g, sep_b, sep_a) = if luminance > 0.5 {
+            (0.0, 0.0, 0.0, 0.12)
+        } else {
+            (1.0, 1.0, 1.0, 0.08)
+        };
+        ctx.set_source_rgba(sep_r, sep_g, sep_b, sep_a);
         ctx.rectangle(0.0, h_local - 1.0, w_local, 1.0);
         ctx.fill().ok()?;
+
         let cy = HEIGHT as f64 / 2.0;
         let close_x = w_local - 22.0;
         let max_x = w_local - 46.0;
@@ -158,10 +286,8 @@ pub fn render(
         } else {
             location.y as f64 - HEIGHT as f64
         };
-        let local_pointer = Point::<f64, Logical>::from((
-            pointer.x - location.x as f64,
-            pointer.y - frame_y,
-        ));
+        let local_pointer =
+            Point::<f64, Logical>::from((pointer.x - location.x as f64, pointer.y - frame_y));
 
         let in_cluster = local_pointer.x >= (min_x - BUTTON)
             && local_pointer.x <= (close_x + BUTTON)
@@ -295,6 +421,25 @@ pub fn render(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_window_titlebar_color_cache() {
+        let user_data = smithay::utils::user_data::UserDataMap::default();
+        assert!(user_data.get::<WindowTitlebarColor>().is_none());
+
+        user_data.insert_if_missing(|| WindowTitlebarColor([0.2, 0.3, 0.4]));
+        assert_eq!(
+            user_data.get::<WindowTitlebarColor>().map(|c| c.0),
+            Some([0.2, 0.3, 0.4])
+        );
+
+        // Subsequent insertions are ignored (sample only once)
+        user_data.insert_if_missing(|| WindowTitlebarColor([0.9, 0.9, 0.9]));
+        assert_eq!(
+            user_data.get::<WindowTitlebarColor>().map(|c| c.0),
+            Some([0.2, 0.3, 0.4])
+        );
+    }
 
     #[test]
     fn test_titlebar_hit_test_floating() {

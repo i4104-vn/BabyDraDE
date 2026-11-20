@@ -11,6 +11,7 @@ use smithay::{
 };
 
 use crate::compositor::window_animation_factors;
+use crate::enums::TITLEBAR_HEIGHT;
 use crate::rendering::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::rendering::blur::{BlurEngine, BlurRenderElement};
 use crate::rendering::titlebar;
@@ -50,7 +51,11 @@ pub fn render_window(
             let matched = engine.matches_window(window);
             (
                 matched,
-                if matched { engine.params.window_opacity } else { 1.0 },
+                if matched {
+                    engine.params.window_opacity
+                } else {
+                    1.0
+                },
                 engine.params.corner_radius,
             )
         } else {
@@ -103,9 +108,44 @@ pub fn render_window(
 
     elements.extend(surfaces);
 
-    // 2. Blur backdrop element (placed behind window surfaces)
-    if should_blur {
-        if let Some(engine_lock) = blur_engine {
+    // 2. Blur backdrop element (placed behind window surfaces and/or titlebar)
+    let has_floating_server_titlebar = window
+        .toplevel()
+        .map(|toplevel| {
+            let state = toplevel.current_state();
+            state.decoration_mode
+                == Some(
+                    smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode::ServerSide,
+                ) && !state.states.contains(xdg_toplevel::State::Maximized)
+                && !state.states.contains(xdg_toplevel::State::Fullscreen)
+        })
+        .unwrap_or(false);
+
+    let has_maximized_hover_titlebar = window
+        .toplevel()
+        .map(|toplevel| {
+            let state = toplevel.current_state();
+            state.decoration_mode
+                == Some(
+                    smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode::ServerSide,
+                ) && state.states.contains(xdg_toplevel::State::Maximized)
+                && !state.states.contains(xdg_toplevel::State::Fullscreen)
+                && pointer_location.x >= location.x as f64
+                && pointer_location.x < location.x as f64 + window.geometry().size.w as f64
+                && pointer_location.y >= location.y as f64
+                && pointer_location.y < location.y as f64 + TITLEBAR_HEIGHT as f64
+        })
+        .unwrap_or(false);
+
+    if let Some(engine_lock) = blur_engine {
+        let is_blur_enabled = engine_lock
+            .lock()
+            .map(|e| e.params.enabled)
+            .unwrap_or(false);
+
+        if is_blur_enabled
+            && (should_blur || has_floating_server_titlebar || has_maximized_hover_titlebar)
+        {
             let bbox = window.bbox();
             let geo = window.geometry();
             let blur_size = if geo.size.w > 0 && geo.size.h > 0 {
@@ -118,7 +158,31 @@ pub fn render_window(
             } else {
                 location + bbox.loc
             };
-            let blur_area = Rectangle::new(blur_loc, blur_size);
+
+            let (blur_area, radius) = if should_blur {
+                let area = if has_floating_server_titlebar {
+                    Rectangle::new(
+                        blur_loc - Point::from((0, TITLEBAR_HEIGHT)),
+                        blur_size + smithay::utils::Size::from((0, TITLEBAR_HEIGHT)),
+                    )
+                } else {
+                    Rectangle::new(blur_loc, blur_size)
+                };
+                (area, corner_radius)
+            } else if has_maximized_hover_titlebar {
+                let titlebar_area = Rectangle::new(
+                    location,
+                    smithay::utils::Size::from((blur_size.w, TITLEBAR_HEIGHT)),
+                );
+                (titlebar_area, 0.0)
+            } else {
+                // When only the server-side titlebar has blur (app body is opaque)
+                let titlebar_area = Rectangle::new(
+                    blur_loc - Point::from((0, TITLEBAR_HEIGHT)),
+                    smithay::utils::Size::from((blur_size.w, TITLEBAR_HEIGHT)),
+                );
+                (titlebar_area, corner_radius)
+            };
 
             window
                 .user_data()
@@ -126,7 +190,7 @@ pub fn render_window(
             let blur_id = window.user_data().get::<WindowBlurId>().unwrap().0.clone();
 
             let blur_elem =
-                BlurRenderElement::new(blur_id, blur_area, corner_radius, engine_lock.clone());
+                BlurRenderElement::new(blur_id, blur_area, radius, engine_lock.clone());
             elements.push(CustomRenderElements::Blur(blur_elem));
         }
     }
