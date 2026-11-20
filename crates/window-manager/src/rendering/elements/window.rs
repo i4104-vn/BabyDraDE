@@ -96,6 +96,7 @@ pub fn render_window(
         scale,
         pointer_location,
         should_blur,
+        opacity,
     ) {
         elements.push(frame);
     }

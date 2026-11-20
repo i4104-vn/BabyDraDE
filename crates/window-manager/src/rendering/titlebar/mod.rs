@@ -17,6 +17,7 @@ use smithay::{
     },
     desktop::Window,
     utils::{Logical, Point, Scale, Transform},
+    wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData},
 };
 
 use super::elements::types::CustomRenderElements;
@@ -30,15 +31,323 @@ pub use crate::enums::Action;
 #[derive(Clone, Copy, Debug)]
 pub struct WindowTitlebarColor(pub [f64; 3]);
 
-/// Extracts the background color from the top edge of the window's client surface.
-///
-/// Uses an OpenGL FBO to read a single pixel near the top edge of the client buffer.
-/// Restores the previously bound framebuffer so that the compositor render pipeline is undisturbed.
+/// Constant for the external OpenGL ES texture target.
+const GL_TEXTURE_EXTERNAL_OES: u32 = 0x8D65;
+
+/// Derives an intelligent app-aware fallback background color from the window's app_id.
+pub fn app_fallback_color(window: &Window) -> [f64; 3] {
+    let toplevel = window.toplevel();
+    let app_id = toplevel.and_then(|t| {
+        with_states(t.wl_surface(), |states| {
+            states
+                .data_map
+                .get::<XdgToplevelSurfaceData>()
+                .and_then(|d| d.lock().ok().and_then(|role| role.app_id.clone()))
+        })
+    });
+
+    let app_lower = app_id.as_deref().unwrap_or("").to_lowercase();
+    if app_lower.contains("kitty") {
+        // Kitty Material / BabyDra Dark background (#14141c)
+        [0.078, 0.078, 0.110]
+    } else if app_lower.contains("alacritty")
+        || app_lower.contains("foot")
+        || app_lower.contains("wezterm")
+        || app_lower.contains("terminal")
+    {
+        // Dark terminal background (#181825 / #1e1e2e)
+        [0.094, 0.094, 0.145]
+    } else if app_lower.contains("code") {
+        // VS Code dark background (#1e1e1e)
+        [0.118, 0.118, 0.118]
+    } else if app_lower.contains("nautilus") || app_lower.contains("thunar") {
+        // Modern dark file manager (#242424)
+        [0.141, 0.141, 0.141]
+    } else {
+        // Neutral modern dark base (#14141c)
+        [0.078, 0.078, 0.110]
+    }
+}
+
+/// Attempts to sample background color directly from an SHM buffer.
+fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
+    let toplevel = window.toplevel()?;
+    let surface = toplevel.wl_surface();
+    with_states(surface, |states| {
+        let state_user_data = states
+            .data_map
+            .get::<smithay::backend::renderer::utils::RendererSurfaceStateUserData>()?;
+        let state = state_user_data.lock().ok()?;
+        let buffer = state.buffer()?;
+        smithay::wayland::shm::with_buffer_contents(buffer, |ptr, len, data| {
+            if data.width <= 0 || data.height <= 0 || len == 0 {
+                return None;
+            }
+            let sample_x = 6.min(data.width - 1).max(0);
+            let sample_y = 6.min(data.height - 1).max(0);
+            let stride = data.stride as usize;
+            let offset = sample_y as usize * stride + sample_x as usize * 4;
+            if offset + 4 <= len {
+                let slice = unsafe { std::slice::from_raw_parts(ptr.add(offset), 4) };
+                // Format ARGB8888 / XRGB8888 is BGRA in little-endian memory
+                let b = slice[0] as f64 / 255.0;
+                let g = slice[1] as f64 / 255.0;
+                let r = slice[2] as f64 / 255.0;
+                let a = slice[3] as f64 / 255.0;
+                if a > 0.05 {
+                    Some([r, g, b])
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .ok()?
+    })
+}
+
+/// Samples the color of an OpenGL client texture using a 1x1 renderbuffer pass.
+/// Supports both standard 2D textures and external OES dmabuf textures.
+unsafe fn sample_gl_texture(
+    gl: &glow::Context,
+    glow_tex: glow::NativeTexture,
+    sample_points: &[(f32, f32)],
+) -> Option<[f64; 3]> {
+    let saved_fbo = gl.get_parameter_i32(glow::FRAMEBUFFER_BINDING).max(0) as u32;
+    let saved_fbo = std::num::NonZeroU32::new(saved_fbo).map(glow::NativeFramebuffer);
+
+    let saved_prog = gl.get_parameter_i32(glow::CURRENT_PROGRAM).max(0) as u32;
+    let saved_prog = std::num::NonZeroU32::new(saved_prog).map(glow::NativeProgram);
+
+    let mut saved_viewport = [0i32; 4];
+    gl.get_parameter_i32_slice(glow::VIEWPORT, &mut saved_viewport);
+
+    let saved_tex = gl.get_parameter_i32(glow::TEXTURE_BINDING_2D).max(0) as u32;
+    let saved_tex = std::num::NonZeroU32::new(saved_tex).map(glow::NativeTexture);
+
+    let saved_vbo = gl.get_parameter_i32(glow::ARRAY_BUFFER_BINDING).max(0) as u32;
+    let saved_vbo = std::num::NonZeroU32::new(saved_vbo).map(glow::NativeBuffer);
+
+    // Create 1x1 FBO with Renderbuffer storage (guaranteed complete in GLES 2/3)
+    let fbo = match gl.create_framebuffer() {
+        Ok(fbo) => fbo,
+        Err(_) => return None,
+    };
+    let rbo = match gl.create_renderbuffer() {
+        Ok(rbo) => rbo,
+        Err(_) => {
+            gl.delete_framebuffer(fbo);
+            return None;
+        }
+    };
+
+    gl.bind_renderbuffer(glow::RENDERBUFFER, Some(rbo));
+    gl.renderbuffer_storage(glow::RENDERBUFFER, glow::RGBA8, 1, 1);
+    gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
+    gl.framebuffer_renderbuffer(
+        glow::FRAMEBUFFER,
+        glow::COLOR_ATTACHMENT0,
+        glow::RENDERBUFFER,
+        Some(rbo),
+    );
+
+    if gl.check_framebuffer_status(glow::FRAMEBUFFER) != glow::FRAMEBUFFER_COMPLETE {
+        gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+        gl.delete_framebuffer(fbo);
+        gl.delete_renderbuffer(rbo);
+        return None;
+    }
+
+    // Clear prior errors
+    while gl.get_error() != glow::NO_ERROR {}
+
+    // Check if texture target is TEXTURE_2D or TEXTURE_EXTERNAL_OES
+    gl.bind_texture(glow::TEXTURE_2D, Some(glow_tex));
+    let is_external = gl.get_error() != glow::NO_ERROR;
+    let target = if is_external {
+        gl.bind_texture(GL_TEXTURE_EXTERNAL_OES, Some(glow_tex));
+        GL_TEXTURE_EXTERNAL_OES
+    } else {
+        glow::TEXTURE_2D
+    };
+
+    let vs_src = "precision mediump float;\nattribute vec2 a_pos;\nvarying vec2 v_uv;\nuniform vec2 u_sample_uv;\nvoid main() {\n    v_uv = u_sample_uv;\n    gl_Position = vec4(a_pos, 0.0, 1.0);\n}";
+    let fs_src = if is_external {
+        "#extension GL_OES_EGL_image_external : require\nprecision mediump float;\nvarying vec2 v_uv;\nuniform samplerExternalOES u_tex;\nvoid main() {\n    gl_FragColor = texture2D(u_tex, v_uv);\n}"
+    } else {
+        "precision mediump float;\nvarying vec2 v_uv;\nuniform sampler2D u_tex;\nvoid main() {\n    gl_FragColor = texture2D(u_tex, v_uv);\n}"
+    };
+
+    let vs = match gl.create_shader(glow::VERTEX_SHADER) {
+        Ok(s) => s,
+        Err(_) => {
+            gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+            gl.delete_framebuffer(fbo);
+            gl.delete_renderbuffer(rbo);
+            return None;
+        }
+    };
+    gl.shader_source(vs, vs_src);
+    gl.compile_shader(vs);
+
+    let fs = match gl.create_shader(glow::FRAGMENT_SHADER) {
+        Ok(s) => s,
+        Err(_) => {
+            gl.delete_shader(vs);
+            gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+            gl.delete_framebuffer(fbo);
+            gl.delete_renderbuffer(rbo);
+            return None;
+        }
+    };
+    gl.shader_source(fs, fs_src);
+    gl.compile_shader(fs);
+
+    let prog = match gl.create_program() {
+        Ok(p) => p,
+        Err(_) => {
+            gl.delete_shader(vs);
+            gl.delete_shader(fs);
+            gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+            gl.delete_framebuffer(fbo);
+            gl.delete_renderbuffer(rbo);
+            return None;
+        }
+    };
+    gl.attach_shader(prog, vs);
+    gl.attach_shader(prog, fs);
+    gl.link_program(prog);
+
+    if !gl.get_program_link_status(prog) {
+        gl.delete_shader(vs);
+        gl.delete_shader(fs);
+        gl.delete_program(prog);
+        gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+        gl.delete_framebuffer(fbo);
+        gl.delete_renderbuffer(rbo);
+        return None;
+    }
+
+    gl.viewport(0, 0, 1, 1);
+    gl.use_program(Some(prog));
+
+    gl.active_texture(glow::TEXTURE0);
+    gl.bind_texture(target, Some(glow_tex));
+    if let Some(loc) = gl.get_uniform_location(prog, "u_tex") {
+        gl.uniform_1_i32(Some(&loc), 0);
+    }
+    let uv_loc = gl.get_uniform_location(prog, "u_sample_uv");
+
+    let quad: [f32; 8] = [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0];
+    let vbo = gl.create_buffer().ok();
+    if let Some(vbo) = vbo {
+        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+        let bytes: &[u8] =
+            core::slice::from_raw_parts(quad.as_ptr() as *const u8, quad.len() * 4);
+        gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, bytes, glow::STREAM_DRAW);
+    }
+
+    let pos_loc = gl.get_attrib_location(prog, "a_pos");
+    if let Some(pos) = pos_loc {
+        gl.enable_vertex_attrib_array(pos);
+        gl.vertex_attrib_pointer_f32(pos, 2, glow::FLOAT, false, 8, 0);
+    }
+
+    let mut sampled_colors = Vec::new();
+    for &(u, v) in sample_points {
+        if let Some(ref loc) = uv_loc {
+            gl.uniform_2_f32(Some(loc), u, v);
+        }
+        gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
+
+        let mut pixel = [0u8; 4];
+        gl.read_pixels(
+            0,
+            0,
+            1,
+            1,
+            glow::RGBA,
+            glow::UNSIGNED_BYTE,
+            glow::PixelPackData::Slice(Some(&mut pixel)),
+        );
+
+        if pixel[3] > 10 {
+            sampled_colors.push([
+                pixel[0] as f64 / 255.0,
+                pixel[1] as f64 / 255.0,
+                pixel[2] as f64 / 255.0,
+            ]);
+        }
+    }
+
+    if let Some(pos) = pos_loc {
+        gl.disable_vertex_attrib_array(pos);
+    }
+
+    if let Some(vbo) = vbo {
+        gl.delete_buffer(vbo);
+    }
+    gl.delete_shader(vs);
+    gl.delete_shader(fs);
+    gl.delete_program(prog);
+    gl.delete_framebuffer(fbo);
+    gl.delete_renderbuffer(rbo);
+
+    if is_external {
+        gl.bind_texture(GL_TEXTURE_EXTERNAL_OES, None);
+    }
+
+    // Restore saved OpenGL states
+    gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
+    gl.bind_texture(glow::TEXTURE_2D, saved_tex);
+    gl.bind_buffer(glow::ARRAY_BUFFER, saved_vbo);
+    gl.use_program(saved_prog);
+    gl.viewport(
+        saved_viewport[0],
+        saved_viewport[1],
+        saved_viewport[2],
+        saved_viewport[3],
+    );
+
+    if sampled_colors.is_empty() {
+        return None;
+    }
+
+    if sampled_colors.len() == 1 {
+        Some(sampled_colors[0])
+    } else {
+        // Find if any 2 colors match closely (typical of padding/background)
+        for i in 0..sampled_colors.len() {
+            for j in (i + 1)..sampled_colors.len() {
+                let dr = (sampled_colors[i][0] - sampled_colors[j][0]).abs();
+                let dg = (sampled_colors[i][1] - sampled_colors[j][1]).abs();
+                let db = (sampled_colors[i][2] - sampled_colors[j][2]).abs();
+                if dr + dg + db < 0.08 {
+                    return Some(sampled_colors[i]);
+                }
+            }
+        }
+        // Fallback: pick the lowest luminance (dark background for dark windows)
+        sampled_colors.into_iter().min_by(|a, b| {
+            let lum_a = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2];
+            let lum_b = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2];
+            lum_a.partial_cmp(&lum_b).unwrap_or(std::cmp::Ordering::Equal)
+        })
+    }
+}
+
+/// Extracts the background color from the client window surface.
 pub fn sample_window_color(renderer: &mut GlowRenderer, window: &Window) -> Option<[f64; 3]> {
+    // 1. Try SHM buffer extraction (instant CPU read if client uses SHM)
+    if let Some(color) = sample_shm_color(window) {
+        return Some(color);
+    }
+
+    // 2. Try OpenGL texture extraction (for GPU dmabuf / EGL clients like Kitty, Alacritty)
     let toplevel = window.toplevel()?;
     let surface = toplevel.wl_surface();
 
-    // Ensure surface textures are imported into the renderer
     let _ = import_surface_tree(renderer, surface);
 
     let context_id = renderer.context_id();
@@ -51,66 +360,43 @@ pub fn sample_window_color(renderer: &mut GlowRenderer, window: &Window) -> Opti
         return None;
     }
 
-    // Inset from corners to avoid borders, shadows or window icons
-    let sample_x = 30.min(size.w / 2).max(0);
-    let sample_y = if y_inverted {
-        4.min(size.h - 1)
-    } else {
-        (size.h - 1 - 4).max(0)
-    };
+    let w = size.w as f32;
+    let h = size.h as f32;
+
+    let points = [
+        // Point 1: top-left padding (6px, 6px)
+        (
+            (6.0 / w).clamp(0.01, 0.99),
+            if y_inverted {
+                (6.0 / h).clamp(0.01, 0.99)
+            } else {
+                (1.0 - 6.0 / h).clamp(0.01, 0.99)
+            },
+        ),
+        // Point 2: top-center (w / 2, 6px)
+        (
+            0.5,
+            if y_inverted {
+                (6.0 / h).clamp(0.01, 0.99)
+            } else {
+                (1.0 - 6.0 / h).clamp(0.01, 0.99)
+            },
+        ),
+        // Point 3: top-right padding (w - 12px, 6px)
+        (
+            (1.0 - 12.0 / w).clamp(0.01, 0.99),
+            if y_inverted {
+                (6.0 / h).clamp(0.01, 0.99)
+            } else {
+                (1.0 - 6.0 / h).clamp(0.01, 0.99)
+            },
+        ),
+    ];
 
     let glow_tex = std::num::NonZeroU32::new(tex_id).map(glow::NativeTexture)?;
 
     renderer
-        .with_context(|gl| unsafe {
-            let saved_fbo = gl.get_parameter_i32(glow::FRAMEBUFFER_BINDING).max(0) as u32;
-            let saved_fbo = std::num::NonZeroU32::new(saved_fbo).map(glow::NativeFramebuffer);
-
-            let fbo = match gl.create_framebuffer() {
-                Ok(fbo) => fbo,
-                Err(_) => return None,
-            };
-
-            gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
-            gl.framebuffer_texture_2d(
-                glow::FRAMEBUFFER,
-                glow::COLOR_ATTACHMENT0,
-                glow::TEXTURE_2D,
-                Some(glow_tex),
-                0,
-            );
-
-            let color = if gl.check_framebuffer_status(glow::FRAMEBUFFER) == glow::FRAMEBUFFER_COMPLETE
-            {
-                let mut pixel = [0u8; 4];
-                gl.read_pixels(
-                    sample_x,
-                    sample_y,
-                    1,
-                    1,
-                    glow::RGBA,
-                    glow::UNSIGNED_BYTE,
-                    glow::PixelPackData::Slice(Some(&mut pixel)),
-                );
-
-                // Ignore completely transparent pixels (unrendered initial buffer)
-                if pixel[3] > 0 {
-                    Some([
-                        pixel[0] as f64 / 255.0,
-                        pixel[1] as f64 / 255.0,
-                        pixel[2] as f64 / 255.0,
-                    ])
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-
-            gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
-            gl.delete_framebuffer(fbo);
-            color
-        })
+        .with_context(|gl| unsafe { sample_gl_texture(gl, glow_tex, &points) })
         .ok()?
 }
 
@@ -126,8 +412,8 @@ pub fn get_or_sample_color(renderer: &mut GlowRenderer, window: &Window) -> [f64
             .insert_if_missing(|| WindowTitlebarColor(color));
         color
     } else {
-        // Default fallback (Catppuccin Frappé base #232634) until the first non-empty frame is committed
-        [0.137, 0.149, 0.204]
+        // App-aware fallback until the first non-empty frame is committed
+        app_fallback_color(window)
     }
 }
 
@@ -209,6 +495,7 @@ pub fn render(
     scale: Scale<f64>,
     pointer: Point<f64, Logical>,
     should_blur: bool,
+    opacity: f32,
 ) -> Option<CustomRenderElements> {
     let state = window.toplevel()?.current_state();
     if state.decoration_mode != Some(
@@ -265,9 +552,9 @@ pub fn render(
         }
 
         if should_blur {
-            // For blurred windows, apply a subtle tint of the app's sampled background color
-            // so the underlying Dual Kawase frosted glass blur shines through with the app's hue.
-            ctx.set_source_rgba(color[0], color[1], color[2], 0.28);
+            // For blurred windows, match the window body's exact blur opacity so the titlebar
+            // and app body blend seamlessly over the shared frosted glass Dual Kawase blur backdrop.
+            ctx.set_source_rgba(color[0], color[1], color[2], opacity as f64);
         } else {
             // For non-blurred windows, fill with 100% solid/opaque background color matching the app.
             ctx.set_source_rgb(color[0], color[1], color[2]);
