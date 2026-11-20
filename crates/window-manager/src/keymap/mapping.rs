@@ -1,13 +1,13 @@
-//! Combo parsing and evdev key-name mapping for the window manager.
+//! Combo parsing and XKB keysym mapping for configurable shortcuts.
 
-use evdev::Key;
 use serde::{Deserialize, Serialize};
+use smithay::input::keyboard::keysyms;
 
 fn default_true() -> bool {
     true
 }
 
-/// A global keyboard shortcut.
+/// A global keyboard shortcut loaded from the config file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Shortcut {
     pub id: usize,
@@ -27,22 +27,25 @@ pub struct Mods {
     pub win: bool,
 }
 
-/// A shortcut resolved into an evdev key + required modifier set.
+/// A shortcut resolved into a keysym + required modifier set.
 #[derive(Clone, Debug)]
 pub struct ResolvedShortcut {
     pub mods: Mods,
-    pub key: Key,
+    pub keysym: u32,
     pub command: String,
 }
 
 impl ResolvedShortcut {
-    /// Converts a shared `Shortcut` model; `None` when unparseable.
+    /// Converts a shared `Shortcut`; `None` when unparseable.
     pub fn resolve(shortcut: &Shortcut) -> Option<Self> {
+        if !shortcut.enabled {
+            return None;
+        }
         let mods = parse_modifiers(&shortcut.modifiers)?;
-        let key = key_name_to_evdev(&shortcut.key)?;
+        let keysym = key_name_to_keysym(&shortcut.key)?;
         Some(Self {
             mods,
-            key,
+            keysym,
             command: shortcut.command.clone(),
         })
     }
@@ -64,18 +67,19 @@ fn parse_modifiers(spec: &str) -> Option<Mods> {
     Some(mods)
 }
 
-/// Maps a config key name (e.g. `"Tab"`, `"F12"`, `"Print"`) to an evdev key.
-pub fn key_name_to_evdev(name: &str) -> Option<Key> {
+/// Maps a config key name (e.g. `"Tab"`, `"F12"`, `"s"`) to the XKB keysym
+/// produced by `KeysymHandle::raw_latin_sym_or_raw_current_sym`.
+pub fn key_name_to_keysym(name: &str) -> Option<u32> {
     let up = name.to_ascii_uppercase();
 
-    // Single characters → KEY_A..KEY_Z / KEY_0..KEY_9
-    let mut chars = up.chars();
-    if let (Some(c), None) = (chars.next(), chars.next()) {
-        if c.is_ascii_uppercase() {
-            return letter_key(c);
+    // Single characters -> lowercase letters / digits.
+    if up.len() == 1 {
+        let c = up.chars().next()?;
+        if c.is_ascii_alphabetic() {
+            return Some(keysyms::KEY_a + (c as u32 - 'A' as u32));
         }
         if c.is_ascii_digit() {
-            return digit_key(c);
+            return Some(c as u32);
         }
     }
 
@@ -89,106 +93,72 @@ pub fn key_name_to_evdev(name: &str) -> Option<Key> {
     }
 
     Some(match up.as_str() {
-        "TAB" => Key::KEY_TAB,
-        "SPACE" => Key::KEY_SPACE,
-        "ENTER" | "RETURN" => Key::KEY_ENTER,
-        "ESC" | "ESCAPE" => Key::KEY_ESC,
-        "BACKSPACE" | "BKSP" => Key::KEY_BACKSPACE,
-        "DELETE" | "DEL" => Key::KEY_DELETE,
-        "INSERT" => Key::KEY_INSERT,
-        "HOME" => Key::KEY_HOME,
-        "END" => Key::KEY_END,
-        "PAGEUP" | "PRIOR" => Key::KEY_PAGEUP,
-        "PAGEDOWN" | "NEXT" => Key::KEY_PAGEDOWN,
-        "UP" => Key::KEY_UP,
-        "DOWN" => Key::KEY_DOWN,
-        "LEFT" => Key::KEY_LEFT,
-        "RIGHT" => Key::KEY_RIGHT,
-        "PRINT" | "PRINTSCREEN" | "SYSRQ" => Key::KEY_SYSRQ,
-        "PAUSE" => Key::KEY_PAUSE,
-        "CAPSLOCK" => Key::KEY_CAPSLOCK,
-        "MINUS" => Key::KEY_MINUS,
-        "EQUAL" => Key::KEY_EQUAL,
-        "COMMA" => Key::KEY_COMMA,
-        "DOT" | "PERIOD" => Key::KEY_DOT,
-        "SLASH" => Key::KEY_SLASH,
-        "SEMICOLON" => Key::KEY_SEMICOLON,
-        "APOSTROPHE" => Key::KEY_APOSTROPHE,
-        "GRAVE" | "BACKQUOTE" => Key::KEY_GRAVE,
-        "BACKSLASH" => Key::KEY_BACKSLASH,
-        "LEFTBRACKET" | "BRACKETLEFT" => Key::KEY_LEFTBRACE,
-        "RIGHTBRACKET" | "BRACKETRIGHT" => Key::KEY_RIGHTBRACE,
-        "MUTE" => Key::KEY_MUTE,
-        "VOLUMEUP" => Key::KEY_VOLUMEUP,
-        "VOLUMEDOWN" => Key::KEY_VOLUMEDOWN,
-        "PLAYPAUSE" => Key::KEY_PLAYPAUSE,
-        "PREVIOUSSONG" => Key::KEY_PREVIOUSSONG,
-        "NEXTSONG" => Key::KEY_NEXTSONG,
+        "TAB" => keysyms::KEY_Tab,
+        "SPACE" => keysyms::KEY_space,
+        "ENTER" | "RETURN" => keysyms::KEY_Return,
+        "ESC" | "ESCAPE" => keysyms::KEY_Escape,
+        "BACKSPACE" | "BKSP" => keysyms::KEY_BackSpace,
+        "DELETE" | "DEL" => keysyms::KEY_Delete,
+        "INSERT" => keysyms::KEY_Insert,
+        "HOME" => keysyms::KEY_Home,
+        "END" => keysyms::KEY_End,
+        "PAGEUP" | "PRIOR" => keysyms::KEY_Prior,
+        "PAGEDOWN" | "NEXT" => keysyms::KEY_Next,
+        "UP" => keysyms::KEY_Up,
+        "DOWN" => keysyms::KEY_Down,
+        "LEFT" => keysyms::KEY_Left,
+        "RIGHT" => keysyms::KEY_Right,
+        "MINUS" => keysyms::KEY_minus,
+        "EQUAL" => keysyms::KEY_equal,
+        "COMMA" => keysyms::KEY_comma,
+        "DOT" | "PERIOD" => keysyms::KEY_period,
+        "SLASH" => keysyms::KEY_slash,
+        "SEMICOLON" => keysyms::KEY_semicolon,
+        "APOSTROPHE" => keysyms::KEY_apostrophe,
+        "GRAVE" | "BACKQUOTE" => keysyms::KEY_grave,
+        "BACKSLASH" => keysyms::KEY_backslash,
+        "LEFTBRACKET" | "BRACKETLEFT" => keysyms::KEY_bracketleft,
+        "RIGHTBRACKET" | "BRACKETRIGHT" => keysyms::KEY_bracketright,
+        "PRINT" | "PRINTSCREEN" => keysyms::KEY_Print,
+        "PAUSE" => keysyms::KEY_Pause,
+        "MUTE" => keysyms::KEY_XF86AudioMute,
+        "VOLUMEUP" => keysyms::KEY_XF86AudioRaiseVolume,
+        "VOLUMEDOWN" => keysyms::KEY_XF86AudioLowerVolume,
+        "PLAYPAUSE" => keysyms::KEY_XF86AudioPlay,
+        "PREVIOUSSONG" => keysyms::KEY_XF86AudioPrev,
+        "NEXTSONG" => keysyms::KEY_XF86AudioNext,
         _ => return None,
     })
 }
 
-fn letter_key(c: char) -> Option<Key> {
-    Some(match c {
-        'A' => Key::KEY_A,
-        'B' => Key::KEY_B,
-        'C' => Key::KEY_C,
-        'D' => Key::KEY_D,
-        'E' => Key::KEY_E,
-        'F' => Key::KEY_F,
-        'G' => Key::KEY_G,
-        'H' => Key::KEY_H,
-        'I' => Key::KEY_I,
-        'J' => Key::KEY_J,
-        'K' => Key::KEY_K,
-        'L' => Key::KEY_L,
-        'M' => Key::KEY_M,
-        'N' => Key::KEY_N,
-        'O' => Key::KEY_O,
-        'P' => Key::KEY_P,
-        'Q' => Key::KEY_Q,
-        'R' => Key::KEY_R,
-        'S' => Key::KEY_S,
-        'T' => Key::KEY_T,
-        'U' => Key::KEY_U,
-        'V' => Key::KEY_V,
-        'W' => Key::KEY_W,
-        'X' => Key::KEY_X,
-        'Y' => Key::KEY_Y,
-        'Z' => Key::KEY_Z,
-        _ => return None,
-    })
+fn f_key(n: u8) -> u32 {
+    keysyms::KEY_F1 + (n as u32 - 1)
 }
 
-fn digit_key(c: char) -> Option<Key> {
-    Some(match c {
-        '0' => Key::KEY_0,
-        '1' => Key::KEY_1,
-        '2' => Key::KEY_2,
-        '3' => Key::KEY_3,
-        '4' => Key::KEY_4,
-        '5' => Key::KEY_5,
-        '6' => Key::KEY_6,
-        '7' => Key::KEY_7,
-        '8' => Key::KEY_8,
-        '9' => Key::KEY_9,
-        _ => return None,
-    })
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-fn f_key(n: u8) -> Key {
-    match n {
-        1 => Key::KEY_F1,
-        2 => Key::KEY_F2,
-        3 => Key::KEY_F3,
-        4 => Key::KEY_F4,
-        5 => Key::KEY_F5,
-        6 => Key::KEY_F6,
-        7 => Key::KEY_F7,
-        8 => Key::KEY_F8,
-        9 => Key::KEY_F9,
-        10 => Key::KEY_F10,
-        11 => Key::KEY_F11,
-        _ => Key::KEY_F12,
+    #[test]
+    fn maps_letters_to_lowercase_keysyms() {
+        assert_eq!(key_name_to_keysym("s"), Some(keysyms::KEY_s));
+        assert_eq!(key_name_to_keysym("A"), Some(keysyms::KEY_a));
+        assert_eq!(key_name_to_keysym("f12"), Some(keysyms::KEY_F12));
+        assert_eq!(key_name_to_keysym("Tab"), Some(keysyms::KEY_Tab));
+        assert_eq!(key_name_to_keysym("nope"), None);
+    }
+
+    #[test]
+    fn resolves_modifiers_and_key() {
+        let shortcut = Shortcut {
+            id: 1,
+            modifiers: "W-S".into(),
+            key: "s".into(),
+            command: "echo hi".into(),
+            enabled: true,
+        };
+        let resolved = ResolvedShortcut::resolve(&shortcut).unwrap();
+        assert_eq!(resolved.keysym, keysyms::KEY_s);
+        assert_eq!(resolved.mods, Mods { shift: true, win: true, ..Mods::default() });
     }
 }

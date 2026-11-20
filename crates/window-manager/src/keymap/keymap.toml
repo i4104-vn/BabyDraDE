@@ -1,7 +1,20 @@
 # BabyDraDE global keyboard shortcuts.
 #
-# Modifier names: W = Super/Windows, A = Alt, C = Ctrl, S = Shift.
-# Add custom shortcuts for external commands under `[shortcuts]`.
-# Super+Shift+S (screenshot) is fixed in the compositor and is not configured here.
+# Format:  "<MODS>-<KEY>" = "<command>"
+#   MODS: W = Super/Windows, A = Alt, C = Ctrl, S = Shift.
+#         Combine them with '-', e.g. "W-S" is Super+Shift.
+#   KEY:  a-z, 0-9, F1-F12, Tab, Space, Enter, Escape, arrows, media keys, ...
+#
+# Examples:
+#   "W-E"      = "nautilus"
+#   "W-S-e"    = "nautilus --new-window"
+#   "C-A-l"    = "lock"
+#
+# At least one modifier is required. Changes reload within 2 seconds.
+#
+# Fixed compositor shortcuts cannot be remapped here:
+#   Super+Q / Alt+F4 (close), Super+T / Super+Return (terminal),
+#   Super+L (lock), Alt+Tab, Super+M/H/F, Super+Tab,
+#   Super+Shift+S (screenshot), Super+Space (launcher).
 
 [shortcuts]

@@ -41,11 +41,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     }
     services::config::ensure_babydra_dirs();
 
-    std::thread::Builder::new()
-        .name("babydra-keymap".to_string())
-        .spawn(keymap::run)
-        .map_err(|err| format!("failed to start keymap daemon: {err}"))?;
-
     if std::env::var_os("WAYLAND_DISPLAY").is_none()
         && std::env::var_os("WAYLAND_SOCKET").is_none()
         && std::env::var_os("DISPLAY").is_none()
