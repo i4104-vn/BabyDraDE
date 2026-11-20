@@ -107,10 +107,39 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn init_tracing() {
+    use tracing_subscriber::fmt::writer::MakeWriterExt;
+
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
-    let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
+
+    // Keep the TTY output but also persist logs so crashes on a bare console
+    // can be inspected afterwards.
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+    let log_dir = std::path::PathBuf::from(home).join(".babydra").join("logs");
+    let file_writer = std::fs::create_dir_all(&log_dir)
+        .ok()
+        .and_then(|_| {
+            std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log_dir.join("window-manager.log"))
+                .ok()
+        });
+
+    let subscriber = tracing_subscriber::fmt().with_env_filter(filter);
+    match file_writer {
+        Some(file) => {
+            let _ = subscriber.with_writer(std::io::stdout.and(file)).try_init();
+        }
+        None => {
+            let _ = subscriber.try_init();
+        }
+    }
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    init_tracing();
 
     // The screenshot editor needs a GTK main context of its own. Running it in
     // a thread of the compositor process is impossible because the default
