@@ -24,10 +24,6 @@ pub use crate::enums::constants::{
 };
 pub use crate::enums::Action;
 
-/// Cached background color sampled once per window and reused every frame.
-#[derive(Clone, Copy, Debug)]
-pub struct WindowTitlebarColor(pub [f64; 3]);
-
 /// Return the representative color from pixels read from the client surface.
 ///
 /// Grouping near-identical pixels prevents a glyph, icon, or antialiased edge
@@ -141,25 +137,18 @@ fn resolve_color(window: &Window) -> Option<[f64; 3]> {
     sample_dmabuf_color(window).or_else(|| sample_shm_color(window))
 }
 
-/// Get or lazily compute (once) the titlebar background color for this window.
+/// Get the titlebar color from the client's currently committed buffer.
 ///
-/// Automatically caches the resolved color in the window's user data so that
-/// resolution is performed exactly once per window lifetime. A fallback is not
-/// cached, so the first committed client buffer always replaces it.
+/// A maximized client commonly commits a differently sized buffer after the
+/// configure event. Sampling on every titlebar render prevents that new buffer
+/// from inheriting a color captured while the window was floating.
 pub fn get_or_sample_color(window: &Window) -> [f64; 3] {
-    if let Some(cached) = window.user_data().get::<WindowTitlebarColor>() {
-        return cached.0;
-    }
-
     if let Some(color) = resolve_color(window) {
-        window
-            .user_data()
-            .insert_if_missing(|| WindowTitlebarColor(color));
         return color;
     }
 
-    // There is no application buffer yet. This is intentionally temporary and
-    // never replaces a color sampled from the application.
+    // The client has not committed a readable buffer yet. This temporary value
+    // is not retained, so it is replaced as soon as one becomes available.
     [0.0, 0.0, 0.0]
 }
 
@@ -472,22 +461,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_window_titlebar_color_cache() {
-        let user_data = smithay::utils::user_data::UserDataMap::default();
-        assert!(user_data.get::<WindowTitlebarColor>().is_none());
-
-        user_data.insert_if_missing(|| WindowTitlebarColor([0.2, 0.3, 0.4]));
-        assert_eq!(
-            user_data.get::<WindowTitlebarColor>().map(|c| c.0),
-            Some([0.2, 0.3, 0.4])
-        );
-
-        // Subsequent insertions are ignored (sample only once)
-        user_data.insert_if_missing(|| WindowTitlebarColor([0.9, 0.9, 0.9]));
-        assert_eq!(
-            user_data.get::<WindowTitlebarColor>().map(|c| c.0),
-            Some([0.2, 0.3, 0.4])
-        );
+    fn test_pick_dominant_color_preserves_light_theme() {
+        let samples = [
+            [0.95, 0.95, 0.95],
+            [0.96, 0.96, 0.96],
+            [0.94, 0.94, 0.94],
+            [0.1, 0.1, 0.1],
+        ];
+        assert!(pick_dominant_color(&samples).unwrap()[0] > 0.9);
     }
 
     #[test]
