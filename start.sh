@@ -3,6 +3,11 @@ set -eu
 
 cd "$(dirname "$0")"
 
+# Ensure media apps (MPRIS) are visible to playerctl inside the session.
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "/run/user/$(id -u)/bus" ]; then
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+fi
+
 # ------------------------------------------------------------------------------
 # 0. Parse arguments & options
 # ------------------------------------------------------------------------------
