@@ -2,7 +2,7 @@ pub mod indicators;
 pub mod popover;
 pub mod render;
 
-use crate::topbar::right::control_center::{create_cc_window, WindowSlot};
+use crate::right::control_center::{create_cc_window, WindowSlot};
 use gtk4::prelude::*;
 use popover::{setup_status_popover, StatusPopoverContext};
 

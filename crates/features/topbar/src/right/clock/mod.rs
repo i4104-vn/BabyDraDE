@@ -1,7 +1,7 @@
 pub mod calendar;
 mod render;
 
-use crate::topbar::right::control_center::WindowSlot;
+use crate::right::control_center::WindowSlot;
 use gtk4::glib;
 use gtk4::prelude::*;
 

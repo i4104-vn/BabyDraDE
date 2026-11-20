@@ -2,7 +2,7 @@
 
 pub mod render;
 
-use crate::topbar::right::control_center::setup_click_outside_dismiss;
+use crate::right::control_center::setup_click_outside_dismiss;
 use chrono::Local;
 use gtk4::prelude::*;
 use services::i18n::trans;

@@ -2,13 +2,22 @@
 resolver = "2"
 members = [
     "crates/window-manager",
-    "crates/widgets",
+    "crates/features/desktop",
+    "crates/features/topbar",
+    "crates/features/panel",
     "libs/animation",
     "libs/common",
     "libs/services",
     "libs/ui-kit",
 ]
-default-members = ["crates/window-manager", "crates/widgets", "libs/animation", "libs/common"]
+default-members = [
+    "crates/window-manager",
+    "crates/features/desktop",
+    "crates/features/topbar",
+    "crates/features/panel",
+    "libs/animation",
+    "libs/common",
+]
 
 [workspace.package]
 version = "0.1.0"

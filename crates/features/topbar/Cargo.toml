@@ -1,25 +1,10 @@
 [package]
-name = "widgets"
+name = "babydra-topbar"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-
-[lib]
-name = "widgets"
-path = "src/lib.rs"
-
-[[bin]]
-name = "babydra-desktop"
-path = "src/bin/babydra-desktop.rs"
-
-[[bin]]
-name = "babydra-topbar"
-path = "src/bin/babydra-topbar.rs"
-
-[[bin]]
-name = "babydra-panel"
-path = "src/bin/babydra-panel.rs"
+description = "BabyDraDE top bar / panel layer-shell feature"
 
 [dependencies]
 gtk4 = { version = "0.11" }
@@ -34,8 +19,7 @@ chrono = "0.4"
 libc = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.2"
-services = { path = "../../libs/services" }
-ui-kit = { path = "../../libs/ui-kit" }
-common = { path = "../../libs/common" }
+services = { path = "../../../libs/services" }
+ui-kit = { path = "../../../libs/ui-kit" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
