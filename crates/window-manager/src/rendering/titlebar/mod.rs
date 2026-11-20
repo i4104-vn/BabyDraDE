@@ -99,6 +99,27 @@ fn read_alacritty_config() -> Option<[f64; 3]> {
     None
 }
 
+/// Read `background` from foot config (INI).
+fn read_foot_config() -> Option<[f64; 3]> {
+    let home = std::env::var("HOME").ok()?;
+    let path = format!("{home}/.config/foot/foot.ini");
+    let content = std::fs::read_to_string(&path).ok()?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('#') || trimmed.starts_with(';') {
+            continue;
+        }
+        if let Some(pos) = trimmed.find('=') {
+            let key = trimmed[..pos].trim().to_lowercase();
+            if key == "background" {
+                let val = trimmed[pos + 1..].trim();
+                return parse_hex(val);
+            }
+        }
+    }
+    None
+}
+
 /// Get the app_id string of the window, lowercased.
 fn window_app_id(window: &Window) -> Option<String> {
     let toplevel = window.toplevel()?;
@@ -120,6 +141,9 @@ fn color_from_app_config(window: &Window) -> Option<[f64; 3]> {
     if app_id.contains("alacritty") {
         return read_alacritty_config();
     }
+    if app_id.contains("foot") {
+        return read_foot_config();
+    }
     None
 }
 
@@ -127,22 +151,152 @@ fn color_from_app_config(window: &Window) -> Option<[f64; 3]> {
 fn app_fallback_color(window: &Window) -> [f64; 3] {
     let app_id = window_app_id(window).unwrap_or_default();
     if app_id.contains("kitty") {
-        // BabyDra / Material Dark: #14141c
+        // Material Dark / Kitty: #14141c
         [0.078, 0.078, 0.110]
-    } else if app_id.contains("alacritty") || app_id.contains("foot") || app_id.contains("wezterm") || app_id.contains("terminal") {
-        // Generic dark terminal: #181820
+    } else if app_id.contains("alacritty")
+        || app_id.contains("foot")
+        || app_id.contains("wezterm")
+        || app_id.contains("terminal")
+    {
+        // Dark terminal: #181820
         [0.094, 0.094, 0.125]
-    } else if app_id.contains("code") {
-        // VS Code: #1e1e1e
+    } else if app_id.contains("code")
+        || app_id.contains("codium")
+        || app_id.contains("antigravity")
+        || app_id.contains("codex")
+    {
+        // VS Code / Antigravity IDE / Codex: #1e1e1e
         [0.118, 0.118, 0.118]
+    } else if app_id.contains("explore")
+        || app_id.contains("babydra-explore")
+        || app_id.contains("filedialog")
+    {
+        // BabyDra Explore: #121214
+        [0.071, 0.071, 0.078]
+    } else if app_id.contains("notepad")
+        || app_id.contains("preview")
+        || app_id.contains("viewer")
+    {
+        // BabyDra Notepad / Preview: #0e0e12
+        [0.055, 0.055, 0.071]
+    } else if app_id.contains("settings") || app_id.contains("babydra-settings") {
+        // BabyDra Settings: #18181b
+        [0.094, 0.094, 0.106]
+    } else if app_id.contains("nautilus")
+        || app_id.contains("thunar")
+        || app_id.contains("pcmanfm")
+    {
+        // Modern file manager dark: #242424
+        [0.141, 0.141, 0.141]
+    } else if app_id.contains("opera")
+        || app_id.contains("chromium")
+        || app_id.contains("chrome")
+    {
+        // Chromium / Opera dark: #202124
+        [0.125, 0.129, 0.141]
+    } else if app_id.contains("firefox") {
+        // Firefox dark: #2b2a33
+        [0.169, 0.165, 0.200]
     } else {
-        // Neutral dark: #12121a
-        [0.071, 0.071, 0.102]
+        // Neutral dark: #14141c
+        [0.078, 0.078, 0.110]
     }
 }
 
-/// Read one ARGB8888/XRGB8888 pixel from an SHM-backed Wayland surface.
-/// Returns `None` for GPU (dmabuf/EGL) clients which never use SHM.
+/// Cluster similar samples and pick the dominant (background) color.
+fn pick_dominant_color(samples: &[[f64; 3]]) -> Option<[f64; 3]> {
+    if samples.is_empty() {
+        return None;
+    }
+    let mut best_color = samples[0];
+    let mut best_count = 0;
+
+    for c1 in samples {
+        let count = samples
+            .iter()
+            .filter(|c2| {
+                let dr = c1[0] - c2[0];
+                let dg = c1[1] - c2[1];
+                let db = c1[2] - c2[2];
+                (dr * dr + dg * dg + db * db) < 0.008
+            })
+            .count();
+        if count > best_count {
+            best_count = count;
+            best_color = *c1;
+        }
+    }
+    Some(best_color)
+}
+
+/// Read candidate pixels from a dmabuf-backed Wayland surface.
+fn sample_dmabuf_color(window: &Window) -> Option<[f64; 3]> {
+    let toplevel = window.toplevel()?;
+    let surface = toplevel.wl_surface();
+    with_states(surface, |states| {
+        let ud = states
+            .data_map
+            .get::<smithay::backend::renderer::utils::RendererSurfaceStateUserData>()?;
+        let state = ud.lock().ok()?;
+        let buffer = state.buffer()?;
+        let dmabuf = smithay::wayland::dmabuf::get_dmabuf(buffer).ok()?;
+
+        use smithay::backend::allocator::Buffer as _;
+        let size = dmabuf.size();
+        if size.w <= 0 || size.h <= 0 {
+            return None;
+        }
+        let stride = dmabuf.strides().next()? as usize;
+        let format = dmabuf.format();
+
+        let mapping = dmabuf
+            .map_plane(0, smithay::backend::allocator::dmabuf::DmabufMappingMode::READ)
+            .ok()?;
+        let ptr = mapping.ptr() as *const u8;
+        let len = mapping.length();
+
+        let w = size.w;
+        let h = size.h;
+        let candidates = [
+            (8.min(w / 4), 8.min(h / 4)),
+            (w / 2, 8.min(h / 4)),
+            (w - 8.min(w / 4), 8.min(h / 4)),
+            (w / 2, h / 2),
+            (8.min(w / 4), h / 2),
+        ];
+
+        let mut samples = Vec::new();
+        for (sx, sy) in candidates {
+            let offset = sy as usize * stride + sx as usize * 4;
+            if offset + 4 <= len {
+                let slice = unsafe { std::slice::from_raw_parts(ptr.add(offset), 4) };
+                let (r, g, b) = match format.code {
+                    smithay::backend::allocator::Fourcc::Argb8888
+                    | smithay::backend::allocator::Fourcc::Xrgb8888 => (
+                        slice[2] as f64 / 255.0,
+                        slice[1] as f64 / 255.0,
+                        slice[0] as f64 / 255.0,
+                    ),
+                    smithay::backend::allocator::Fourcc::Abgr8888
+                    | smithay::backend::allocator::Fourcc::Xbgr8888 => (
+                        slice[0] as f64 / 255.0,
+                        slice[1] as f64 / 255.0,
+                        slice[2] as f64 / 255.0,
+                    ),
+                    _ => (
+                        slice[0] as f64 / 255.0,
+                        slice[1] as f64 / 255.0,
+                        slice[2] as f64 / 255.0,
+                    ),
+                };
+                samples.push([r, g, b]);
+            }
+        }
+        pick_dominant_color(&samples)
+    })
+}
+
+/// Read candidate pixels from an SHM-backed Wayland surface.
 fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
     let toplevel = window.toplevel()?;
     with_states(toplevel.wl_surface(), |states| {
@@ -155,11 +309,9 @@ fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
             if data.width <= 0 || data.height <= 0 || len < 4 {
                 return None;
             }
-            // Sample 5 inset points and pick the most-common (background) color
             let w = data.width;
             let h = data.height;
             let stride = data.stride as usize;
-            // Inset 8px from edges to skip window borders/shadows
             let candidates = [
                 (8.min(w / 4), 8.min(h / 4)),
                 (w / 2, 8.min(h / 4)),
@@ -167,7 +319,7 @@ fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
                 (w / 2, h / 2),
                 (8.min(w / 4), h / 2),
             ];
-            let mut colors: Vec<[f64; 3]> = candidates
+            let samples: Vec<[f64; 3]> = candidates
                 .iter()
                 .filter_map(|&(sx, sy)| {
                     let off = sy as usize * stride + sx as usize * 4;
@@ -175,7 +327,6 @@ fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
                         return None;
                     }
                     let s = unsafe { std::slice::from_raw_parts(ptr.add(off), 4) };
-                    // ARGB8888 little-endian: B G R A
                     let a = s[3];
                     if a < 10 {
                         return None;
@@ -183,57 +334,61 @@ fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
                     Some([s[2] as f64 / 255.0, s[1] as f64 / 255.0, s[0] as f64 / 255.0])
                 })
                 .collect();
-            if colors.is_empty() {
-                return None;
-            }
-            // Return the darkest sample — most likely the background, not text
-            colors.sort_by(|a, b| {
-                let la = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2];
-                let lb = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2];
-                la.partial_cmp(&lb).unwrap_or(std::cmp::Ordering::Equal)
-            });
-            Some(colors[0])
+            pick_dominant_color(&samples)
         })
         .ok()?
     })
 }
 
 /// Resolve the best-match background color for a window.
-/// Priority: (1) app config file → (2) SHM pixel readback → (3) hardcoded app fallback.
-fn resolve_color(window: &Window) -> [f64; 3] {
-    // Priority 1: read the app's own config (most accurate, works for GPU clients)
-    if let Some(c) = color_from_app_config(window) {
-        return c;
+/// Priority:
+/// (1) direct dmabuf pixel sampling (actual GPU rendered frame)
+/// (2) direct SHM pixel sampling (actual CPU rendered frame)
+/// (3) app config file (kitty, alacritty, foot)
+/// (4) intelligent per-app fallback (when app_id is known)
+fn resolve_color(window: &Window) -> Option<[f64; 3]> {
+    // Priority 1: sample actual rendered pixels directly from dmabuf GPU buffer
+    if let Some(c) = sample_dmabuf_color(window) {
+        return Some(c);
     }
 
-    // Priority 2: direct SHM buffer pixel (works for CPU-rendered clients)
+    // Priority 2: sample actual rendered pixels directly from SHM CPU buffer
     if let Some(c) = sample_shm_color(window) {
-        // Validate: reject excessively bright samples (likely hit a text pixel)
-        let lum = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
-        if lum < 0.75 {
-            return c;
-        }
+        return Some(c);
     }
 
-    // Priority 3: hardcoded per-app fallback
-    app_fallback_color(window)
+    // Priority 3: read app's own configuration file
+    if let Some(c) = color_from_app_config(window) {
+        return Some(c);
+    }
+
+    // Priority 4: if window app_id is already available, use app-specific fallback
+    if window_app_id(window).is_some() {
+        return Some(app_fallback_color(window));
+    }
+
+    // Window buffer is not yet committed and app_id is not yet set
+    None
 }
 
 /// Get or lazily compute (once) the titlebar background color for this window.
 ///
-/// Automatically caches the resolved color in the window's user data so that
-/// resolution is performed exactly once per window lifetime, avoiding repeated
-/// file I/O, buffer sampling, or color jitter during dragging.
+/// Automatically caches the resolved color in the window's user data as soon as
+/// the client commits its first buffer or publishes its app_id.
 pub fn get_or_sample_color(window: &Window) -> [f64; 3] {
     if let Some(cached) = window.user_data().get::<WindowTitlebarColor>() {
         return cached.0;
     }
 
-    let color = resolve_color(window);
-    window
-        .user_data()
-        .insert_if_missing(|| WindowTitlebarColor(color));
-    color
+    if let Some(color) = resolve_color(window) {
+        window
+            .user_data()
+            .insert_if_missing(|| WindowTitlebarColor(color));
+        return color;
+    }
+
+    // Temporary fallback on early frame 0 before buffer commit; not cached yet
+    app_fallback_color(window)
 }
 
 // Keep old public name as an alias for external callers / tests
