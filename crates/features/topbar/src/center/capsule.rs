@@ -36,7 +36,8 @@ impl IslandCapsule {
 
         let tick_engine = engine.clone();
         glib::timeout_add_local(Duration::from_millis(150), move || {
-            tick_engine.borrow_mut().tick();
+            let rc = tick_engine.clone();
+            rc.borrow_mut().tick(&rc);
             glib::ControlFlow::Continue
         });
 

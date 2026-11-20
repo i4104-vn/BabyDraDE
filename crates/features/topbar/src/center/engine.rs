@@ -20,8 +20,9 @@ pub const PLAYER_CAPSULE_WIDTH: i32 = 200;
 pub const CAPSULE_HEIGHT: i32 = 30;
 
 #[derive(Default)]
-struct ViewState {
+pub(crate) struct ViewState {
     requested: Cell<bool>,
+    pub(crate) active: Cell<bool>,
     override_active: Cell<bool>,
     auto_hide_at: RefCell<Option<Instant>>,
     release_at: RefCell<Option<Instant>>,
@@ -188,23 +189,23 @@ pub trait IslandFeature {
     fn on_click(&mut self) {}
 }
 
-struct ViewRecord {
-    feature: Rc<RefCell<dyn IslandFeature>>,
-    widget: gtk4::Widget,
-    container: gtk4::Box,
-    state: Rc<ViewState>,
+pub(crate) struct ViewRecord {
+    pub(crate) feature: Rc<RefCell<dyn IslandFeature>>,
+    pub(crate) container: gtk4::Box,
+    pub(crate) state: Rc<ViewState>,
 }
 
 /// Owns the island widget tree and drives arbitration.
 pub struct IslandEngine {
-    root: gtk4::Box,
-    capsule: gtk4::Box,
+    pub(crate) root: gtk4::Box,
+    pub(crate) capsule: gtk4::Box,
     content: gtk4::Box,
     left_bracket: gtk4::Label,
     right_bracket: gtk4::Label,
-    views: Vec<ViewRecord>,
-    displayed: Option<usize>,
-    hovered: Cell<bool>,
+    pub(crate) views: Vec<ViewRecord>,
+    pub(crate) displayed: Option<usize>,
+    pub(crate) hovered: Cell<bool>,
+    pub(crate) animating: Cell<bool>,
 }
 
 impl IslandEngine {
@@ -270,6 +271,7 @@ impl IslandEngine {
             views: Vec::new(),
             displayed: None,
             hovered: hover,
+            animating: Cell::new(false),
         }
     }
 
@@ -303,7 +305,6 @@ impl IslandEngine {
 
         self.views.push(ViewRecord {
             feature: Rc::new(RefCell::new(feature)),
-            widget,
             container,
             state,
         });
@@ -320,7 +321,7 @@ impl IslandEngine {
     }
 
     /// One arbitration tick. Called every 150 ms by the capsule.
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self, engine_rc: &Rc<RefCell<IslandEngine>>) {
         let now = Instant::now();
         let hovered = self.hovered.get();
 
@@ -365,38 +366,11 @@ impl IslandEngine {
             return;
         }
 
-        if let Some(old) = self.displayed {
-            if let Some(view) = self.views.get(old) {
-                view.container.set_visible(false);
-                view.widget.set_visible(false);
-                if let Ok(mut feature) = view.feature.try_borrow_mut() {
-                    feature.on_hide();
-                }
-            }
+        // Cancel a pending transition if the target changed mid-animation.
+        if winner != self.displayed {
+            self.animating.set(false);
         }
-
-        self.capsule.remove_css_class("active-music");
-        self.capsule.remove_css_class("notification-mode");
-        self.capsule.remove_css_class("recording-notch");
-
-        if let Some(idx) = winner {
-            let view = &self.views[idx];
-            view.container.set_visible(true);
-            view.widget.set_visible(true);
-            if let Some(class) = view.feature.borrow().capsule_class() {
-                self.capsule.add_css_class(class);
-            }
-            let (w, h) = view.feature.borrow().size();
-            self.capsule.set_size_request(w, h);
-            self.capsule.set_visible(true);
-            if let Ok(mut feature) = view.feature.try_borrow_mut() {
-                feature.on_show();
-            }
-        } else {
-            self.capsule.set_visible(false);
-        }
-
-        self.displayed = winner;
+        super::ui::transition::apply_transition(self, winner, engine_rc);
     }
 
     fn select_winner(&self, now: Instant) -> Option<usize> {

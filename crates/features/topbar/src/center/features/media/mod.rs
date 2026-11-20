@@ -186,7 +186,7 @@ impl MediaFeature {
 
             if meta.len_secs > 0.0 {
                 popover
-                    .progress
+                    .progress_bar
                     .set_fraction((meta.pos_secs / meta.len_secs).clamp(0.0, 1.0));
                 popover.position_lbl.set_text(&format_time(meta.pos_secs));
                 popover.length_lbl.set_text(&format_time(meta.len_secs));
@@ -196,7 +196,7 @@ impl MediaFeature {
         if let Some(popover) = self.popover.borrow().as_ref() {
             if self.play_state.get() != Some(meta.playing) {
                 let icon = if meta.playing { "pause" } else { "play" };
-                ui_kit::icons::set_image_from_icon(&popover.play_icon, icon, 22);
+                ui_kit::icons::set_image_from_icon(&popover.play_btn_icon, icon, 22);
                 self.play_state.set(Some(meta.playing));
             }
         }

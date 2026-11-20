@@ -7,3 +7,5 @@ authors.workspace = true
 description = "Frame-rate independent animation primitives shared by BabyDraDE UI and compositor"
 
 [dependencies]
+gtk4 = { version = "0.11" }
+glib = "0.22"
