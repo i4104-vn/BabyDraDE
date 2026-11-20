@@ -208,6 +208,7 @@ pub fn render(
     location: Point<i32, Logical>,
     scale: Scale<f64>,
     pointer: Point<f64, Logical>,
+    should_blur: bool,
 ) -> Option<CustomRenderElements> {
     let state = window.toplevel()?.current_state();
     if state.decoration_mode != Some(
@@ -262,7 +263,15 @@ pub fn render(
         } else {
             ctx.rectangle(0.0, 0.0, w_local, h_local);
         }
-        ctx.set_source_rgba(color[0], color[1], color[2], 0.82);
+
+        if should_blur {
+            // For blurred windows, apply a subtle tint of the app's sampled background color
+            // so the underlying Dual Kawase frosted glass blur shines through with the app's hue.
+            ctx.set_source_rgba(color[0], color[1], color[2], 0.28);
+        } else {
+            // For non-blurred windows, fill with 100% solid/opaque background color matching the app.
+            ctx.set_source_rgb(color[0], color[1], color[2]);
+        }
         ctx.fill().ok()?;
 
         // Subtle 1px bottom separator adapting to dark/light background
