@@ -579,9 +579,9 @@ fi
 
 # Clean up any lingering widget or compositor processes from previous sessions
 echo "[*] Ensuring clean state (terminating any lingering previous session processes)..."
-    pkill -TERM -f "babydra-(window-manager|desktop|topbar|screenshot|keymap)" 2>/dev/null || true
+    pkill -TERM -f "babydra-(window-manager|desktop|topbar|launcher|screenshot|keymap)" 2>/dev/null || true
 pkill -TERM -x window-manager 2>/dev/null || true
-    pkill -9 -f "babydra-(window-manager|desktop|topbar|screenshot|keymap)" 2>/dev/null || true
+    pkill -9 -f "babydra-(window-manager|desktop|topbar|launcher|screenshot|keymap)" 2>/dev/null || true
 pkill -9 -x window-manager 2>/dev/null || true
 
 # If no active compositor is running, clean up stale wayland socket & lock files to avoid socket conflicts
@@ -634,6 +634,13 @@ fi
 # ------------------------------------------------------------------------------
 echo "[*] Building BabyDraDE binaries (compositor & features)..."
 cargo build --workspace
+
+# Make sure the quick launcher is available even if the workspace build was
+# skipped or only partially completed — the install loop below picks it up.
+if [ ! -x "target/debug/babydra-launcher" ]; then
+    echo "[*] Building babydra-launcher..."
+    cargo build -p babydra-launcher || true
+fi
 
 # ------------------------------------------------------------------------------
 # 8. Install BabyDraDE binaries into system directories
@@ -696,6 +703,8 @@ for bin in "${BINARIES[@]}"; do
     fi
 done
 
+echo "[*] Quick launcher installed at: $(find_babydra_bin "babydra-launcher")"
+
 # Backwards compatibility: create symlink for window-manager -> babydra-window-manager
 if [ -n "${USER_BIN_DIR}" ] && [ -x "${USER_BIN_DIR}/babydra-window-manager" ]; then
     ln -sf "babydra-window-manager" "${USER_BIN_DIR}/window-manager" 2>/dev/null || true
@@ -720,9 +729,9 @@ echo "[*] Selected BabyDraDE compositor binary: $COMPOSITOR_BIN"
 cleanup_session() {
     trap - EXIT INT TERM
     echo "[*] Cleaning up BabyDraDE features and session processes..."
-    pkill -TERM -f "babydra-(desktop|topbar|panel|screenshot|keymap)" 2>/dev/null || true
+    pkill -TERM -f "babydra-(desktop|topbar|panel|launcher|screenshot|keymap)" 2>/dev/null || true
     sleep 0.2
-    pkill -9 -f "babydra-(desktop|topbar|panel|screenshot|keymap)" 2>/dev/null || true
+    pkill -9 -f "babydra-(desktop|topbar|panel|launcher|screenshot|keymap)" 2>/dev/null || true
 }
 
 trap cleanup_session EXIT INT TERM
