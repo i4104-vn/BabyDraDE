@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use cairo::{Format, ImageSurface};
+use cairo::{Context, Format, ImageSurface, Matrix};
 use services::theme::DesktopTheme;
 use smithay::{
     backend::{
@@ -18,7 +18,7 @@ use smithay::{
         },
     },
     output::Output,
-    utils::{Buffer as BufferCoord, Size},
+    utils::{Buffer as BufferCoord, Size, Transform},
 };
 
 /// Shared flag set by the keymap thread and consumed by the render loops.
@@ -37,7 +37,7 @@ pub fn get_screenshot_path() -> PathBuf {
     screenshots_dir.join(format!("Screenshot_{}.png", datetime))
 }
 
-/// Requests a screenshot. Safe to call from any thread (the keymap daemon).
+/// Requests a screenshot. Safe to call from any thread.
 pub fn trigger() {
     CAPTURE_REQUESTED.store(true, Ordering::SeqCst);
 }
@@ -56,16 +56,15 @@ where
     tracing::info!("[screenshot] capturing screen");
 
     let mode = output.current_mode()?;
-    tracing::debug!("[screenshot] mode size: {:?}", mode.size);
-    let size = output.current_transform().transform_size(mode.size);
-    tracing::debug!("[screenshot] transformed size: {:?}", size);
-    if size.w <= 0 || size.h <= 0 {
-        tracing::warn!("[screenshot] invalid size");
-        return None;
-    }
-    let buffer_size = Size::<i32, BufferCoord>::from((size.w, size.h));
+    let transform = output.current_transform();
 
-    // Render the exact same element list the backend draws into an offscreen target.
+    // OutputDamageTracker renders into the *raw* mode size and applies the
+    // inverse output transform itself. The offscreen target must use that same
+    // size, otherwise a rotated output yields a sideways, partially blank PNG.
+    let raw = mode.size;
+    tracing::debug!("[screenshot] raw mode size {:?}, transform {:?}", raw, transform);
+    let buffer_size = Size::<i32, BufferCoord>::from((raw.w, raw.h));
+
     let mut target: GlesRenderbuffer = match renderer.create_buffer(Fourcc::Argb8888, buffer_size) {
         Ok(target) => target,
         Err(e) => {
@@ -73,7 +72,6 @@ where
             return None;
         }
     };
-    tracing::debug!("[screenshot] offscreen buffer created");
     let mut framebuffer = match renderer.bind(&mut target) {
         Ok(fb) => fb,
         Err(e) => {
@@ -81,7 +79,6 @@ where
             return None;
         }
     };
-    tracing::debug!("[screenshot] offscreen target bound");
     let clear_color = DesktopTheme::default().background_color;
     if let Err(e) = OutputDamageTracker::from_output(output).render_output(
         renderer,
@@ -93,28 +90,23 @@ where
         tracing::warn!("[screenshot] render_output failed: {}", e);
         return None;
     }
-    tracing::debug!("[screenshot] offscreen render done");
 
-    // get_proc_address() is only safe while an EGL context is current, so make
-    // it current before resolving any GL function pointer.
+    // get_proc_address() is only safe while an EGL context is current.
     if let Err(e) = unsafe { renderer.egl_context().make_current() } {
         tracing::warn!("[screenshot] make_current failed: {:?}", e);
         return None;
     }
     let gl = Gles2::load_with(|symbol| unsafe { get_proc_address(symbol) });
-    tracing::debug!("[screenshot] GL functions loaded");
-    unsafe {
-        gl.ReadBuffer(gl_ffi::COLOR_ATTACHMENT0);
-    }
-    tracing::debug!("[screenshot] ReadBuffer done");
-    let (width, height) = (size.w as usize, size.h as usize);
+
+    let (width, height) = (raw.w as usize, raw.h as usize);
     let mut rgba = vec![0u8; width * height * 4];
     unsafe {
+        gl.ReadBuffer(gl_ffi::COLOR_ATTACHMENT0);
         gl.ReadPixels(
             0,
             0,
-            size.w,
-            size.h,
+            raw.w,
+            raw.h,
             gl_ffi::RGBA,
             gl_ffi::UNSIGNED_BYTE,
             rgba.as_mut_ptr() as *mut _,
@@ -138,9 +130,21 @@ where
         }
     }
 
-    tracing::debug!("[screenshot] pixel conversion done");
-    let surface = ImageSurface::create_for_data(bgra, Format::ARgb32, size.w, size.h, row as i32)
+    let raw_surface = ImageSurface::create_for_data(bgra, Format::ARgb32, raw.w, raw.h, row as i32)
         .ok()?;
+
+    // Rotate the physical frame into the output's logical orientation so the
+    // saved image matches what is shown on screen (also handles flipped modes).
+    let logical = transform.transform_size(raw);
+    let surface = ImageSurface::create(Format::ARgb32, logical.w, logical.h).ok()?;
+    {
+        let cr = Context::new(&surface).ok()?;
+        let (a, b, c, d, tx, ty) = transform_matrix(rotation_only(transform), raw.w, raw.h);
+        cr.set_matrix(Matrix::new(a, b, c, d, tx, ty));
+        cr.set_source_surface(&raw_surface, 0.0, 0.0).ok()?;
+        cr.paint().ok()?;
+    }
+
     let save_path = get_screenshot_path();
     tracing::debug!("[screenshot] saving to {}", save_path.display());
     {
@@ -174,9 +178,75 @@ where
     Some(save_path)
 }
 
+/// Keeps only the rotational part of an output transform.
+fn rotation_only(transform: Transform) -> Transform {
+    match transform {
+        Transform::Flipped => Transform::Normal,
+        Transform::Flipped90 => Transform::_90,
+        Transform::Flipped180 => Transform::_180,
+        Transform::Flipped270 => Transform::_270,
+        other => other,
+    }
+}
+
+/// Affine matrix mapping the raw frame buffer into the output's logical
+/// orientation. Coefficients come from smithay's `Transform::transform_point_in`.
+fn transform_matrix(transform: Transform, w: i32, h: i32) -> (f64, f64, f64, f64, f64, f64) {
+    let (w, h) = (w as f64, h as f64);
+    match transform {
+        Transform::Normal => (1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+        Transform::_90 => (0.0, 1.0, -1.0, 0.0, h, 0.0),
+        Transform::_180 => (-1.0, 0.0, 0.0, -1.0, w, h),
+        Transform::_270 => (0.0, -1.0, 1.0, 0.0, 0.0, w),
+        Transform::Flipped => (-1.0, 0.0, 0.0, 1.0, w, 0.0),
+        Transform::Flipped90 => (0.0, 1.0, 1.0, 0.0, 0.0, 0.0),
+        Transform::Flipped180 => (1.0, 0.0, 0.0, -1.0, 0.0, h),
+        Transform::Flipped270 => (0.0, -1.0, -1.0, 0.0, h, w),
+    }
+}
+
 /// Dispatches a desktop notification.
 pub fn send_notification(title: &str, body: &str) {
     let _ = std::process::Command::new("notify-send")
         .args(["-a", "BabyDra", title, body])
         .spawn();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use smithay::utils::{Physical, Point};
+
+    #[test]
+    fn transform_matrix_matches_smithay_point_mapping() {
+        let (w, h) = (13, 7);
+        let area = Size::<i32, Physical>::from((w, h));
+        let transforms = [
+            Transform::Normal,
+            Transform::_90,
+            Transform::_180,
+            Transform::_270,
+            Transform::Flipped,
+            Transform::Flipped90,
+            Transform::Flipped180,
+            Transform::Flipped270,
+        ];
+
+        for transform in transforms {
+            let (a, b, c, d, tx, ty) = transform_matrix(transform, w, h);
+            for x in 0..=w {
+                for y in 0..=h {
+                    let expected = transform.transform_point_in(
+                        Point::<i32, Physical>::from((x, y)),
+                        &area,
+                    );
+                    let actual = (
+                        (a * x as f64 + c * y as f64 + tx) as i32,
+                        (b * x as f64 + d * y as f64 + ty) as i32,
+                    );
+                    assert_eq!(actual, (expected.x, expected.y), "transform {:?}", transform);
+                }
+            }
+        }
+    }
 }
