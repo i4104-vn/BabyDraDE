@@ -2,10 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
-/// Embedded default wallpaper image (wallpaper.jpeg)
+/// Embedded default wallpaper image (wallpaper.jpg)
 pub const DEFAULT_WALLPAPER_BYTES: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../assets/wallpaper/wallpaper.jpeg"
+    "/../../assets/wallpaper/wallpaper.jpg"
 ));
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
