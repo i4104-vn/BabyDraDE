@@ -334,12 +334,16 @@ impl IslandEngine {
                     || feature.is_popover_open()
                     || (hovered && feature.hover_keep() && view.state.requested.get())
             };
-            if !view.state.purge(now) && alive && !view.state.has_timeout(now) && !view.state.override_active.get() {
-                view.state.deactivate();
-            }
+            // Expire deadlines first, then mirror the old `is_view_alive`:
+            // a dead feature with no live timeout/override must be wiped from
+            // the queue, otherwise it would keep winning arbitration forever
+            // (and the capsule could never play its collapse animation).
+            view.state.purge(now);
             if alive {
                 view.state.requested.set(true);
                 alive_count += 1;
+            } else if !view.state.has_timeout(now) && !view.state.override_active.get() {
+                view.state.deactivate();
             }
         }
 
@@ -359,6 +363,15 @@ impl IslandEngine {
         if self.left_bracket.is_visible() != show_brackets {
             self.left_bracket.set_visible(show_brackets);
             self.right_bracket.set_visible(show_brackets);
+        }
+
+        // Pin the capsule to the active view's size so an open popover or a
+        // long label can never push the notch wider.
+        if !self.animating.get() {
+            if let Some(idx) = self.displayed {
+                let (w, h) = self.views[idx].feature.borrow().size();
+                self.capsule.set_size_request(w, h);
+            }
         }
 
         let winner = self.select_winner(now);

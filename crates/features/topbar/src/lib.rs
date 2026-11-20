@@ -36,6 +36,15 @@ pub fn run() {
 
         window.add_css_class("panel-window");
 
+        // Clicking anywhere on the panel outside the island capsule dismisses
+        // any open island popover (GTK autohide is unreliable on layer shell).
+        let dismiss_window = window.clone();
+        let outside_click = gtk4::GestureClick::new();
+        outside_click.connect_pressed(move |_, _, x, y| {
+            center::ui::popover::dismiss_outside(dismiss_window.upcast_ref(), x, y);
+        });
+        window.add_controller(outside_click);
+
         // Layer Shell configuration for Wayland
         window.init_layer_shell();
         window.set_layer(Layer::Top);

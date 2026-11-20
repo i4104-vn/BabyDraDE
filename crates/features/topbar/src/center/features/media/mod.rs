@@ -7,6 +7,7 @@ pub mod visualizer;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::time::Instant;
 
 use gdk_pixbuf::prelude::*;
 use gtk4::prelude::*;
@@ -33,6 +34,9 @@ pub struct MediaFeature {
     art_loaded: Cell<bool>,
     playing_state: Rc<Cell<bool>>,
     play_state: Cell<Option<bool>>,
+    pos_base: Cell<f64>,
+    pos_at: Cell<Instant>,
+    len_secs: Cell<f64>,
     view_ready: Cell<bool>,
     art_tx: tokio::sync::mpsc::UnboundedSender<(String, Vec<u8>)>,
     art_rx: Option<tokio::sync::mpsc::UnboundedReceiver<(String, Vec<u8>)>>,
@@ -57,6 +61,9 @@ impl MediaFeature {
         let track_label = gtk4::Label::builder()
             .label("Music Player")
             .css_classes(["notch-player-text"])
+            .ellipsize(gtk4::pango::EllipsizeMode::End)
+            .max_width_chars(16)
+            .hexpand(false)
             .build();
         container.append(&track_label);
         let (visualizer, playing_state) = create_visualizer();
@@ -78,6 +85,9 @@ impl MediaFeature {
             art_loaded: Cell::new(false),
             playing_state,
             play_state: Cell::new(None),
+            pos_base: Cell::new(0.0),
+            pos_at: Cell::new(Instant::now()),
+            len_secs: Cell::new(0.0),
             view_ready: Cell::new(false),
             art_tx,
             art_rx: Some(art_rx),
@@ -96,6 +106,9 @@ impl MediaFeature {
                 .unwrap_or_default();
             self.cached = merge_transient_metadata(&self.cached, meta);
             self.player_active = player_active;
+            self.pos_base.set(self.cached.pos_secs);
+            self.pos_at.set(Instant::now());
+            self.len_secs.set(self.cached.len_secs);
         }
 
         let popover_open = self
@@ -183,14 +196,6 @@ impl MediaFeature {
                     .unwrap_or_default()
             };
             popover.app_name.set_text(&player);
-
-            if meta.len_secs > 0.0 {
-                popover
-                    .progress_bar
-                    .set_fraction((meta.pos_secs / meta.len_secs).clamp(0.0, 1.0));
-                popover.position_lbl.set_text(&format_time(meta.pos_secs));
-                popover.length_lbl.set_text(&format_time(meta.len_secs));
-            }
         }
 
         if let Some(popover) = self.popover.borrow().as_ref() {
@@ -227,6 +232,30 @@ impl MediaFeature {
         }
     }
 
+    /// Advances the progress bar and time labels on every island tick, using
+    /// the last reported MPRIS position as a base plus local elapsed time.
+    fn update_progress(&self) {
+        let binding = self.popover.borrow();
+        let Some(popover) = binding.as_ref() else {
+            return;
+        };
+        let len = self.len_secs.get();
+        if len <= 0.0 {
+            return;
+        }
+        let elapsed = if self.playing_state.get() {
+            self.pos_at.get().elapsed().as_secs_f64()
+        } else {
+            0.0
+        };
+        let pos = (self.pos_base.get() + elapsed).min(len);
+        popover
+            .progress_bar
+            .set_fraction((pos / len).clamp(0.0, 1.0));
+        popover.position_lbl.set_text(&format_time(pos));
+        popover.length_lbl.set_text(&format_time(len));
+    }
+
     fn start_art_receiver(&mut self, popover_art: gtk4::Picture) {
         let Some(mut rx) = self.art_rx.take() else {
             return;
@@ -246,7 +275,13 @@ impl MediaFeature {
                 let Some(pixbuf) = loader.pixbuf() else {
                     continue;
                 };
-                capsule_art.set_pixbuf(Some(&pixbuf));
+                // Island capsule art is circular (old ui-kit crop_circle); the
+                // popover keeps the original full artwork.
+                if let Some(circle) = ui_kit::drawing::crop_circle(&bytes, 18) {
+                    capsule_art.set_pixbuf(Some(&circle));
+                } else {
+                    capsule_art.set_pixbuf(Some(&pixbuf));
+                }
                 popover_art.set_pixbuf(Some(&pixbuf));
                 loaded.set(true);
             }
@@ -302,6 +337,7 @@ impl IslandFeature for MediaFeature {
 
     fn tick(&mut self, ctx: &IslandCtx) {
         self.refresh(ctx);
+        self.update_progress();
     }
 
     fn on_click(&mut self) {

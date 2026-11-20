@@ -1,12 +1,45 @@
 //! Shared slide animation and lifecycle for Dynamic Island popovers.
-//! Copied from the old island implementation (slide-only path).
-
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gtk4::prelude::*;
 
 use animation::{slide_in, slide_out_cb_cancelable, SlideDirection};
+
+thread_local! {
+    static OPEN_POPOVERS: RefCell<Vec<gtk4::Popover>> = const { RefCell::new(Vec::new()) };
+    static ISLAND_CAPSULE: RefCell<Option<gtk4::Box>> = const { RefCell::new(None) };
+}
+
+/// Dismisses every island popover (used by outside-click / Escape handlers).
+pub fn dismiss_all_popovers() {
+    let popovers = OPEN_POPOVERS.with(|list| list.borrow().clone());
+    for popover in popovers {
+        if popover.is_visible() {
+            popover.popdown();
+        }
+    }
+}
+
+/// Dismisses island popovers when a click lands outside the capsule.
+pub fn dismiss_outside(window: &gtk4::Widget, x: f64, y: f64) {
+    let inside = ISLAND_CAPSULE.with(|slot| {
+        slot.borrow().as_ref().is_some_and(|capsule| {
+            capsule
+                .translate_coordinates(window, 0.0, 0.0)
+                .map(|(cx, cy)| {
+                    x >= cx
+                        && x <= cx + capsule.width() as f64
+                        && y >= cy
+                        && y <= cy + capsule.height() as f64
+                })
+                .unwrap_or(false)
+        })
+    });
+    if !inside {
+        dismiss_all_popovers();
+    }
+}
 
 #[derive(Clone)]
 pub struct IslandPopover {
@@ -41,6 +74,20 @@ impl IslandPopover {
         popover_box.set_focusable(false);
         popover_box.set_can_focus(false);
         popover.set_child(Some(&popover_box));
+
+        let escape = gtk4::EventControllerKey::new();
+        let pop_esc = popover.clone();
+        escape.connect_key_pressed(move |_, key, _, _| {
+            if key == gtk4::gdk::Key::Escape && pop_esc.is_visible() {
+                pop_esc.popdown();
+                return gtk4::glib::Propagation::Stop;
+            }
+            gtk4::glib::Propagation::Proceed
+        });
+        popover.add_controller(escape);
+
+        OPEN_POPOVERS.with(|list| list.borrow_mut().push(popover.clone()));
+        ISLAND_CAPSULE.with(|slot| *slot.borrow_mut() = Some(capsule.clone()));
 
         setup_popover_slide_lifecycle(&popover, capsule, &popover_box, duration_ms);
 
