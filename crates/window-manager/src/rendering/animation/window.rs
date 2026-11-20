@@ -66,10 +66,7 @@ pub fn render_animated_window(
 
     let constrain = Rectangle::<i32, Logical>::new(
         Point::from((new_x.round() as i32, new_y.round() as i32)),
-        Size::from((
-            (new_w.round() as i32).max(4),
-            (new_h.round() as i32).max(4),
-        )),
+        Size::from(((new_w.round() as i32).max(4), (new_h.round() as i32).max(4))),
     );
 
     let behavior = ConstrainBehavior {
@@ -81,21 +78,18 @@ pub fn render_animated_window(
     let effective_opacity = (params.base_opacity * params.alpha_factor).clamp(0.0, 1.0);
 
     // Render scaled client window surfaces
-    let surfaces: Vec<CustomRenderElements> = constrain_space_element::<
-        GlowRenderer,
-        Window,
-        ConstrainedSurface,
-    >(
-        renderer,
-        window,
-        constrain.loc,
-        effective_opacity,
-        scale,
-        constrain,
-        behavior,
-    )
-    .map(CustomRenderElements::Constrained)
-    .collect();
+    let surfaces: Vec<CustomRenderElements> =
+        constrain_space_element::<GlowRenderer, Window, ConstrainedSurface>(
+            renderer,
+            window,
+            constrain.loc,
+            effective_opacity,
+            scale,
+            constrain,
+            behavior,
+        )
+        .map(CustomRenderElements::Constrained)
+        .collect();
 
     elements.extend(surfaces);
 

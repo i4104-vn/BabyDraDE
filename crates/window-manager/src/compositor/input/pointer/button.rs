@@ -91,7 +91,9 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
             if !pointer.is_grabbed() {
                 // 1. Check window border for interactive resize
                 if button_code == crate::enums::BTN_LEFT {
-                    if let Some((window, loc, edge)) = state.window_border_under(state.pointer_location) {
+                    if let Some((window, loc, edge)) =
+                        state.window_border_under(state.pointer_location)
+                    {
                         state.space.raise_element(&window, true);
                         state.raise_window(&window);
                         keyboard.set_focus(
@@ -158,18 +160,20 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                             }
                             Action::Move => {
                                 let now = std::time::Instant::now();
-                                let is_double_click = if let Some((last_time, last_pos, ref last_win)) =
-                                    state.last_titlebar_click.take()
-                                {
-                                    let elapsed = now.duration_since(last_time).as_millis();
-                                    let dx = state.pointer_location.x - last_pos.x;
-                                    let dy = state.pointer_location.y - last_pos.y;
-                                    last_win == &window
-                                        && elapsed <= crate::enums::DOUBLE_CLICK_TIMEOUT_MS
-                                        && (dx * dx + dy * dy) <= crate::enums::DOUBLE_CLICK_DISTANCE_SQ
-                                } else {
-                                    false
-                                };
+                                let is_double_click =
+                                    if let Some((last_time, last_pos, ref last_win)) =
+                                        state.last_titlebar_click.take()
+                                    {
+                                        let elapsed = now.duration_since(last_time).as_millis();
+                                        let dx = state.pointer_location.x - last_pos.x;
+                                        let dy = state.pointer_location.y - last_pos.y;
+                                        last_win == &window
+                                            && elapsed <= crate::enums::DOUBLE_CLICK_TIMEOUT_MS
+                                            && (dx * dx + dy * dy)
+                                                <= crate::enums::DOUBLE_CLICK_DISTANCE_SQ
+                                    } else {
+                                        false
+                                    };
 
                                 if is_double_click {
                                     state.toggle_maximize(&window);

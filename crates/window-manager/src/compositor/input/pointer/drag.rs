@@ -65,10 +65,11 @@ pub(crate) fn handle_window_drag(
                 .unwrap_or(false);
             if is_maximized {
                 let window = move_state.window.clone();
-                let saved_size = crate::compositor::state::window::state_data::window_state(&window)
-                    .lock()
-                    .unwrap()
-                    .saved_size;
+                let saved_size =
+                    crate::compositor::state::window::state_data::window_state(&window)
+                        .lock()
+                        .unwrap()
+                        .saved_size;
                 // Restore the saved normal geometry first, then place that
                 // geometry under the pointer so the drag feels continuous.
                 state.unmaximize_window(&window);

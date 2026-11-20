@@ -56,7 +56,8 @@ pub(crate) struct ResizeState {
     pub(crate) initial_window_location: Point<i32, Logical>,
     pub(crate) initial_window_size: smithay::utils::Size<i32, Logical>,
     pub(crate) initial_pointer_location: Point<f64, Logical>,
-    pub(crate) edges: smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
+    pub(crate) edges:
+        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
     pub(crate) button: u32,
 }
 

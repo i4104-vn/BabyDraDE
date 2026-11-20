@@ -31,10 +31,11 @@ pub(crate) fn handle_touch_drag(
                 .unwrap_or(false);
             if is_maximized {
                 let window = move_state.window.clone();
-                let saved_size = crate::compositor::state::window::state_data::window_state(&window)
-                    .lock()
-                    .unwrap()
-                    .saved_size;
+                let saved_size =
+                    crate::compositor::state::window::state_data::window_state(&window)
+                        .lock()
+                        .unwrap()
+                        .saved_size;
                 state.unmaximize_window(&window);
                 let size = saved_size.unwrap_or_else(|| window.geometry().size);
                 let desired = Point::from((
