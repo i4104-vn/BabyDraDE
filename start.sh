@@ -3,11 +3,6 @@ set -eu
 
 cd "$(dirname "$0")"
 
-# Ensure media apps (MPRIS) are visible to playerctl inside the session.
-if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "/run/user/$(id -u)/bus" ]; then
-    export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
-fi
-
 # ------------------------------------------------------------------------------
 # 0. Parse arguments & options
 # ------------------------------------------------------------------------------
@@ -383,6 +378,9 @@ install_packages_for_distro() {
                 mesa
                 gtk4
                 gtk4-layer-shell
+                pipewire
+                pipewire-pulse
+                wireplumber
             )
             run_privileged pacman -S --needed --noconfirm "${pkgs[@]}"
             ;;
@@ -406,6 +404,9 @@ install_packages_for_distro() {
                 libgles2-mesa-dev
                 libgtk-4-dev
                 libgtk4-layer-shell-dev
+                pipewire
+                pipewire-pulse
+                wireplumber
             )
             run_privileged apt-get update
             run_privileged apt-get install -y --no-install-recommends "${pkgs[@]}"
@@ -432,6 +433,9 @@ install_packages_for_distro() {
                 mesa-libGLES-devel
                 gtk4-devel
                 gtk4-layer-shell-devel
+                pipewire
+                pipewire-pulseaudio
+                wireplumber
             )
             if command -v dnf5 >/dev/null 2>&1; then
                 run_privileged dnf5 install -y "${pkgs[@]}"
@@ -462,6 +466,9 @@ install_packages_for_distro() {
                 Mesa-libGLESv2-devel
                 gtk4-devel
                 gtk4-layer-shell-devel
+                pipewire
+                pipewire-pulse
+                wireplumber
             )
             run_privileged zypper install -y --no-recommends "${pkgs[@]}"
             ;;
@@ -483,6 +490,9 @@ install_packages_for_distro() {
                 mesa-dev
                 gtk4.0-dev
                 gtk4-layer-shell-dev
+                pipewire
+                pipewire-pulse
+                wireplumber
             )
             run_privileged apk add --no-cache "${pkgs[@]}"
             ;;
@@ -502,6 +512,9 @@ install_packages_for_distro() {
                 MesaLib-devel
                 gtk4-devel
                 gtk4-layer-shell-devel
+                pipewire
+                pipewire-pulse
+                wireplumber
             )
             run_privileged xbps-install -Sy "${pkgs[@]}"
             ;;

@@ -6,20 +6,6 @@ use std::time::Duration;
 
 const METADATA_FORMAT: &str = "{{ status }}|//|{{ title }}|//|{{ artist }}|//|{{ playerName }}|//|{{ mpris:artUrl }}|//|{{ position }}|//|{{ mpris:length }}";
 
-/// Builds a `playerctl` command with a D-Bus fallback for sessions launched
-/// from a TTY (where `DBUS_SESSION_BUS_ADDRESS` may be missing).
-fn playerctl_command() -> std::process::Command {
-    let mut command = std::process::Command::new("playerctl");
-    if std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_none() {
-        let uid = unsafe { libc::getuid() };
-        command.env(
-            "DBUS_SESSION_BUS_ADDRESS",
-            format!("unix:path=/run/user/{uid}/bus"),
-        );
-    }
-    command
-}
-
 /// Spawns the polling thread and returns the shared main-thread cache.
 pub fn spawn_playerctl_polling() -> Rc<RefCell<Option<String>>> {
     let cache = Rc::new(RefCell::new(None));
@@ -28,7 +14,7 @@ pub fn spawn_playerctl_polling() -> Rc<RefCell<Option<String>>> {
     std::thread::Builder::new()
         .name("island-playerctl-poll".into())
         .spawn(move || loop {
-            let metadata = playerctl_command()
+            let metadata = std::process::Command::new("playerctl")
                 .args(["metadata", "--format", METADATA_FORMAT])
                 .output()
                 .ok()
@@ -56,5 +42,5 @@ pub fn spawn_playerctl_polling() -> Rc<RefCell<Option<String>>> {
 
 /// Runs a one-off `playerctl` command (used by the popover controls).
 pub fn playerctl(command: &str) {
-    let _ = playerctl_command().arg(command).spawn();
+    let _ = std::process::Command::new("playerctl").arg(command).spawn();
 }
