@@ -18,7 +18,7 @@ use smithay::{
         },
     },
     output::Output,
-    utils::{Buffer as BufferCoord, Size, Transform},
+    utils::{Buffer as BufferCoord, Physical, Size, Transform},
 };
 
 /// Shared flag set by the keymap thread and consumed by the render loops.
@@ -114,65 +114,98 @@ where
     }
     tracing::debug!("[screenshot] ReadPixels done");
 
-    // GL rows are bottom-up and RGBA; cairo wants top-down premultiplied ARGB32
-    // (BGRA byte order on little-endian).
-    let mut bgra = vec![0u8; rgba.len()];
-    let row = width * 4;
-    for y in 0..height {
-        let src = &rgba[(height - 1 - y) * row..(height - y) * row];
-        let dst = &mut bgra[y * row..(y + 1) * row];
-        for x in 0..width {
-            let (s, d) = (&src[x * 4..x * 4 + 4], &mut dst[x * 4..x * 4 + 4]);
-            d[0] = s[2];
-            d[1] = s[1];
-            d[2] = s[0];
-            d[3] = s[3];
-        }
-    }
-
-    let raw_surface = ImageSurface::create_for_data(bgra, Format::ARgb32, raw.w, raw.h, row as i32)
-        .ok()?;
-
-    // Rotate the physical frame into the output's logical orientation so the
-    // saved image matches what is shown on screen (also handles flipped modes).
-    let logical = transform.transform_size(raw);
-    let surface = ImageSurface::create(Format::ARgb32, logical.w, logical.h).ok()?;
-    {
-        let cr = Context::new(&surface).ok()?;
-        let (a, b, c, d, tx, ty) = transform_matrix(rotation_only(transform), raw.w, raw.h);
-        cr.set_matrix(Matrix::new(a, b, c, d, tx, ty));
-        cr.set_source_surface(&raw_surface, 0.0, 0.0).ok()?;
-        cr.paint().ok()?;
-    }
-
+    // Pixel conversion, rotation and PNG encoding are CPU-heavy; keep them off
+    // the compositor's event loop so taking a screenshot never stalls rendering.
     let save_path = get_screenshot_path();
-    tracing::debug!("[screenshot] saving to {}", save_path.display());
-    {
-        let mut file = std::fs::File::create(&save_path).ok()?;
-        surface.write_to_png(&mut file).ok()?;
-    }
-    tracing::info!("[screenshot] saved {}", save_path.display());
-
-    let notif_title = services::trans("screenshot.full_saved_title");
-    let notif_msg =
-        services::trans("screenshot.saved_msg").replace("{}", &format!("{:?}", save_path));
-    send_notification(&notif_title, &notif_msg);
-
-    // Run the GTK annotation editor in a separate process. GTK cannot run on a
-    // worker thread of this process: the compositor already owns the default
-    // GLib main context, which makes g_application_run() abort the whole WM.
-    let editor_path = save_path.to_string_lossy().into_owned();
-    match std::env::current_exe() {
-        Ok(exe) => {
-            if let Err(e) = std::process::Command::new(exe)
-                .arg("--screenshot-editor")
-                .arg(&editor_path)
-                .spawn()
-            {
-                tracing::warn!("[screenshot] cannot start annotation editor: {}", e);
+    let worker_path = save_path.clone();
+    let result = std::thread::Builder::new()
+        .name("babydra-screenshot-save".to_string())
+        .spawn(move || {
+            let save_path = worker_path;
+            // GL rows are bottom-up and RGBA; cairo wants top-down ARGB32.
+            let mut bgra = vec![0u8; rgba.len()];
+            let row = width * 4;
+            for y in 0..height {
+                let src = &rgba[(height - 1 - y) * row..(height - y) * row];
+                let dst = &mut bgra[y * row..(y + 1) * row];
+                for x in 0..width {
+                    let (s, d) = (&src[x * 4..x * 4 + 4], &mut dst[x * 4..x * 4 + 4]);
+                    d[0] = s[2];
+                    d[1] = s[1];
+                    d[2] = s[0];
+                    d[3] = s[3];
+                }
             }
-        }
-        Err(e) => tracing::warn!("[screenshot] cannot locate compositor binary: {}", e),
+
+            let raw_surface = match ImageSurface::create_for_data(
+                bgra, Format::ARgb32, width as i32, height as i32, row as i32,
+            ) {
+                Ok(surface) => surface,
+                Err(e) => {
+                    tracing::warn!("[screenshot] cannot build source surface: {}", e);
+                    return;
+                }
+            };
+
+            // Rotate the physical frame into the output's logical orientation.
+            let logical = transform.transform_size(Size::<i32, Physical>::from((width as i32, height as i32)));
+            let surface = match ImageSurface::create(Format::ARgb32, logical.w, logical.h) {
+                Ok(surface) => surface,
+                Err(e) => {
+                    tracing::warn!("[screenshot] cannot build output surface: {}", e);
+                    return;
+                }
+            };
+            {
+                let Ok(cr) = Context::new(&surface) else { return };
+                let (a, b, c, d, tx, ty) = transform_matrix(rotation_only(transform), width as i32, height as i32);
+                cr.set_matrix(Matrix::new(a, b, c, d, tx, ty));
+                if cr.set_source_surface(&raw_surface, 0.0, 0.0).is_err() {
+                    return;
+                }
+                let _ = cr.paint();
+            }
+
+            tracing::debug!("[screenshot] saving to {}", save_path.display());
+            match std::fs::File::create(&save_path) {
+                Ok(mut file) => {
+                    if let Err(e) = surface.write_to_png(&mut file) {
+                        tracing::warn!("[screenshot] cannot write PNG: {}", e);
+                        return;
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("[screenshot] cannot create {}: {}", save_path.display(), e);
+                    return;
+                }
+            }
+            tracing::info!("[screenshot] saved {}", save_path.display());
+
+            let notif_title = services::trans("screenshot.full_saved_title");
+            let notif_msg =
+                services::trans("screenshot.saved_msg").replace("{}", &format!("{:?}", save_path));
+            send_notification(&notif_title, &notif_msg);
+
+            // Run the GTK annotation editor in its own process: GTK cannot run
+            // on a worker thread because the GLib main context is already owned.
+            let editor_path = save_path.to_string_lossy().into_owned();
+            match std::env::current_exe() {
+                Ok(exe) => {
+                    if let Err(e) = std::process::Command::new(exe)
+                        .arg("--screenshot-editor")
+                        .arg(&editor_path)
+                        .spawn()
+                    {
+                        tracing::warn!("[screenshot] cannot start annotation editor: {}", e);
+                    }
+                }
+                Err(e) => tracing::warn!("[screenshot] cannot locate compositor binary: {}", e),
+            }
+        });
+
+    if let Err(e) = result {
+        tracing::warn!("[screenshot] cannot spawn save thread: {}", e);
+        return None;
     }
 
     Some(save_path)
