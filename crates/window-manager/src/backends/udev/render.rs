@@ -205,6 +205,12 @@ pub fn setup_render_loop(
                         }
                     }
 
+                    if crate::screenshot::capture::take_requested() {
+                        let _ = crate::screenshot::capture::capture_screen(
+                            renderer, &render_elements, output,
+                        );
+                    }
+
                     let output = &surface_data.output;
                     state.space.elements().for_each(|window| {
                         window.send_frame(

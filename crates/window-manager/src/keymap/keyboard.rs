@@ -266,7 +266,12 @@ fn try_trigger(key: Key, state: &Arc<Mutex<ModifierState>>, shortcuts: &SharedSh
 
     if let Some(command) = matched {
         tracing::debug!("shortcut triggered: {:?}", command);
-        tokio::spawn(run_command(command));
+        if command == crate::screenshot::CAPTURE_COMMAND {
+            // Screenshot is a first-class window-manager feature: no external binary.
+            crate::screenshot::trigger();
+        } else {
+            tokio::spawn(run_command(command));
+        }
         return true;
     }
 

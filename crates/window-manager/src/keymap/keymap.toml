@@ -2,6 +2,7 @@
 #
 # Modifier names: W = Super/Windows, A = Alt, C = Ctrl, S = Shift.
 # Add or edit shortcuts under `[shortcuts]`.
+# "babydra-screenshot" is handled internally by the compositor (no external binary).
 
 [shortcuts]
 "W-S-s" = "babydra-screenshot"

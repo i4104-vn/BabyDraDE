@@ -2,6 +2,7 @@ mod backends;
 mod compositor;
 mod keymap;
 pub mod rendering;
+mod screenshot;
 
 pub use common as enums;
 

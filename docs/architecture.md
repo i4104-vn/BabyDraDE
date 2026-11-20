@@ -8,8 +8,8 @@ It supports both direct TTY scanout (Udev/DRM backend) and nested execution (Win
 The workspace is cleanly divided into executables (`crates/`) and libraries (`libs/`):
 
 ### Executables (`crates/` with `src/main.rs`)
-- `crates/window-manager`: Smithay Wayland compositor and window manager. Manages the Wayland display, socket, seat, outputs, rendering loop, and layer/XDG shell handlers, and autostarts widgets.
-- `crates/widgets`: Unified GUI widgets binary. Dispatches `desktop`, `topbar`, `screenshot`, `lock`, and `keymap`.
+- `crates/window-manager`: Smithay Wayland compositor and window manager. Manages the Wayland display, socket, seat, outputs, rendering loop, and layer/XDG shell handlers, autostarts widgets, and captures screenshots directly through its renderer (with the annotation editor).
+- `crates/widgets`: Unified GUI widgets binary. Dispatches `desktop`, `topbar`, and `panel`.
 
 ### Libraries (`libs/` with `src/lib.rs`)
 - `libs/services`: Core OS integration, hardware readers (battery, disk, CPU, RAM, network, volume, VPN), desktop configuration, themes, tray, and i18n localization.

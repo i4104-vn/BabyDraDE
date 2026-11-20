@@ -176,6 +176,14 @@ pub(crate) fn init(
                         render_result.damage.cloned()
                     };
 
+                    if crate::screenshot::capture::take_requested() {
+                        let _ = crate::screenshot::capture::capture_screen(
+                            backend.renderer(),
+                            &render_elements,
+                            &output,
+                        );
+                    }
+
                     backend
                         .submit(render_damage.as_deref())
                         .expect("failed to submit Winit frame");

@@ -4,6 +4,7 @@ pub mod canvas;
 pub mod handle;
 pub mod model;
 pub mod popovers;
+mod layer_shell;
 mod view;
 
 pub use view::build_editor_ui;
