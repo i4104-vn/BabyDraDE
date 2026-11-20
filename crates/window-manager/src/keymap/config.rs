@@ -35,18 +35,12 @@ pub fn load() -> Vec<Shortcut> {
         }
     }
 
-    if shortcuts.is_empty() {
-        shortcuts.extend([Shortcut {
-            id: 1,
-            modifiers: "W-S".to_string(),
-            key: "s".to_string(),
-            command: "babydra-screenshot".to_string(),
-            enabled: true,
-        }]);
-    }
-
     shortcuts.retain(|shortcut| {
-        !shortcut.key.is_empty() && !shortcut.command.trim().is_empty() && shortcut.enabled
+        !shortcut.key.is_empty()
+            && !shortcut.command.trim().is_empty()
+            && shortcut.enabled
+            // Ignore stale entries for the removed screenshot command.
+            && shortcut.command.trim() != "babydra-screenshot"
     });
     tracing::info!("loaded {} shortcut(s)", shortcuts.len());
     shortcuts

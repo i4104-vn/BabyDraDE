@@ -1,8 +1,7 @@
 # BabyDraDE global keyboard shortcuts.
 #
 # Modifier names: W = Super/Windows, A = Alt, C = Ctrl, S = Shift.
-# Add or edit shortcuts under `[shortcuts]`.
-# "babydra-screenshot" is handled internally by the compositor (no external binary).
+# Add custom shortcuts for external commands under `[shortcuts]`.
+# Super+Shift+S (screenshot) is fixed in the compositor and is not configured here.
 
 [shortcuts]
-"W-S-s" = "babydra-screenshot"

@@ -256,6 +256,13 @@ fn try_trigger(key: Key, state: &Arc<Mutex<ModifierState>>, shortcuts: &SharedSh
 
     let current = state.lock().unwrap().snapshot();
 
+    // Fixed screenshot shortcut (Super+Shift+S) is a compositor action, not a
+    // configurable command, so it cannot be remapped or removed via settings.
+    if key == Key::KEY_S && current.win && current.shift && !current.ctrl && !current.alt {
+        crate::screenshot::trigger();
+        return true;
+    }
+
     let matched = shortcuts
         .read()
         .unwrap()
@@ -266,12 +273,7 @@ fn try_trigger(key: Key, state: &Arc<Mutex<ModifierState>>, shortcuts: &SharedSh
 
     if let Some(command) = matched {
         tracing::debug!("shortcut triggered: {:?}", command);
-        if command == crate::screenshot::CAPTURE_COMMAND {
-            // Screenshot is a first-class window-manager feature: no external binary.
-            crate::screenshot::trigger();
-        } else {
-            tokio::spawn(run_command(command));
-        }
+        tokio::spawn(run_command(command));
         return true;
     }
 

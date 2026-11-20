@@ -6,9 +6,6 @@ pub mod editor;
 use gtk4::prelude::*;
 use gtk4::Application;
 
-/// Keymap command that requests a screenshot from the window manager itself.
-pub(crate) const CAPTURE_COMMAND: &str = "babydra-screenshot";
-
 /// Requests a full screenshot from the next compositor frame.
 pub fn trigger() {
     capture::trigger();

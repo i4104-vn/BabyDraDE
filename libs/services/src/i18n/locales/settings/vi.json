@@ -239,8 +239,6 @@
   "settings.keybind_launcher_desc": "Mở menu ứng dụng và tìm kiếm",
   "settings.keybind_switcher": "Chuyển đổi cửa sổ",
   "settings.keybind_switcher_desc": "Chuyển đổi qua lại giữa các cửa sổ đang mở",
-  "settings.keybind_screenshot": "Chụp ảnh màn hình",
-  "settings.keybind_screenshot_desc": "Chụp ảnh màn hình",
   "settings.keybind_recorder_ui": "Quay màn hình",
   "settings.keybind_recorder_ui_desc": "Mở phần điều khiển quay màn hình",
   "settings.keybind_lock": "Khóa màn hình",

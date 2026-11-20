@@ -245,8 +245,6 @@
   "settings.keybind_launcher_desc": "Open application menu and search",
   "settings.keybind_switcher": "Window Switcher",
   "settings.keybind_switcher_desc": "Switch between active windows",
-  "settings.keybind_screenshot": "Screenshot",
-  "settings.keybind_screenshot_desc": "Take a screenshot",
   "settings.keybind_recorder_ui": "Recording",
   "settings.keybind_recorder_ui_desc": "Open the screen recording controls",
   "settings.keybind_lock": "Lock Screen",
