@@ -124,15 +124,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "babydra-panel"
-version = "0.1.0"
-dependencies = [
- "babydra-topbar",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "babydra-topbar"
 version = "0.1.0"
 dependencies = [

@@ -69,6 +69,18 @@ pub fn setup_click_outside_dismiss(win: &gtk4::ApplicationWindow, target: &gtk4:
         }
     });
     win.add_controller(click);
+
+    // Escape also dismisses the panel.
+    let escape = gtk4::EventControllerKey::new();
+    let win_esc = win.clone();
+    escape.connect_key_pressed(move |_, key, _, _| {
+        if key == gtk4::gdk::Key::Escape {
+            win_esc.close();
+            return gtk4::glib::Propagation::Stop;
+        }
+        gtk4::glib::Propagation::Proceed
+    });
+    win.add_controller(escape);
 }
 
 /// Builds the control center transparent layer window.
