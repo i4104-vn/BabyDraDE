@@ -4,6 +4,7 @@ members = [
     "crates/window-manager",
     "crates/features/desktop",
     "crates/features/topbar",
+    "crates/features/launcher",
     "libs/animation",
     "libs/common",
     "libs/services",
@@ -13,6 +14,7 @@ default-members = [
     "crates/window-manager",
     "crates/features/desktop",
     "crates/features/topbar",
+    "crates/features/launcher",
     "libs/animation",
     "libs/common",
 ]

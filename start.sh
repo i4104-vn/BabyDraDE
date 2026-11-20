@@ -667,6 +667,7 @@ BINARIES=(
     "babydra-window-manager"
     "babydra-desktop"
     "babydra-topbar"
+    "babydra-launcher"
 )
 
 if [ -n "${USER_BIN_DIR}" ]; then

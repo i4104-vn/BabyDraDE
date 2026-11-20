@@ -256,6 +256,13 @@ fn try_trigger(key: Key, state: &Arc<Mutex<ModifierState>>, shortcuts: &SharedSh
 
     let current = state.lock().unwrap().snapshot();
 
+    // Fixed launcher shortcut (Super+Space): toggles the quick app launcher.
+    // The launcher app is single-instance, so repeated presses toggle it.
+    if key == Key::KEY_SPACE && current.win && !current.shift && !current.ctrl && !current.alt {
+        tokio::spawn(run_command("babydra-launcher".to_string()));
+        return true;
+    }
+
     // Fixed screenshot shortcut (Super+Shift+S) is a compositor action, not a
     // configurable command, so it cannot be remapped or removed via settings.
     if key == Key::KEY_S && current.win && current.shift && !current.ctrl && !current.alt {
