@@ -15,7 +15,7 @@ use crate::center::engine::{IslandCtx, IslandFeature, IslandViewHandle, PLAYER_C
 use model::{format_time, merge_transient_metadata, parse_metadata, PlayerMeta};
 use poll::spawn_playerctl_polling;
 use popover::MediaPopover;
-use visualizer::build_visualizer_bars;
+use visualizer::create_visualizer;
 
 pub const PRIORITY: u32 = 50;
 
@@ -31,6 +31,7 @@ pub struct MediaFeature {
     player_active: bool,
     song_key: String,
     art_loaded: Cell<bool>,
+    playing_state: Rc<Cell<bool>>,
     play_state: Cell<Option<bool>>,
     view_ready: Cell<bool>,
     art_tx: tokio::sync::mpsc::UnboundedSender<(String, Vec<u8>)>,
@@ -58,7 +59,8 @@ impl MediaFeature {
             .css_classes(["notch-player-text"])
             .build();
         container.append(&track_label);
-        container.append(&build_visualizer_bars());
+        let (visualizer, playing_state) = create_visualizer();
+        container.append(&visualizer);
 
         let (art_tx, art_rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -74,6 +76,7 @@ impl MediaFeature {
             player_active: false,
             song_key: String::new(),
             art_loaded: Cell::new(false),
+            playing_state,
             play_state: Cell::new(None),
             view_ready: Cell::new(false),
             art_tx,
@@ -101,9 +104,12 @@ impl MediaFeature {
             .as_ref()
             .is_some_and(|popover| popover.is_visible());
         let playing = self.player_active && self.cached.playing;
+        self.playing_state.set(playing);
 
+        // Show the island whenever a MPRIS player exists — including while
+        // paused, so the track and controls stay reachable.
         if let Some(handle) = self.handle.borrow().as_ref() {
-            if playing || popover_open || (self.player_active && ctx.is_current()) {
+            if self.player_active || popover_open || ctx.is_current() {
                 handle.show();
             } else {
                 handle.hide();
@@ -122,7 +128,7 @@ impl MediaFeature {
 
     fn update_view(&mut self) {
         let meta = &self.cached;
-        let display = if meta.title.is_empty() {
+        let base = if meta.title.is_empty() {
             if meta.artist.is_empty() {
                 "Music Player".to_string()
             } else {
@@ -132,6 +138,11 @@ impl MediaFeature {
             meta.title.clone()
         } else {
             format!("{} - {}", meta.artist, meta.title)
+        };
+        let display = if self.player_active && !self.cached.playing {
+            format!("{base}")
+        } else {
+            base
         };
         let short: String = if display.chars().count() > 18 {
             display.chars().take(15).collect::<String>() + "..."
@@ -267,7 +278,7 @@ impl IslandFeature for MediaFeature {
     }
 
     fn is_alive(&self) -> bool {
-        self.player_active && self.cached.playing
+        self.player_active
     }
 
     fn is_popover_open(&self) -> bool {
