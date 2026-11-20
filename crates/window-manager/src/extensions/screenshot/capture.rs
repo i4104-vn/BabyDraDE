@@ -95,8 +95,12 @@ where
     }
     tracing::debug!("[screenshot] offscreen render done");
 
-    // The renderer's EGL context is already current here (render_output and
-    // renderer.bind() make it current), so GL functions can be loaded directly.
+    // get_proc_address() is only safe while an EGL context is current, so make
+    // it current before resolving any GL function pointer.
+    if let Err(e) = unsafe { renderer.egl_context().make_current() } {
+        tracing::warn!("[screenshot] make_current failed: {:?}", e);
+        return None;
+    }
     let gl = Gles2::load_with(|symbol| unsafe { get_proc_address(symbol) });
     tracing::debug!("[screenshot] GL functions loaded");
     unsafe {
