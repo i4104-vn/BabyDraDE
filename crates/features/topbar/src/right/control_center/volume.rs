@@ -9,14 +9,11 @@ use ui_kit::components::{create_popover, create_slider_header, PillSlider};
 use ui_kit::icons::{get_icon, get_icon_colored, set_image_from_icon};
 
 pub fn update_topbar_volume_state(vol_icon: &gtk4::Image, vol: f64, muted: bool) {
-    let name = if muted {
-        "volume-mute"
-    } else if vol > 66.0 {
-        "volume"
-    } else if vol > 33.0 {
-        "volume-medium"
-    } else {
-        "volume-low"
+    let name = match true {
+        _ if muted => "volume-mute",
+        _ if vol > 66.0 => "volume",
+        _ if vol > 33.0 => "volume-medium",
+        _ => "volume-low",
     };
     set_image_from_icon(vol_icon, name, 14);
 }

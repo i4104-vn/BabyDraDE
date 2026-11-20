@@ -125,40 +125,49 @@ where
     let time = event.time_msec();
     let cancelled = event.cancelled();
 
-    if let Some(gesture) = state.trackpad_swipe.take() {
-        if !cancelled {
-            let cfg = load_gesture_config();
-            let threshold = if gesture.fingers == FOUR_FINGERS {
-                cfg.four_finger_swipe_threshold
-            } else {
-                cfg.swipe_threshold
-            };
-
-            let direction =
-                SwipeDirection::from_delta(gesture.total_delta.x, gesture.total_delta.y, threshold);
-
-            if let Some(dir) = direction {
-                let consumed = match gesture.fingers {
-                    THREE_FINGERS => handle_three_finger(state, dir, &cfg),
-                    FOUR_FINGERS => handle_four_finger(state, dir, &cfg),
-                    _ => false,
+    match state.trackpad_swipe.take() {
+        Some(gesture) => {
+            if !cancelled {
+                let cfg = load_gesture_config();
+                let threshold = if gesture.fingers == FOUR_FINGERS {
+                    cfg.four_finger_swipe_threshold
+                } else {
+                    cfg.swipe_threshold
                 };
-                if consumed {
-                    return;
+
+                let direction = SwipeDirection::from_delta(
+                    gesture.total_delta.x,
+                    gesture.total_delta.y,
+                    threshold,
+                );
+
+                if let Some(dir) = direction {
+                    let consumed = match gesture.fingers {
+                        THREE_FINGERS => handle_three_finger(state, dir, &cfg),
+                        FOUR_FINGERS => handle_four_finger(state, dir, &cfg),
+                        _ => false,
+                    };
+                    if consumed {
+                        return;
+                    }
                 }
             }
-        }
 
-        replay_swipe(state, gesture, cancelled, time);
-    } else if let Some(pointer) = state.seat.get_pointer() {
-        pointer.gesture_swipe_end(
-            state,
-            &GestureSwipeEndEvent {
-                serial: SERIAL_COUNTER.next_serial(),
-                time,
-                cancelled,
-            },
-        );
+            replay_swipe(state, gesture, cancelled, time);
+        }
+        None => match state.seat.get_pointer() {
+            Some(pointer) => {
+                pointer.gesture_swipe_end(
+                    state,
+                    &GestureSwipeEndEvent {
+                        serial: SERIAL_COUNTER.next_serial(),
+                        time,
+                        cancelled,
+                    },
+                );
+            }
+            None => {}
+        },
     }
 }
 

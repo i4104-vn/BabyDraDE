@@ -22,12 +22,12 @@ pub struct ActiveNetworkInfo {
 }
 
 pub fn format_speed(bytes_per_sec: f64) -> String {
-    if bytes_per_sec >= 1_048_576.0 {
-        format!("{:.1} MB/s", bytes_per_sec / 1_048_576.0)
-    } else if bytes_per_sec >= 1024.0 {
-        format!("{:.0} KB/s", bytes_per_sec / 1024.0)
-    } else {
-        format!("{:.0} B/s", bytes_per_sec)
+    match true {
+        _ if bytes_per_sec >= 1_048_576.0 => {
+            format!("{:.1} MB/s", bytes_per_sec / 1_048_576.0)
+        }
+        _ if bytes_per_sec >= 1024.0 => format!("{:.0} KB/s", bytes_per_sec / 1024.0),
+        _ => format!("{:.0} B/s", bytes_per_sec),
     }
 }
 

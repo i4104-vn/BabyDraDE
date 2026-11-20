@@ -51,14 +51,11 @@ pub fn hit_test_geometry(
     let close = location.x as f64 + width - 22.0;
     let max = close - 24.0;
     let min = max - 24.0;
-    if point.x >= close - BUTTON && point.x <= close + BUTTON {
-        Some(Action::Close)
-    } else if point.x >= max - BUTTON && point.x <= max + BUTTON {
-        Some(Action::Maximize)
-    } else if point.x >= min - BUTTON && point.x <= min + BUTTON {
-        Some(Action::Minimize)
-    } else {
-        Some(Action::Move)
+    match true {
+        _ if point.x >= close - BUTTON && point.x <= close + BUTTON => Some(Action::Close),
+        _ if point.x >= max - BUTTON && point.x <= max + BUTTON => Some(Action::Maximize),
+        _ if point.x >= min - BUTTON && point.x <= min + BUTTON => Some(Action::Minimize),
+        _ => Some(Action::Move),
     }
 }
 
@@ -68,12 +65,12 @@ fn outside_rounded_corner(
     y_min: f64,
     point: Point<f64, Logical>,
 ) -> bool {
-    let center_x = if point.x < location.x as f64 + CORNER_RADIUS {
-        location.x as f64 + CORNER_RADIUS
-    } else if point.x > location.x as f64 + width - CORNER_RADIUS {
-        location.x as f64 + width - CORNER_RADIUS
-    } else {
-        return false;
+    let center_x = match true {
+        _ if point.x < location.x as f64 + CORNER_RADIUS => location.x as f64 + CORNER_RADIUS,
+        _ if point.x > location.x as f64 + width - CORNER_RADIUS => {
+            location.x as f64 + width - CORNER_RADIUS
+        }
+        _ => return false,
     };
     point.y < y_min + CORNER_RADIUS
         && (point.x - center_x).powi(2) + (point.y - (y_min + CORNER_RADIUS)).powi(2)

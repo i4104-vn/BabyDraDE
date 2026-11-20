@@ -206,10 +206,14 @@ pub fn find_app_menu_service(app_id: &str, process_id: Option<u32>) -> Option<(S
                 continue;
             }
             let name_lower = name.to_ascii_lowercase();
-            if name_lower == app_id_clean {
-                exact_name_candidates.push(name.to_string());
-            } else if name_lower.ends_with(&format!(".{app_id_clean}")) {
-                suffix_candidates.push(name.to_string());
+            match true {
+                _ if name_lower == app_id_clean => {
+                    exact_name_candidates.push(name.to_string());
+                }
+                _ if name_lower.ends_with(&format!(".{app_id_clean}")) => {
+                    suffix_candidates.push(name.to_string());
+                }
+                _ => {}
             }
         }
     }
@@ -409,12 +413,10 @@ fn find_dbusmenu_path(conn: &gio::DBusConnection, service: &str) -> Option<Strin
         if depth < MAX_DEPTH {
             for child in node.nodes() {
                 if let Some(child_path) = child.path() {
-                    let child_path = if child_path.starts_with('/') {
-                        child_path.to_string()
-                    } else if path == "/" {
-                        format!("/{child_path}")
-                    } else {
-                        format!("{path}/{child_path}")
+                    let child_path = match true {
+                        _ if child_path.starts_with('/') => child_path.to_string(),
+                        _ if path == "/" => format!("/{child_path}"),
+                        _ => format!("{path}/{child_path}"),
                     };
                     pending.push((child_path, depth + 1));
                 }

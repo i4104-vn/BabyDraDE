@@ -32,18 +32,20 @@ pub fn render_layer_surfaces(
                 let render_loc = geo.loc.to_physical_precise_round(scale);
 
                 // The desktop background and topbar are never blur targets.
-                let should_blur =
-                    if layer.layer() == Layer::Background || layer.namespace().contains("topbar") {
-                        false
-                    } else if let Some(engine_lock) = blur_engine {
+                let should_blur = match (
+                    layer.layer() == Layer::Background || layer.namespace().contains("topbar"),
+                    blur_engine,
+                ) {
+                    (true, _) => false,
+                    (false, Some(engine_lock)) => {
                         if let Ok(mut engine) = engine_lock.lock() {
                             engine.matches_layer(layer.namespace())
                         } else {
                             false
                         }
-                    } else {
-                        false
-                    };
+                    }
+                    (false, None) => false,
+                };
 
                 let layer_surfaces: Vec<CustomRenderElements> = layer
                     .render_elements::<WaylandSurfaceRenderElement<GlowRenderer>>(

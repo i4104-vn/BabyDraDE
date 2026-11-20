@@ -134,20 +134,28 @@ pub(crate) fn handle_window_resize(
         let mut new_w = init_size.w;
         let mut new_h = init_size.h;
 
-        if resize_state.resizes_left() {
-            let target_w = (init_size.w - dx).clamp(min_w, max_w);
-            new_w = target_w;
-            new_x = init_loc.x + (init_size.w - target_w);
-        } else if resize_state.resizes_right() {
-            new_w = (init_size.w + dx).clamp(min_w, max_w);
+        match true {
+            _ if resize_state.resizes_left() => {
+                let target_w = (init_size.w - dx).clamp(min_w, max_w);
+                new_w = target_w;
+                new_x = init_loc.x + (init_size.w - target_w);
+            }
+            _ if resize_state.resizes_right() => {
+                new_w = (init_size.w + dx).clamp(min_w, max_w);
+            }
+            _ => {}
         }
 
-        if resize_state.resizes_top() {
-            let target_h = (init_size.h - dy).clamp(min_h, max_h);
-            new_h = target_h;
-            new_y = init_loc.y + (init_size.h - target_h);
-        } else if resize_state.resizes_bottom() {
-            new_h = (init_size.h + dy).clamp(min_h, max_h);
+        match true {
+            _ if resize_state.resizes_top() => {
+                let target_h = (init_size.h - dy).clamp(min_h, max_h);
+                new_h = target_h;
+                new_y = init_loc.y + (init_size.h - target_h);
+            }
+            _ if resize_state.resizes_bottom() => {
+                new_h = (init_size.h + dy).clamp(min_h, max_h);
+            }
+            _ => {}
         }
 
         if let Some(toplevel) = resize_state.window.toplevel() {

@@ -78,12 +78,10 @@ pub fn draw_cairo_ethernet_desktop(
     let top_dot_cy = bot_dot_cy - 3.4;
 
     let draw_led = |cx: f64, cy: f64, (r, g, b): (f64, f64, f64), is_lit: bool| {
-        let alpha = if !is_connected {
-            0.15
-        } else if is_lit {
-            0.95
-        } else {
-            0.18
+        let alpha = match true {
+            _ if !is_connected => 0.15,
+            _ if is_lit => 0.95,
+            _ => 0.18,
         };
 
         if is_connected && is_lit {

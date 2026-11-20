@@ -5,12 +5,10 @@ use std::rc::Rc;
 use ui_kit::components::overlay::popover::tooltip::{TooltipPopover, TooltipRow};
 
 fn get_speed_color_class(bytes_per_sec: f64) -> &'static str {
-    if bytes_per_sec > 1_048_576.0 {
-        "speed-high"
-    } else if bytes_per_sec > 102_400.0 {
-        "speed-medium"
-    } else {
-        "speed-low"
+    match true {
+        _ if bytes_per_sec > 1_048_576.0 => "speed-high",
+        _ if bytes_per_sec > 102_400.0 => "speed-medium",
+        _ => "speed-low",
     }
 }
 

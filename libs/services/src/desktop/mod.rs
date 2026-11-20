@@ -31,12 +31,12 @@ pub fn fetch_desktop_entries() -> Vec<DesktopEntry> {
                 continue;
             }
             let is_dir = path.is_dir();
-            let icon_name = if is_dir {
-                "folder".to_string()
-            } else if path.extension().map(|e| e == "desktop").unwrap_or(false) {
-                "application-x-executable".to_string()
-            } else {
-                "text-x-generic".to_string()
+            let icon_name = match true {
+                _ if is_dir => "folder".to_string(),
+                _ if path.extension().map(|e| e == "desktop").unwrap_or(false) => {
+                    "application-x-executable".to_string()
+                }
+                _ => "text-x-generic".to_string(),
             };
 
             entries.push(DesktopEntry {

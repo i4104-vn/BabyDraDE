@@ -10,12 +10,10 @@ pub enum AudioBackend {
 }
 
 pub fn detect_audio_backend() -> AudioBackend {
-    if Command::new("wpctl").arg("--version").output().is_ok() {
-        AudioBackend::Wpctl
-    } else if Command::new("pactl").arg("--version").output().is_ok() {
-        AudioBackend::Pactl
-    } else {
-        AudioBackend::Amixer
+    match true {
+        _ if Command::new("wpctl").arg("--version").output().is_ok() => AudioBackend::Wpctl,
+        _ if Command::new("pactl").arg("--version").output().is_ok() => AudioBackend::Pactl,
+        _ => AudioBackend::Amixer,
     }
 }
 

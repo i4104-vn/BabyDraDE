@@ -93,28 +93,36 @@ where
         .relative_direction(Axis::Vertical, vert_dir);
 
     // Process horizontal axis
-    if let Some(amount) = horiz_amount {
-        if source == AxisSource::Finger && amount == 0.0 {
-            frame = frame.stop(Axis::Horizontal);
-        } else {
-            frame = frame.value(Axis::Horizontal, amount);
+    match (horiz_amount, horiz_v120) {
+        (Some(amount), _) => {
+            if source == AxisSource::Finger && amount == 0.0 {
+                frame = frame.stop(Axis::Horizontal);
+            } else {
+                frame = frame.value(Axis::Horizontal, amount);
+            }
         }
-    } else if let Some(amount_v120) = horiz_v120 {
-        frame = frame.value(Axis::Horizontal, amount_v120 / 8.0);
+        (None, Some(amount_v120)) => {
+            frame = frame.value(Axis::Horizontal, amount_v120 / 8.0);
+        }
+        (None, None) => {}
     }
     if let Some(amount_v120) = horiz_v120 {
         frame = frame.v120(Axis::Horizontal, amount_v120.round() as i32);
     }
 
     // Process vertical axis
-    if let Some(amount) = vert_amount {
-        if source == AxisSource::Finger && amount == 0.0 {
-            frame = frame.stop(Axis::Vertical);
-        } else {
-            frame = frame.value(Axis::Vertical, amount);
+    match (vert_amount, vert_v120) {
+        (Some(amount), _) => {
+            if source == AxisSource::Finger && amount == 0.0 {
+                frame = frame.stop(Axis::Vertical);
+            } else {
+                frame = frame.value(Axis::Vertical, amount);
+            }
         }
-    } else if let Some(amount_v120) = vert_v120 {
-        frame = frame.value(Axis::Vertical, amount_v120 / 8.0);
+        (None, Some(amount_v120)) => {
+            frame = frame.value(Axis::Vertical, amount_v120 / 8.0);
+        }
+        (None, None) => {}
     }
     if let Some(amount_v120) = vert_v120 {
         frame = frame.v120(Axis::Vertical, amount_v120.round() as i32);

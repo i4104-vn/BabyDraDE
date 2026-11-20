@@ -36,24 +36,28 @@ pub fn create_visualizer() -> (gtk4::Box, Rc<Cell<bool>>) {
         let start_time = start_time.clone();
         let was_playing = was_playing.clone();
         move |_, clock| {
-            if is_playing.get() {
-                was_playing.set(true);
-                let now = clock.frame_time();
-                if start_time.get() == 0 {
-                    start_time.set(now);
+            match true {
+                _ if is_playing.get() => {
+                    was_playing.set(true);
+                    let now = clock.frame_time();
+                    if start_time.get() == 0 {
+                        start_time.set(now);
+                    }
+                    let elapsed = (now - start_time.get()) as f64 / 1_000_000.0;
+                    for (i, bar) in bars.iter().enumerate() {
+                        let a = (elapsed * (6.0 + i as f64 * 2.5)).sin();
+                        let b = (elapsed * (4.0 - i as f64 * 1.2)).cos();
+                        let height = ((a + b) / 2.0 * 4.0 + 6.0) as i32;
+                        bar.set_size_request(2, height.clamp(2, 10));
+                    }
                 }
-                let elapsed = (now - start_time.get()) as f64 / 1_000_000.0;
-                for (i, bar) in bars.iter().enumerate() {
-                    let a = (elapsed * (6.0 + i as f64 * 2.5)).sin();
-                    let b = (elapsed * (4.0 - i as f64 * 1.2)).cos();
-                    let height = ((a + b) / 2.0 * 4.0 + 6.0) as i32;
-                    bar.set_size_request(2, height.clamp(2, 10));
+                _ if was_playing.replace(false) => {
+                    start_time.set(0);
+                    for bar in bars.iter() {
+                        bar.set_size_request(2, 2);
+                    }
                 }
-            } else if was_playing.replace(false) {
-                start_time.set(0);
-                for bar in bars.iter() {
-                    bar.set_size_request(2, 2);
-                }
+                _ => {}
             }
             glib::ControlFlow::Continue
         }

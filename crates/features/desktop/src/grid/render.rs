@@ -65,34 +65,42 @@ pub fn create_icon_widget(entry: &DesktopEntry, rebuild: Rc<dyn Fn()>) -> Box {
 
     click.connect_pressed(move |gesture, n_press, _, _| {
         let btn = gesture.current_button();
-        if btn == 1 {
-            if n_press == 1 {
-                // Toggle selection
-                if box_click.has_css_class("selected") {
-                    box_click.remove_css_class("selected");
-                } else {
-                    box_click.add_css_class("selected");
-                }
-            } else if n_press >= 2 {
-                // Double click: open
-                if is_dir {
-                    let _ = Command::new("alacritty")
-                        .arg("--working-directory")
-                        .arg(&path_clone)
-                        .spawn()
-                        .or_else(|_| {
-                            Command::new("foot")
+        match true {
+            _ if btn == 1 => {
+                match true {
+                    _ if n_press == 1 => {
+                        // Toggle selection
+                        if box_click.has_css_class("selected") {
+                            box_click.remove_css_class("selected");
+                        } else {
+                            box_click.add_css_class("selected");
+                        }
+                    }
+                    _ if n_press >= 2 => {
+                        // Double click: open
+                        if is_dir {
+                            let _ = Command::new("alacritty")
                                 .arg("--working-directory")
                                 .arg(&path_clone)
                                 .spawn()
-                        })
-                        .or_else(|_| Command::new("xdg-open").arg(&path_clone).spawn());
-                } else {
-                    let _ = Command::new("xdg-open").arg(&path_clone).spawn();
+                                .or_else(|_| {
+                                    Command::new("foot")
+                                        .arg("--working-directory")
+                                        .arg(&path_clone)
+                                        .spawn()
+                                })
+                                .or_else(|_| Command::new("xdg-open").arg(&path_clone).spawn());
+                        } else {
+                            let _ = Command::new("xdg-open").arg(&path_clone).spawn();
+                        }
+                    }
+                    _ => {}
                 }
             }
-        } else if btn == 3 {
-            menu_click.popup();
+            _ if btn == 3 => {
+                menu_click.popup();
+            }
+            _ => {}
         }
     });
 

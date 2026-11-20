@@ -91,15 +91,25 @@ pub fn create_desktop_grid(parent_window: &gtk4::ApplicationWindow) -> (Fixed, R
 
     bg_click.connect_pressed(move |g, _, x, y| {
         let btn = g.current_button();
-        if btn == 1 {
-            // Deselect all
-            let mut child = fixed_click.first_child();
-            while let Some(w) = child {
-                w.remove_css_class("selected");
-                child = w.next_sibling();
+        match true {
+            _ if btn == 1 => {
+                // Deselect all
+                let mut child = fixed_click.first_child();
+                while let Some(w) = child {
+                    w.remove_css_class("selected");
+                    child = w.next_sibling();
+                }
             }
-        } else if btn == 3 {
-            show_desktop_context_menu(&fixed_click, &win_for_menu, x, y, rebuild_for_menu.clone());
+            _ if btn == 3 => {
+                show_desktop_context_menu(
+                    &fixed_click,
+                    &win_for_menu,
+                    x,
+                    y,
+                    rebuild_for_menu.clone(),
+                );
+            }
+            _ => {}
         }
     });
     fixed.add_controller(bg_click);

@@ -10,14 +10,11 @@ pub fn build_volume_update(vol_icon: &gtk4::Image, vol_popover: &gtk4::Popover) 
 
     Rc::new(move || {
         let (vol_pct, is_m) = get_volume_state();
-        let icon_name = if is_m {
-            "volume-mute"
-        } else if vol_pct > 66.0 {
-            "volume"
-        } else if vol_pct > 33.0 {
-            "volume-medium"
-        } else {
-            "volume-low"
+        let icon_name = match true {
+            _ if is_m => "volume-mute",
+            _ if vol_pct > 66.0 => "volume",
+            _ if vol_pct > 33.0 => "volume-medium",
+            _ => "volume-low",
         };
         set_image_from_icon(&vol_icon_c, icon_name, 14);
 

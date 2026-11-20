@@ -48,17 +48,21 @@ pub fn merge_transient_metadata(previous: &PlayerMeta, mut incoming: PlayerMeta)
     if !same_player {
         return incoming;
     }
-    if incoming.title.is_empty() {
-        incoming.title = previous.title.clone();
-        incoming.artist = previous.artist.clone();
-        incoming.art_url = previous.art_url.clone();
-    } else if incoming.title == previous.title {
-        if incoming.artist.is_empty() {
+    match true {
+        _ if incoming.title.is_empty() => {
+            incoming.title = previous.title.clone();
             incoming.artist = previous.artist.clone();
-        }
-        if incoming.art_url.is_empty() {
             incoming.art_url = previous.art_url.clone();
         }
+        _ if incoming.title == previous.title => {
+            if incoming.artist.is_empty() {
+                incoming.artist = previous.artist.clone();
+            }
+            if incoming.art_url.is_empty() {
+                incoming.art_url = previous.art_url.clone();
+            }
+        }
+        _ => {}
     }
     incoming
 }

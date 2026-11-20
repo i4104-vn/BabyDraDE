@@ -36,17 +36,21 @@ fn run() {
     if args.len() > 1 {
         let mut i = 1;
         while i < args.len() {
-            if (args[i] == "--image" || args[i] == "-i") && i + 1 < args.len() {
-                custom_image = Some(args[i + 1].clone());
-                i += 2;
-            } else if !args[i].starts_with('-')
-                && !args[i].contains("lock")
-                && !args[i].contains("__widget")
-            {
-                custom_image = Some(args[i].clone());
-                i += 1;
-            } else {
-                i += 1;
+            match true {
+                _ if (args[i] == "--image" || args[i] == "-i") && i + 1 < args.len() => {
+                    custom_image = Some(args[i + 1].clone());
+                    i += 2;
+                }
+                _ if !args[i].starts_with('-')
+                    && !args[i].contains("lock")
+                    && !args[i].contains("__widget") =>
+                {
+                    custom_image = Some(args[i].clone());
+                    i += 1;
+                }
+                _ => {
+                    i += 1;
+                }
             }
         }
     }

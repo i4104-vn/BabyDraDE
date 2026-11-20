@@ -34,10 +34,14 @@ fn default_locale() -> String {
                 }
             }
             if trimmed.starts_with("LANG=") || trimmed.starts_with("LANGUAGE=") {
-                if trimmed.to_lowercase().contains("vi") {
-                    return "vi".to_string();
-                } else if trimmed.to_lowercase().contains("en") {
-                    return "en".to_string();
+                match true {
+                    _ if trimmed.to_lowercase().contains("vi") => {
+                        return "vi".to_string();
+                    }
+                    _ if trimmed.to_lowercase().contains("en") => {
+                        return "en".to_string();
+                    }
+                    _ => {}
                 }
             }
         }

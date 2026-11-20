@@ -66,22 +66,26 @@ impl BabydraState {
                     self.space.map_element(entry.window.clone(), loc, false);
                 }
             }
-            if entry.was_maximized {
-                if let Some(toplevel) = entry.window.toplevel() {
-                    toplevel.with_pending_state(|state| {
-                        state.states.set(xdg_toplevel::State::Maximized);
-                        state.size = entry.original_size;
-                    });
-                    toplevel.send_configure();
+            match (entry.was_maximized, entry.original_size) {
+                (true, _) => {
+                    if let Some(toplevel) = entry.window.toplevel() {
+                        toplevel.with_pending_state(|state| {
+                            state.states.set(xdg_toplevel::State::Maximized);
+                            state.size = entry.original_size;
+                        });
+                        toplevel.send_configure();
+                    }
                 }
-            } else if let Some(orig_size) = entry.original_size {
-                if let Some(toplevel) = entry.window.toplevel() {
-                    toplevel.with_pending_state(|state| {
-                        state.states.unset(xdg_toplevel::State::Maximized);
-                        state.size = Some(orig_size);
-                    });
-                    toplevel.send_configure();
+                (false, Some(orig_size)) => {
+                    if let Some(toplevel) = entry.window.toplevel() {
+                        toplevel.with_pending_state(|state| {
+                            state.states.unset(xdg_toplevel::State::Maximized);
+                            state.size = Some(orig_size);
+                        });
+                        toplevel.send_configure();
+                    }
                 }
+                (false, None) => {}
             }
         }
         self.space.refresh();
@@ -214,12 +218,10 @@ impl BabydraState {
             return;
         }
 
-        let selected_index = if entries.len() == 1 {
-            0
-        } else if backwards {
-            entries.len() - 1
-        } else {
-            1
+        let selected_index = match (entries.len() == 1, backwards) {
+            (true, _) => 0,
+            (false, true) => entries.len() - 1,
+            (false, false) => 1,
         };
         self.alt_tab_switcher = Some(AltTabSwitcher {
             entries,

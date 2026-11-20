@@ -115,24 +115,29 @@ impl BabydraState {
         self.space.refresh();
 
         let next_top = self.space.elements().next_back().cloned();
-        if let Some(ref next) = next_top {
-            next.set_activated(true);
-            if let Some(top) = next.toplevel() {
+        match next_top.as_ref() {
+            Some(next) => {
+                next.set_activated(true);
+                if let Some(top) = next.toplevel() {
+                    if let Some(keyboard) = self.seat.get_keyboard() {
+                        keyboard.set_focus(
+                            self,
+                            Some(top.wl_surface().clone()),
+                            SERIAL_COUNTER.next_serial(),
+                        );
+                    }
+                    top.send_configure();
+                }
+            }
+            None => {
                 if let Some(keyboard) = self.seat.get_keyboard() {
                     keyboard.set_focus(
                         self,
-                        Some(top.wl_surface().clone()),
+                        Option::<WlSurface>::None,
                         SERIAL_COUNTER.next_serial(),
                     );
                 }
-                top.send_configure();
             }
-        } else if let Some(keyboard) = self.seat.get_keyboard() {
-            keyboard.set_focus(
-                self,
-                Option::<WlSurface>::None,
-                SERIAL_COUNTER.next_serial(),
-            );
         }
 
         self.space.elements().for_each(|w| {

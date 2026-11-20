@@ -24,12 +24,10 @@ pub(crate) fn cycle_window_focus(state: &mut BabydraState, forward: bool, serial
         return false;
     }
 
-    let next_window = if state.windows.len() == 1 {
-        state.windows.first().cloned()
-    } else if forward {
-        state.windows.iter().rev().nth(1).cloned()
-    } else {
-        state.windows.first().cloned()
+    let next_window = match (state.windows.len() == 1, forward) {
+        (true, _) => state.windows.first().cloned(),
+        (false, true) => state.windows.iter().rev().nth(1).cloned(),
+        (false, false) => state.windows.first().cloned(),
     };
 
     let Some(next_window) = next_window else {

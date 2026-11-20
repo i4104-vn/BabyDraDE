@@ -134,12 +134,10 @@ impl Tween {
     #[inline]
     pub fn value_at(&self, now: Instant) -> f64 {
         let p = self.eased_progress_at(now);
-        if p >= 1.0 {
-            self.to
-        } else if p <= 0.0 {
-            self.from
-        } else {
-            self.from + (self.to - self.from) * p
+        match true {
+            _ if p >= 1.0 => self.to,
+            _ if p <= 0.0 => self.from,
+            _ => self.from + (self.to - self.from) * p,
         }
     }
 

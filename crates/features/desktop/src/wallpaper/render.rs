@@ -122,12 +122,17 @@ pub fn load_wallpaper_pixbuf(path: Option<&Path>, target_w: i32, target_h: i32) 
     if let Some(p) = path {
         if p.exists() {
             let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("");
-            if ext.eq_ignore_ascii_case("svg") {
-                if let Ok(pb) = Pixbuf::from_file_at_scale(p, target_w, target_h, false) {
-                    return Some(pb);
+            match true {
+                _ if ext.eq_ignore_ascii_case("svg") => {
+                    if let Ok(pb) = Pixbuf::from_file_at_scale(p, target_w, target_h, false) {
+                        return Some(pb);
+                    }
                 }
-            } else if let Ok(pb) = Pixbuf::from_file(p) {
-                return scale_aspect_fill(&pb, target_w, target_h);
+                _ => {
+                    if let Ok(pb) = Pixbuf::from_file(p) {
+                        return scale_aspect_fill(&pb, target_w, target_h);
+                    }
+                }
             }
         }
     }

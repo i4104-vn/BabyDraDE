@@ -132,14 +132,11 @@ pub fn ease_out_expo(t: f64) -> f64 {
 
 #[inline]
 pub fn ease_in_out_expo(t: f64) -> f64 {
-    if t == 0.0 {
-        0.0
-    } else if t == 1.0 {
-        1.0
-    } else if t < 0.5 {
-        (2.0f64).powf(20.0 * t - 10.0) * 0.5
-    } else {
-        1.0 - (2.0f64).powf(-20.0 * t + 10.0) * 0.5
+    match true {
+        _ if t == 0.0 => 0.0,
+        _ if t == 1.0 => 1.0,
+        _ if t < 0.5 => (2.0f64).powf(20.0 * t - 10.0) * 0.5,
+        _ => 1.0 - (2.0f64).powf(-20.0 * t + 10.0) * 0.5,
     }
 }
 

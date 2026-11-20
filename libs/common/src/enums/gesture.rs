@@ -20,16 +20,16 @@ impl SwipeDirection {
         if abs_x < threshold && abs_y < threshold {
             return None;
         }
-        if abs_x >= abs_y {
-            if dx > 0.0 {
-                Some(Self::Right)
-            } else {
-                Some(Self::Left)
+        match true {
+            _ if abs_x >= abs_y => {
+                if dx > 0.0 {
+                    Some(Self::Right)
+                } else {
+                    Some(Self::Left)
+                }
             }
-        } else if dy > 0.0 {
-            Some(Self::Down)
-        } else {
-            Some(Self::Up)
+            _ if dy > 0.0 => Some(Self::Down),
+            _ => Some(Self::Up),
         }
     }
 }

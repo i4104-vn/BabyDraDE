@@ -154,12 +154,10 @@ pub fn read_and_clear_window_action() -> Option<String> {
 /// Closes the specified window
 pub fn close_window_by_app(app_id: &str, title: &str) {
     send_window_action("close");
-    let target = if !app_id.is_empty() {
-        format!("app_id:{}", app_id)
-    } else if !title.is_empty() {
-        format!("title:{}", title)
-    } else {
-        "state:focused".to_string()
+    let target = match true {
+        _ if !app_id.is_empty() => format!("app_id:{}", app_id),
+        _ if !title.is_empty() => format!("title:{}", title),
+        _ => "state:focused".to_string(),
     };
     let _ = Command::new("wlrctl")
         .args(["window", "close", &target])

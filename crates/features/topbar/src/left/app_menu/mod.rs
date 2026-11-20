@@ -147,18 +147,37 @@ impl AppMenu {
                     .borrow()
                     .is_none_or(|attempt| attempt.elapsed() >= Duration::from_secs(1));
 
-            if changed {
-                *app_info_poll.borrow_mut() = latest.clone();
-                container_poll.set_visible(has_app);
+            match true {
+                _ if changed => {
+                    *app_info_poll.borrow_mut() = latest.clone();
+                    container_poll.set_visible(has_app);
 
-                let next_gen = *gen_poll.borrow() + 1;
-                *gen_poll.borrow_mut() = next_gen;
-                clear_menubar(&menubar_poll, &service_poll, &path_poll);
+                    let next_gen = *gen_poll.borrow() + 1;
+                    *gen_poll.borrow_mut() = next_gen;
+                    clear_menubar(&menubar_poll, &service_poll, &path_poll);
 
-                if has_app {
-                    let display_name = get_app_display_name(&latest.app_id, &latest.title);
-                    update_app_icon(&icon_poll, &latest.app_id);
-                    label_poll.set_label(&display_name);
+                    if has_app {
+                        let display_name = get_app_display_name(&latest.app_id, &latest.title);
+                        update_app_icon(&icon_poll, &latest.app_id);
+                        label_poll.set_label(&display_name);
+                        trigger_dbus_menu_discovery(
+                            &latest.app_id,
+                            latest.process_id,
+                            next_gen,
+                            gen_poll.clone(),
+                            menubar_poll.clone(),
+                            service_poll.clone(),
+                            path_poll.clone(),
+                        );
+                        *last_discovery_poll.borrow_mut() = Some(Instant::now());
+                    } else {
+                        label_poll.set_label("");
+                        *last_discovery_poll.borrow_mut() = None;
+                    }
+                }
+                _ if discovery_retry_due => {
+                    let next_gen = *gen_poll.borrow() + 1;
+                    *gen_poll.borrow_mut() = next_gen;
                     trigger_dbus_menu_discovery(
                         &latest.app_id,
                         latest.process_id,
@@ -169,23 +188,8 @@ impl AppMenu {
                         path_poll.clone(),
                     );
                     *last_discovery_poll.borrow_mut() = Some(Instant::now());
-                } else {
-                    label_poll.set_label("");
-                    *last_discovery_poll.borrow_mut() = None;
                 }
-            } else if discovery_retry_due {
-                let next_gen = *gen_poll.borrow() + 1;
-                *gen_poll.borrow_mut() = next_gen;
-                trigger_dbus_menu_discovery(
-                    &latest.app_id,
-                    latest.process_id,
-                    next_gen,
-                    gen_poll.clone(),
-                    menubar_poll.clone(),
-                    service_poll.clone(),
-                    path_poll.clone(),
-                );
-                *last_discovery_poll.borrow_mut() = Some(Instant::now());
+                _ => {}
             }
 
             glib::ControlFlow::Continue

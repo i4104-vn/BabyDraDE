@@ -10,12 +10,10 @@ use ui_kit::icons::get_icon_colored;
 
 /// Returns the symbolic icon name for a given brightness percentage.
 fn get_brightness_icon_name(val: f64) -> &'static str {
-    if val <= 20.0 {
-        "brightness-low"
-    } else if val <= 70.0 {
-        "brightness-medium"
-    } else {
-        "brightness"
+    match true {
+        _ if val <= 20.0 => "brightness-low",
+        _ if val <= 70.0 => "brightness-medium",
+        _ => "brightness",
     }
 }
 

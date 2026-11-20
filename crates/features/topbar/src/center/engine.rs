@@ -339,11 +339,15 @@ impl IslandEngine {
             // the queue, otherwise it would keep winning arbitration forever
             // (and the capsule could never play its collapse animation).
             view.state.purge(now);
-            if alive {
-                view.state.requested.set(true);
-                alive_count += 1;
-            } else if !view.state.has_timeout(now) && !view.state.override_active.get() {
-                view.state.deactivate();
+            match true {
+                _ if alive => {
+                    view.state.requested.set(true);
+                    alive_count += 1;
+                }
+                _ if !view.state.has_timeout(now) && !view.state.override_active.get() => {
+                    view.state.deactivate();
+                }
+                _ => {}
             }
         }
 

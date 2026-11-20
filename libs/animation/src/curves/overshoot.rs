@@ -28,40 +28,40 @@ pub fn ease_in_out_back(t: f64) -> f64 {
 
 #[inline]
 pub fn ease_in_elastic(t: f64) -> f64 {
-    if t == 0.0 {
-        0.0
-    } else if t == 1.0 {
-        1.0
-    } else {
-        let c4 = (2.0 * PI) / 3.0;
-        -((2.0f64).powf(10.0 * t - 10.0)) * ((t * 10.0 - 10.75) * c4).sin()
+    match true {
+        _ if t == 0.0 => 0.0,
+        _ if t == 1.0 => 1.0,
+        _ => {
+            let c4 = (2.0 * PI) / 3.0;
+            -((2.0f64).powf(10.0 * t - 10.0)) * ((t * 10.0 - 10.75) * c4).sin()
+        }
     }
 }
 
 #[inline]
 pub fn ease_out_elastic(t: f64) -> f64 {
-    if t == 0.0 {
-        0.0
-    } else if t == 1.0 {
-        1.0
-    } else {
-        let c4 = (2.0 * PI) / 3.0;
-        (2.0f64).powf(-10.0 * t) * ((t * 10.0 - 0.75) * c4).sin() + 1.0
+    match true {
+        _ if t == 0.0 => 0.0,
+        _ if t == 1.0 => 1.0,
+        _ => {
+            let c4 = (2.0 * PI) / 3.0;
+            (2.0f64).powf(-10.0 * t) * ((t * 10.0 - 0.75) * c4).sin() + 1.0
+        }
     }
 }
 
 #[inline]
 pub fn ease_in_out_elastic(t: f64) -> f64 {
-    if t == 0.0 {
-        0.0
-    } else if t == 1.0 {
-        1.0
-    } else {
-        let c5 = (2.0 * PI) / 4.5;
-        if t < 0.5 {
-            -0.5 * ((2.0f64).powf(20.0 * t - 10.0)) * ((20.0 * t - 11.125) * c5).sin()
-        } else {
-            0.5 * ((2.0f64).powf(-20.0 * t + 10.0)) * ((20.0 * t - 11.125) * c5).sin() + 1.0
+    match true {
+        _ if t == 0.0 => 0.0,
+        _ if t == 1.0 => 1.0,
+        _ => {
+            let c5 = (2.0 * PI) / 4.5;
+            if t < 0.5 {
+                -0.5 * ((2.0f64).powf(20.0 * t - 10.0)) * ((20.0 * t - 11.125) * c5).sin()
+            } else {
+                0.5 * ((2.0f64).powf(-20.0 * t + 10.0)) * ((20.0 * t - 11.125) * c5).sin() + 1.0
+            }
         }
     }
 }
@@ -70,17 +70,20 @@ pub fn ease_in_out_elastic(t: f64) -> f64 {
 pub fn ease_out_bounce(t: f64) -> f64 {
     let n1 = 7.5625;
     let d1 = 2.75;
-    if t < 1.0 / d1 {
-        n1 * t * t
-    } else if t < 2.0 / d1 {
-        let t = t - 1.5 / d1;
-        n1 * t * t + 0.75
-    } else if t < 2.5 / d1 {
-        let t = t - 2.25 / d1;
-        n1 * t * t + 0.9375
-    } else {
-        let t = t - 2.625 / d1;
-        n1 * t * t + 0.984375
+    match true {
+        _ if t < 1.0 / d1 => n1 * t * t,
+        _ if t < 2.0 / d1 => {
+            let t = t - 1.5 / d1;
+            n1 * t * t + 0.75
+        }
+        _ if t < 2.5 / d1 => {
+            let t = t - 2.25 / d1;
+            n1 * t * t + 0.9375
+        }
+        _ => {
+            let t = t - 2.625 / d1;
+            n1 * t * t + 0.984375
+        }
     }
 }
 

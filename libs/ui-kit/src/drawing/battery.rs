@@ -3,12 +3,10 @@
 use gtk4::cairo;
 
 pub fn get_battery_rgb(percentage: u32, is_charging: bool) -> (f64, f64, f64) {
-    if is_charging || percentage > 30 {
-        (0.13, 0.77, 0.36) // Green (#22c55e)
-    } else if percentage > 15 {
-        (0.96, 0.62, 0.04) // Amber (#f59e0b)
-    } else {
-        (0.94, 0.27, 0.27) // Red (#ef4444)
+    match true {
+        _ if is_charging || percentage > 30 => (0.13, 0.77, 0.36), // Green (#22c55e)
+        _ if percentage > 15 => (0.96, 0.62, 0.04),                // Amber (#f59e0b)
+        _ => (0.94, 0.27, 0.27),                                   // Red (#ef4444)
     }
 }
 

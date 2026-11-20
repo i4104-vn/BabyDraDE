@@ -141,16 +141,16 @@ impl MediaFeature {
 
     fn update_view(&mut self) {
         let meta = &self.cached;
-        let base = if meta.title.is_empty() {
-            if meta.artist.is_empty() {
-                "Music Player".to_string()
-            } else {
-                meta.artist.clone()
+        let base = match true {
+            _ if meta.title.is_empty() => {
+                if meta.artist.is_empty() {
+                    "Music Player".to_string()
+                } else {
+                    meta.artist.clone()
+                }
             }
-        } else if meta.artist.is_empty() {
-            meta.title.clone()
-        } else {
-            format!("{} - {}", meta.artist, meta.title)
+            _ if meta.artist.is_empty() => meta.title.clone(),
+            _ => format!("{} - {}", meta.artist, meta.title),
         };
         let display = if self.player_active && !self.cached.playing {
             format!("{base}")
@@ -211,19 +211,16 @@ impl MediaFeature {
             let url = meta.art_url.clone();
             let tx = self.art_tx.clone();
             std::thread::spawn(move || {
-                let bytes = if let Some(path) = url.strip_prefix("file://") {
-                    std::fs::read(path).ok()
-                } else if url.starts_with('/') {
-                    std::fs::read(&url).ok()
-                } else if url.starts_with("http") {
-                    std::process::Command::new("curl")
+                let bytes = match url.strip_prefix("file://") {
+                    Some(path) => std::fs::read(path).ok(),
+                    None if url.starts_with('/') => std::fs::read(&url).ok(),
+                    None if url.starts_with("http") => std::process::Command::new("curl")
                         .args(["-s", "-L", "--max-time", "5", &url])
                         .output()
                         .ok()
                         .filter(|out| out.status.success())
-                        .map(|out| out.stdout)
-                } else {
-                    Some(Vec::new())
+                        .map(|out| out.stdout),
+                    None => Some(Vec::new()),
                 };
                 if let Some(bytes) = bytes {
                     let _ = tx.send((url, bytes));

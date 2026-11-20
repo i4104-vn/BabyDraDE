@@ -231,14 +231,11 @@ pub fn create_wifi_net_icon(
     size: i32,
     color: Option<&str>,
 ) -> gtk4::Image {
-    let icon_name = if signal > 75 {
-        "network-wireless-signal-excellent-symbolic"
-    } else if signal > 50 {
-        "network-wireless-signal-good-symbolic"
-    } else if signal > 25 {
-        "network-wireless-signal-ok-symbolic"
-    } else {
-        "network-wireless-signal-weak-symbolic"
+    let icon_name = match true {
+        _ if signal > 75 => "network-wireless-signal-excellent-symbolic",
+        _ if signal > 50 => "network-wireless-signal-good-symbolic",
+        _ if signal > 25 => "network-wireless-signal-ok-symbolic",
+        _ => "network-wireless-signal-weak-symbolic",
     };
 
     if let Some(c) = color {

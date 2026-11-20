@@ -44,12 +44,10 @@ pub fn render_animated_window(
 
     let bbox = window.bbox();
     let geo = window.geometry();
-    let base_size = if bbox.size.w > 0 && bbox.size.h > 0 {
-        bbox.size
-    } else if geo.size.w > 0 && geo.size.h > 0 {
-        geo.size
-    } else {
-        return elements;
+    let base_size = match true {
+        _ if bbox.size.w > 0 && bbox.size.h > 0 => bbox.size,
+        _ if geo.size.w > 0 && geo.size.h > 0 => geo.size,
+        _ => return elements,
     };
 
     // Calculate window center in logical coordinates

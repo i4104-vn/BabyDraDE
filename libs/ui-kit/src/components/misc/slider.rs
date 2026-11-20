@@ -137,12 +137,10 @@ impl PillSlider {
         scroll_controller.connect_scroll(move |_, _dx, dy| {
             let current = scale.value();
             let step = 5.0;
-            let new_val = if dy < 0.0 {
-                (current + step).min(100.0)
-            } else if dy > 0.0 {
-                (current - step).max(0.0)
-            } else {
-                current
+            let new_val = match true {
+                _ if dy < 0.0 => (current + step).min(100.0),
+                _ if dy > 0.0 => (current - step).max(0.0),
+                _ => current,
             };
 
             scale.set_value(new_val);
