@@ -11,8 +11,6 @@ use smithay::{
             Kind,
         },
         glow::GlowRenderer,
-        utils::{with_renderer_surface_state},
-        Renderer, Texture,
     },
     desktop::Window,
     utils::{Logical, Point, Scale, Transform},
@@ -202,7 +200,7 @@ fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
 
 /// Resolve the best-match background color for a window.
 /// Priority: (1) app config file → (2) SHM pixel readback → (3) hardcoded app fallback.
-fn resolve_color(renderer: &mut GlowRenderer, window: &Window) -> [f64; 3] {
+fn resolve_color(window: &Window) -> [f64; 3] {
     // Priority 1: read the app's own config (most accurate, works for GPU clients)
     if let Some(c) = color_from_app_config(window) {
         return c;
@@ -217,116 +215,25 @@ fn resolve_color(renderer: &mut GlowRenderer, window: &Window) -> [f64; 3] {
         }
     }
 
-    // Priority 3: try GL texture read for GPU clients that expose TEXTURE_2D
-    if let Some(c) = sample_gl_color(renderer, window) {
-        return c;
-    }
-
-    // Priority 4: hardcoded per-app fallback
+    // Priority 3: hardcoded per-app fallback
     app_fallback_color(window)
 }
 
-/// Best-effort OpenGL pixel readback from a standard TEXTURE_2D surface.
-/// Skips silently for external OES textures (dmabuf GPU clients — handled by config reading).
-fn sample_gl_color(renderer: &mut GlowRenderer, window: &Window) -> Option<[f64; 3]> {
-    use glow::HasContext;
-
-    let toplevel = window.toplevel()?;
-    let surface = toplevel.wl_surface();
-    let context_id = renderer.context_id();
-
-    let (tex_id, size, y_inverted) = with_renderer_surface_state(surface, |state| {
-        let tex = state.texture::<smithay::backend::renderer::gles::GlesTexture>(context_id)?;
-        Some((tex.tex_id(), tex.size(), tex.is_y_inverted()))
-    })??;
-
-    if size.w <= 0 || size.h <= 0 {
-        return None;
-    }
-
-    let glow_tex = std::num::NonZeroU32::new(tex_id).map(glow::NativeTexture)?;
-
-    // Compute UV for 8px inset from the top of the client area
-    let h = size.h as f32;
-    let uv_y: f32 = if y_inverted {
-        (8.0 / h).clamp(0.01, 0.5)
-    } else {
-        (1.0 - 8.0 / h).clamp(0.5, 0.99)
-    };
-    let sample_uv = (0.5f32, uv_y);
-
-    renderer
-        .with_context(|gl| unsafe {
-            // Try attaching as plain TEXTURE_2D — fast path, works for SHM-imported textures
-            let saved_fbo = gl.get_parameter_i32(glow::FRAMEBUFFER_BINDING).max(0) as u32;
-            let saved_fbo = std::num::NonZeroU32::new(saved_fbo).map(glow::NativeFramebuffer);
-
-            let fbo = gl.create_framebuffer().ok()?;
-            gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
-            gl.framebuffer_texture_2d(
-                glow::FRAMEBUFFER,
-                glow::COLOR_ATTACHMENT0,
-                glow::TEXTURE_2D,
-                Some(glow_tex),
-                0,
-            );
-            let status = gl.check_framebuffer_status(glow::FRAMEBUFFER);
-            if status != glow::FRAMEBUFFER_COMPLETE {
-                // dmabuf external texture — cannot read this way, return None
-                gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
-                gl.delete_framebuffer(fbo);
-                return None;
-            }
-
-            // Pixel coordinate from UV
-            let px = (sample_uv.0 * size.w as f32) as i32;
-            let py = (sample_uv.1 * size.h as f32) as i32;
-            let mut pixel = [0u8; 4];
-            gl.read_pixels(
-                px.clamp(0, size.w - 1),
-                py.clamp(0, size.h - 1),
-                1, 1,
-                glow::RGBA,
-                glow::UNSIGNED_BYTE,
-                glow::PixelPackData::Slice(Some(&mut pixel)),
-            );
-            gl.bind_framebuffer(glow::FRAMEBUFFER, saved_fbo);
-            gl.delete_framebuffer(fbo);
-
-            if pixel[3] < 10 {
-                return None;
-            }
-            Some([pixel[0] as f64 / 255.0, pixel[1] as f64 / 255.0, pixel[2] as f64 / 255.0])
-        })
-        .ok()?
-}
-
-/// Get or lazily compute the titlebar background color for this window.
+/// Get or lazily compute (once) the titlebar background color for this window.
 ///
-/// Cache strategy:
-/// - If the color was resolved from the app's own **config file** (most accurate path),
-///   store it permanently — config files don't change while the app is running.
-/// - Otherwise (SHM readback / GL readback / hardcoded fallback), do NOT cache yet;
-///   retry every frame until the app_id is available and we can read the config.
-///   This prevents "poison cache" on first frame when `app_id` is still `None`.
-pub fn get_or_sample_color(renderer: &mut GlowRenderer, window: &Window) -> [f64; 3] {
-    // Return permanently cached value (only stored after a config-file hit)
+/// Automatically caches the resolved color in the window's user data so that
+/// resolution is performed exactly once per window lifetime, avoiding repeated
+/// file I/O, buffer sampling, or color jitter during dragging.
+pub fn get_or_sample_color(window: &Window) -> [f64; 3] {
     if let Some(cached) = window.user_data().get::<WindowTitlebarColor>() {
         return cached.0;
     }
 
-    // Try config file first — most reliable, works for GPU/dmabuf clients
-    if let Some(color) = color_from_app_config(window) {
-        // Got a definitive answer from the app's own config: cache it forever
-        window
-            .user_data()
-            .insert_if_missing(|| WindowTitlebarColor(color));
-        return color;
-    }
-
-    // app_id not yet available or app not recognised — fall through to runtime sampling.
-    // Do NOT cache the result so we retry every frame until app_id is set.
-    resolve_color(renderer, window)
+    let color = resolve_color(window);
+    window
+        .user_data()
+        .insert_if_missing(|| WindowTitlebarColor(color));
+    color
 }
 
 // Keep old public name as an alias for external callers / tests
@@ -410,7 +317,7 @@ pub fn render(
     scale: Scale<f64>,
     pointer: Point<f64, Logical>,
     should_blur: bool,
-    _opacity: f32,
+    opacity: f32,
 ) -> Option<CustomRenderElements> {
     let state = window.toplevel()?.current_state();
     if state.decoration_mode != Some(
@@ -441,7 +348,7 @@ pub fn render(
         ctx.scale(scale.x, scale.y);
         let w_local = width as f64 / scale.x;
 
-        let color = get_or_sample_color(renderer, window);
+        let color = get_or_sample_color(window);
 
         // Clear surface to ensure transparency outside rounded corners
         ctx.set_operator(cairo::Operator::Clear);
@@ -467,11 +374,7 @@ pub fn render(
         }
 
         if should_blur {
-            // Semi-transparent tint over the BlurRenderElement beneath.
-            // The blur backdrop already renders the frosted-glass effect; this layer
-            // adds the app's tint color at ~75% opacity so the blur "shows through"
-            // while still matching the app's overall dark tone.
-            ctx.set_source_rgba(color[0], color[1], color[2], 0.75);
+            ctx.set_source_rgba(color[0], color[1], color[2], opacity as f64);
         } else {
             // No blur — fully opaque solid color matching the app background exactly.
             ctx.set_source_rgb(color[0], color[1], color[2]);
@@ -614,10 +517,10 @@ pub fn render(
     } else {
         location.y - HEIGHT
     };
-    let point = Point::<f64, smithay::utils::Physical>::from((
-        (location.x as f64 * scale.x),
-        (frame_y as f64 * scale.y),
-    ));
+    let titlebar_loc = Point::<i32, Logical>::from((location.x, frame_y));
+    let titlebar_phys: Point<i32, smithay::utils::Physical> =
+        titlebar_loc.to_physical_precise_round(scale);
+    let point = titlebar_phys.to_f64();
     MemoryRenderBufferRenderElement::from_buffer(
         renderer,
         point,
