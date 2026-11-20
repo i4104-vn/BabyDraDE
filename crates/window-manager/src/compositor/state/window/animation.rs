@@ -131,9 +131,9 @@ impl BabydraState {
             self.space.unmap_elem(&window);
         }
 
-        if !self.windows.is_empty() {
-            self.cleanup_windows();
-        }
+        // Always clean up, including when the last window closed, so the
+        // active-window state file is cleared for the topbar app label.
+        self.cleanup_windows();
     }
 }
 

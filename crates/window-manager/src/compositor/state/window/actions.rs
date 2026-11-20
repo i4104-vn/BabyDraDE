@@ -4,9 +4,16 @@ use super::animation::is_window_closing;
 use crate::compositor::state::BabydraState;
 
 impl BabydraState {
-    /// Removes dead windows from the tracking list.
+    /// Removes dead windows from the tracking list and keeps the shared
+    /// active-window state in sync (so widgets hide the name of closed apps).
     pub(crate) fn cleanup_windows(&mut self) {
+        let before = self.windows.len();
         self.windows.retain(|w| w.alive());
+
+        if self.windows.len() != before || self.windows.is_empty() {
+            let active = self.active_window();
+            self.update_active_window(active.as_ref());
+        }
     }
 
     /// Returns the topmost (most recently raised / focused) window, if any.
