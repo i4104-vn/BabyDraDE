@@ -7,16 +7,16 @@ use smithay::{
     },
     desktop::Window,
     reexports::wayland_protocols::xdg::shell::server::xdg_toplevel,
-    utils::{Logical, Physical, Point, Rectangle, Scale, Size},
+    utils::{Logical, Point, Rectangle, Scale},
 };
 
 use crate::compositor::window_animation_factors;
-use crate::enums::{CORNER_RADIUS, TITLEBAR_HEIGHT};
+use crate::enums::TITLEBAR_HEIGHT;
 use crate::rendering::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::rendering::blur::{BlurEngine, BlurRenderElement};
 use crate::rendering::titlebar;
 
-use super::types::{CustomRenderElements, RoundedSurface, WindowBlurId};
+use super::types::{CustomRenderElements, WindowBlurId};
 
 /// Full-bleed windows must retain the application's own edge treatment.
 fn corner_radius_for_window(window: &Window, floating_radius: f32) -> f32 {
@@ -103,20 +103,16 @@ pub fn render_window(
     let render_loc = location - window.geometry().loc;
 
     // 1. Wayland window surface elements (in front)
-    let surfaces = if corner_radius > 0.0 {
-        rounded_client_surfaces(renderer, window, render_loc, location, scale, opacity)
-    } else {
-        window
-            .render_elements::<WaylandSurfaceRenderElement<GlowRenderer>>(
-                renderer,
-                render_loc.to_physical_precise_round(scale),
-                scale,
-                opacity,
-            )
-            .into_iter()
-            .map(CustomRenderElements::Surface)
-            .collect()
-    };
+    let surfaces: Vec<CustomRenderElements> = window
+        .render_elements::<WaylandSurfaceRenderElement<GlowRenderer>>(
+            renderer,
+            render_loc.to_physical_precise_round(scale),
+            scale,
+            opacity,
+        )
+        .into_iter()
+        .map(CustomRenderElements::Surface)
+        .collect();
 
     elements.extend(surfaces);
 
@@ -178,62 +174,4 @@ pub fn render_window(
     }
 
     elements
-}
-
-/// Approximate the two bottom circular corners with a small, fixed set of
-/// crops. This only affects floating windows; maximized/fullscreen windows pass
-/// `corner_radius == 0` and retain their original, rectangular client surface.
-fn rounded_client_surfaces(
-    renderer: &mut GlowRenderer,
-    window: &Window,
-    render_loc: Point<i32, Logical>,
-    location: Point<i32, Logical>,
-    scale: Scale<f64>,
-    opacity: f32,
-) -> Vec<CustomRenderElements> {
-    const BANDS: i32 = 8;
-    let bounds = Rectangle::<i32, Logical>::new(location, window.geometry().size)
-        .to_physical_precise_round(scale);
-    let radius_x = ((CORNER_RADIUS * scale.x) as i32).clamp(1, bounds.size.w / 2);
-    let radius_y = ((CORNER_RADIUS * scale.y) as i32).clamp(1, bounds.size.h / 2);
-    let straight_height = bounds.size.h - radius_y;
-
-    let mut crops = Vec::with_capacity((BANDS + 1) as usize);
-    if straight_height > 0 {
-        crops.push(Rectangle::<i32, Physical>::new(
-            bounds.loc,
-            Size::from((bounds.size.w, straight_height)),
-        ));
-    }
-    for band in 0..BANDS {
-        let y0 = radius_y * band / BANDS;
-        let y1 = radius_y * (band + 1) / BANDS;
-        let center_y = (y0 + y1) as f64 * 0.5;
-        let inset = (radius_x as f64
-            - radius_x as f64 * (1.0 - (center_y / radius_y as f64).powi(2)).sqrt())
-        .ceil() as i32;
-        crops.push(Rectangle::<i32, Physical>::new(
-            bounds.loc + Point::from((inset, straight_height + y0)),
-            Size::from(((bounds.size.w - 2 * inset).max(0), (y1 - y0).max(1))),
-        ));
-    }
-
-    let mut result = Vec::new();
-    for crop in crops {
-        result.extend(
-            window
-                .render_elements::<WaylandSurfaceRenderElement<GlowRenderer>>(
-                    renderer,
-                    render_loc.to_physical_precise_round(scale),
-                    scale,
-                    opacity,
-                )
-                .into_iter()
-                .filter_map(|surface| {
-                    RoundedSurface::from_element(surface, scale, crop)
-                        .map(CustomRenderElements::RoundedSurface)
-                }),
-        );
-    }
-    result
 }
