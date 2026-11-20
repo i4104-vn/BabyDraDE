@@ -297,7 +297,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::view::CardLayout;
+    use crate::extensions::switcher::view::CardLayout;
     use super::*;
 
     fn test_layout(viewport: Rect) -> SwitcherLayout {
