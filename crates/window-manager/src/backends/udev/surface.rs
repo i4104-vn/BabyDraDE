@@ -12,7 +12,7 @@ use smithay::{
     output::Output,
 };
 
-use crate::rendering::Cursor;
+use crate::extensions::Cursor;
 
 pub type UdevDrmCompositor =
     DrmCompositor<GbmAllocator<DrmDeviceFd>, GbmFramebufferExporter<DrmDeviceFd>, (), DrmDeviceFd>;

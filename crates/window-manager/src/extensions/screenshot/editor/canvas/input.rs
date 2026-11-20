@@ -2,7 +2,7 @@ use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::screenshot::editor::model::{Drawing, EditorState, Tool};
+use crate::extensions::screenshot::editor::model::{Drawing, EditorState, Tool};
 
 use super::render::SharedCache;
 

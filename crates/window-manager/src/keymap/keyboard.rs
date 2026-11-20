@@ -259,7 +259,7 @@ fn try_trigger(key: Key, state: &Arc<Mutex<ModifierState>>, shortcuts: &SharedSh
     // Fixed screenshot shortcut (Super+Shift+S) is a compositor action, not a
     // configurable command, so it cannot be remapped or removed via settings.
     if key == Key::KEY_S && current.win && current.shift && !current.ctrl && !current.alt {
-        crate::screenshot::trigger();
+        crate::extensions::screenshot::trigger();
         return true;
     }
 

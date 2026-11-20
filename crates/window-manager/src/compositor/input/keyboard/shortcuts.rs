@@ -7,7 +7,7 @@ use tracing::info;
 use super::focus::{cycle_window_focus, focus_window};
 use super::launcher::spawn_new_terminal;
 use crate::compositor::state::BabydraState;
-use crate::rendering::lock;
+use crate::extensions::lock;
 
 pub(crate) use crate::enums::KeyboardAction;
 

@@ -2,8 +2,8 @@ use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::screenshot::editor::handle::drawing::{draw_pixelated_rect, render_shape};
-use crate::screenshot::editor::model::{Drawing, EditorState, Tool};
+use crate::extensions::screenshot::editor::handle::drawing::{draw_pixelated_rect, render_shape};
+use crate::extensions::screenshot::editor::model::{Drawing, EditorState, Tool};
 
 /// Cached static scene (background + overlay + finished drawings).
 /// Rebuilt only when content version, canvas size, or scale factor changes,

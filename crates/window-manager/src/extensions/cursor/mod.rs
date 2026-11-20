@@ -14,7 +14,7 @@ use smithay::{
     utils::{Buffer, Logical, Point, Rectangle, Scale, Transform},
 };
 
-use super::CustomRenderElements;
+use crate::rendering::CustomRenderElements;
 use data::{CURSOR_HEIGHT, CURSOR_PIXELS, CURSOR_WIDTH};
 
 pub struct Cursor {

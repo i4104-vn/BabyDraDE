@@ -126,7 +126,7 @@ where
     let editor_path = save_path.to_string_lossy().into_owned();
     let _ = std::thread::Builder::new()
         .name("babydra-screenshot-editor".to_string())
-        .spawn(move || crate::screenshot::open_editor(editor_path));
+        .spawn(move || crate::extensions::screenshot::open_editor(editor_path));
 
     Some(save_path)
 }

@@ -13,9 +13,8 @@ use smithay::{
 
 use crate::{
     compositor::{BabydraState, CalloopData},
-    rendering::{
-        render_layer_surfaces, render_window, Cursor, CustomRenderElements, SwitcherOverlay,
-    },
+    extensions::{Cursor, SwitcherOverlay},
+    rendering::{render_layer_surfaces, render_window, CustomRenderElements},
 };
 
 const OUTPUT_REFRESH_MHZ: i32 = animation::TARGET_FPS as i32 * 1000;
@@ -176,8 +175,8 @@ pub(crate) fn init(
                         render_result.damage.cloned()
                     };
 
-                    if crate::screenshot::capture::take_requested() {
-                        let _ = crate::screenshot::capture::capture_screen(
+                    if crate::extensions::screenshot::capture::take_requested() {
+                        let _ = crate::extensions::screenshot::capture::capture_screen(
                             backend.renderer(),
                             &render_elements,
                             &output,

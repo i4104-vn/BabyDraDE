@@ -1,8 +1,8 @@
 mod backends;
 mod compositor;
+mod extensions;
 mod keymap;
 pub mod rendering;
-mod screenshot;
 
 pub use common as enums;
 

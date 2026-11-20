@@ -21,12 +21,11 @@ use smithay::{
 use crate::compositor::AltTabSwitcher;
 
 use super::{
-    super::CustomRenderElements,
     draw::Rect,
     view::{compute_layout, draw_switcher_foreground, SwitcherLayout, DOCK_MAX_VISIBLE_ITEMS},
 };
 
-use crate::rendering::elements::types::ConstrainedSurface;
+use crate::rendering::{elements::types::ConstrainedSurface, CustomRenderElements};
 
 #[derive(Default)]
 pub struct SwitcherOverlay {
@@ -298,7 +297,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::view::CardLayout;
+    use super::view::CardLayout;
     use super::*;
 
     fn test_layout(viewport: Rect) -> SwitcherLayout {

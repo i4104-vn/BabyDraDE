@@ -18,7 +18,8 @@ use tracing::{error, info, warn};
 
 use crate::{
     compositor::CalloopData,
-    rendering::{render_layer_surfaces, render_window, CustomRenderElements, SwitcherOverlay},
+    extensions::SwitcherOverlay,
+    rendering::{render_layer_surfaces, render_window, CustomRenderElements},
 };
 
 use super::surface::UdevState;
@@ -205,8 +206,8 @@ pub fn setup_render_loop(
                         }
                     }
 
-                    if crate::screenshot::capture::take_requested() {
-                        let _ = crate::screenshot::capture::capture_screen(
+                    if crate::extensions::screenshot::capture::take_requested() {
+                        let _ = crate::extensions::screenshot::capture::capture_screen(
                             renderer, &render_elements, output,
                         );
                     }
