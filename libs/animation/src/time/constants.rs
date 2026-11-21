@@ -21,6 +21,9 @@ pub const FADE_IN_DURATION: Duration = Duration::from_millis(240);
 /// Overlay fade-out duration.
 pub const FADE_OUT_DURATION: Duration = Duration::from_millis(180);
 
+/// Wallpaper circular-reveal duration.
+pub const REVEAL_DURATION: Duration = Duration::from_millis(600);
+
 #[cfg(test)]
 mod tests {
     use super::*;

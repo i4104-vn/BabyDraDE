@@ -251,7 +251,9 @@ fn draw_label(
 }
 
 /// Draws the whole overlay: capsule, selection, icons, indicator and label.
-/// `presence` (0..=1) drives the open/close fade of the complete scene.
+/// `presence` (0..=1) drives the fade, `slide_x` slides the docked capsule in
+/// from / out to the left screen edge.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn draw_scene(
     context: &Context,
     apps: &[LauncherApp],
@@ -260,11 +262,17 @@ pub(super) fn draw_scene(
     selected: Option<usize>,
     logical_w: f64,
     presence: f64,
+    slide_x: f64,
 ) -> Result<(), cairo::Error> {
+    // Shifting the panel rectangle moves the capsule, its clip path, icons,
+    // indicator and name label together. The shadow follows automatically.
+    let mut scene_panel = *panel;
+    scene_panel.x += slide_x;
+
     // Fade the composited scene as a whole so the panel, icons, label and
     // shadow all appear and disappear together.
     context.push_group();
-    let drawn = draw_content(context, apps, panel, position, selected, logical_w);
+    let drawn = draw_content(context, apps, &scene_panel, position, selected, logical_w);
     let group = context.pop_group()?;
     context.set_source(&group)?;
     context.paint_with_alpha(presence)?;

@@ -27,7 +27,7 @@ use super::draw::draw_scene;
 use super::layout::{visual_center, Panel};
 use super::{
     BackdropKey, BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO,
-    SLOT, VISIBLE_SLOTS,
+    PANEL_WIDTH, SLOT, VISIBLE_SLOTS,
 };
 
 /// State of the launcher.
@@ -99,6 +99,12 @@ impl LauncherState {
 
     fn panel(&self) -> Panel {
         Panel::new(self.apps.len(), self.center_y)
+    }
+
+    /// Horizontal offset of the capsule during the open/close animation:
+    /// fully off-screen to the left when closed, docked at `PANEL_X` when open.
+    fn slide_offset(&self) -> f64 {
+        slide_offset_for(self.presence.value())
     }
 
     pub(crate) fn is_visible(&self) -> bool {
@@ -238,7 +244,8 @@ impl LauncherState {
         if !self.visible || self.closing || self.apps.is_empty() {
             return None;
         }
-        let panel = self.panel();
+        let mut panel = self.panel();
+        panel.x += self.slide_offset();
         if !panel.contains(point) {
             return None;
         }
@@ -255,7 +262,12 @@ impl LauncherState {
     }
 
     pub(crate) fn is_over_panel(&self, point: Point<f64, Logical>) -> bool {
-        self.visible && !self.closing && !self.apps.is_empty() && self.panel().contains(point)
+        if !self.visible || self.closing || self.apps.is_empty() {
+            return false;
+        }
+        let mut panel = self.panel();
+        panel.x += self.slide_offset();
+        panel.contains(point)
     }
 
     pub(crate) fn update_hover(&mut self, point: Point<f64, Logical>) -> bool {
@@ -306,17 +318,18 @@ impl LauncherState {
         let presence_animating = self.presence.is_animating();
         let position_animating = self.position.is_animating();
         let presence_tick = if presence_animating {
-            self.presence.frame_tick()
+            self.presence.frame_index()
         } else {
             u64::MAX
         };
         let tick = match (presence_animating, position_animating) {
-            (true, true) => presence_tick ^ self.position.frame_tick(),
+            (true, true) => presence_tick.max(self.position.frame_index()),
             (true, false) => presence_tick,
-            (false, true) => self.position.frame_tick(),
+            (false, true) => self.position.frame_index(),
             (false, false) => u64::MAX,
         };
         let presence = self.presence.value();
+        let slide_x = slide_offset_for(presence);
         let key = (self.apps.len(), self.selected, tick, region);
 
         if self.buffer.is_none() || self.region != Some(region) {
@@ -337,7 +350,9 @@ impl LauncherState {
             let selected = self.selected;
             if let Some(pixels) =
                 render_pixels(region.2, region.3, scale, (region.0, region.1), |ctx| {
-                    draw_scene(ctx, apps, &panel, position, selected, logical_w, presence)
+                    draw_scene(
+                        ctx, apps, &panel, position, selected, logical_w, presence, slide_x,
+                    )
                 })
             {
                 if let Some(buffer) = self.buffer.as_mut() {
@@ -428,6 +443,11 @@ impl LauncherState {
     }
 }
 
+/// Slide distance for a given presence value (0 = hidden left, 1 = docked).
+fn slide_offset_for(presence: f64) -> f64 {
+    -(1.0 - presence.clamp(0.0, 1.0)) * PANEL_WIDTH
+}
+
 /// Whether a held arrow should step again at `now`.
 fn repeat_due(started: Instant, last: Instant, now: Instant) -> bool {
     now.duration_since(started) >= Duration::from_millis(REPEAT_DELAY_MS)
@@ -437,6 +457,13 @@ fn repeat_due(started: Instant, last: Instant, now: Instant) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn capsule_slides_in_from_the_left() {
+        assert_eq!(slide_offset_for(0.0), -PANEL_WIDTH);
+        assert_eq!(slide_offset_for(1.0), 0.0);
+        assert_eq!(slide_offset_for(0.5), -PANEL_WIDTH / 2.0);
+    }
 
     #[test]
     fn repeat_waits_for_delay_then_runs_at_interval() {

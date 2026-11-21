@@ -1,6 +1,6 @@
 //! Lock screen UI components, window creation, and blur transitions.
 
-use animation::{Easing, Tween, FRAME_INTERVAL};
+use animation::{Easing, Tween};
 
 use super::auth::verify_password;
 use gtk4::prelude::*;
@@ -301,10 +301,13 @@ fn schedule_reverse_blur_step(transition: LockTransition, on_complete: Rc<dyn Fn
 
 fn fade_out_reverse_transition(transition: LockTransition, on_complete: Rc<dyn Fn()>) {
     let fade = Tween::new(1.0, 0.0, Duration::from_millis(120), Easing::EaseOutCubic);
-    glib::timeout_add_local(FRAME_INTERVAL, move || {
+    // Tick callbacks follow the display refresh (up to 120 fps) instead of a
+    // fixed timer, while the Tween keeps motion wall-clock based.
+    transition.window.clone().add_tick_callback(move |_, _| {
         transition.window.set_opacity(fade.value());
 
         if !fade.is_animating() {
+            transition.window.set_opacity(0.0);
             transition.window.set_visible(false);
             on_complete();
             glib::ControlFlow::Break
@@ -373,7 +376,8 @@ fn blur_transition_frame(
 
 fn fade_out_transition(transition: LockTransition) {
     let fade = Tween::new(1.0, 0.0, Duration::from_millis(160), Easing::EaseOutCubic);
-    glib::timeout_add_local(FRAME_INTERVAL, move || {
+    // Vsynced fade: updates once per display frame (up to 120 fps).
+    transition.stack.clone().add_tick_callback(move |_, _| {
         if transition.cancelled.get() {
             return glib::ControlFlow::Break;
         }
@@ -381,6 +385,7 @@ fn fade_out_transition(transition: LockTransition) {
         transition.stack.set_opacity(fade.value());
 
         if !fade.is_animating() {
+            transition.stack.set_opacity(0.0);
             transition.stack.set_visible(false);
             glib::ControlFlow::Break
         } else {

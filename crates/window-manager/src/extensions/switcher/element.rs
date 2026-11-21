@@ -81,7 +81,7 @@ impl SwitcherOverlay {
         // items are static but the highlight frame glides between them, and
         // skipping these frames made it jump in one step.
         let animation_tick = if switcher.scroll.is_animating() {
-            switcher.scroll.frame_tick()
+            switcher.scroll.frame_index()
         } else {
             u64::MAX
         };
@@ -298,8 +298,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::extensions::switcher::view::CardLayout;
     use super::*;
+    use crate::extensions::switcher::view::CardLayout;
 
     fn test_layout(viewport: Rect) -> SwitcherLayout {
         SwitcherLayout {

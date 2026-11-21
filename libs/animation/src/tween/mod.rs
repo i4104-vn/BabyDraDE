@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 use crate::curves::Easing;
 use crate::time::clock::tick_between;
 use crate::time::constants::DEFAULT_DURATION;
+use crate::time::frame::frame_index_since;
 
 /// A clock-driven interpolation between two `f64` values.
 #[derive(Clone, Copy, Debug)]
@@ -227,11 +228,31 @@ impl Tween {
     pub fn frame_tick_at(&self, now: Instant) -> u64 {
         tick_between(self.started_at, now)
     }
+
+    /// Frame index since this tween started, quantized to the shared 120 fps
+    /// budget. Stable within a frame, so it is a good animation cache key.
+    #[inline]
+    pub fn frame_index(&self) -> u64 {
+        frame_index_since(self.started_at)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::time::FRAME_INTERVAL;
+
+    #[test]
+    fn frame_index_tracks_the_120fps_budget() {
+        let tween = Tween::new_at(
+            0.0,
+            1.0,
+            Duration::from_secs(1),
+            Easing::Linear,
+            Instant::now() - FRAME_INTERVAL * 4 + Duration::from_micros(1),
+        );
+        assert_eq!(tween.frame_index(), 3);
+    }
 
     #[test]
     fn settled_tween_rests_at_value() {
@@ -291,7 +312,13 @@ mod tests {
     #[test]
     fn evaluated_at_instant_matches_expectations() {
         let start = Instant::now();
-        let tween = Tween::new_at(0.0, 100.0, Duration::from_millis(1000), Easing::Linear, start);
+        let tween = Tween::new_at(
+            0.0,
+            100.0,
+            Duration::from_millis(1000),
+            Easing::Linear,
+            start,
+        );
 
         let half_time = start + Duration::from_millis(500);
         assert_eq!(tween.raw_progress_at(half_time), 0.5);

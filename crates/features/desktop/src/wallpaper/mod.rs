@@ -1,11 +1,12 @@
 pub mod render;
 
+use animation::{Easing, Tween, REVEAL_DURATION};
 use gtk4::glib;
 use gtk4::prelude::*;
 use services::wallpaper::get_wallpaper;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
     let container = gtk4::Overlay::new();
@@ -21,13 +22,13 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
     let reveal_center = Rc::new(Cell::new(None::<(f64, f64)>));
     let wallpaper_path = Rc::new(RefCell::new(None::<Option<std::path::PathBuf>>));
     let wallpaper_ready = Rc::new(Cell::new(false));
-    let animation_started = Rc::new(Cell::new(None::<Instant>));
+    let reveal_tween = Rc::new(Cell::new(None::<Tween>));
     let image_prepared = Rc::new(Cell::new(false));
     let progress_for_draw = reveal_progress.clone();
     let center_for_draw = reveal_center.clone();
     let path_for_draw = wallpaper_path.clone();
     let ready_for_draw = wallpaper_ready.clone();
-    let animation_for_draw = animation_started.clone();
+    let tween_for_draw = reveal_tween.clone();
     let prepared_for_draw = image_prepared.clone();
     drawing_area.set_draw_func(move |_, cr, width, height| {
         if !ready_for_draw.get() {
@@ -43,7 +44,12 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
                 path_ref.as_ref().and_then(|p| p.as_deref()),
             );
             prepared_for_draw.set(true);
-            animation_for_draw.set(Some(Instant::now()));
+            tween_for_draw.set(Some(Tween::new(
+                0.0,
+                1.0,
+                REVEAL_DURATION,
+                Easing::EaseOutCubic,
+            )));
             cr.set_source_rgb(0.02, 0.025, 0.04);
             let _ = cr.paint();
             return;
@@ -81,19 +87,19 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
         load_area.queue_draw();
     });
 
-    // Smooth vsync-synced frame rendering via tick callback
-    let animation_for_tick = animation_started.clone();
+    // GTK tick callbacks are vsync-synced, so on a 120 Hz output this runs at
+    // 120 fps. The Tween is wall-clock based, giving identical motion at any
+    // refresh rate.
+    let tween_for_tick = reveal_tween.clone();
     let reveal_progress_tick = reveal_progress.clone();
     drawing_area.add_tick_callback(move |widget, _| {
-        if let Some(started) = animation_for_tick.get() {
-            let elapsed = started.elapsed().as_secs_f64() / 0.6;
-            let linear_p = elapsed.clamp(0.0, 1.0);
-            // Ease-out cubic: 1 - (1 - t)^3 for silky smooth reveal
-            let progress = 1.0 - (1.0 - linear_p).powi(3);
-            reveal_progress_tick.set(progress);
+        if let Some(tween) = tween_for_tick.get() {
+            reveal_progress_tick.set(tween.value());
             widget.queue_draw();
 
-            if linear_p >= 1.0 {
+            if !tween.is_animating() {
+                reveal_progress_tick.set(1.0);
+                widget.queue_draw();
                 return glib::ControlFlow::Break;
             }
         }
