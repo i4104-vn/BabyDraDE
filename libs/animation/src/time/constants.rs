@@ -9,20 +9,20 @@ pub const FRAME_INTERVAL: Duration = Duration::from_nanos(1_000_000_000 / TARGET
 /// Default duration for UI transitions.
 pub const DEFAULT_DURATION: Duration = Duration::from_millis(420);
 
-/// Quick highlight/selection step, e.g. keyboard navigation in a dock.
-pub const NAVIGATION_DURATION: Duration = Duration::from_millis(220);
+/// Smooth highlight/selection step, e.g. keyboard navigation in a dock.
+pub const NAVIGATION_DURATION: Duration = Duration::from_millis(320);
 
 /// Duration of a wheel/touchpad scroll step.
-pub const SCROLL_DURATION: Duration = Duration::from_millis(180);
+pub const SCROLL_DURATION: Duration = Duration::from_millis(260);
 
 /// Overlay fade-in duration.
-pub const FADE_IN_DURATION: Duration = Duration::from_millis(240);
+pub const FADE_IN_DURATION: Duration = Duration::from_millis(320);
 
 /// Overlay fade-out duration.
-pub const FADE_OUT_DURATION: Duration = Duration::from_millis(180);
+pub const FADE_OUT_DURATION: Duration = Duration::from_millis(260);
 
 /// Wallpaper circular-reveal duration.
-pub const REVEAL_DURATION: Duration = Duration::from_millis(600);
+pub const REVEAL_DURATION: Duration = Duration::from_millis(900);
 
 #[cfg(test)]
 mod tests {

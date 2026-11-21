@@ -300,7 +300,7 @@ fn schedule_reverse_blur_step(transition: LockTransition, on_complete: Rc<dyn Fn
 }
 
 fn fade_out_reverse_transition(transition: LockTransition, on_complete: Rc<dyn Fn()>) {
-    let fade = Tween::new(1.0, 0.0, Duration::from_millis(120), Easing::EaseOutCubic);
+    let fade = Tween::new(1.0, 0.0, Duration::from_millis(200), Easing::EaseInOutCubic);
     // Tick callbacks follow the display refresh (up to 120 fps) instead of a
     // fixed timer, while the Tween keeps motion wall-clock based.
     transition.window.clone().add_tick_callback(move |_, _| {
@@ -375,7 +375,7 @@ fn blur_transition_frame(
 }
 
 fn fade_out_transition(transition: LockTransition) {
-    let fade = Tween::new(1.0, 0.0, Duration::from_millis(160), Easing::EaseOutCubic);
+    let fade = Tween::new(1.0, 0.0, Duration::from_millis(240), Easing::EaseInOutCubic);
     // Vsynced fade: updates once per display frame (up to 120 fps).
     transition.stack.clone().add_tick_callback(move |_, _| {
         if transition.cancelled.get() {

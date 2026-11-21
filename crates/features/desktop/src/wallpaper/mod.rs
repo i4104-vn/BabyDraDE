@@ -48,7 +48,7 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
                 0.0,
                 1.0,
                 REVEAL_DURATION,
-                Easing::EaseOutCubic,
+                Easing::EaseInOutCubic,
             )));
             cr.set_source_rgb(0.02, 0.025, 0.04);
             let _ = cr.paint();

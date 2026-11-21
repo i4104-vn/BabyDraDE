@@ -81,7 +81,7 @@ impl SwitcherOverlay {
         // items are static but the highlight frame glides between them, and
         // skipping these frames made it jump in one step.
         let animation_tick = if switcher.scroll.is_animating() {
-            switcher.scroll.frame_index()
+            switcher.scroll.frame_tick()
         } else {
             u64::MAX
         };

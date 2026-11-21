@@ -99,7 +99,7 @@ pub fn setup_render_loop(
     let timer = Timer::immediate();
     event_loop
         .handle()
-        .insert_source(timer, move |_deadline, _, data| {
+        .insert_source(timer, move |deadline, _, data| {
             let mut s = state_render.borrow_mut();
             if s.active {
                 let state = &mut data.state;
@@ -151,9 +151,11 @@ pub fn setup_render_loop(
 
                     // Compositor-owned launcher (above windows, below switcher)
                     if let Some(size) = oriented_size {
-                        render_elements.extend(
-                            state.launcher.render(renderer, (size.w, size.h), scale),
-                        );
+                        render_elements.extend(state.launcher.render(
+                            renderer,
+                            (size.w, size.h),
+                            scale,
+                        ));
                     }
 
                     // 3. Render either the Stage Manager switcher or the normal mapped windows
@@ -220,7 +222,9 @@ pub fn setup_render_loop(
 
                     if crate::extensions::screenshot::capture::take_requested() {
                         let _ = crate::extensions::screenshot::capture::capture_screen(
-                            renderer, &render_elements, output,
+                            renderer,
+                            &render_elements,
+                            output,
                         );
                     }
 
@@ -250,7 +254,9 @@ pub fn setup_render_loop(
                 let _ = display_handle.flush_clients();
             }
 
-            TimeoutAction::ToDuration(FRAME_INTERVAL)
+            // Schedule from the previous deadline, not from render completion,
+            // so a slow frame cannot permanently drift the 120 fps cadence.
+            TimeoutAction::ToInstant(deadline + FRAME_INTERVAL)
         })
         .map_err(|err| std::io::Error::other(format!("Failed to insert frame timer: {err}")))?;
 

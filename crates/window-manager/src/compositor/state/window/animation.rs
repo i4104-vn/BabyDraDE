@@ -80,7 +80,7 @@ pub(crate) fn start_window_opening(window: &Window) {
             0.0,
             1.0,
             Duration::from_millis(common::constants::WINDOW_OPEN_ANIM_MS),
-            Easing::EaseOutCubic,
+            Easing::EaseInOutCubic,
         )));
     }
 }
@@ -92,7 +92,7 @@ pub(crate) fn start_window_minimizing(window: &Window) {
         0.0,
         1.0,
         Duration::from_millis(common::constants::WINDOW_MINIMIZE_ANIM_MS),
-        Easing::EaseInCubic,
+        Easing::EaseInOutCubic,
     )));
 }
 
@@ -111,7 +111,7 @@ pub(crate) fn start_window_restoring(window: &Window) {
         0.0,
         1.0,
         Duration::from_millis(common::constants::WINDOW_RESTORE_ANIM_MS),
-        Easing::EaseOutCubic,
+        Easing::EaseInOutCubic,
     )));
 }
 
@@ -230,7 +230,7 @@ impl BabydraState {
                 0.0,
                 1.0,
                 Duration::from_millis(common::constants::WINDOW_CLOSE_ANIM_MS),
-                Easing::EaseOutCubic,
+                Easing::EaseInOutCubic,
             )));
         }
 
@@ -352,27 +352,30 @@ mod tests {
 
         let minimize_tween = Tween::new(0.0, 1.0, Duration::ZERO, Easing::Linear);
         state.animation = Some(WindowAnimation::Minimizing(minimize_tween));
-        assert!(matches!(state.animation, Some(WindowAnimation::Minimizing(_))));
+        assert!(matches!(
+            state.animation,
+            Some(WindowAnimation::Minimizing(_))
+        ));
 
         let restore_tween = Tween::new(0.0, 1.0, Duration::ZERO, Easing::Linear);
         state.animation = Some(WindowAnimation::Restoring(restore_tween));
-        assert!(matches!(state.animation, Some(WindowAnimation::Restoring(_))));
+        assert!(matches!(
+            state.animation,
+            Some(WindowAnimation::Restoring(_))
+        ));
 
         let geometry = GeometryTransition {
-            from: Rectangle::new(
-                Point::from((0.0, 0.0)),
-                Size::from((1920.0, 1080.0)),
-            ),
-            to: Rectangle::new(
-                Point::from((100.0, 100.0)),
-                Size::from((800.0, 600.0)),
-            ),
+            from: Rectangle::new(Point::from((0.0, 0.0)), Size::from((1920.0, 1080.0))),
+            to: Rectangle::new(Point::from((100.0, 100.0)), Size::from((800.0, 600.0))),
         };
         state.animation = Some(WindowAnimation::Transition {
             tween: Tween::new(0.0, 1.0, Duration::ZERO, Easing::Linear),
             geometry,
         });
-        assert!(matches!(state.animation, Some(WindowAnimation::Transition { .. })));
+        assert!(matches!(
+            state.animation,
+            Some(WindowAnimation::Transition { .. })
+        ));
 
         let mid = lerp_rect(geometry.from, geometry.to, 0.5);
         assert_eq!(mid.loc, Point::from((50.0, 50.0)));

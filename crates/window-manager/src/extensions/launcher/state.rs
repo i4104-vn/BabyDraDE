@@ -132,7 +132,7 @@ impl LauncherState {
         self.selected = Some(selected);
         self.position = Tween::settled(selected as f64);
         self.presence
-            .retarget(1.0, FADE_IN_DURATION, Easing::EaseOutCubic);
+            .retarget(1.0, FADE_IN_DURATION, Easing::EaseInOutCubic);
         self.cache_key = None;
     }
 
@@ -144,7 +144,7 @@ impl LauncherState {
         self.closing = true;
         self.stop_key_repeat();
         self.presence
-            .retarget(0.0, FADE_OUT_DURATION, Easing::EaseInCubic);
+            .retarget(0.0, FADE_OUT_DURATION, Easing::EaseInOutCubic);
         self.cache_key = None;
     }
 
@@ -211,7 +211,7 @@ impl LauncherState {
             return;
         }
         self.position
-            .retarget(next as f64, NAVIGATION_DURATION, Easing::EaseOutCubic);
+            .retarget(next as f64, NAVIGATION_DURATION, Easing::EaseInOutCubic);
         self.selected = Some(next);
         self.cache_key = None;
     }
@@ -235,7 +235,7 @@ impl LauncherState {
         if (next - current).abs() > f64::EPSILON {
             self.selected = Some(next as usize);
             self.position
-                .retarget(next, SCROLL_DURATION, Easing::EaseOutCubic);
+                .retarget(next, SCROLL_DURATION, Easing::EaseInOutCubic);
             self.cache_key = None;
         }
     }
@@ -280,7 +280,7 @@ impl LauncherState {
             return false;
         }
         self.position
-            .retarget(index as f64, NAVIGATION_DURATION, Easing::EaseOutCubic);
+            .retarget(index as f64, NAVIGATION_DURATION, Easing::EaseInOutCubic);
         self.selected = Some(index);
         true
     }
@@ -317,15 +317,17 @@ impl LauncherState {
         let region = physical_region(&panel, scale, screen_w, screen_h);
         let presence_animating = self.presence.is_animating();
         let position_animating = self.position.is_animating();
+        // Microsecond ticks (not frame indices) guarantee a fresh buffer on
+        // every render, even when the event loop runs faster than 120 fps.
         let presence_tick = if presence_animating {
-            self.presence.frame_index()
+            self.presence.frame_tick()
         } else {
             u64::MAX
         };
         let tick = match (presence_animating, position_animating) {
-            (true, true) => presence_tick.max(self.position.frame_index()),
+            (true, true) => presence_tick.max(self.position.frame_tick()),
             (true, false) => presence_tick,
-            (false, true) => self.position.frame_index(),
+            (false, true) => self.position.frame_tick(),
             (false, false) => u64::MAX,
         };
         let presence = self.presence.value();
