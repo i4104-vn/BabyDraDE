@@ -120,6 +120,14 @@ the scrolled content to `[half, count - 1 - half]`, so the first icon starts at
 the top of the capsule and the last one ends at the bottom while the selection
 still loops.
 
+Pointer hover is deliberately kept **separate** from the scrolling tween:
+`DockState::hovered` (and `AltTabSwitcher::hovered`) only move the highlight and
+never retarget `position`. Otherwise moving the cursor changes the carousel
+offset, which changes hit-testing, which moves the cursor target again — a
+feedback loop that made the highlight jump around. Pointer motion and touch
+motion both call `update_hover`; a touch tap on an icon launches/focuses it and
+a tap outside dismisses the overlay.
+
 ### 2.5 Cache invalidation
 
 Both overlays rasterise into small off-screen buffers. While a tween is

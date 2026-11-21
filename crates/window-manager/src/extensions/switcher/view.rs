@@ -21,6 +21,8 @@ const TITLE_PAD: f64 = 12.0;
 pub(crate) struct SwitcherLayout {
     /// Shared right-edge capsule.
     pub(crate) panel: DockLayout,
+    /// App currently highlighted (pointer or keyboard).
+    pub(crate) selected: usize,
     /// Small live preview beside the active icon.
     pub(crate) preview: Rect,
     /// Fade of the preview while switching.
@@ -35,13 +37,30 @@ pub(crate) fn compute_layout(
     if switcher.entries.is_empty() {
         return None;
     }
-    Some(compute_layout_metrics(
+    let mut layout = compute_layout_metrics(
         switcher.entries.len(),
         switcher.visual_selection(),
         switcher.stage_progress(),
         screen_w,
         screen_h,
-    ))
+    );
+    if let Some(hovered) = switcher.hovered {
+        layout.selected = hovered.min(switcher.entries.len() - 1);
+        layout.preview.y = (layout.panel.center_y
+            + dock_active_rel(switcher.entries.len(), switcher.visual_selection()) * SLOT
+            - PREVIEW_H / 2.0)
+            .clamp(8.0, screen_h - PREVIEW_H - 8.0);
+    }
+    Some(layout)
+}
+
+fn dock_active_rel(count: usize, position: f64) -> f64 {
+    let visual = visual_center(count, position);
+    if count <= VISIBLE_SLOTS {
+        position.rem_euclid(count as f64) - visual
+    } else {
+        position - visual
+    }
 }
 
 fn compute_layout_metrics(
@@ -52,13 +71,7 @@ fn compute_layout_metrics(
     screen_h: f64,
 ) -> SwitcherLayout {
     let panel = DockLayout::new(count, screen_h / 2.0, screen_w, DockSide::Right);
-    let visual = visual_center(count, position);
-    let active_rel = if count <= VISIBLE_SLOTS {
-        position.rem_euclid(count as f64) - visual
-    } else {
-        position - visual
-    };
-    let active_y = panel.center_y + active_rel * SLOT;
+    let active_y = panel.center_y + dock_active_rel(count, position) * SLOT;
 
     let preview = Rect::new(
         (panel.x - PREVIEW_GAP - PREVIEW_W).max(8.0),
@@ -69,6 +82,7 @@ fn compute_layout_metrics(
 
     SwitcherLayout {
         panel,
+        selected: 0,
         preview,
         preview_alpha: stage_progress.clamp(0.0, 1.0),
     }
@@ -86,12 +100,17 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
+    let display_position = switcher
+        .hovered
+        .map(|index| index as f64)
+        .unwrap_or_else(|| switcher.visual_selection());
+
     draw_dock(
         context,
         &layout.panel,
         switcher.entries.len(),
-        switcher.visual_selection(),
-        switcher.selected_index.into(),
+        display_position,
+        Some(layout.selected),
         presence,
         slide_x,
         DockSide::Right,
@@ -105,7 +124,7 @@ pub(crate) fn draw_switcher_foreground(
     )?;
 
     // Side-specific content: title inside the bottom of the small preview.
-    if let Some(entry) = switcher.entries.get(switcher.selected_index) {
+    if let Some(entry) = switcher.entries.get(layout.selected) {
         let mut p = layout.preview;
         p.x += slide_x;
         context.save()?;
@@ -143,6 +162,7 @@ mod tests {
         AltTabSwitcher {
             entries: Vec::new(),
             selected_index: 0,
+            hovered: None,
             scroll: Tween::settled(0.0),
             stage: Tween::settled(1.0),
             presence: Tween::settled(1.0),

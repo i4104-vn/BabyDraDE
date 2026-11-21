@@ -23,6 +23,8 @@ pub(crate) struct AltTabEntry {
 pub(crate) struct AltTabSwitcher {
     pub(crate) entries: Vec<AltTabEntry>,
     pub(crate) selected_index: usize,
+    /// Icon under the pointer; overrides `selected_index` while hovering.
+    pub(crate) hovered: Option<usize>,
     /// Continuous carousel position (fractional slots) of the right-side dock.
     /// Driven by `Tween` so repeated Tab presses accumulate smoothly.
     pub(crate) scroll: Tween,
@@ -61,6 +63,10 @@ impl AltTabSwitcher {
 
     pub(crate) fn presence(&self) -> f64 {
         self.presence.value()
+    }
+
+    pub(crate) fn set_hover(&mut self, index: Option<usize>) {
+        self.hovered = index;
     }
 
     /// First Tab press starts repeat tracking; backend repeats are ignored
@@ -130,6 +136,7 @@ impl AltTabSwitcher {
             return;
         }
         self.closing = true;
+        self.hovered = None;
         self.stop_key_repeat();
         self.presence
             .retarget(0.0, SWITCHER_PREVIEW_DURATION, Easing::EaseInOutCubic);
@@ -160,6 +167,7 @@ impl BabydraState {
             return;
         }
         if let Some(mut switcher) = self.alt_tab_switcher.take() {
+            switcher.hovered = None;
             let entries_before = switcher.entries.len();
             let selected_window = switcher
                 .entries
@@ -298,6 +306,7 @@ impl BabydraState {
         self.alt_tab_switcher = Some(AltTabSwitcher {
             entries,
             selected_index: selected,
+            hovered: None,
             scroll: Tween::settled(selected as f64),
             stage: Tween::new(0.0, 1.0, SWITCHER_PREVIEW_DURATION, Easing::EaseOutCubic),
             presence: Tween::new(0.0, 1.0, SWITCHER_PREVIEW_DURATION, Easing::EaseOutCubic),

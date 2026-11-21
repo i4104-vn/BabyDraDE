@@ -24,6 +24,9 @@ pub struct DockState {
     pub position: Tween,
     pub presence: Tween,
     pub selected: Option<usize>,
+    /// Icon currently under the pointer. Kept separate from `position` so
+    /// hovering never moves the carousel and cannot feed back into hit-testing.
+    pub hovered: Option<usize>,
     pub closing: bool,
     held_direction: Option<i32>,
     repeat_started: Option<Instant>,
@@ -42,6 +45,7 @@ impl DockState {
             position: Tween::settled(0.0),
             presence: Tween::settled(0.0),
             selected: None,
+            hovered: None,
             closing: false,
             held_direction: None,
             repeat_started: None,
@@ -57,12 +61,33 @@ impl DockState {
         self.presence.value()
     }
 
+    /// Position used for rendering: the hovered slot when the pointer is over
+    /// the dock, otherwise the keyboard/scroll selection.
+    pub fn display_position(&self) -> f64 {
+        self.hovered
+            .map(|index| index as f64)
+            .unwrap_or_else(|| self.position.value())
+    }
+
+    pub fn display_selected(&self) -> Option<usize> {
+        self.hovered.or(self.selected)
+    }
+
+    pub fn set_hover(&mut self, index: usize) {
+        self.hovered = Some(index);
+    }
+
+    pub fn clear_hover(&mut self) {
+        self.hovered = None;
+    }
+
     pub fn is_closing(&self) -> bool {
         self.closing
     }
 
     pub fn open(&mut self, index: usize, animate: bool) {
         self.closing = false;
+        self.hovered = None;
         self.selected = Some(index);
         self.position = Tween::settled(index as f64);
         if animate {
@@ -78,6 +103,7 @@ impl DockState {
             return;
         }
         self.closing = true;
+        self.hovered = None;
         self.stop_key_repeat();
         self.presence
             .retarget(0.0, FADE_OUT_DURATION, Easing::EaseOutCubic);
@@ -85,6 +111,7 @@ impl DockState {
 
     pub fn finish_close(&mut self) {
         self.closing = false;
+        self.hovered = None;
         self.selected = None;
         self.position = Tween::settled(0.0);
         self.presence = Tween::settled(0.0);
@@ -102,6 +129,7 @@ impl DockState {
         if count == 0 || self.closing {
             return;
         }
+        self.hovered = None;
         let (next, wrapped) = step_target(self.position.target(), delta as f64, count);
         self.selected = Some(next as usize);
         if wrapped {
@@ -112,6 +140,7 @@ impl DockState {
     }
 
     pub fn select(&mut self, index: usize, duration: Duration) {
+        self.hovered = None;
         self.selected = Some(index);
         self.position
             .retarget(index as f64, duration, Easing::EaseOutCubic);
@@ -121,6 +150,7 @@ impl DockState {
         if count == 0 || self.closing {
             return;
         }
+        self.hovered = None;
         let (next, wrapped) = step_target(self.position.target(), direction as f64, count);
         self.selected = Some(next as usize);
         if wrapped {
@@ -138,6 +168,7 @@ impl DockState {
         if count == 0 || self.closing {
             return;
         }
+        self.hovered = None;
         let (next, wrapped) = step_target(self.position.target(), slots.round(), count);
         self.selected = Some(next as usize);
         if wrapped {

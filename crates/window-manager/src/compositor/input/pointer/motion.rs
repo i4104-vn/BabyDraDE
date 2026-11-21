@@ -3,12 +3,51 @@
 use smithay::{
     backend::input::{AbsolutePositionEvent, InputBackend, PointerMotionEvent},
     input::pointer::MotionEvent,
-    utils::SERIAL_COUNTER,
+    utils::{Logical, Point, SERIAL_COUNTER},
 };
 
 use super::drag::{handle_window_drag, handle_window_resize};
 use crate::compositor::input::common::transform_absolute_position;
 use crate::compositor::state::BabydraState;
+
+fn update_overlay_hover(state: &mut BabydraState, position: Point<f64, Logical>) {
+    if state.alt_tab_switcher.is_none() {
+        state.launcher.update_hover(position);
+        return;
+    }
+
+    let output = state.space.outputs().next().cloned();
+    let (size, scale) = output
+        .as_ref()
+        .and_then(|output| {
+            let mode = output.current_mode()?;
+            let size = output.current_transform().transform_size(mode.size);
+            Some((
+                size,
+                smithay::utils::Scale::from(output.current_scale().fractional_scale()),
+            ))
+        })
+        .unwrap_or(((1920, 1080).into(), smithay::utils::Scale::from(1.0)));
+    let logical_w = (size.w as f64 / scale.x).max(1.0);
+    let logical_h = (size.h as f64 / scale.y).max(1.0);
+
+    let index = state.alt_tab_switcher.as_ref().and_then(|switcher| {
+        let layout =
+            crate::extensions::switcher::view::compute_layout(switcher, logical_w, logical_h)?;
+        let slide =
+            (1.0 - switcher.presence().clamp(0.0, 1.0)) * common::constants::launcher::PANEL_WIDTH;
+        layout.panel.index_at(
+            (position.x, position.y),
+            slide,
+            switcher.entries.len(),
+            switcher.visual_selection(),
+        )
+    });
+
+    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+        switcher.set_hover(index);
+    }
+}
 
 /// Handles relative pointer motion events (such as mice and touchpad cursor movements).
 ///
@@ -39,9 +78,7 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
 
     state.pointer_location = position;
 
-    if state.alt_tab_switcher.is_none() {
-        state.launcher.update_hover(position);
-    }
+    update_overlay_hover(state, position);
 
     if handle_window_resize(state, position) {
         return;
@@ -85,9 +122,7 @@ pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositio
 
     state.pointer_location = position;
 
-    if state.alt_tab_switcher.is_none() {
-        state.launcher.update_hover(position);
-    }
+    update_overlay_hover(state, position);
 
     if handle_window_resize(state, position) {
         return;

@@ -134,7 +134,7 @@ impl LauncherState {
 
     pub(crate) fn activate(&mut self) {
         if !self.dock.is_closing() {
-            if let Some(index) = self.dock.selected {
+            if let Some(index) = self.dock.display_selected() {
                 self.launch(index);
             }
         }
@@ -167,12 +167,18 @@ impl LauncherState {
 
     pub(crate) fn update_hover(&mut self, point: Point<f64, Logical>) -> bool {
         let Some(index) = self.index_at(point) else {
+            if self.dock.hovered.is_some() {
+                self.dock.clear_hover();
+                return true;
+            }
             return false;
         };
-        if Some(index) == self.dock.selected {
+        if self.dock.hovered == Some(index) {
             return false;
         }
-        self.dock.select(index, NAVIGATION_DURATION);
+        // Hover changes only the highlight; it must not retarget `position`,
+        // otherwise the carousel moves and hit-testing starts to chase itself.
+        self.dock.set_hover(index);
         true
     }
 
@@ -209,7 +215,9 @@ impl LauncherState {
         let tick = self.dock.animation_tick();
         let presence = self.dock.presence();
         let slide_x = self.slide_offset();
-        let key = (self.apps.len(), self.dock.selected, tick, region);
+        let position = self.dock.display_position();
+        let selected = self.dock.display_selected();
+        let key = (self.apps.len(), selected, tick, region);
 
         if self.buffer.is_none() || self.region != Some(region) {
             self.buffer = Some(MemoryRenderBuffer::new(
@@ -225,8 +233,6 @@ impl LauncherState {
 
         if self.cache_key != Some(key) {
             let apps = &self.apps;
-            let position = self.dock.position();
-            let selected = self.dock.selected;
             if let Some(pixels) =
                 render_pixels(region.2, region.3, scale, (region.0, region.1), |ctx| {
                     draw_scene(

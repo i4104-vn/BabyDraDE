@@ -15,6 +15,75 @@ use crate::compositor::input::touch::gestures::{on_touch_down, on_touch_motion, 
 use crate::compositor::state::BabydraState;
 use crate::rendering::titlebar::Action;
 
+/// Tap routing for the compositor-owned overlays. Returns true when the touch
+/// was consumed and must not reach Wayland clients.
+fn handle_overlay_touch(
+    state: &mut BabydraState,
+    position: smithay::utils::Point<f64, smithay::utils::Logical>,
+) -> bool {
+    if state.alt_tab_switcher.is_none() && state.launcher.is_visible() {
+        if let Some(index) = state.launcher.index_at(position) {
+            state.launcher.launch(index);
+        } else {
+            state.launcher.close();
+        }
+        return true;
+    }
+
+    if state.alt_tab_switcher.is_some() {
+        let serial = SERIAL_COUNTER.next_serial();
+        let output = state.space.outputs().next().cloned();
+        let (size, scale) = output
+            .as_ref()
+            .and_then(|output| {
+                let mode = output.current_mode()?;
+                let size = output.current_transform().transform_size(mode.size);
+                Some((
+                    size,
+                    smithay::utils::Scale::from(output.current_scale().fractional_scale()),
+                ))
+            })
+            .unwrap_or(((1920, 1080).into(), smithay::utils::Scale::from(1.0)));
+        let logical_w = (size.w as f64 / scale.x).max(1.0);
+        let logical_h = (size.h as f64 / scale.y).max(1.0);
+
+        let tapped = state
+            .alt_tab_switcher
+            .as_ref()
+            .and_then(|switcher| {
+                let layout = crate::extensions::switcher::view::compute_layout(
+                    switcher, logical_w, logical_h,
+                )?;
+                let slide = (1.0 - switcher.presence().clamp(0.0, 1.0))
+                    * common::constants::launcher::PANEL_WIDTH;
+                layout.panel.index_at(
+                    (position.x, position.y),
+                    slide,
+                    switcher.entries.len(),
+                    switcher.visual_selection(),
+                )
+            })
+            .and_then(|index| {
+                state
+                    .alt_tab_switcher
+                    .as_ref()
+                    .and_then(|switcher| switcher.entries.get(index))
+                    .map(|entry| entry.window.clone())
+            });
+
+        if let Some(window) = tapped {
+            state.unminimize_window(&window);
+            crate::compositor::input::keyboard::focus::focus_window(state, window, serial);
+        }
+        if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+            switcher.begin_close();
+        }
+        return true;
+    }
+
+    false
+}
+
 /// Handles a touchscreen contact press (touch down).
 ///
 /// Hides the software cursor during direct finger manipulation, raises and focuses
@@ -35,6 +104,10 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
     state.pointer_location = position;
     state.cursor_visible = false;
     state.touch_slots.insert(event.slot());
+
+    if handle_overlay_touch(state, position) {
+        return;
+    }
 
     // Begin tracking this finger for multi-touch gesture detection.
     on_touch_down(state, event.slot(), position, event.time_msec() as u64);
@@ -172,6 +245,11 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
 
     // Update gesture tracking position for this slot.
     on_touch_motion(state, event.slot(), position);
+
+    if state.alt_tab_switcher.is_none() && state.launcher.is_visible() {
+        state.launcher.update_hover(position);
+        return;
+    }
 
     if handle_touch_resize(state, position) {
         return;

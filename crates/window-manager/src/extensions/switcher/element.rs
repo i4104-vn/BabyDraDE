@@ -198,7 +198,7 @@ impl SwitcherOverlay {
 
         // 2. One small live preview beside the active icon; the big centre
         // stage no longer exists.
-        if let Some(entry) = switcher.entries.get(switcher.selected_index) {
+        if let Some(entry) = switcher.entries.get(layout.selected) {
             let mut preview_rect = layout.preview;
             preview_rect.x += slide_x;
             let crop = Rectangle::<i32, Physical>::new(
@@ -372,6 +372,7 @@ mod tests {
                 height: panel.height,
                 center_y: panel.y + panel.height / 2.0,
             },
+            selected: 0,
             preview,
             preview_alpha: 1.0,
         }
