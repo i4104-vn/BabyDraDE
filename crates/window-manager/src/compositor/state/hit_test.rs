@@ -8,16 +8,49 @@ use smithay::{
 use super::BabydraState;
 
 impl BabydraState {
+    /// Returns true when a window stacked above `window` has a client surface
+    /// at `point`.
+    fn is_occluded_by_window_above(&self, window: &Window, point: Point<f64, Logical>) -> bool {
+        for other in self.space.elements().rev() {
+            if other == window {
+                return false;
+            }
+            if super::is_window_closing(other) {
+                continue;
+            }
+            let Some(location) = self.space.element_location(other) else {
+                continue;
+            };
+            // Match `Space::element_under`: input regions are relative to the
+            // surface render location, not the element's mapped location.
+            let render_location = location - other.geometry().loc;
+            if other
+                .surface_under(point - render_location.to_f64(), WindowSurfaceType::ALL)
+                .is_some()
+            {
+                return true;
+            }
+        }
+        false
+    }
+
     pub(crate) fn window_under(
         &self,
         point: Point<f64, Logical>,
     ) -> Option<(Window, Point<i32, Logical>)> {
         // The compositor-owned frame sits just above the client surface.
         for window in self.space.elements().rev() {
-            if let Some(location) = self.space.element_location(window) {
-                if crate::rendering::titlebar::hit_test(window, location, point).is_some() {
-                    return Some((window.clone(), location));
+            if super::is_window_closing(window) {
+                continue;
+            }
+            let Some(location) = self.space.element_location(window) else {
+                continue;
+            };
+            if crate::rendering::titlebar::hit_test(window, location, point).is_some() {
+                if self.is_occluded_by_window_above(window, point) {
+                    break;
                 }
+                return Some((window.clone(), location));
             }
         }
         // 1. First check via Smithay's element_under (handles exact input regions)
@@ -216,6 +249,12 @@ impl BabydraState {
                 (_, _, _, true) => ResizeEdge::Bottom,
                 _ => continue,
             };
+
+            // Same occlusion rule as for titlebars: never start a resize on a
+            // border that is hidden behind a higher window's surface.
+            if self.is_occluded_by_window_above(window, point) {
+                continue;
+            }
 
             return Some((window.clone(), loc, edge));
         }
