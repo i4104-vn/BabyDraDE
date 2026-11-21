@@ -8,8 +8,6 @@ pub enum KeyboardAction {
     QuitCompositor,
     /// Send a close request to the top/active window.
     CloseActiveWindow,
-    /// Spawn a new terminal emulator instance.
-    SpawnTerminal,
     /// Show the integrated lock screen.
     LockScreen,
     /// Hot reload compositor and blur configuration from disk.

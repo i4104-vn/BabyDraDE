@@ -9,10 +9,6 @@ pub mod pointer;
 pub mod touch;
 pub mod touchpad;
 
-// Backwards compatibility re-exports
-#[allow(unused_imports)]
-pub use keyboard::launcher;
-
 use smithay::backend::input::{InputBackend, InputEvent};
 
 use super::state::BabydraState;

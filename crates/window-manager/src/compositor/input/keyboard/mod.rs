@@ -1,7 +1,6 @@
 //! Keyboard input processing, focus handling, and global hotkeys.
 
 pub mod focus;
-pub mod launcher;
 pub mod shortcuts;
 
 pub(crate) use focus::cycle_window_focus;
@@ -18,7 +17,7 @@ use shortcuts::{check_key_shortcut, execute_action, KeyboardAction};
 /// Dispatches and processes an incoming keyboard event from the input backend.
 ///
 /// Filters global window manager shortcuts (such as Super+Q to close window,
-/// Alt+Tab window switching, and Super+T for terminal), and forwards non-intercepted
+/// Alt+Tab window switching, and Super+Enter for fullscreen), and forwards non-intercepted
 /// key events to the Wayland surface holding keyboard focus.
 ///
 /// # Arguments

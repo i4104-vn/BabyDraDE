@@ -5,7 +5,6 @@ use smithay::utils::Serial;
 use tracing::info;
 
 use super::focus::{cycle_window_focus, focus_window};
-use super::launcher::spawn_new_terminal;
 use crate::compositor::state::BabydraState;
 use crate::extensions::lock;
 
@@ -58,19 +57,12 @@ pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option
         return Some(KeyboardAction::CloseActiveWindow);
     }
 
-    // 3. Super (Win) + T OR Super + Return: Spawn new terminal window
-    if modifiers.logo
-        && (sym == keysyms::KEY_t || sym == keysyms::KEY_T || sym == keysyms::KEY_Return)
-    {
-        return Some(KeyboardAction::SpawnTerminal);
-    }
-
-    // 4. Super + L: Lock the current session
+    // 3. Super + L: Lock the current session
     if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_l || sym == keysyms::KEY_L) {
         return Some(KeyboardAction::LockScreen);
     }
 
-    // 5. Alt + Tab: choose a window, then focus it when Alt is released
+    // 4. Alt + Tab: choose a window, then focus it when Alt is released
     if modifiers.alt && (sym == keysyms::KEY_Tab || sym == keysyms::KEY_ISO_Left_Tab) {
         let backwards = modifiers.shift || sym == keysyms::KEY_ISO_Left_Tab;
         return Some(KeyboardAction::AltTabStep { backwards });
@@ -91,8 +83,8 @@ pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option
         return Some(KeyboardAction::Minimize);
     }
 
-    // 8. Super + F: Toggle fullscreen on the active window
-    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_f || sym == keysyms::KEY_F) {
+    // 8. Super + Enter: Toggle fullscreen on the active window
+    if modifiers.logo && !modifiers.shift && sym == keysyms::KEY_Return {
         return Some(KeyboardAction::ToggleFullscreen);
     }
 
@@ -128,9 +120,6 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
                 state.close_window(&active_window);
             }
         }
-        KeyboardAction::SpawnTerminal => {
-            spawn_new_terminal(&state.socket_name);
-        }
         KeyboardAction::LockScreen => {
             info!("Super+L pressed: locking the session");
             lock::spawn();
@@ -164,7 +153,7 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
         KeyboardAction::ToggleFullscreen => {
             let active = state.space.elements().next_back().cloned();
             if let Some(active_window) = active {
-                info!("Super+F pressed: Toggling fullscreen on active window");
+                info!("Super+Enter pressed: Toggling fullscreen on active window");
                 state.toggle_fullscreen(&active_window);
             }
         }

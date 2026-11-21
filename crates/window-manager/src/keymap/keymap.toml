@@ -13,8 +13,8 @@
 # At least one modifier is required. Changes reload within 2 seconds.
 #
 # Fixed compositor shortcuts cannot be remapped here:
-#   Super+Q / Alt+F4 (close), Super+T / Super+Return (terminal),
-#   Super+L (lock), Alt+Tab, Super+M/H/F, Super+Tab,
+#   Super+Q / Alt+F4 (close), Super+Return (fullscreen),
+#   Super+L (lock), Alt+Tab, Super+M/H, Super+Tab,
 #   Super+Shift+S (screenshot), Super+Space (launcher).
 
 [shortcuts]
