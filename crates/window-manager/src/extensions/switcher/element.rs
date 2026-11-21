@@ -234,9 +234,10 @@ impl SwitcherOverlay {
 
         // 3. Backdrop behind everything else (index 0 is topmost).
         if let Some(backdrop) = self.backdrop_buffer.as_ref() {
+            let backdrop_x = (width - backdrop_w).max(0) as f64;
             if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
                 renderer,
-                Point::<f64, Physical>::from((0.0, 0.0)),
+                Point::<f64, Physical>::from((backdrop_x, 0.0)),
                 backdrop,
                 None,
                 None,
@@ -364,9 +365,13 @@ mod tests {
 
     fn test_layout(panel: Rect, preview: Rect) -> SwitcherLayout {
         SwitcherLayout {
-            panel,
-            dock_items: Vec::new(),
-            active: panel,
+            panel: ui_kit::components::dock::DockLayout {
+                x: panel.x,
+                y: panel.y,
+                width: panel.width,
+                height: panel.height,
+                center_y: panel.y + panel.height / 2.0,
+            },
             preview,
             preview_alpha: 1.0,
         }

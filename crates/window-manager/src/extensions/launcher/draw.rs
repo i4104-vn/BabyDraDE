@@ -2,34 +2,15 @@
 //! tiles and label surfaces consistent with the topbar style.
 
 use cairo::Context;
+use common::constants::launcher::{HAIRLINE, PANEL_SURFACE};
 use gtk4::gdk::prelude::GdkCairoContextExt;
-use services::graphics::{
-    app_color, docked_panel_path, draw_docked_panel, draw_text, fit_text, paint_rounded,
-    rounded_rect, set_bold_font, DockSide,
-};
+use ui_kit::components::dock::{draw_dock, visual_center, DockLayout, DockSide};
+use ui_kit::drawing::{app_color, draw_text, fit_text, paint_rounded, rounded_rect, set_bold_font};
 
-use super::layout::{visual_center, Panel};
 use super::{
-    LauncherApp, HAIRLINE, INDICATOR_HEIGHT, INDICATOR_WIDTH, LABEL_FONT_SIZE, LABEL_GAP,
-    LABEL_HEIGHT, LABEL_MAX_TEXT, LABEL_MAX_WIDTH, LABEL_PAD, PANEL_CORNER_RADIUS,
-    PANEL_FILLET_RADIUS, PANEL_SURFACE, SELECTION_SIZE, SLOT,
+    LauncherApp, LABEL_FONT_SIZE, LABEL_GAP, LABEL_HEIGHT, LABEL_MAX_TEXT, LABEL_MAX_WIDTH,
+    LABEL_PAD, SLOT, VISIBLE_SLOTS,
 };
-
-/// Docked panel surface with layered soft shadow, matching the notch style.
-fn draw_panel(context: &Context, panel: &Panel) -> Result<(), cairo::Error> {
-    draw_docked_panel(
-        context,
-        panel.x,
-        panel.y,
-        panel.width,
-        panel.height,
-        PANEL_CORNER_RADIUS,
-        PANEL_FILLET_RADIUS,
-        PANEL_SURFACE,
-        HAIRLINE,
-        DockSide::Left,
-    )
-}
 
 /// Draws an app icon centred on `(center_x, center_y)`.
 fn draw_icon(
@@ -140,99 +121,47 @@ fn draw_label(
 pub(super) fn draw_scene(
     context: &Context,
     apps: &[LauncherApp],
-    panel: &Panel,
+    panel: &DockLayout,
     position: f64,
     selected: Option<usize>,
     logical_w: f64,
     presence: f64,
     slide_x: f64,
 ) -> Result<(), cairo::Error> {
-    // Shifting the panel rectangle moves the capsule, its clip path, icons,
-    // indicator and name label together. The shadow follows automatically.
-    let mut scene_panel = *panel;
-    scene_panel.x += slide_x;
-
-    // Fade the composited scene as a whole so the panel, icons, label and
-    // shadow all appear and disappear together.
-    context.push_group();
-    let drawn = draw_content(context, apps, &scene_panel, position, selected, logical_w);
-    let group = context.pop_group()?;
-    context.set_source(&group)?;
-    context.paint_with_alpha(presence)?;
-    drawn
-}
-
-fn draw_content(
-    context: &Context,
-    apps: &[LauncherApp],
-    panel: &Panel,
-    position: f64,
-    selected: Option<usize>,
-    logical_w: f64,
-) -> Result<(), cairo::Error> {
-    draw_panel(context, panel)?;
-
-    let visual = visual_center(apps.len(), position);
-    let selected_center_y = panel.center_y + (position - visual) * SLOT;
-
-    // Icons stay inside the docked panel while their list scrolls.
-    context.save()?;
-    docked_panel_path(
+    // The capsule, icons, highlight and indicator are shared with the switcher.
+    draw_dock(
         context,
-        panel.x,
-        panel.y,
-        panel.width,
-        panel.height,
-        PANEL_CORNER_RADIUS,
-        PANEL_FILLET_RADIUS,
+        panel,
+        apps.len(),
+        position,
+        selected,
+        presence,
+        slide_x,
         DockSide::Left,
+        |ctx, index, cx, cy, size, _| {
+            if let Some(app) = apps.get(index) {
+                draw_icon(ctx, app, cx, cy, size)
+            } else {
+                Ok(())
+            }
+        },
     )?;
-    context.clip();
 
-    if selected.is_some() {
-        paint_rounded(
-            context,
-            panel.x + (panel.width - SELECTION_SIZE) / 2.0,
-            selected_center_y - SELECTION_SIZE / 2.0,
-            SELECTION_SIZE,
-            SELECTION_SIZE,
-            17.0,
-            (1.0, 1.0, 1.0, 0.09),
-            None,
-        )?;
-    }
-
-    let (first, last) = panel.visible_range(apps.len(), visual);
-    for index in first..last {
-        let rel = index as f64 - visual;
-        let (center_x, center_y, size) = panel.icon_geometry(rel, index as f64 - position);
-        if let Some(app) = apps.get(index) {
-            draw_icon(context, app, center_x, center_y, size)?;
-        }
-    }
-
-    // White pill on the inner edge, echoing the topbar workspace dots.
-    if selected.is_some() {
-        paint_rounded(
-            context,
-            panel.x + 8.0,
-            selected_center_y - INDICATOR_HEIGHT / 2.0,
-            INDICATOR_WIDTH,
-            INDICATOR_HEIGHT,
-            INDICATOR_WIDTH / 2.0,
-            (1.0, 1.0, 1.0, 0.92),
-            None,
-        )?;
-    }
-    context.restore()?;
-
+    // Left-side content: floating title capsule beside the selected icon.
     if let Some(index) = selected {
         if let Some(app) = apps.get(index) {
+            let visual = visual_center(apps.len(), position);
+            let active_rel = if apps.len() <= VISIBLE_SLOTS {
+                position.rem_euclid(apps.len() as f64) - visual
+            } else {
+                0.0
+            };
+            let active_y = panel.center_y + active_rel * SLOT;
             draw_label(
                 context,
                 &app.name,
-                panel.x + panel.width + LABEL_GAP,
-                selected_center_y,
+                panel.x + slide_x + panel.width + LABEL_GAP,
+                active_y,
                 logical_w,
             )?;
         }
@@ -258,12 +187,23 @@ mod tests {
     }
 
     #[test]
-    fn draws_docked_panel_surface_and_hairline() {
+    fn draws_shared_dock_surface() {
         let surface =
             cairo::ImageSurface::create(cairo::Format::ARgb32, 200, 600).expect("surface");
         let context = Context::new(&surface).expect("context");
-        let panel = Panel::new(7, 300.0);
-        assert!(draw_panel(&context, &panel).is_ok());
+        let panel = DockLayout::new(7, 300.0, 200.0, DockSide::Left);
+        assert!(draw_dock(
+            &context,
+            &panel,
+            7,
+            3.0,
+            Some(3),
+            1.0,
+            0.0,
+            DockSide::Left,
+            |_, _, _, _, _, _| Ok(()),
+        )
+        .is_ok());
     }
 
     #[test]

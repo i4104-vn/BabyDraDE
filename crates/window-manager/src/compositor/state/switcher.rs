@@ -1,11 +1,10 @@
 use std::time::{Duration, Instant};
 
-use animation::{Easing, Tween};
+use animation::{Easing, Tween, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION};
 use gtk4::gdk_pixbuf::Pixbuf;
 use smithay::{desktop::Window, wayland::compositor::with_states};
 
 use super::BabydraState;
-use common::constants::{DOCK_MAX_VISIBLE_ITEMS, SWITCHER_PREVIEW_MS, SWITCHER_SCROLL_MS};
 
 /// One entry in the Alt+Tab switcher list.
 /// `icon_pixbuf` is resolved eagerly when the switcher opens so that
@@ -56,12 +55,8 @@ impl AltTabSwitcher {
 
     /// Restarts the preview fade from 0 -> 1 after a selection change.
     fn restart_stage(&mut self) {
-        self.stage.restart(
-            0.0,
-            1.0,
-            Duration::from_millis(SWITCHER_PREVIEW_MS),
-            Easing::EaseOutCubic,
-        );
+        self.stage
+            .restart(0.0, 1.0, SWITCHER_PREVIEW_DURATION, Easing::EaseOutCubic);
     }
 
     pub(crate) fn presence(&self) -> f64 {
@@ -116,18 +111,17 @@ impl AltTabSwitcher {
         if count < 2 {
             return;
         }
-        let target = if count < DOCK_MAX_VISIBLE_ITEMS {
-            let current = self.selected_index as i64;
-            (current + direction as i64).rem_euclid(count as i64) as f64
+        let (target, wrapped) = step_target(self.scroll.target(), direction as f64, count);
+        self.selected_index = target.round() as usize;
+        if wrapped {
+            self.scroll.snap_to(target);
         } else {
-            (self.scroll.target() + direction as f64).clamp(0.0, count as f64 - 1.0)
-        };
-        self.selected_index = (target.round() as usize).min(count - 1);
-        self.scroll.retarget(
-            target,
-            Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS),
-            Easing::Linear,
-        );
+            self.scroll.retarget(
+                target,
+                Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS),
+                Easing::Linear,
+            );
+        }
         self.last_step = Some(Instant::now());
     }
 
@@ -137,11 +131,22 @@ impl AltTabSwitcher {
         }
         self.closing = true;
         self.stop_key_repeat();
-        self.presence.retarget(
-            0.0,
-            Duration::from_millis(SWITCHER_PREVIEW_MS),
-            Easing::EaseInOutCubic,
-        );
+        self.presence
+            .retarget(0.0, SWITCHER_PREVIEW_DURATION, Easing::EaseInOutCubic);
+    }
+}
+
+/// Next dock position plus whether it wrapped past an end. Wrapping snaps
+/// straight to the first/last icon so there is no empty scroll or drift.
+fn step_target(current: f64, direction: f64, count: usize) -> (f64, bool) {
+    let raw = current + direction;
+    let n = count as f64;
+    if raw >= n {
+        (0.0, true)
+    } else if raw < 0.0 {
+        (n - 1.0, true)
+    } else {
+        (raw, false)
     }
 }
 
@@ -190,11 +195,8 @@ impl BabydraState {
                         .position(|entry| entry.window == selected)
                 })
                 .unwrap_or(0);
-            switcher.selected_index = if backwards {
-                (selected_index + switcher.entries.len() - 1) % switcher.entries.len()
-            } else {
-                (selected_index + 1) % switcher.entries.len()
-            };
+            let next = selected_index as i64 + if backwards { -1 } else { 1 };
+            switcher.selected_index = next.rem_euclid(switcher.entries.len() as i64) as usize;
 
             if entries_changed {
                 // Danh sách entry đã đổi (có cửa sổ đóng/mở): căn lại để
@@ -203,15 +205,8 @@ impl BabydraState {
             } else {
                 // Cộng dồn vào đích thay vì vị trí hiện tại, nhờ vậy bấm Tab
                 // liên tiếp không bị nhảy lùi về đầu bước trước.
-                let few_items = switcher.entries.len() < DOCK_MAX_VISIBLE_ITEMS;
-                // Với ít app, các item đứng yên và chỉ khung active trượt giữa
-                // chúng. Không cộng dồn như carousel (sẽ trượt ra khỏi dock sau
-                // vài vòng lặp) mà đi thẳng tới slot của item được chọn.
-                let target = if few_items {
-                    switcher.selected_index as f64
-                } else {
-                    switcher.scroll.target() + direction
-                };
+                let (target, wrapped) =
+                    step_target(switcher.scroll.target(), direction, switcher.entries.len());
                 // While Tab is held the backend sends repeated presses. Use a
                 // short linear step so the dock glides continuously instead of
                 // restarting a long easing curve and jumping at the end.
@@ -219,18 +214,19 @@ impl BabydraState {
                     .last_step
                     .is_some_and(|last| last.elapsed() < Duration::from_millis(150));
                 switcher.last_step = Some(Instant::now());
-                let (duration, easing) = if rapid {
-                    (
-                        Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS),
-                        Easing::Linear,
-                    )
+                if wrapped {
+                    switcher.scroll.snap_to(target);
                 } else {
-                    (
-                        Duration::from_millis(SWITCHER_SCROLL_MS),
-                        Easing::EaseOutCubic,
-                    )
-                };
-                switcher.scroll.retarget(target, duration, easing);
+                    let (duration, easing) = if rapid {
+                        (
+                            Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS),
+                            Easing::Linear,
+                        )
+                    } else {
+                        (SWITCHER_SCROLL_DURATION, Easing::EaseOutCubic)
+                    };
+                    switcher.scroll.retarget(target, duration, easing);
+                }
             }
             switcher.scroll_direction = direction;
             switcher.restart_stage();
@@ -298,22 +294,13 @@ impl BabydraState {
             (false, true) => entries.len() - 1,
             (false, false) => 1,
         };
+        let selected = selected_index.min(entries.len() - 1);
         self.alt_tab_switcher = Some(AltTabSwitcher {
             entries,
-            selected_index,
-            scroll: Tween::settled(selected_index as f64),
-            stage: Tween::new(
-                0.0,
-                1.0,
-                Duration::from_millis(SWITCHER_PREVIEW_MS),
-                Easing::EaseOutCubic,
-            ),
-            presence: Tween::new(
-                0.0,
-                1.0,
-                Duration::from_millis(SWITCHER_PREVIEW_MS),
-                Easing::EaseOutCubic,
-            ),
+            selected_index: selected,
+            scroll: Tween::settled(selected as f64),
+            stage: Tween::new(0.0, 1.0, SWITCHER_PREVIEW_DURATION, Easing::EaseOutCubic),
+            presence: Tween::new(0.0, 1.0, SWITCHER_PREVIEW_DURATION, Easing::EaseOutCubic),
             closing: false,
             last_step: None,
             held_direction: None,
@@ -321,5 +308,18 @@ impl BabydraState {
             last_repeat: None,
             scroll_direction: if backwards { -1.0 } else { 1.0 },
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dock_wraps_directly_to_the_first_or_last_icon() {
+        assert_eq!(step_target(0.0, -1.0, 5), (4.0, true));
+        assert_eq!(step_target(0.0, 1.0, 5), (1.0, false));
+        assert_eq!(step_target(4.0, 1.0, 5), (0.0, true));
+        assert_eq!(step_target(4.0, -1.0, 5), (3.0, false));
     }
 }

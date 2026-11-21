@@ -16,3 +16,5 @@ The workspace is cleanly divided into executables (`crates/`) and libraries (`li
 ### Libraries (`libs/` with `src/lib.rs`)
 - `libs/services`: Core OS integration, hardware readers (battery, disk, CPU, RAM, network, volume, VPN), desktop configuration, themes, tray, and i18n localization.
 - `libs/ui-kit`: Reusable GTK4 design system, components, icons, theme engine, and stylesheets.
+
+See [Animations, Constants and Enums](animations-constants-enums.md) for frame pacing, shared dock behaviour and the full token catalogue.

@@ -1,6 +1,7 @@
 //! Small, dependency-free Cairo primitives shared by shell surfaces.
 
 use cairo::{Context, FontSlant, FontWeight};
+use common::DockSide;
 
 /// RGBA tuple used by the drawing helpers.
 type Color = (f64, f64, f64, f64);
@@ -135,13 +136,6 @@ pub fn app_color(name: &str) -> (f64, f64, f64) {
     };
     let offset = 0.28;
     (red + offset, green + offset, blue + offset)
-}
-
-/// Which screen edge a docked capsule attaches to.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DockSide {
-    Left,
-    Right,
 }
 
 #[allow(clippy::too_many_arguments)]

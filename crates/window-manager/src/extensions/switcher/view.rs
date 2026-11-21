@@ -1,16 +1,11 @@
-//! Right-side Alt+Tab switcher: a docked capsule styled like the launcher,
-//! with one small live preview beside the active icon and its title at the
-//! bottom of that preview. The old centre stage is gone.
+//! Right-side Alt+Tab switcher layout and side-specific content. The capsule,
+//! icons and indicator come from `ui_kit::components::dock`; here we only add
+//! the small live preview and its title strip.
 
 use cairo::{Context, Operator};
-use common::constants::launcher::{
-    HAIRLINE, ICON, ICON_SELECTED, PANEL_CORNER_RADIUS, PANEL_FILLET_RADIUS, PANEL_PAD,
-    PANEL_SURFACE, PANEL_WIDTH, SELECTION_SIZE, SLOT, VISIBLE_SLOTS,
-};
-use services::graphics::{
-    docked_panel_path, draw_docked_panel, draw_text, fit_text, paint_rounded, set_bold_font,
-    DockSide,
-};
+use common::constants::launcher::{SLOT, VISIBLE_SLOTS};
+use ui_kit::components::dock::{draw_dock, visual_center, DockLayout, DockSide};
+use ui_kit::drawing::{draw_text, fit_text, set_bold_font};
 
 use crate::compositor::AltTabSwitcher;
 
@@ -23,37 +18,13 @@ const TITLE_H: f64 = 34.0;
 const TITLE_FONT: f64 = 13.5;
 const TITLE_PAD: f64 = 12.0;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct CardLayout {
-    pub(crate) card: Rect,
-    pub(crate) preview: Rect,
-    pub(crate) radius: f64,
-    pub(crate) opacity: f64,
-}
-
 pub(crate) struct SwitcherLayout {
-    /// Right-edge capsule body.
-    pub(crate) panel: Rect,
-    /// Icon slots inside the capsule.
-    pub(crate) dock_items: Vec<(usize, CardLayout)>,
-    /// Highlight behind the active icon.
-    pub(crate) active: Rect,
-    /// Small live preview of the active window.
+    /// Shared right-edge capsule.
+    pub(crate) panel: DockLayout,
+    /// Small live preview beside the active icon.
     pub(crate) preview: Rect,
     /// Fade of the preview while switching.
     pub(crate) preview_alpha: f64,
-}
-
-/// Slot at the capsule centre. Short lists stay still; long lists scroll but
-/// stop before leaving an empty rounded end.
-fn visual_center(count: usize, position: f64) -> f64 {
-    let count = count as f64;
-    if count <= VISIBLE_SLOTS as f64 {
-        (count - 1.0) / 2.0
-    } else {
-        let half = (VISIBLE_SLOTS / 2) as f64;
-        position.clamp(half, count - 1.0 - half)
-    }
 }
 
 pub(crate) fn compute_layout(
@@ -73,8 +44,6 @@ pub(crate) fn compute_layout(
     ))
 }
 
-/// Pure geometry, independent of `AltTabEntry` so it can be tested without
-/// constructing real Wayland windows.
 fn compute_layout_metrics(
     count: usize,
     position: f64,
@@ -82,68 +51,29 @@ fn compute_layout_metrics(
     screen_w: f64,
     screen_h: f64,
 ) -> SwitcherLayout {
+    let panel = DockLayout::new(count, screen_h / 2.0, screen_w, DockSide::Right);
     let visual = visual_center(count, position);
-
-    let slots = count.clamp(1, VISIBLE_SLOTS) as f64;
-    let panel_h = slots * SLOT + PANEL_PAD * 2.0;
-    let panel_x = screen_w - PANEL_WIDTH;
-    let panel_y = (screen_h - panel_h) / 2.0;
-    let center_y = screen_h / 2.0;
-    let panel = Rect::new(panel_x, panel_y, PANEL_WIDTH, panel_h);
-
-    let (first, last) = if count <= VISIBLE_SLOTS {
-        (0, count)
+    let active_rel = if count <= VISIBLE_SLOTS {
+        position.rem_euclid(count as f64) - visual
     } else {
-        let half = (VISIBLE_SLOTS / 2) as f64;
-        (
-            (visual - half - 1.0).floor().max(0.0) as usize,
-            ((visual + half + 1.0).ceil() as usize).min(count),
-        )
+        0.0
     };
+    let active_y = panel.center_y + active_rel * SLOT;
 
-    let mut dock_items = Vec::new();
-    for index in first..last {
-        let rel = index as f64 - visual;
-        let selection_rel = index as f64 - position;
-        let proximity = (1.0 - selection_rel.abs()).clamp(0.0, 1.0);
-        let size = ICON + (ICON_SELECTED - ICON) * proximity * proximity;
-        let center_x = panel_x + PANEL_WIDTH / 2.0;
-        let center_y = center_y + rel * SLOT;
-        let card = Rect::new(center_x - size / 2.0, center_y - size / 2.0, size, size);
-        dock_items.push((
-            index,
-            CardLayout {
-                card,
-                preview: card,
-                radius: size * 0.24,
-                opacity: 1.0,
-            },
-        ));
-    }
-
-    let active_center_y = center_y + (position - visual) * SLOT;
-    let active = Rect::new(
-        panel_x + (PANEL_WIDTH - SELECTION_SIZE) / 2.0,
-        active_center_y - SELECTION_SIZE / 2.0,
-        SELECTION_SIZE,
-        SELECTION_SIZE,
+    let preview = Rect::new(
+        (panel.x - PREVIEW_GAP - PREVIEW_W).max(8.0),
+        (active_y - PREVIEW_H / 2.0).clamp(8.0, screen_h - PREVIEW_H - 8.0),
+        PREVIEW_W,
+        PREVIEW_H,
     );
-
-    let preview_x = (panel_x - PREVIEW_GAP - PREVIEW_W).max(8.0);
-    let preview_y = (active_center_y - PREVIEW_H / 2.0).clamp(8.0, screen_h - PREVIEW_H - 8.0);
-    let preview = Rect::new(preview_x, preview_y, PREVIEW_W, PREVIEW_H);
 
     SwitcherLayout {
         panel,
-        dock_items,
-        active,
         preview,
         preview_alpha: stage_progress.clamp(0.0, 1.0),
     }
 }
 
-/// Draws the capsule, icon slots and the title strip of the small preview.
-/// The live window pixels are composited by `element.rs` underneath this.
 pub(crate) fn draw_switcher_foreground(
     context: &Context,
     switcher: &AltTabSwitcher,
@@ -156,91 +86,28 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    context.push_group();
-    let drawn = draw_switcher_content(context, switcher, layout, slide_x);
-    let group = context.pop_group()?;
-    context.set_source(&group)?;
-    context.paint_with_alpha(presence)?;
-    drawn
-}
-
-fn draw_switcher_content(
-    context: &Context,
-    switcher: &AltTabSwitcher,
-    layout: &SwitcherLayout,
-    slide_x: f64,
-) -> Result<(), cairo::Error> {
-    let panel_x = layout.panel.x + slide_x;
-    let preview_x = layout.preview.x + slide_x;
-
-    draw_docked_panel(
+    draw_dock(
         context,
-        panel_x,
-        layout.panel.y,
-        layout.panel.width,
-        layout.panel.height,
-        PANEL_CORNER_RADIUS,
-        PANEL_FILLET_RADIUS,
-        PANEL_SURFACE,
-        HAIRLINE,
+        &layout.panel,
+        switcher.entries.len(),
+        switcher.visual_selection(),
+        switcher.selected_index.into(),
+        presence,
+        slide_x,
         DockSide::Right,
+        |ctx, index, cx, cy, size, _| {
+            if let Some(entry) = switcher.entries.get(index) {
+                draw_app_badge(ctx, entry, cx - size / 2.0, cy - size / 2.0, size, 1.0)
+            } else {
+                Ok(())
+            }
+        },
     )?;
 
-    context.save()?;
-    docked_panel_path(
-        context,
-        panel_x,
-        layout.panel.y,
-        layout.panel.width,
-        layout.panel.height,
-        PANEL_CORNER_RADIUS,
-        PANEL_FILLET_RADIUS,
-        DockSide::Right,
-    )?;
-    context.clip();
-
-    paint_rounded(
-        context,
-        layout.active.x + slide_x,
-        layout.active.y,
-        layout.active.width,
-        layout.active.height,
-        17.0,
-        (1.0, 1.0, 1.0, 0.09),
-        None,
-    )?;
-
-    for (index, item) in &layout.dock_items {
-        if let Some(entry) = switcher.entries.get(*index) {
-            let card = item.card;
-            draw_app_badge(
-                context,
-                entry,
-                card.x + slide_x,
-                card.y,
-                card.width.min(card.height),
-                item.opacity,
-            )?;
-        }
-    }
-
-    // White pill on the inner edge, mirroring the launcher workspace dot.
-    paint_rounded(
-        context,
-        panel_x + layout.panel.width - 11.0,
-        layout.active.y + (layout.active.height - 16.0) / 2.0,
-        3.0,
-        16.0,
-        1.5,
-        (1.0, 1.0, 1.0, 0.92),
-        None,
-    )?;
-    context.restore()?;
-
-    // Title inside the bottom of the small preview.
+    // Side-specific content: title inside the bottom of the small preview.
     if let Some(entry) = switcher.entries.get(switcher.selected_index) {
         let mut p = layout.preview;
-        p.x = preview_x;
+        p.x += slide_x;
         context.save()?;
         context.rectangle(p.x, p.y + p.height - TITLE_H, p.width, TITLE_H);
         context.clip();
@@ -272,9 +139,8 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn empty_switcher_has_no_layout() {
-        let switcher = AltTabSwitcher {
+    fn empty_switcher() -> AltTabSwitcher {
+        AltTabSwitcher {
             entries: Vec::new(),
             selected_index: 0,
             scroll: Tween::settled(0.0),
@@ -286,32 +152,27 @@ mod tests {
             repeat_started: None,
             last_repeat: None,
             scroll_direction: 1.0,
-        };
-        assert!(compute_layout(&switcher, 1920.0, 1080.0).is_none());
+        }
     }
 
     #[test]
-    fn capsule_is_docked_to_the_right_and_preview_sits_left_of_it() {
-        let layout = compute_layout_metrics(4, 0.0, 1.0, 1920.0, 1080.0);
+    fn empty_switcher_has_no_layout() {
+        assert!(compute_layout(&empty_switcher(), 1920.0, 1080.0).is_none());
+    }
 
+    #[test]
+    fn preview_sits_left_of_the_right_capsule() {
+        let layout = compute_layout_metrics(4, 0.0, 1.0, 1920.0, 1080.0);
         assert_eq!(layout.panel.x + layout.panel.width, 1920.0);
         assert!(layout.preview.x + layout.preview.width <= layout.panel.x);
-        assert_eq!(layout.preview_alpha, 1.0);
     }
 
     #[test]
-    fn short_lists_keep_all_icons_visible() {
-        let layout = compute_layout_metrics(3, 0.0, 1.0, 1920.0, 1080.0);
-        assert_eq!(layout.dock_items.len(), 3);
-        assert_eq!(layout.panel.height, 3.0 * SLOT + PANEL_PAD * 2.0);
-    }
-
-    #[test]
-    fn long_lists_clamp_the_visual_center() {
-        assert_eq!(visual_center(12, 0.0), 4.0);
-        assert_eq!(visual_center(12, 11.0), 7.0);
-
-        let layout = compute_layout_metrics(12, 11.0, 1.0, 1920.0, 1080.0);
-        assert!(layout.dock_items.len() <= VISIBLE_SLOTS + 2);
+    fn short_and_long_lists_share_the_dock_geometry() {
+        let short = compute_layout_metrics(5, 4.0, 1.0, 1920.0, 1080.0);
+        let long = compute_layout_metrics(12, 11.0, 1.0, 1920.0, 1080.0);
+        assert_eq!(short.panel.width, long.panel.width);
+        assert_eq!(visual_center(5, 7.0), 2.0);
+        assert_eq!(visual_center(12, 11.0), 11.0);
     }
 }

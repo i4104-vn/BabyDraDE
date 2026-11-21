@@ -2097,7 +2097,6 @@ dependencies = [
 name = "services"
 version = "0.1.0"
 dependencies = [
- "cairo-rs",
  "dirs",
  "gio",
  "libc",
@@ -2549,6 +2548,9 @@ dependencies = [
 name = "ui-kit"
 version = "0.1.0"
 dependencies = [
+ "animation",
+ "cairo-rs",
+ "common",
  "gdk-pixbuf",
  "gtk4",
  "serde_json",

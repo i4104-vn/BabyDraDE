@@ -57,21 +57,12 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 ) {
                     let px = state.pointer_location.x;
                     let py = state.pointer_location.y;
-                    let in_panel = px >= layout.panel.x
-                        && px <= layout.panel.x + layout.panel.width
-                        && py >= layout.panel.y
-                        && py <= layout.panel.y + layout.panel.height;
-                    let clicked_idx = if in_panel {
-                        layout
-                            .dock_items
-                            .iter()
-                            .find(|(_, item)| {
-                                py >= item.card.y && py <= item.card.y + item.card.height
-                            })
-                            .map(|(idx, _)| *idx)
-                    } else {
-                        None
-                    };
+                    let clicked_idx = layout.panel.index_at(
+                        (px, py),
+                        0.0,
+                        switcher.entries.len(),
+                        switcher.visual_selection(),
+                    );
 
                     let clicked_window = clicked_idx.and_then(|idx| {
                         state.alt_tab_switcher.as_ref().and_then(|switcher| {

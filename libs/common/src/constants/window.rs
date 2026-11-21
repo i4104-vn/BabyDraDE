@@ -1,4 +1,4 @@
-//! Window geometry, decoration, and animation constants.
+//! Window geometry and decoration constants. Animation durations live in `animation`.
 
 /// Default window corner radius in pixels (floating / normal state).
 pub const CORNER_RADIUS: f64 = 14.0;
@@ -16,18 +16,3 @@ pub const BORDER_MARGIN: f64 = 8.0;
 /// Minimum allowable window dimensions during interactive resize.
 pub const WINDOW_MIN_WIDTH: i32 = 150;
 pub const WINDOW_MIN_HEIGHT: i32 = 100;
-
-/// Default duration for window opening transition in milliseconds.
-pub const WINDOW_OPEN_ANIM_MS: u64 = 280;
-
-/// Default duration for window closing transition in milliseconds.
-pub const WINDOW_CLOSE_ANIM_MS: u64 = 260;
-
-/// Duration for the minimize shrink animation in milliseconds.
-pub const WINDOW_MINIMIZE_ANIM_MS: u64 = 280;
-
-/// Duration for the restore (unminimize) grow animation in milliseconds.
-pub const WINDOW_RESTORE_ANIM_MS: u64 = 300;
-
-/// Duration for geometry transitions such as fullscreen/maximize enter and exit.
-pub const WINDOW_GEOMETRY_ANIM_MS: u64 = 340;

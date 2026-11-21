@@ -1,6 +1,6 @@
 use cairo::{Context, FontSlant, FontWeight};
 use gtk4::gdk::prelude::GdkCairoContextExt;
-use services::graphics::{app_color, draw_text, rounded_rect};
+use ui_kit::drawing::{app_color, draw_text, rounded_rect};
 
 use crate::compositor::AltTabEntry;
 

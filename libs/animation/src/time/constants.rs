@@ -24,6 +24,19 @@ pub const FADE_OUT_DURATION: Duration = Duration::from_millis(260);
 /// Wallpaper circular-reveal duration.
 pub const REVEAL_DURATION: Duration = Duration::from_millis(900);
 
+/// Window open / close / minimize / restore / geometry transitions.
+pub const WINDOW_OPEN_DURATION: Duration = Duration::from_millis(280);
+pub const WINDOW_CLOSE_DURATION: Duration = Duration::from_millis(260);
+pub const WINDOW_MINIMIZE_DURATION: Duration = Duration::from_millis(280);
+pub const WINDOW_RESTORE_DURATION: Duration = Duration::from_millis(300);
+pub const WINDOW_GEOMETRY_DURATION: Duration = Duration::from_millis(340);
+
+/// Alt+Tab switcher stage pulse, dock highlight and preview/scroll steps.
+pub const STAGE_ANIM_DURATION: Duration = Duration::from_millis(500);
+pub const DOCK_TARGET_ANIM_DURATION: Duration = Duration::from_millis(420);
+pub const SWITCHER_PREVIEW_DURATION: Duration = Duration::from_millis(180);
+pub const SWITCHER_SCROLL_DURATION: Duration = Duration::from_millis(160);
+
 #[cfg(test)]
 mod tests {
     use super::*;

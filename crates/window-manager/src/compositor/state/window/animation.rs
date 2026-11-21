@@ -1,6 +1,7 @@
-use std::time::Duration;
-
-use animation::{Easing, Tween};
+use animation::{
+    Easing, Tween, WINDOW_CLOSE_DURATION, WINDOW_GEOMETRY_DURATION, WINDOW_MINIMIZE_DURATION,
+    WINDOW_OPEN_DURATION, WINDOW_RESTORE_DURATION,
+};
 use smithay::{
     desktop::Window,
     utils::{Logical, Point, Rectangle, Size, SERIAL_COUNTER},
@@ -79,7 +80,7 @@ pub(crate) fn start_window_opening(window: &Window) {
         state_guard.animation = Some(WindowAnimation::Opening(Tween::new(
             0.0,
             1.0,
-            Duration::from_millis(common::constants::WINDOW_OPEN_ANIM_MS),
+            WINDOW_OPEN_DURATION,
             Easing::EaseInOutCubic,
         )));
     }
@@ -91,7 +92,7 @@ pub(crate) fn start_window_minimizing(window: &Window) {
     state_guard.animation = Some(WindowAnimation::Minimizing(Tween::new(
         0.0,
         1.0,
-        Duration::from_millis(common::constants::WINDOW_MINIMIZE_ANIM_MS),
+        WINDOW_MINIMIZE_DURATION,
         Easing::EaseInOutCubic,
     )));
 }
@@ -110,7 +111,7 @@ pub(crate) fn start_window_restoring(window: &Window) {
     state_guard.animation = Some(WindowAnimation::Restoring(Tween::new(
         0.0,
         1.0,
-        Duration::from_millis(common::constants::WINDOW_RESTORE_ANIM_MS),
+        WINDOW_RESTORE_DURATION,
         Easing::EaseInOutCubic,
     )));
 }
@@ -131,12 +132,7 @@ pub(crate) fn start_window_transition(
         return;
     }
     state_guard.animation = Some(WindowAnimation::Transition {
-        tween: Tween::new(
-            0.0,
-            1.0,
-            Duration::from_millis(common::constants::WINDOW_GEOMETRY_ANIM_MS),
-            Easing::EaseInOutCubic,
-        ),
+        tween: Tween::new(0.0, 1.0, WINDOW_GEOMETRY_DURATION, Easing::EaseInOutCubic),
         geometry: GeometryTransition {
             from: from.to_f64(),
             to: to.to_f64(),
@@ -229,7 +225,7 @@ impl BabydraState {
             state_guard.animation = Some(WindowAnimation::Closing(Tween::new(
                 0.0,
                 1.0,
-                Duration::from_millis(common::constants::WINDOW_CLOSE_ANIM_MS),
+                WINDOW_CLOSE_DURATION,
                 Easing::EaseInOutCubic,
             )));
         }
@@ -347,6 +343,7 @@ impl BabydraState {
 mod tests {
     use super::super::state_data::WindowStateData;
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn test_window_animation_factors_and_states() {

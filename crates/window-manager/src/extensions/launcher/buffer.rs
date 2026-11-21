@@ -4,12 +4,14 @@
 use cairo::{Context, Format, ImageSurface};
 use smithay::utils::{Buffer, Rectangle, Scale};
 
-use super::layout::Panel;
-use super::{BufferRegion, LABEL_GAP, LABEL_MAX_WIDTH, PANEL_FILLET_RADIUS, SHADOW_PAD};
+use common::constants::launcher::PANEL_FILLET_RADIUS;
+use ui_kit::components::dock::DockLayout;
+
+use super::{BufferRegion, LABEL_GAP, LABEL_MAX_WIDTH, SHADOW_PAD};
 
 /// Physical region covered by the capsule, its shadow and the name label.
 pub(super) fn physical_region(
-    panel: &Panel,
+    panel: &DockLayout,
     scale: Scale<f64>,
     screen_w: i32,
     screen_h: i32,

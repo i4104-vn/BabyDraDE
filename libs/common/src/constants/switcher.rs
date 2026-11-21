@@ -33,19 +33,6 @@ pub const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
 /// Horizontal slide animation offset distance during stage item transitions.
 pub const STAGE_SLIDE_DISTANCE: f64 = 24.0;
 
-/// Duration of the large stage pulse in milliseconds. Deliberately slower than
-/// the dock so the main preview settles gently instead of snapping.
-pub const STAGE_ANIM_MS: u64 = 500;
-
-/// Snappy icon/highlight movement in the right-side Alt+Tab dock.
-pub const SWITCHER_SCROLL_MS: u64 = 160;
-
-/// Fade of the small preview beside the active icon.
-pub const SWITCHER_PREVIEW_MS: u64 = 180;
-
-/// Duration of the moving highlight when fewer than five apps are open.
-pub const DOCK_TARGET_ANIM_MS: u64 = 420;
-
 /// How far the stage grows at the peak of a switch pulse (0..1).
 /// Growing instead of shrinking keeps the preview covering its slot, so the
 /// dark canvas can never show through as a black border around the app.
