@@ -44,6 +44,30 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
             let sym = handle.modified_sym().into();
             let switcher_active = state.alt_tab_switcher.is_some();
 
+            // The launcher owns keyboard input while open: Up/Down move the
+            // selection, Return launches, Escape closes.
+            if state.launcher.is_visible() && event.state() == KeyState::Pressed {
+                match sym {
+                    keysyms::KEY_Up => {
+                        state.launcher.move_selection(-1);
+                        return FilterResult::Intercept(());
+                    }
+                    keysyms::KEY_Down => {
+                        state.launcher.move_selection(1);
+                        return FilterResult::Intercept(());
+                    }
+                    keysyms::KEY_Return | keysyms::KEY_KP_Enter => {
+                        state.launcher.activate();
+                        return FilterResult::Intercept(());
+                    }
+                    keysyms::KEY_Escape => {
+                        state.launcher.close();
+                        return FilterResult::Intercept(());
+                    }
+                    _ => {}
+                }
+            }
+
             if switcher_active
                 && event.state() == KeyState::Released
                 && (sym == keysyms::KEY_Tab || sym == keysyms::KEY_ISO_Left_Tab)
