@@ -58,6 +58,20 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         display_handle,
     };
 
+    // The clipboard capture thread reports back through calloop so the
+    // compositor can take ownership of the selection on the main thread.
+    let (clipboard_tx, clipboard_rx) =
+        smithay::reexports::calloop::channel::channel::<Vec<String>>();
+    data.state.clipboard_sender = Some(clipboard_tx);
+    event_loop
+        .handle()
+        .insert_source(clipboard_rx, |event, _, data| {
+            if let smithay::reexports::calloop::channel::Event::Msg(mimes) = event {
+                data.state.complete_clipboard_capture(mimes);
+            }
+        })
+        .expect("failed to register clipboard completion channel");
+
     backends::init(&mut event_loop, &mut data)?;
 
     // Export standard Wayland & desktop environment variables
@@ -147,6 +161,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() == 3 && args[1] == "--screenshot-editor" {
         extensions::screenshot::open_editor(args[2].clone());
+        return Ok(());
+    }
+    if args.len() == 2 && args[1] == "--clipboard-picker" {
+        extensions::clipboard::open_picker();
         return Ok(());
     }
 

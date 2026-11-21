@@ -330,7 +330,12 @@ check_missing_deps() {
         MISSING_DEPS+=("C/C++ compiler (gcc or clang)")
     fi
 
-    # 3. pkg-config / pkgconf
+    # 3. Clipboard utilities (wl-copy / wl-paste)
+    if ! command -v wl-copy >/dev/null 2>&1; then
+        MISSING_DEPS+=("wl-clipboard (wl-copy / wl-paste)")
+    fi
+
+    # 4. pkg-config / pkgconf
     if ! command -v pkg-config >/dev/null 2>&1 && ! command -v pkgconf >/dev/null 2>&1; then
         MISSING_DEPS+=("pkg-config / pkgconf")
     else
@@ -381,6 +386,7 @@ install_packages_for_distro() {
                 pipewire
                 pipewire-pulse
                 wireplumber
+                wl-clipboard
             )
             run_privileged pacman -S --needed --noconfirm "${pkgs[@]}"
             ;;
@@ -407,6 +413,7 @@ install_packages_for_distro() {
                 pipewire
                 pipewire-pulse
                 wireplumber
+                wl-clipboard
             )
             run_privileged apt-get update
             run_privileged apt-get install -y --no-install-recommends "${pkgs[@]}"
@@ -436,6 +443,7 @@ install_packages_for_distro() {
                 pipewire
                 pipewire-pulseaudio
                 wireplumber
+                wl-clipboard
             )
             if command -v dnf5 >/dev/null 2>&1; then
                 run_privileged dnf5 install -y "${pkgs[@]}"
@@ -469,6 +477,7 @@ install_packages_for_distro() {
                 pipewire
                 pipewire-pulse
                 wireplumber
+                wl-clipboard
             )
             run_privileged zypper install -y --no-recommends "${pkgs[@]}"
             ;;
@@ -493,6 +502,7 @@ install_packages_for_distro() {
                 pipewire
                 pipewire-pulse
                 wireplumber
+                wl-clipboard
             )
             run_privileged apk add --no-cache "${pkgs[@]}"
             ;;
@@ -515,6 +525,7 @@ install_packages_for_distro() {
                 pipewire
                 pipewire-pulse
                 wireplumber
+                wl-clipboard
             )
             run_privileged xbps-install -Sy "${pkgs[@]}"
             ;;
@@ -526,6 +537,7 @@ install_packages_for_distro() {
             echo "    - Wayland: libwayland, wayland-protocols"
             echo "    - Smithay backend: libxkbcommon, libudev, libinput, libseat, libdrm, libgbm, EGL, GLESv2"
             echo "    - UI libraries: gtk4, gtk4-layer-shell"
+            echo "    - Clipboard utilities: wl-clipboard (wl-copy / wl-paste)"
             ;;
     esac
 }

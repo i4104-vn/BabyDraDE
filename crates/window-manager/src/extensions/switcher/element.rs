@@ -22,7 +22,7 @@ use crate::compositor::AltTabSwitcher;
 
 use super::{
     draw::Rect,
-    view::{compute_layout, draw_switcher_foreground, SwitcherLayout, DOCK_MAX_VISIBLE_ITEMS},
+    view::{compute_layout, draw_switcher_foreground, SwitcherLayout},
 };
 
 use crate::rendering::{elements::types::ConstrainedSurface, CustomRenderElements};
@@ -75,14 +75,12 @@ impl SwitcherOverlay {
             self.last_rendered = None;
         }
 
-        // Re-render the Cairo foreground while the dock carousel is scrolling,
-        // otherwise the decorations would freeze on their first frame. The tick
-        // is measured in microseconds instead of quantising to 16 ms, so a
-        // 120 fps animation gets a distinct frame every time. With fewer than
-        // five apps the dock is static: the target moves once when
-        // `selected_index` changes, so extra frames would be identical.
-        let dock_scrolls = switcher.entries.len() >= DOCK_MAX_VISIBLE_ITEMS;
-        let animation_tick = if dock_scrolls && switcher.scroll.is_animating() {
+        // Re-render the Cairo foreground while the selection tween is moving.
+        // The microsecond tick gives the 120 fps loop a distinct frame every
+        // time. This must also run with fewer than five apps: there the dock
+        // items are static but the highlight frame glides between them, and
+        // skipping these frames made it jump in one step.
+        let animation_tick = if switcher.scroll.is_animating() {
             switcher.scroll.frame_tick()
         } else {
             u64::MAX

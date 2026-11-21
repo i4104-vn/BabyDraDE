@@ -14,6 +14,8 @@ pub enum KeyboardAction {
     ReloadConfig,
     /// Toggle the quick application launcher (Super+Space).
     ToggleLauncher,
+    /// Open the clipboard history picker (Super+V).
+    ClipboardPicker,
     /// Capture the screen (Super+Shift+S).
     Screenshot,
     /// Toggle maximize state on the active window.

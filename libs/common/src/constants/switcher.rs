@@ -31,4 +31,14 @@ pub const STAGE_RIGHT_MARGIN: f64 = 24.0;
 pub const STAGE_ASPECT_RATIO: f64 = 16.0 / 9.0;
 
 /// Horizontal slide animation offset distance during stage item transitions.
-pub const STAGE_SLIDE_DISTANCE: f64 = 14.0;
+pub const STAGE_SLIDE_DISTANCE: f64 = 24.0;
+
+/// Duration of the large stage pulse in milliseconds. Deliberately slower than
+/// the dock so the main preview settles gently instead of snapping.
+pub const STAGE_ANIM_MS: u64 = 780;
+
+/// Duration of the moving highlight when fewer than five apps are open.
+pub const DOCK_TARGET_ANIM_MS: u64 = 620;
+
+/// How far the stage shrinks at the peak of a switch pulse (0..1).
+pub const STAGE_SCALE_DIP: f64 = 0.065;

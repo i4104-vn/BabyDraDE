@@ -107,6 +107,7 @@ pub fn setup_render_loop(
                     state.handle_window_action(&action);
                 }
                 state.update_window_animations();
+                state.update_clipboard();
                 let display_handle = &mut data.display_handle;
                 let scale = Scale::from(1.0);
 

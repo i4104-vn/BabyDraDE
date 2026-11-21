@@ -268,3 +268,8 @@ pub fn save_autostart_config(autostart: &AutostartConfig) {
     config.autostart = autostart.clone();
     save_babydra_config(&config);
 }
+
+/// Loads clipboard history/hotkey configuration from `~/.babydra/babydra.conf`.
+pub fn load_clipboard_config() -> crate::models::ClipboardConfig {
+    load_babydra_config().clipboard
+}

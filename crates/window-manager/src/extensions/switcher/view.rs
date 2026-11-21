@@ -7,7 +7,8 @@ use super::draw::{draw_app_badge, rounded_rect, Rect};
 pub(crate) use crate::enums::constants::DOCK_MAX_VISIBLE_ITEMS;
 use crate::enums::constants::{
     DOCK_BOTTOM_MARGIN, DOCK_GAP, DOCK_THUMBNAIL_HEIGHT, DOCK_THUMBNAIL_WIDTH, DOCK_TOP_MARGIN,
-    DOCK_X, STAGE_ASPECT_RATIO, STAGE_RIGHT_MARGIN, STAGE_SIDE_GAP, STAGE_SLIDE_DISTANCE,
+    DOCK_X, STAGE_ASPECT_RATIO, STAGE_RIGHT_MARGIN, STAGE_SCALE_DIP, STAGE_SIDE_GAP,
+    STAGE_SLIDE_DISTANCE,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -77,10 +78,13 @@ pub(crate) fn compute_layout(
         stage_card.center_x(),
         stage_card.y + stage_card.height / 2.0,
     );
-    // Chuyển app: stage hơi thu nhỏ, trượt nhẹ theo hướng điều hướng rồi trở
-    // về đúng kích thước. Không đổi opacity để tránh cảm giác nhấp nháy.
-    let stage_scale = 0.965 + 0.035 * progress;
-    let stage_slide = switcher.scroll_direction * (1.0 - progress) * STAGE_SLIDE_DISTANCE;
+    // Chuyển app: stage thu nhỏ và trượt nhẹ rồi trở về đúng kích thước.
+    // Dùng nửa chu kỳ sin: pulse bằng 0 ở cả đầu và cuối nên việc restart
+    // pulse ở mỗi lần bấm Tab không bao giờ làm nhảy kích thước. Chuyển động
+    // liên tục trong suốt 780ms nên không có các frame bị đứng yên rồi giật.
+    let pulse = stage_pulse(progress);
+    let stage_scale = 1.0 - STAGE_SCALE_DIP * pulse;
+    let stage_slide = switcher.scroll_direction * pulse * STAGE_SLIDE_DISTANCE;
     let stage_card = scale_rect_around(stage_card, stage_center, stage_scale);
     let stage_preview = scale_rect_around(stage_preview, stage_center, stage_scale);
     let stage_card = Rect::new(
@@ -226,7 +230,7 @@ fn compute_static_dock_items(
 
 fn compute_dock_layout_static(
     entry_count: usize,
-    selected_index: usize,
+    visual_selection: f64,
     screen_h: f64,
 ) -> (Rect, Vec<(usize, CardLayout)>, Rect) {
     if entry_count == 0 {
@@ -236,11 +240,10 @@ fn compute_dock_layout_static(
 
     let metrics = compute_dock_metrics(entry_count, screen_h);
     let items = compute_static_dock_items(&metrics, entry_count);
-    let target = items
-        .iter()
-        .find(|(index, _)| *index == selected_index)
-        .map(|(_, item)| item.preview)
-        .unwrap_or_else(|| dock_card(&metrics, 0.0, 1.0).preview);
+    // Các item đứng yên, nhưng khung active trượt liên tục theo tween chọn
+    // (có phần lẻ) thay vì nhảy thẳng tới slot của item mới.
+    let center_slot = (entry_count as f64 - 1.0) / 2.0;
+    let target = dock_card(&metrics, visual_selection - center_slot, 1.0).preview;
 
     (metrics.viewport, items, target)
 }
@@ -249,14 +252,14 @@ fn compute_dock_layout_static(
 /// hiển thị cố định và chỉ di chuyển khung active.
 fn compute_dock_layout_mode(
     entry_count: usize,
-    selected_index: usize,
+    _selected_index: usize,
     visual_selection: f64,
     screen_h: f64,
 ) -> (Rect, Vec<(usize, CardLayout)>, Rect) {
     if entry_count >= DOCK_MAX_VISIBLE_ITEMS {
         compute_dock_layout_animated(entry_count, visual_selection, screen_h)
     } else {
-        compute_dock_layout_static(entry_count, selected_index, screen_h)
+        compute_dock_layout_static(entry_count, visual_selection, screen_h)
     }
 }
 
@@ -287,6 +290,12 @@ fn compute_dock_layout(
     let (viewport, items, _) =
         compute_dock_layout_mode(entry_count, selected_index, selected_index as f64, screen_h);
     (viewport, items)
+}
+
+/// Nửa chu kỳ sin dùng cho pulse của stage: bằng 0 ở cả hai đầu nên việc
+/// restart pulse khi bấm Tab liên tiếp không bao giờ làm nhảy khung hình.
+pub(crate) fn stage_pulse(progress: f64) -> f64 {
+    (std::f64::consts::PI * progress.clamp(0.0, 1.0)).sin()
 }
 
 fn scale_rect_around(rect: Rect, center: (f64, f64), scale: f64) -> Rect {
@@ -390,6 +399,15 @@ mod tests {
     use animation::Tween;
 
     use super::*;
+
+    #[test]
+    fn stage_pulse_starts_and_ends_at_rest() {
+        assert!(stage_pulse(0.0).abs() < 1e-9);
+        assert!(stage_pulse(1.0).abs() < 1e-9);
+        assert!((stage_pulse(0.5) - 1.0).abs() < 1e-9);
+        assert!(stage_pulse(-1.0).abs() < 1e-9);
+        assert!(stage_pulse(2.0).abs() < 1e-9);
+    }
 
     #[test]
     fn test_compute_layout_empty() {

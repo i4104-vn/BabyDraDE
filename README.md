@@ -9,6 +9,7 @@ input, and launches one Wayland app for a smoke run.
 - Linux with a running graphical session (Wayland or X11)
 - Rust stable
 - Smithay's Linux build dependencies, including Wayland, XKB common, EGL, and GLES
+- `wl-clipboard` (`wl-copy` / `wl-paste`) — installed automatically by `start.sh`
 - A Wayland app to launch via a configurable shortcut
 
 ## Run
@@ -23,6 +24,13 @@ Launch a terminal (or any app) with a configurable shortcut in
 
 Change the command to `alacritty`, `kitty`, or any other executable. Changes
 reload within 2 seconds.
+
+## Clipboard
+
+`Ctrl+C`, `Ctrl+X` and `Ctrl+V` are always delivered to the focused application,
+so normal copy/paste works as on any desktop. The compositor caches every
+selection, so copied text survives the source app closing. `Super+V` opens the
+clipboard history picker; choose an entry to copy it back to the selection.
 
 start.sh runs the same nested development compositor without installing system
 packages or changing user permissions.

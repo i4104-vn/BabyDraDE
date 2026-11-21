@@ -3,6 +3,8 @@ mod layer_shell;
 mod xdg_decoration;
 mod xdg_shell;
 
+use std::{io::Write, os::unix::io::OwnedFd, time::Duration};
+
 use smithay::{
     delegate_data_device, delegate_output, delegate_pointer_gestures, delegate_seat,
     input::{pointer::CursorImageStatus, Seat, SeatHandler, SeatState},
@@ -14,7 +16,7 @@ use smithay::{
                 set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler, DataDeviceState,
                 ServerDndGrabHandler,
             },
-            SelectionHandler,
+            SelectionHandler, SelectionSource, SelectionTarget,
         },
     },
 };
@@ -42,6 +44,43 @@ delegate_seat!(BabydraState);
 
 impl SelectionHandler for BabydraState {
     type SelectionUserData = ();
+
+    /// A client copied something. Defer the capture until Smithay has stored
+    /// the source, then keep the data in our own cache.
+    fn new_selection(
+        &mut self,
+        ty: SelectionTarget,
+        source: Option<SelectionSource>,
+        _seat: Seat<Self>,
+    ) {
+        if ty == SelectionTarget::Clipboard {
+            if let Some(source) = source {
+                self.note_client_selection(source.mime_types());
+            }
+        }
+    }
+
+    /// A client is pasting from the compositor-owned selection.
+    fn send_selection(
+        &mut self,
+        ty: SelectionTarget,
+        mime_type: String,
+        fd: OwnedFd,
+        _seat: Seat<Self>,
+        _user_data: &Self::SelectionUserData,
+    ) {
+        if ty != SelectionTarget::Clipboard {
+            return;
+        }
+        if let Some(data) =
+            services::system::clipboard::wait_and_read_current(&mime_type, Duration::from_millis(500))
+        {
+            let mut file = std::fs::File::from(fd);
+            if let Err(err) = file.write_all(&data) {
+                tracing::warn!("Failed to serve clipboard selection: {err}");
+            }
+        }
+    }
 }
 
 impl DataDeviceHandler for BabydraState {

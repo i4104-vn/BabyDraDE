@@ -1,3 +1,4 @@
+pub mod clipboard;
 pub mod dbus_menu;
 pub mod hardware;
 pub mod host;
@@ -8,6 +9,7 @@ pub mod volume;
 pub mod vpn;
 pub mod window;
 
+pub use clipboard::{clear_history, history as clipboard_history, store_selection, ClipboardEntry};
 pub use dbus_menu::{
     activate_dbus_menu_item, fetch_dbus_menu, fetch_dbus_menu_with_prepared_submenus,
     find_app_menu_service, DbusMenuItem,

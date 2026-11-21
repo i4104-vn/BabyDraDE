@@ -92,6 +92,7 @@ pub(crate) fn init(
                         state.handle_window_action(&action);
                     }
                     state.update_window_animations();
+                    state.update_clipboard();
                     let size = backend.window_size();
 
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();

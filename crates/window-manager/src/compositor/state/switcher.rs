@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use animation::{Easing, Tween, DEFAULT_DURATION};
 use gtk4::gdk_pixbuf::Pixbuf;
 use smithay::{
@@ -8,6 +10,7 @@ use smithay::{
 };
 
 use super::{window_state, BabydraState};
+use crate::enums::constants::{DOCK_MAX_VISIBLE_ITEMS, DOCK_TARGET_ANIM_MS, STAGE_ANIM_MS};
 
 /// One entry in the Alt+Tab switcher list.
 /// `icon_pixbuf` is resolved eagerly when the switcher opens so that
@@ -51,10 +54,12 @@ impl AltTabSwitcher {
         self.stage.value()
     }
 
-    /// Chạy lại pulse của stage từ 0 -> 1.
+    /// Chạy lại pulse của stage từ 0 -> 1. Dùng Linear vì hình dạng pulse được
+    /// tạo bằng sin(pi * progress) ở view.rs — nó đã có đầu/cuối mềm và bằng
+    /// nhau, nên việc restart từ 1 về 0 không gây nhảy khung hình.
     fn restart_stage(&mut self) {
         self.stage
-            .restart(0.0, 1.0, DEFAULT_DURATION, Easing::EaseInOutCubic);
+            .restart(0.0, 1.0, Duration::from_millis(STAGE_ANIM_MS), Easing::Linear);
     }
 }
 
@@ -141,10 +146,24 @@ impl BabydraState {
             } else {
                 // Cộng dồn vào đích thay vì vị trí hiện tại, nhờ vậy bấm Tab
                 // liên tiếp không bị nhảy lùi về đầu bước trước.
-                let target = switcher.scroll.target() + direction;
-                switcher
-                    .scroll
-                    .retarget(target, DEFAULT_DURATION, Easing::EaseInOutCubic);
+                let few_items = switcher.entries.len() < DOCK_MAX_VISIBLE_ITEMS;
+                // Với ít app, các item đứng yên và chỉ khung active trượt giữa
+                // chúng. Không cộng dồn như carousel (sẽ trượt ra khỏi dock sau
+                // vài vòng lặp) mà đi thẳng tới slot của item được chọn.
+                let target = if few_items {
+                    switcher.selected_index as f64
+                } else {
+                    switcher.scroll.target() + direction
+                };
+                let (duration, easing) = if few_items {
+                    (
+                        Duration::from_millis(DOCK_TARGET_ANIM_MS),
+                        Easing::EaseInOutSine,
+                    )
+                } else {
+                    (DEFAULT_DURATION, Easing::EaseInOutCubic)
+                };
+                switcher.scroll.retarget(target, duration, easing);
             }
             switcher.scroll_direction = direction;
             switcher.restart_stage();
@@ -227,7 +246,12 @@ impl BabydraState {
             entries,
             selected_index,
             scroll: Tween::settled(selected_index as f64),
-            stage: Tween::new(0.0, 1.0, DEFAULT_DURATION, Easing::EaseInOutCubic),
+            stage: Tween::new(
+                0.0,
+                1.0,
+                Duration::from_millis(STAGE_ANIM_MS),
+                Easing::Linear,
+            ),
             scroll_direction: if backwards { -1.0 } else { 1.0 },
         });
     }

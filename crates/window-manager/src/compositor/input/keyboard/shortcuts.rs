@@ -39,6 +39,17 @@ pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option
         return Some(KeyboardAction::ToggleLauncher);
     }
 
+    // Super + V: open the clipboard history picker. Plain Ctrl+V stays with
+    // the focused application so normal copy/paste is never broken.
+    if modifiers.logo
+        && !modifiers.shift
+        && !modifiers.ctrl
+        && !modifiers.alt
+        && sym == keysyms::KEY_v
+    {
+        return Some(KeyboardAction::ClipboardPicker);
+    }
+
     // Super + Shift + S: capture the screen. The configurable shortcut list
     // cannot remap this compositor action.
     if modifiers.logo
@@ -131,6 +142,10 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
         KeyboardAction::ToggleLauncher => {
             info!("Super+Space pressed: toggling quick launcher");
             crate::keymap::spawn_command("babydra-launcher".to_string());
+        }
+        KeyboardAction::ClipboardPicker => {
+            info!("Super+V pressed: opening clipboard history");
+            crate::extensions::clipboard::trigger_picker();
         }
         KeyboardAction::Screenshot => {
             info!("Super+Shift+S pressed: taking screenshot");

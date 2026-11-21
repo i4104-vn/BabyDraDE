@@ -29,6 +29,7 @@ use smithay::{
 
 mod active_window;
 mod blur;
+mod clipboard;
 mod hit_test;
 mod switcher;
 pub(crate) mod window;
@@ -141,6 +142,13 @@ pub(crate) struct BabydraState {
     pub(crate) popups: PopupManager,
     pub(crate) seat: Seat<BabydraState>,
 
+    /// MIME types of a client selection that still needs to be cached.
+    pub(crate) clipboard_pending: Option<Vec<String>>,
+    /// MIME types of a capture currently running in a background thread.
+    pub(crate) clipboard_capture: Option<Vec<String>>,
+    /// Channel used by the capture thread to hand ownership back to us.
+    pub(crate) clipboard_sender: Option<smithay::reexports::calloop::channel::Sender<Vec<String>>>,
+
     pub(crate) move_state: Option<MoveState>,
     pub(crate) resize_state: Option<ResizeState>,
     pub(crate) last_titlebar_click: Option<(std::time::Instant, Point<f64, Logical>, Window)>,
@@ -201,6 +209,9 @@ impl BabydraState {
             data_device_state,
             popups: PopupManager::default(),
             seat,
+            clipboard_pending: None,
+            clipboard_capture: None,
+            clipboard_sender: None,
             move_state: None,
             resize_state: None,
             last_titlebar_click: None,
