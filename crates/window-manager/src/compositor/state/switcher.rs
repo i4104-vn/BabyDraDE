@@ -1,16 +1,11 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use animation::{Easing, Tween, DEFAULT_DURATION};
+use animation::{Easing, Tween};
 use gtk4::gdk_pixbuf::Pixbuf;
-use smithay::{
-    desktop::Window,
-    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel,
-    utils::{Logical, Point, Size},
-    wayland::compositor::with_states,
-};
+use smithay::{desktop::Window, wayland::compositor::with_states};
 
-use super::{window_state, BabydraState};
-use common::constants::{DOCK_MAX_VISIBLE_ITEMS, DOCK_TARGET_ANIM_MS, STAGE_ANIM_MS};
+use super::BabydraState;
+use common::constants::{DOCK_MAX_VISIBLE_ITEMS, SWITCHER_PREVIEW_MS, SWITCHER_SCROLL_MS};
 
 /// One entry in the Alt+Tab switcher list.
 /// `icon_pixbuf` is resolved eagerly when the switcher opens so that
@@ -24,10 +19,6 @@ pub(crate) struct AltTabEntry {
     pub(crate) app_name: String,
     /// Pre-loaded icon, or `None` if the app has no resolvable icon.
     pub(crate) icon_pixbuf: Option<Pixbuf>,
-    pub(crate) original_location: Option<Point<i32, Logical>>,
-    pub(crate) original_size: Option<Size<i32, Logical>>,
-    pub(crate) was_maximized: bool,
-    pub(crate) was_minimized: bool,
 }
 
 pub(crate) struct AltTabSwitcher {
@@ -38,6 +29,16 @@ pub(crate) struct AltTabSwitcher {
     pub(crate) scroll: Tween,
     /// 0..1 fade of the small preview beside the active icon.
     pub(crate) stage: Tween,
+    /// 0..1 presence driving the backdrop fade and slide in/out.
+    pub(crate) presence: Tween,
+    /// Rendered while the close animation plays before the state is removed.
+    pub(crate) closing: bool,
+    /// Last Tab step, used to keep held-key repeats continuous.
+    pub(crate) last_step: Option<Instant>,
+    /// Held Tab direction and timers for backend-independent auto-repeat.
+    pub(crate) held_direction: Option<i32>,
+    pub(crate) repeat_started: Option<Instant>,
+    pub(crate) last_repeat: Option<Instant>,
     /// +1.0 when moving forward, -1.0 when going backwards with Shift+Tab.
     pub(crate) scroll_direction: f64,
 }
@@ -58,46 +59,101 @@ impl AltTabSwitcher {
         self.stage.restart(
             0.0,
             1.0,
-            Duration::from_millis(STAGE_ANIM_MS),
+            Duration::from_millis(SWITCHER_PREVIEW_MS),
+            Easing::EaseOutCubic,
+        );
+    }
+
+    pub(crate) fn presence(&self) -> f64 {
+        self.presence.value()
+    }
+
+    /// First Tab press starts repeat tracking; backend repeats are ignored
+    /// because `tick_key_repeat` drives held navigation.
+    pub(crate) fn tab_pressed(&mut self, direction: i32) -> bool {
+        if self.closing || self.held_direction == Some(direction) {
+            return false;
+        }
+        self.held_direction = Some(direction);
+        let now = Instant::now();
+        self.repeat_started = Some(now);
+        self.last_repeat = Some(now);
+        true
+    }
+
+    pub(crate) fn tab_released(&mut self, direction: i32) {
+        if self.held_direction == Some(direction) {
+            self.stop_key_repeat();
+        }
+    }
+
+    fn stop_key_repeat(&mut self) {
+        self.held_direction = None;
+        self.repeat_started = None;
+        self.last_repeat = None;
+    }
+
+    pub(crate) fn tick_key_repeat(&mut self) {
+        let Some(direction) = self.held_direction else {
+            return;
+        };
+        let Some(started) = self.repeat_started else {
+            return;
+        };
+        let now = Instant::now();
+        let delay = Duration::from_millis(common::constants::KEY_REPEAT_DELAY_MS);
+        let interval = Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS);
+        if now.duration_since(started) >= delay
+            && now.duration_since(self.last_repeat.unwrap_or(started)) >= interval
+        {
+            self.last_repeat = Some(now);
+            self.repeat_step(direction);
+        }
+    }
+
+    fn repeat_step(&mut self, direction: i32) {
+        let count = self.entries.len();
+        if count < 2 {
+            return;
+        }
+        let target = if count < DOCK_MAX_VISIBLE_ITEMS {
+            let current = self.selected_index as i64;
+            (current + direction as i64).rem_euclid(count as i64) as f64
+        } else {
+            (self.scroll.target() + direction as f64).clamp(0.0, count as f64 - 1.0)
+        };
+        self.selected_index = (target.round() as usize).min(count - 1);
+        self.scroll.retarget(
+            target,
+            Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS),
             Easing::Linear,
+        );
+        self.last_step = Some(Instant::now());
+    }
+
+    pub(crate) fn begin_close(&mut self) {
+        if self.closing {
+            return;
+        }
+        self.closing = true;
+        self.stop_key_repeat();
+        self.presence.retarget(
+            0.0,
+            Duration::from_millis(SWITCHER_PREVIEW_MS),
+            Easing::EaseInOutCubic,
         );
     }
 }
 
 impl BabydraState {
-    pub(crate) fn restore_alt_tab_windows(&mut self, switcher: &AltTabSwitcher) {
-        for entry in &switcher.entries {
-            if let Some(loc) = entry.original_location {
-                if !entry.was_minimized {
-                    self.space.map_element(entry.window.clone(), loc, false);
-                }
-            }
-            match (entry.was_maximized, entry.original_size) {
-                (true, _) => {
-                    if let Some(toplevel) = entry.window.toplevel() {
-                        toplevel.with_pending_state(|state| {
-                            state.states.set(xdg_toplevel::State::Maximized);
-                            state.size = entry.original_size;
-                        });
-                        toplevel.send_configure();
-                    }
-                }
-                (false, Some(orig_size)) => {
-                    if let Some(toplevel) = entry.window.toplevel() {
-                        toplevel.with_pending_state(|state| {
-                            state.states.unset(xdg_toplevel::State::Maximized);
-                            state.size = Some(orig_size);
-                        });
-                        toplevel.send_configure();
-                    }
-                }
-                (false, None) => {}
-            }
-        }
-        self.space.refresh();
-    }
-
     pub(crate) fn cycle_alt_tab(&mut self, backwards: bool) {
+        if self
+            .alt_tab_switcher
+            .as_ref()
+            .is_some_and(|switcher| switcher.closing)
+        {
+            return;
+        }
         if let Some(mut switcher) = self.alt_tab_switcher.take() {
             let entries_before = switcher.entries.len();
             let selected_window = switcher
@@ -156,13 +212,23 @@ impl BabydraState {
                 } else {
                     switcher.scroll.target() + direction
                 };
-                let (duration, easing) = if few_items {
+                // While Tab is held the backend sends repeated presses. Use a
+                // short linear step so the dock glides continuously instead of
+                // restarting a long easing curve and jumping at the end.
+                let rapid = switcher
+                    .last_step
+                    .is_some_and(|last| last.elapsed() < Duration::from_millis(150));
+                switcher.last_step = Some(Instant::now());
+                let (duration, easing) = if rapid {
                     (
-                        Duration::from_millis(DOCK_TARGET_ANIM_MS),
-                        Easing::EaseInOutSine,
+                        Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS),
+                        Easing::Linear,
                     )
                 } else {
-                    (DEFAULT_DURATION, Easing::EaseInOutCubic)
+                    (
+                        Duration::from_millis(SWITCHER_SCROLL_MS),
+                        Easing::EaseOutCubic,
+                    )
                 };
                 switcher.scroll.retarget(target, duration, easing);
             }
@@ -214,27 +280,11 @@ impl BabydraState {
                     std::panic::catch_unwind(|| ui_kit::get_app_icon_pixbuf_any(&app_id, 32))
                         .unwrap_or(None);
 
-                let original_location = self.space.element_location(window);
-                let original_size = Some(window.geometry().size);
-                let was_maximized = window
-                    .toplevel()
-                    .map(|t| {
-                        t.current_state()
-                            .states
-                            .contains(xdg_toplevel::State::Maximized)
-                    })
-                    .unwrap_or(false);
-                let was_minimized = window_state(window).lock().unwrap().is_minimized;
-
                 Some(AltTabEntry {
                     window: window.clone(),
                     app_id,
                     app_name,
                     icon_pixbuf,
-                    original_location,
-                    original_size,
-                    was_maximized,
-                    was_minimized,
                 })
             })
             .collect::<Vec<_>>();
@@ -255,9 +305,20 @@ impl BabydraState {
             stage: Tween::new(
                 0.0,
                 1.0,
-                Duration::from_millis(STAGE_ANIM_MS),
-                Easing::Linear,
+                Duration::from_millis(SWITCHER_PREVIEW_MS),
+                Easing::EaseOutCubic,
             ),
+            presence: Tween::new(
+                0.0,
+                1.0,
+                Duration::from_millis(SWITCHER_PREVIEW_MS),
+                Easing::EaseOutCubic,
+            ),
+            closing: false,
+            last_step: None,
+            held_direction: None,
+            repeat_started: None,
+            last_repeat: None,
             scroll_direction: if backwards { -1.0 } else { 1.0 },
         });
     }

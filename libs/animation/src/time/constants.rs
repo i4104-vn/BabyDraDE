@@ -10,7 +10,7 @@ pub const FRAME_INTERVAL: Duration = Duration::from_nanos(1_000_000_000 / TARGET
 pub const DEFAULT_DURATION: Duration = Duration::from_millis(420);
 
 /// Smooth highlight/selection step, e.g. keyboard navigation in a dock.
-pub const NAVIGATION_DURATION: Duration = Duration::from_millis(320);
+pub const NAVIGATION_DURATION: Duration = Duration::from_millis(200);
 
 /// Duration of a wheel/touchpad scroll step.
 pub const SCROLL_DURATION: Duration = Duration::from_millis(260);

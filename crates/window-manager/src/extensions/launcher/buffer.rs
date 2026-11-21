@@ -53,6 +53,31 @@ where
     surface.data().ok().map(|data| data.to_vec())
 }
 
+/// Same backdrop mirrored for a right-side dock: darkest at the right edge.
+pub(crate) fn render_right_backdrop_pixels(
+    width: i32,
+    height: i32,
+    scale: Scale<f64>,
+    gradient_w: f64,
+    presence: f64,
+) -> Option<Vec<u8>> {
+    let mut surface = ImageSurface::create(Format::ARgb32, width, height).ok()?;
+    {
+        let context = Context::new(&surface).ok()?;
+        context.scale(scale.x, scale.y);
+        let logical_w = width as f64 / scale.x;
+        let gradient = cairo::LinearGradient::new(logical_w, 0.0, logical_w - gradient_w, 0.0);
+        gradient.add_color_stop_rgba(0.0, 0.0, 0.0, 0.0, 0.70 * presence);
+        gradient.add_color_stop_rgba(0.30, 0.0, 0.0, 0.0, 0.45 * presence);
+        gradient.add_color_stop_rgba(0.65, 0.0, 0.0, 0.0, 0.18 * presence);
+        gradient.add_color_stop_rgba(1.0, 0.0, 0.0, 0.0, 0.0);
+        context.set_source(&gradient).ok()?;
+        context.paint().ok()?;
+    }
+    surface.flush();
+    surface.data().ok().map(|data| data.to_vec())
+}
+
 /// Damage rectangle for a freshly written buffer.
 pub(super) fn buffer_damage(width: i32, height: i32) -> Vec<Rectangle<i32, Buffer>> {
     vec![Rectangle::<i32, Buffer>::from_size((width, height).into())]

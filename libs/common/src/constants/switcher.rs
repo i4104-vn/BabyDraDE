@@ -37,6 +37,12 @@ pub const STAGE_SLIDE_DISTANCE: f64 = 24.0;
 /// the dock so the main preview settles gently instead of snapping.
 pub const STAGE_ANIM_MS: u64 = 500;
 
+/// Snappy icon/highlight movement in the right-side Alt+Tab dock.
+pub const SWITCHER_SCROLL_MS: u64 = 160;
+
+/// Fade of the small preview beside the active icon.
+pub const SWITCHER_PREVIEW_MS: u64 = 180;
+
 /// Duration of the moving highlight when fewer than five apps are open.
 pub const DOCK_TARGET_ANIM_MS: u64 = 420;
 

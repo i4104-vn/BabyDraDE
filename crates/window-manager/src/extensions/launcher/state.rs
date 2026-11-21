@@ -196,8 +196,29 @@ impl LauncherState {
         let now = Instant::now();
         if repeat_due(started, self.last_repeat.unwrap_or(started), now) {
             self.last_repeat = Some(now);
-            self.move_selection(direction);
+            self.repeat_move(direction);
         }
+    }
+
+    /// One held-key step: advance the target immediately and use a short linear
+    /// tween so consecutive steps chain into a continuous glide instead of
+    /// restarting a long easing curve every 70 ms.
+    fn repeat_move(&mut self, direction: i32) {
+        if !self.visible || self.closing || self.apps.is_empty() {
+            return;
+        }
+        let target = self.position.target();
+        let next = (target + direction as f64).clamp(0.0, self.apps.len() as f64 - 1.0);
+        if (next - target).abs() < f64::EPSILON {
+            return;
+        }
+        self.selected = Some(next as usize);
+        self.position.retarget(
+            next,
+            Duration::from_millis(REPEAT_INTERVAL_MS),
+            Easing::Linear,
+        );
+        self.cache_key = None;
     }
 
     /// Moves the keyboard selection with a smooth transition.
@@ -211,7 +232,7 @@ impl LauncherState {
             return;
         }
         self.position
-            .retarget(next as f64, NAVIGATION_DURATION, Easing::EaseInOutCubic);
+            .retarget(next as f64, NAVIGATION_DURATION, Easing::EaseOutCubic);
         self.selected = Some(next);
         self.cache_key = None;
     }

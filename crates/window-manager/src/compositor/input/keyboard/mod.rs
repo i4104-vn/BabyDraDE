@@ -33,6 +33,7 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
     let keyboard = state.seat.get_keyboard().unwrap();
 
     let mut action_to_execute = None;
+    let mut alt_tab_hold: Option<i32> = None;
 
     keyboard.input::<(), _>(
         state,
@@ -77,6 +78,33 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                         _ => {}
                     }
                 }
+            }
+
+            // Alt+Tab holds are tracked here so the switcher can auto-repeat
+            // even on backends that do not generate key-repeat events.
+            let is_alt_tab =
+                modifiers.alt && (sym == keysyms::KEY_Tab || sym == keysyms::KEY_ISO_Left_Tab);
+            if is_alt_tab {
+                let backwards = modifiers.shift || sym == keysyms::KEY_ISO_Left_Tab;
+                let direction = if backwards { -1 } else { 1 };
+                match event.state() {
+                    KeyState::Pressed => {
+                        if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                            if switcher.tab_pressed(direction) {
+                                state.cycle_alt_tab(backwards);
+                            }
+                        } else if let Some(action) = check_key_shortcut(modifiers, sym) {
+                            action_to_execute = Some(action);
+                            alt_tab_hold = Some(direction);
+                        }
+                    }
+                    KeyState::Released => {
+                        if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                            switcher.tab_released(direction);
+                        }
+                    }
+                }
+                return FilterResult::Intercept(());
             }
 
             if switcher_active
@@ -128,5 +156,10 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
 
     if let Some(action) = action_to_execute {
         execute_action(state, action, serial);
+    }
+    if let Some(direction) = alt_tab_hold {
+        if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+            switcher.tab_pressed(direction);
+        }
     }
 }

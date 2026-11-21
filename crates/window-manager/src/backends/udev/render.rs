@@ -158,34 +158,29 @@ pub fn setup_render_loop(
                         ));
                     }
 
-                    // 3. Render either the Stage Manager switcher or the normal mapped windows
-                    match (state.alt_tab_switcher.is_none(), oriented_size) {
-                        (true, _) => {
-                            // Render each mapped window in front-to-back order (highest z-index / focused window first)
-                            for window in state.space.elements().rev() {
-                                if let Some(loc) = state.space.element_location(window) {
-                                    render_elements.extend(render_window(
-                                        renderer,
-                                        window,
-                                        loc,
-                                        scale,
-                                        blur_engine,
-                                        state.pointer_location,
-                                    ));
-                                }
-                            }
-                        }
-                        (false, Some(size)) => {
-                            // Switcher is active: normal windows are hidden to reveal desktop wallpaper,
-                            // and live Stage Manager previews of apps are rendered here.
-                            render_elements.extend(switcher_overlay.render(
+                    // 3. Switcher sits above the live windows; no show-desktop
+                    // mode — open windows keep their current state and geometry.
+                    if let Some(size) = oriented_size {
+                        render_elements.extend(switcher_overlay.render(
+                            renderer,
+                            state.alt_tab_switcher.as_ref(),
+                            (size.w, size.h),
+                            scale,
+                        ));
+                    }
+
+                    // 4. Render each mapped window in front-to-back order.
+                    for window in state.space.elements().rev() {
+                        if let Some(loc) = state.space.element_location(window) {
+                            render_elements.extend(render_window(
                                 renderer,
-                                state.alt_tab_switcher.as_ref(),
-                                (size.w, size.h),
+                                window,
+                                loc,
                                 scale,
+                                blur_engine,
+                                state.pointer_location,
                             ));
                         }
-                        (false, None) => {}
                     }
 
                     // 4. Render Bottom & Background layer surfaces (wallpaper, desktop background)

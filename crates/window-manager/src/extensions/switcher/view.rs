@@ -148,15 +148,34 @@ pub(crate) fn draw_switcher_foreground(
     context: &Context,
     switcher: &AltTabSwitcher,
     layout: &SwitcherLayout,
+    slide_x: f64,
+    presence: f64,
 ) -> Result<(), cairo::Error> {
     context.set_operator(Operator::Source);
     context.set_source_rgba(0.0, 0.0, 0.0, 0.0);
     context.paint()?;
     context.set_operator(Operator::Over);
 
+    context.push_group();
+    let drawn = draw_switcher_content(context, switcher, layout, slide_x);
+    let group = context.pop_group()?;
+    context.set_source(&group)?;
+    context.paint_with_alpha(presence)?;
+    drawn
+}
+
+fn draw_switcher_content(
+    context: &Context,
+    switcher: &AltTabSwitcher,
+    layout: &SwitcherLayout,
+    slide_x: f64,
+) -> Result<(), cairo::Error> {
+    let panel_x = layout.panel.x + slide_x;
+    let preview_x = layout.preview.x + slide_x;
+
     draw_docked_panel(
         context,
-        layout.panel.x,
+        panel_x,
         layout.panel.y,
         layout.panel.width,
         layout.panel.height,
@@ -170,7 +189,7 @@ pub(crate) fn draw_switcher_foreground(
     context.save()?;
     docked_panel_path(
         context,
-        layout.panel.x,
+        panel_x,
         layout.panel.y,
         layout.panel.width,
         layout.panel.height,
@@ -182,7 +201,7 @@ pub(crate) fn draw_switcher_foreground(
 
     paint_rounded(
         context,
-        layout.active.x,
+        layout.active.x + slide_x,
         layout.active.y,
         layout.active.width,
         layout.active.height,
@@ -197,7 +216,7 @@ pub(crate) fn draw_switcher_foreground(
             draw_app_badge(
                 context,
                 entry,
-                card.x,
+                card.x + slide_x,
                 card.y,
                 card.width.min(card.height),
                 item.opacity,
@@ -208,7 +227,7 @@ pub(crate) fn draw_switcher_foreground(
     // White pill on the inner edge, mirroring the launcher workspace dot.
     paint_rounded(
         context,
-        layout.panel.x + layout.panel.width - 11.0,
+        panel_x + layout.panel.width - 11.0,
         layout.active.y + (layout.active.height - 16.0) / 2.0,
         3.0,
         16.0,
@@ -220,7 +239,8 @@ pub(crate) fn draw_switcher_foreground(
 
     // Title inside the bottom of the small preview.
     if let Some(entry) = switcher.entries.get(switcher.selected_index) {
-        let p = layout.preview;
+        let mut p = layout.preview;
+        p.x = preview_x;
         context.save()?;
         context.rectangle(p.x, p.y + p.height - TITLE_H, p.width, TITLE_H);
         context.clip();
@@ -259,6 +279,12 @@ mod tests {
             selected_index: 0,
             scroll: Tween::settled(0.0),
             stage: Tween::settled(1.0),
+            presence: Tween::settled(1.0),
+            closing: false,
+            last_step: None,
+            held_direction: None,
+            repeat_started: None,
+            last_repeat: None,
             scroll_direction: 1.0,
         };
         assert!(compute_layout(&switcher, 1920.0, 1080.0).is_none());

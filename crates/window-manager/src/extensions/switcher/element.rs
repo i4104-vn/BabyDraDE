@@ -18,7 +18,10 @@ use smithay::{
     utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Size, Transform},
 };
 
+use common::constants::launcher::{BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO};
+
 use crate::compositor::AltTabSwitcher;
+use crate::extensions::launcher::buffer::render_right_backdrop_pixels;
 
 use super::{
     draw::Rect,
@@ -34,7 +37,10 @@ pub struct SwitcherOverlay {
     /// Chỉ chứa dock thay vì toàn màn hình, nên mỗi frame animation chỉ phải
     /// cấp phát và copy vài trăm KB thay vì toàn bộ framebuffer.
     fg_region: Option<(i32, i32, i32, i32)>,
-    last_rendered: Option<(Instant, usize, usize, u64, u64)>,
+    last_rendered: Option<(Instant, usize, usize, u64, u64, u64)>,
+    backdrop_buffer: Option<MemoryRenderBuffer>,
+    backdrop_size: Option<(i32, i32)>,
+    backdrop_tick: Option<u64>,
 }
 
 impl SwitcherOverlay {
@@ -47,6 +53,7 @@ impl SwitcherOverlay {
     ) -> Vec<CustomRenderElements> {
         let Some(switcher) = switcher else {
             self.last_rendered = None;
+            self.backdrop_tick = None;
             return Vec::new();
         };
 
@@ -90,12 +97,21 @@ impl SwitcherOverlay {
         } else {
             u64::MAX
         };
+        let presence = switcher.presence();
+        let presence_tick = if switcher.presence.is_animating() {
+            switcher.presence.frame_tick()
+        } else {
+            u64::MAX
+        };
+        // Slide out to the right when closed, dock at the screen edge when open.
+        let slide_x = (1.0 - presence) * common::constants::launcher::PANEL_WIDTH;
         let render_key = (
             switcher.scroll.started_at(),
             switcher.selected_index,
             switcher.entries.len(),
             animation_tick,
             stage_tick,
+            presence_tick,
         );
 
         if self.last_rendered != Some(render_key) {
@@ -103,7 +119,7 @@ impl SwitcherOverlay {
             if let Some(fg_buf) = self.fg_buffer.as_mut() {
                 if let Some(pixels) =
                     render_pixels(buffer_w, buffer_h, scale, (origin_x, origin_y), |ctx| {
-                        draw_switcher_foreground(ctx, switcher, &layout)
+                        draw_switcher_foreground(ctx, switcher, &layout, slide_x, presence)
                     })
                 {
                     let mut context = fg_buf.render();
@@ -121,6 +137,44 @@ impl SwitcherOverlay {
             }
 
             self.last_rendered = Some(render_key);
+        }
+
+        // Backdrop: same fade as the launcher, mirrored for the right dock.
+        let gradient_w = (logical_w * BACKDROP_WIDTH_RATIO)
+            .max(BACKDROP_WIDTH_MIN)
+            .min(logical_w);
+        let backdrop_w = ((gradient_w * scale.x).ceil() as i32).clamp(1, width);
+        let backdrop_size = (backdrop_w, height);
+        if self.backdrop_buffer.is_none()
+            || self.backdrop_size != Some(backdrop_size)
+            || self.backdrop_tick != Some(presence_tick)
+        {
+            if let Some(pixels) =
+                render_right_backdrop_pixels(backdrop_w, height, scale, gradient_w, presence)
+            {
+                let mut buffer = MemoryRenderBuffer::new(
+                    smithay::backend::allocator::Fourcc::Argb8888,
+                    backdrop_size,
+                    1,
+                    Transform::Normal,
+                    None,
+                );
+                {
+                    let mut context = buffer.render();
+                    let _ = context.draw(|dst| {
+                        if dst.len() != pixels.len() {
+                            return Err(());
+                        }
+                        dst.copy_from_slice(&pixels);
+                        Ok(vec![Rectangle::<i32, Buffer>::from_size(
+                            backdrop_size.into(),
+                        )])
+                    });
+                }
+                self.backdrop_buffer = Some(buffer);
+                self.backdrop_size = Some(backdrop_size);
+                self.backdrop_tick = Some(presence_tick);
+            }
         }
 
         let mut elements = Vec::new();
@@ -145,7 +199,8 @@ impl SwitcherOverlay {
         // 2. One small live preview beside the active icon; the big centre
         // stage no longer exists.
         if let Some(entry) = switcher.entries.get(switcher.selected_index) {
-            let preview_rect = layout.preview;
+            let mut preview_rect = layout.preview;
+            preview_rect.x += slide_x;
             let crop = Rectangle::<i32, Physical>::new(
                 Point::<i32, Physical>::from((
                     (preview_rect.x * scale.x).floor() as i32,
@@ -175,6 +230,21 @@ impl SwitcherOverlay {
                         .map(CustomRenderElements::DockClipped)
                 }),
             );
+        }
+
+        // 3. Backdrop behind everything else (index 0 is topmost).
+        if let Some(backdrop) = self.backdrop_buffer.as_ref() {
+            if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
+                renderer,
+                Point::<f64, Physical>::from((0.0, 0.0)),
+                backdrop,
+                None,
+                None,
+                None,
+                Kind::Unspecified,
+            ) {
+                elements.push(CustomRenderElements::Memory(elem));
+            }
         }
 
         elements
@@ -250,8 +320,9 @@ fn overlay_region(
     screen_h: i32,
 ) -> (i32, i32, i32, i32) {
     let left = layout.preview.x.min(layout.panel.x) - 24.0;
-    let right =
-        (layout.panel.x + layout.panel.width).max(layout.preview.x + layout.preview.width) + 24.0;
+    let right = (layout.panel.x + layout.panel.width).max(layout.preview.x + layout.preview.width)
+        + 24.0
+        + common::constants::launcher::PANEL_WIDTH;
     let top = layout.preview.y.min(layout.panel.y) - 24.0;
     let bottom =
         (layout.preview.y + layout.preview.height).max(layout.panel.y + layout.panel.height) + 24.0;

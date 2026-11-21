@@ -257,6 +257,18 @@ impl BabydraState {
 
     /// Progresses active window animations and completes transitions.
     pub(crate) fn update_window_animations(&mut self) {
+        // A closing switcher stays alive until its fade/slide finishes.
+        let switcher_done = self
+            .alt_tab_switcher
+            .as_ref()
+            .is_some_and(|switcher| switcher.closing && !switcher.presence.is_animating());
+        if switcher_done {
+            self.alt_tab_switcher = None;
+        }
+        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+            switcher.tick_key_repeat();
+        }
+
         let mut to_close = Vec::new();
         let mut finished_opening = Vec::new();
         let mut finished_minimizing = Vec::new();

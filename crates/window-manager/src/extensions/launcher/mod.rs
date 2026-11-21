@@ -7,7 +7,7 @@
 //! owns Cairo drawing, [`buffer`] owns off-screen pixel work, and [`state`]
 //! owns selection/input state.
 
-mod buffer;
+pub(crate) mod buffer;
 mod draw;
 mod layout;
 mod state;

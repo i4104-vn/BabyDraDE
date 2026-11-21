@@ -73,17 +73,19 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                         None
                     };
 
-                    if let Some(switcher) = state.alt_tab_switcher.take() {
-                        state.restore_alt_tab_windows(&switcher);
-                        if let Some(idx) = clicked_idx {
-                            if let Some(entry) = switcher.entries.get(idx) {
-                                let window = entry.window.clone();
-                                state.unminimize_window(&window);
-                                crate::compositor::input::keyboard::focus::focus_window(
-                                    state, window, serial,
-                                );
-                            }
-                        }
+                    let clicked_window = clicked_idx.and_then(|idx| {
+                        state.alt_tab_switcher.as_ref().and_then(|switcher| {
+                            switcher.entries.get(idx).map(|entry| entry.window.clone())
+                        })
+                    });
+                    if let Some(window) = clicked_window {
+                        state.unminimize_window(&window);
+                        crate::compositor::input::keyboard::focus::focus_window(
+                            state, window, serial,
+                        );
+                    }
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.begin_close();
                     }
                     return;
                 }

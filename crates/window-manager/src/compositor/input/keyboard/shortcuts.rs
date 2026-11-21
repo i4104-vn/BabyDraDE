@@ -179,17 +179,23 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
             state.cycle_alt_tab(backwards);
         }
         KeyboardAction::AltTabCancel => {
-            if let Some(switcher) = state.alt_tab_switcher.take() {
-                state.restore_alt_tab_windows(&switcher);
+            if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                switcher.begin_close();
             }
         }
         KeyboardAction::AltTabCommit => {
-            if let Some(switcher) = state.alt_tab_switcher.take() {
-                state.restore_alt_tab_windows(&switcher);
-                if let Some(entry) = switcher.entries.get(switcher.selected_index) {
-                    state.unminimize_window(&entry.window);
-                    focus_window(state, entry.window.clone(), serial);
-                }
+            let selected = state.alt_tab_switcher.as_ref().and_then(|switcher| {
+                switcher
+                    .entries
+                    .get(switcher.selected_index)
+                    .map(|entry| entry.window.clone())
+            });
+            if let Some(window) = selected {
+                state.unminimize_window(&window);
+                focus_window(state, window, serial);
+            }
+            if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                switcher.begin_close();
             }
         }
     }
