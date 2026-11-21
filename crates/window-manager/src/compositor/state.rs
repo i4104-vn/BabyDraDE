@@ -147,13 +147,16 @@ pub(crate) struct BabydraState {
     /// MIME types of a capture currently running in a background thread.
     pub(crate) clipboard_capture: Option<Vec<String>>,
     /// Channel used by the capture thread to hand ownership back to us.
-    pub(crate) clipboard_sender: Option<smithay::reexports::calloop::channel::Sender<Vec<String>>>,
+    pub(crate) clipboard_sender:
+        Option<smithay::reexports::calloop::channel::Sender<Option<String>>>,
 
     pub(crate) move_state: Option<MoveState>,
     pub(crate) resize_state: Option<ResizeState>,
     pub(crate) last_titlebar_click: Option<(std::time::Instant, Point<f64, Logical>, Window)>,
     pub(crate) trackpad_swipe: Option<TrackpadSwipeBuffer>,
     pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
+    /// Compositor-owned application launcher (shown via its shortcut).
+    pub(crate) launcher: crate::extensions::launcher::LauncherState,
     pub(crate) blur_engine: std::sync::Arc<std::sync::Mutex<crate::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) cursor_visible: bool,
@@ -217,6 +220,7 @@ impl BabydraState {
             last_titlebar_click: None,
             trackpad_swipe: None,
             alt_tab_switcher: None,
+            launcher: crate::extensions::launcher::LauncherState::new(),
             blur_engine: std::sync::Arc::new(std::sync::Mutex::new(
                 crate::rendering::blur::BlurEngine::new(),
             )),

@@ -66,6 +66,25 @@ where
     E: PointerAxisEvent<B>,
 {
     state.cursor_visible = true;
+
+    // Wheel/touchpad scrolling over the visible launcher scrolls its app list
+    // instead of the window under the pointer.
+    if state.launcher.is_over_panel(state.pointer_location) {
+        let delta = event
+            .amount(Axis::Vertical)
+            .filter(|amount| *amount != 0.0)
+            .unwrap_or_else(|| {
+                event
+                    .amount_v120(Axis::Vertical)
+                    .map(|amount| amount as f64 / 120.0)
+                    .unwrap_or(0.0)
+            });
+        if delta != 0.0 {
+            state.launcher.scroll_by(delta);
+        }
+        return;
+    }
+
     let source = event.source();
 
     let natural_scroll = match source {

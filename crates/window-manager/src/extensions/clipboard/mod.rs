@@ -27,11 +27,14 @@ pub fn trigger_picker() {
 }
 
 /// Copies raw bytes into the Wayland selection using `wl-copy` (wl-clipboard).
-fn copy_to_selection(data: &[u8]) {
+fn copy_to_selection(data: &[u8], mime: &str) {
     use std::io::Write;
     use std::process::Stdio;
 
+    // Preserve the original target type (e.g. image/png) so apps paste the
+    // image itself instead of treating the bytes as text.
     let mut child = match std::process::Command::new("wl-copy")
+        .args(["-t", mime])
         .stdin(Stdio::piped())
         .spawn()
     {
@@ -92,7 +95,7 @@ pub fn open_picker() {
             let window_weak = window.downgrade();
             button.connect_clicked(move |_| {
                 if !entry.data.is_empty() {
-                    copy_to_selection(&entry.data);
+                    copy_to_selection(&entry.data, &entry.mime);
                 }
                 if let Some(window) = window_weak.upgrade() {
                     window.destroy();

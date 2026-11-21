@@ -39,6 +39,10 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
 
     state.pointer_location = position;
 
+    if state.alt_tab_switcher.is_none() {
+        state.launcher.update_hover(position);
+    }
+
     if handle_window_resize(state, position) {
         return;
     }
@@ -80,6 +84,10 @@ pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositio
     let pointer = state.seat.get_pointer().unwrap();
 
     state.pointer_location = position;
+
+    if state.alt_tab_switcher.is_none() {
+        state.launcher.update_hover(position);
+    }
 
     if handle_window_resize(state, position) {
         return;

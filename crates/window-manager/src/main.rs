@@ -61,13 +61,13 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     // The clipboard capture thread reports back through calloop so the
     // compositor can take ownership of the selection on the main thread.
     let (clipboard_tx, clipboard_rx) =
-        smithay::reexports::calloop::channel::channel::<Vec<String>>();
+        smithay::reexports::calloop::channel::channel::<Option<String>>();
     data.state.clipboard_sender = Some(clipboard_tx);
     event_loop
         .handle()
         .insert_source(clipboard_rx, |event, _, data| {
-            if let smithay::reexports::calloop::channel::Event::Msg(mimes) = event {
-                data.state.complete_clipboard_capture(mimes);
+            if let smithay::reexports::calloop::channel::Event::Msg(mime) = event {
+                data.state.complete_clipboard_capture(mime);
             }
         })
         .expect("failed to register clipboard completion channel");

@@ -122,6 +122,13 @@ pub(crate) fn init(
                         blur_engine,
                     ));
 
+                    // Compositor-owned launcher (above windows, below switcher)
+                    render_elements.extend(state.launcher.render(
+                        backend.renderer(),
+                        (oriented_size.w, oriented_size.h),
+                        scale,
+                    ));
+
                     // 3. Render either the Stage Manager switcher or the normal mapped windows
                     if state.alt_tab_switcher.is_none() {
                         // Render each mapped window in front-to-back order (highest z-index / focused window first)

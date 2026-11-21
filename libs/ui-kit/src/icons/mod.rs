@@ -1,6 +1,7 @@
 //! System icon resolving logic and asset generation.
 
 pub mod assets;
+pub mod filesystem;
 pub mod resolver;
 
 use gtk4::gdk::Texture;
@@ -10,6 +11,30 @@ use gtk4::gio::MemoryInputStream;
 use gtk4::glib;
 
 pub use crate::theme::is_dark_mode;
+pub use filesystem::{get_icon_pixbuf_from_filesystem, pixbuf_from_gicon};
+
+/// Resolves an app id to its `gio::Icon` via the desktop files, with a
+/// case-insensitive match. Shared by every GTK-side consumer so the
+/// `AppInfo::all()` + `.desktop` stripping logic lives in one place.
+pub fn resolve_app_gicon(app_id: &str) -> Option<gtk4::gio::Icon> {
+    let clean_id = app_id
+        .trim()
+        .strip_suffix(".desktop")
+        .unwrap_or(app_id.trim());
+    if clean_id.is_empty() {
+        return None;
+    }
+    gtk4::gio::AppInfo::all()
+        .into_iter()
+        .find(|info| {
+            info.id().is_some_and(|id| {
+                id.strip_suffix(".desktop")
+                    .unwrap_or(id.as_str())
+                    .eq_ignore_ascii_case(clean_id)
+            })
+        })
+        .and_then(|info| info.icon())
+}
 pub use resolver::resolve_icon_pair;
 
 /// Converts SVG string content into a `gtk4::Image` at the requested pixel size.
@@ -282,6 +307,37 @@ pub fn resolve_app_icon_name(app_id: &str) -> Option<String> {
 pub fn get_app_icon_pixbuf(app_id: &str, size: i32) -> Option<Pixbuf> {
     let icon_name = resolve_app_icon_name(app_id)?;
     get_theme_icon_pixbuf(&icon_name, size)
+}
+
+/// Single entry point for app-id → Pixbuf that works everywhere, including a
+/// bare compositor session with no GDK display.
+///
+/// Resolution order: AppInfo GIcon (file/themed) → on-disk icon theme scan →
+/// display-backed GtkIconTheme → `None`. Never panics.
+pub fn get_app_icon_pixbuf_any(app_id: &str, size: i32) -> Option<Pixbuf> {
+    let clean_id = app_id
+        .trim()
+        .strip_suffix(".desktop")
+        .unwrap_or(app_id.trim());
+
+    let info = gtk4::gio::AppInfo::all()
+        .into_iter()
+        .find(|info| {
+            info.id().is_some_and(|id| {
+                id.strip_suffix(".desktop")
+                    .unwrap_or(id.as_str())
+                    .eq_ignore_ascii_case(clean_id)
+            })
+        });
+    if let Some(info) = info {
+        if let Some(icon) = info.icon() {
+            if let Some(pb) = pixbuf_from_gicon(&icon, size) {
+                return Some(pb);
+            }
+        }
+    }
+    get_icon_pixbuf_from_filesystem(clean_id, size)
+        .or_else(|| get_theme_icon_pixbuf(clean_id, size))
 }
 
 /// Retrieves a Pixbuf for an icon name or path, prioritizing system GtkIconTheme.

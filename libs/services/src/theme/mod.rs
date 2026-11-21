@@ -11,7 +11,7 @@ pub use gtk::{
     find_gtk4_css_path, find_settings_ini_path, parse_settings_ini, read_gtk4_css,
     read_gtk_settings,
 };
-pub use icons::{find_icon_theme_path, list_available_icon_themes};
+pub use icons::{find_icon_theme_path, get_icon_search_paths, list_available_icon_themes};
 pub use model::{DesktopTheme, GtkThemeConfig};
 
 #[derive(Debug, Clone, Default)]

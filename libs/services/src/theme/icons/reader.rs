@@ -38,7 +38,8 @@ pub fn find_icon_theme_path(name: &str) -> Option<PathBuf> {
     None
 }
 
-fn get_icon_search_paths() -> Vec<PathBuf> {
+/// All base directories that may contain icon themes.
+pub fn get_icon_search_paths() -> Vec<PathBuf> {
     let mut paths = vec![
         PathBuf::from("/usr/share/icons"),
         PathBuf::from("/usr/local/share/icons"),

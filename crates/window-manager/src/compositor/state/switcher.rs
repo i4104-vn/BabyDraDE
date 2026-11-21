@@ -171,6 +171,11 @@ impl BabydraState {
             return;
         }
 
+        // The launcher is an overlay too; it must not sit above the switcher.
+        if self.launcher.is_visible() {
+            self.launcher.toggle();
+        }
+
         self.cleanup_windows();
         let entries = self
             .windows
@@ -205,7 +210,7 @@ impl BabydraState {
                 // cannot take down the whole compositor — the switcher simply falls
                 // back to a coloured badge when the icon is unavailable.
                 let icon_pixbuf =
-                    std::panic::catch_unwind(|| ui_kit::icons::get_app_icon_pixbuf(&app_id, 32))
+                    std::panic::catch_unwind(|| ui_kit::get_app_icon_pixbuf_any(&app_id, 32))
                         .unwrap_or(None);
 
                 let original_location = self.space.element_location(window);

@@ -128,19 +128,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "babydra-launcher"
-version = "0.1.0"
-dependencies = [
- "animation",
- "gtk4",
- "gtk4-layer-shell",
- "services",
- "tracing",
- "tracing-subscriber",
- "ui-kit",
-]
-
-[[package]]
 name = "babydra-topbar"
 version = "0.1.0"
 dependencies = [

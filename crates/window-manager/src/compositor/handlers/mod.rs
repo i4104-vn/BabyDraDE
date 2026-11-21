@@ -72,13 +72,19 @@ impl SelectionHandler for BabydraState {
         if ty != SelectionTarget::Clipboard {
             return;
         }
-        if let Some(data) =
-            services::system::clipboard::wait_and_read_current(&mime_type, Duration::from_millis(500))
-        {
-            let mut file = std::fs::File::from(fd);
-            if let Err(err) = file.write_all(&data) {
-                tracing::warn!("Failed to serve clipboard selection: {err}");
+        tracing::info!("Serving clipboard paste request for MIME '{mime_type}'");
+        match services::system::clipboard::wait_and_read_current(
+            &mime_type,
+            Duration::from_millis(500),
+        ) {
+            Some(data) => {
+                tracing::info!("Writing {} clipboard bytes to paste request", data.len());
+                let mut file = std::fs::File::from(fd);
+                if let Err(err) = file.write_all(&data) {
+                    tracing::warn!("Failed to serve clipboard selection: {err}");
+                }
             }
+            None => tracing::warn!("No cached clipboard data for MIME '{mime_type}'"),
         }
     }
 }

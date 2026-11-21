@@ -81,7 +81,7 @@ impl BabydraState {
             return;
         }
 
-        let sender: Option<Sender<Vec<String>>> = self.clipboard_sender.clone();
+        let sender: Option<Sender<Option<String>>> = self.clipboard_sender.clone();
         let capture_mime = mime.clone();
         let capture_mimes = mimes.clone();
         std::thread::Builder::new()
@@ -116,7 +116,9 @@ impl BabydraState {
                     );
                 }
                 if let Some(sender) = sender {
-                    let _ = sender.send(capture_mimes);
+                    // Only take ownership when we actually have bytes to
+                    // serve; otherwise leave the client selection untouched.
+                    let _ = sender.send((!data.is_empty()).then_some(capture_mime));
                 }
             })
             .ok();
@@ -127,10 +129,29 @@ impl BabydraState {
     /// Called from the calloop channel once the data has been cached. Now it
     /// is safe to replace the client source: `cancelled` cannot destroy data
     /// we already have.
-    pub(crate) fn complete_clipboard_capture(&mut self, mimes: Vec<String>) {
+    pub(crate) fn complete_clipboard_capture(&mut self, cached_mime: Option<String>) {
         if self.clipboard_capture.take().is_none() {
             return;
         }
-        set_data_device_selection(&self.display_handle, &self.seat, mimes, ());
+        let Some(cached_mime) = cached_mime else {
+            return;
+        };
+
+        // Only advertise MIME types we can actually serve. We cache one
+        // representation, so for text we also advertise the common aliases
+        // that GTK/Qt/XWayland clients request when pasting.
+        let mut offered = vec![cached_mime.clone()];
+        let is_text = cached_mime.starts_with("text/")
+            || matches!(cached_mime.as_str(), "UTF8_STRING" | "STRING");
+        if is_text {
+            for alias in ["UTF8_STRING", "STRING", "text/plain", "text/plain;charset=utf-8"] {
+                if !offered.iter().any(|mime| mime == alias) {
+                    offered.push(alias.to_string());
+                }
+            }
+        }
+
+        info!("Owning clipboard selection with MIMEs: {:?}", offered);
+        set_data_device_selection(&self.display_handle, &self.seat, offered, ());
     }
 }

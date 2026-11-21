@@ -88,6 +88,22 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 }
             }
 
+            // The launcher is compositor-owned UI: a click on one of its icons
+            // launches that app and must not reach (or raise) any window.
+            if state.alt_tab_switcher.is_none()
+                && button_code == crate::enums::BTN_LEFT
+                && !pointer.is_grabbed()
+            {
+                if let Some(index) = state.launcher.index_at(state.pointer_location) {
+                    state.launcher.launch(index);
+                    return;
+                }
+                // Clicking elsewhere dismisses the launcher.
+                if state.launcher.is_visible() {
+                    state.launcher.toggle();
+                }
+            }
+
             if !pointer.is_grabbed() {
                 // 1. Check window border for interactive resize
                 if button_code == crate::enums::BTN_LEFT {

@@ -8,7 +8,6 @@ pub mod dbus;
 pub mod menu;
 
 use dbus::{clear_menubar, load_and_render_dbus_menu, trigger_dbus_menu_discovery};
-use gtk4::gio::prelude::*;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Box, Button, GestureClick, Label, Orientation};
@@ -255,48 +254,13 @@ impl AppMenu {
 }
 
 fn update_app_icon(icon: &gtk4::Image, app_id: &str) {
-    let clean_id = app_id
-        .trim()
-        .strip_suffix(".desktop")
-        .unwrap_or(app_id.trim());
-
-    thread_local! {
-        static APP_ICON_CACHE: RefCell<std::collections::HashMap<String, Option<gtk4::gio::Icon>>> = RefCell::new(std::collections::HashMap::new());
-    }
-
-    let cached_icon = APP_ICON_CACHE.with(|cache| {
-        let mut map = cache.borrow_mut();
-        if let Some(opt_icon) = map.get(clean_id) {
-            return opt_icon.clone();
-        }
-
-        let app_info = gtk4::gio::AppInfo::all().into_iter().find(|info| {
-            info.id().is_some_and(|id| {
-                id.strip_suffix(".desktop")
-                    .unwrap_or(id.as_str())
-                    .eq_ignore_ascii_case(clean_id)
-            })
-        });
-
-        let icon = app_info.and_then(|info| info.icon());
-        map.insert(clean_id.to_string(), icon.clone());
-        icon
-    });
-
-    if let Some(gicon) = cached_icon {
+    // AppInfo/GIcon resolution is centralized in ui-kit; the GTK Image uses
+    // the gio::Icon directly so the icon theme stays live.
+    if let Some(gicon) = ui_kit::resolve_app_gicon(app_id) {
         icon.set_from_gicon(&gicon);
         icon.set_pixel_size(16);
         return;
     }
-
-    if let Some(display) = gtk4::gdk::Display::default() {
-        if gtk4::IconTheme::for_display(&display).has_icon(clean_id) {
-            icon.set_icon_name(Some(clean_id));
-            icon.set_pixel_size(16);
-            return;
-        }
-    }
-
     icon.set_icon_name(Some("application-x-executable"));
     icon.set_pixel_size(16);
 }

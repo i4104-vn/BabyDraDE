@@ -29,7 +29,7 @@ pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option
         return Some(KeyboardAction::QuitCompositor);
     }
 
-    // Super + Space: toggle the quick application launcher.
+    // Super + Space: toggle the compositor-owned app launcher.
     if modifiers.logo
         && !modifiers.shift
         && !modifiers.ctrl
@@ -139,13 +139,13 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
             crate::keymap::reload();
             state.reload_config();
         }
-        KeyboardAction::ToggleLauncher => {
-            info!("Super+Space pressed: toggling quick launcher");
-            crate::keymap::spawn_command("babydra-launcher".to_string());
-        }
         KeyboardAction::ClipboardPicker => {
             info!("Super+V pressed: opening clipboard history");
             crate::extensions::clipboard::trigger_picker();
+        }
+        KeyboardAction::ToggleLauncher => {
+            info!("Super+Space pressed: toggling app launcher");
+            state.launcher.toggle();
         }
         KeyboardAction::Screenshot => {
             info!("Super+Shift+S pressed: taking screenshot");

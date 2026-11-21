@@ -12,10 +12,10 @@ pub enum KeyboardAction {
     LockScreen,
     /// Hot reload compositor and blur configuration from disk.
     ReloadConfig,
-    /// Toggle the quick application launcher (Super+Space).
-    ToggleLauncher,
     /// Open the clipboard history picker (Super+V).
     ClipboardPicker,
+    /// Toggle the compositor-owned app launcher (Super+Space).
+    ToggleLauncher,
     /// Capture the screen (Super+Shift+S).
     Screenshot,
     /// Toggle maximize state on the active window.
