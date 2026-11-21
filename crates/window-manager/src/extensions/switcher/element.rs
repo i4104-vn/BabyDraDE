@@ -30,6 +30,8 @@ use super::{
 
 use crate::rendering::{elements::types::ConstrainedSurface, CustomRenderElements};
 
+type RenderKey = (Instant, usize, Option<usize>, usize, u64, u64, u64, u64);
+
 #[derive(Default)]
 pub struct SwitcherOverlay {
     fg_buffer: Option<MemoryRenderBuffer>,
@@ -37,7 +39,7 @@ pub struct SwitcherOverlay {
     /// Chỉ chứa dock thay vì toàn màn hình, nên mỗi frame animation chỉ phải
     /// cấp phát và copy vài trăm KB thay vì toàn bộ framebuffer.
     fg_region: Option<(i32, i32, i32, i32)>,
-    last_rendered: Option<(Instant, usize, usize, u64, u64, u64)>,
+    last_rendered: Option<RenderKey>,
     backdrop_buffer: Option<MemoryRenderBuffer>,
     backdrop_size: Option<(i32, i32)>,
     backdrop_tick: Option<u64>,
@@ -97,6 +99,11 @@ impl SwitcherOverlay {
         } else {
             u64::MAX
         };
+        let highlight_tick = if switcher.highlight.is_animating() {
+            switcher.highlight.frame_tick()
+        } else {
+            u64::MAX
+        };
         let presence = switcher.presence();
         let presence_tick = if switcher.presence.is_animating() {
             switcher.presence.frame_tick()
@@ -108,10 +115,12 @@ impl SwitcherOverlay {
         let render_key = (
             switcher.scroll.started_at(),
             switcher.selected_index,
+            switcher.hovered,
             switcher.entries.len(),
             animation_tick,
             stage_tick,
             presence_tick,
+            highlight_tick,
         );
 
         if self.last_rendered != Some(render_key) {

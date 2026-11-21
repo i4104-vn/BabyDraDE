@@ -12,6 +12,9 @@ pub const DEFAULT_DURATION: Duration = Duration::from_millis(420);
 /// Smooth highlight/selection step, e.g. keyboard navigation in a dock.
 pub const NAVIGATION_DURATION: Duration = Duration::from_millis(200);
 
+/// Short glide when the highlight moves between icons (pointer hover).
+pub const HOVER_DURATION: Duration = Duration::from_millis(140);
+
 /// Duration of a wheel/touchpad scroll step.
 pub const SCROLL_DURATION: Duration = Duration::from_millis(260);
 

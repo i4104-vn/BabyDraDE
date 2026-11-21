@@ -21,6 +21,7 @@ pub fn draw_dock<F>(
     layout: &DockLayout,
     count: usize,
     position: f64,
+    highlight_position: f64,
     selected: Option<usize>,
     presence: f64,
     slide_x: f64,
@@ -43,6 +44,7 @@ where
         x,
         count,
         position,
+        highlight_position,
         selected,
         graphics_side,
         &mut draw_item,
@@ -60,6 +62,7 @@ fn draw_capsule_content<F>(
     x: f64,
     count: usize,
     position: f64,
+    highlight_position: f64,
     selected: Option<usize>,
     side: GraphicsSide,
     draw_item: &mut F,
@@ -94,8 +97,8 @@ where
     context.clip();
 
     let visual = visual_center(count, position);
-    if let Some(sel) = selected {
-        let active_y = active_center_y(layout, count, sel, visual);
+    if selected.is_some() {
+        let active_y = active_center_y(layout, count, highlight_position, visual);
         paint_rounded(
             context,
             x + (layout.width - SELECTION_SIZE) / 2.0,
@@ -108,10 +111,17 @@ where
         )?;
     }
 
-    draw_items(context, layout, x, count, position, visual, selected, draw_item)?;
+    draw_items(
+        context,
+        layout,
+        count,
+        visual,
+        highlight_position,
+        draw_item,
+    )?;
 
-    if let Some(sel) = selected {
-        let active_y = active_center_y(layout, count, sel, visual);
+    if selected.is_some() {
+        let active_y = active_center_y(layout, count, highlight_position, visual);
         let pill_x = match side {
             GraphicsSide::Left => x + 8.0,
             GraphicsSide::Right => x + layout.width - 11.0,
@@ -131,16 +141,20 @@ where
     Ok(())
 }
 
-fn active_center_y(layout: &DockLayout, count: usize, selected_index: usize, visual: f64) -> f64 {
+fn wrapped_diff(value: f64, reference: f64, count: usize) -> f64 {
+    let n = count as f64;
+    let mut diff = (value - reference).rem_euclid(n);
+    if diff > n / 2.0 {
+        diff -= n;
+    }
+    diff
+}
+
+fn active_center_y(layout: &DockLayout, count: usize, highlight_position: f64, visual: f64) -> f64 {
     let rel = if count <= VISIBLE_SLOTS {
-        selected_index as f64 - visual
+        wrapped_diff(highlight_position, visual, count)
     } else {
-        let n = count as f64;
-        let mut diff = (selected_index as f64 - visual).rem_euclid(n);
-        if diff > n / 2.0 {
-            diff -= n;
-        }
-        diff
+        highlight_position - visual
     };
     layout.center_y + rel * SLOT
 }
@@ -148,23 +162,18 @@ fn active_center_y(layout: &DockLayout, count: usize, selected_index: usize, vis
 fn draw_items<F>(
     context: &Context,
     layout: &DockLayout,
-    _x: f64,
     count: usize,
-    position: f64,
     visual: f64,
-    selected: Option<usize>,
+    highlight_position: f64,
     draw_item: &mut F,
 ) -> Result<(), cairo::Error>
 where
     F: FnMut(&Context, usize, f64, f64, f64, f64) -> Result<(), cairo::Error>,
 {
     if count <= VISIBLE_SLOTS {
-        let wrapped = position.rem_euclid(count as f64);
         for index in 0..count {
             let rel = index as f64 - visual;
-            let sel_rel = selected
-                .map(|s| index as f64 - s as f64)
-                .unwrap_or(index as f64 - wrapped);
+            let sel_rel = wrapped_diff(index as f64, highlight_position, count);
             let (cx, cy, size) = layout.icon_geometry(rel, sel_rel);
             draw_item(context, index, cx, cy, size, 1.0)?;
         }
@@ -174,16 +183,7 @@ where
             let unwrapped = base + offset;
             let index = unwrapped.rem_euclid(count as i64) as usize;
             let slot = unwrapped as f64 - visual;
-            let sel_rel = if let Some(sel) = selected {
-                let n = count as i64;
-                let mut d = (index as i64 - sel as i64).rem_euclid(n);
-                if d > n / 2 {
-                    d -= n;
-                }
-                d as f64
-            } else {
-                unwrapped as f64 - position
-            };
+            let sel_rel = wrapped_diff(unwrapped as f64, highlight_position, count);
             let (cx, cy, size) = layout.icon_geometry(slot, sel_rel);
             draw_item(context, index, cx, cy, size, 1.0)?;
         }

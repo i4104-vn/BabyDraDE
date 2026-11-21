@@ -1,8 +1,10 @@
 use std::time::{Duration, Instant};
 
-use animation::{Easing, Tween, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION};
+use animation::{
+    Easing, Tween, HOVER_DURATION, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION,
+};
 use gtk4::gdk_pixbuf::Pixbuf;
-use smithay::{desktop::Window, wayland::compositor::with_states};
+use smithay::{desktop::Window, utils::SERIAL_COUNTER, wayland::compositor::with_states};
 
 use super::BabydraState;
 
@@ -28,6 +30,8 @@ pub(crate) struct AltTabSwitcher {
     /// Continuous carousel position (fractional slots) of the right-side dock.
     /// Driven by `Tween` so repeated Tab presses accumulate smoothly.
     pub(crate) scroll: Tween,
+    /// Animated highlight position, independent of the scrolling content.
+    pub(crate) highlight: Tween,
     /// 0..1 fade of the small preview beside the active icon.
     pub(crate) stage: Tween,
     /// 0..1 presence driving the backdrop fade and slide in/out.
@@ -66,7 +70,17 @@ impl AltTabSwitcher {
     }
 
     pub(crate) fn set_hover(&mut self, index: Option<usize>) {
-        self.hovered = index;
+        if self.hovered != index {
+            self.hovered = index;
+            if let Some(index) = index {
+                self.highlight
+                    .retarget(index as f64, HOVER_DURATION, Easing::EaseOutCubic);
+            }
+        }
+    }
+
+    pub(crate) fn highlight_position(&self) -> f64 {
+        self.highlight.value()
     }
 
     /// First Tab press starts repeat tracking; backend repeats are ignored
@@ -119,14 +133,13 @@ impl AltTabSwitcher {
         }
         let (target, wrapped) = step_target(self.scroll.target(), direction as f64, count);
         self.selected_index = target.round() as usize;
+        let duration = Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS);
         if wrapped {
             self.scroll.snap_to(target);
+            self.highlight.snap_to(target);
         } else {
-            self.scroll.retarget(
-                target,
-                Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS),
-                Easing::Linear,
-            );
+            self.scroll.retarget(target, duration, Easing::Linear);
+            self.highlight.retarget(target, duration, Easing::Linear);
         }
         self.last_step = Some(Instant::now());
     }
@@ -152,6 +165,7 @@ impl AltTabSwitcher {
         let (next, _) = step_target(current, slots, count);
         self.selected_index = next.round() as usize;
         self.scroll.snap_to(next);
+        self.highlight.snap_to(next);
     }
 
     pub(crate) fn finish_drag(&mut self) {
@@ -162,6 +176,8 @@ impl AltTabSwitcher {
         let nearest = self.scroll.value().round().rem_euclid(count as f64);
         self.selected_index = nearest as usize;
         self.scroll
+            .retarget(nearest, SWITCHER_SCROLL_DURATION, Easing::EaseOutCubic);
+        self.highlight
             .retarget(nearest, SWITCHER_SCROLL_DURATION, Easing::EaseOutCubic);
         self.restart_stage();
     }
@@ -213,6 +229,7 @@ impl BabydraState {
             if switcher.entries.len() == 1 {
                 switcher.selected_index = 0;
                 switcher.scroll.snap_to(0.0);
+                switcher.highlight.snap_to(0.0);
                 switcher.scroll_direction = direction;
                 switcher.restart_stage();
                 self.alt_tab_switcher = Some(switcher);
@@ -234,6 +251,7 @@ impl BabydraState {
                 // Danh sách entry đã đổi (có cửa sổ đóng/mở): căn lại để
                 // tránh cuộn tới một item không còn tồn tại.
                 switcher.scroll.snap_to(switcher.selected_index as f64);
+                switcher.highlight.snap_to(switcher.selected_index as f64);
             } else {
                 // Cộng dồn vào đích thay vì vị trí hiện tại, nhờ vậy bấm Tab
                 // liên tiếp không bị nhảy lùi về đầu bước trước.
@@ -248,6 +266,7 @@ impl BabydraState {
                 switcher.last_step = Some(Instant::now());
                 if wrapped {
                     switcher.scroll.snap_to(target);
+                    switcher.highlight.snap_to(target);
                 } else {
                     let (duration, easing) = if rapid {
                         (
@@ -258,6 +277,7 @@ impl BabydraState {
                         (SWITCHER_SCROLL_DURATION, Easing::EaseOutCubic)
                     };
                     switcher.scroll.retarget(target, duration, easing);
+                    switcher.highlight.retarget(target, duration, easing);
                 }
             }
             switcher.scroll_direction = direction;
@@ -332,6 +352,7 @@ impl BabydraState {
             selected_index: selected,
             hovered: None,
             scroll: Tween::settled(selected as f64),
+            highlight: Tween::settled(selected as f64),
             stage: Tween::new(0.0, 1.0, SWITCHER_PREVIEW_DURATION, Easing::EaseOutCubic),
             presence: Tween::new(0.0, 1.0, SWITCHER_PREVIEW_DURATION, Easing::EaseOutCubic),
             closing: false,
@@ -341,6 +362,58 @@ impl BabydraState {
             last_repeat: None,
             scroll_direction: if backwards { -1.0 } else { 1.0 },
         });
+    }
+
+    /// Opens the switcher for a finger drag and returns the index to scrub from.
+    pub(crate) fn begin_switcher_scrub(&mut self) -> Option<usize> {
+        if self.alt_tab_switcher.is_none() {
+            self.cycle_alt_tab(false);
+        }
+        self.alt_tab_switcher
+            .as_ref()
+            .map(|switcher| switcher.selected_index)
+    }
+
+    /// Focuses the current switcher entry and starts the close animation.
+    pub(crate) fn commit_switcher_selection(&mut self) {
+        let window = self.alt_tab_switcher.as_ref().and_then(|switcher| {
+            switcher
+                .entries
+                .get(switcher.selected_index)
+                .map(|entry| entry.window.clone())
+        });
+        if let Some(window) = window {
+            self.unminimize_window(&window);
+            crate::compositor::input::keyboard::focus::focus_window(
+                self,
+                window,
+                SERIAL_COUNTER.next_serial(),
+            );
+        }
+        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+            switcher.begin_close();
+        }
+    }
+
+    /// Moves the active switcher entry with the finger. `steps` is the number
+    /// of icons travelled since the drag started (may be negative).
+    pub(crate) fn scrub_switcher(&mut self, start_x: f64, base_index: usize, current_x: f64) {
+        let Some(switcher) = self.alt_tab_switcher.as_mut() else {
+            return;
+        };
+        let count = switcher.entries.len();
+        if count == 0 {
+            return;
+        }
+        let steps = ((current_x - start_x) / 60.0).round() as i64;
+        let index = (base_index as i64 + steps).rem_euclid(count as i64) as usize;
+        switcher.hovered = None;
+        switcher.selected_index = index;
+        switcher.scroll.snap_to(index as f64);
+        switcher.highlight.snap_to(index as f64);
+        switcher.stage = Tween::settled(1.0);
+        switcher.presence = Tween::settled(1.0);
+        switcher.closing = false;
     }
 }
 

@@ -121,12 +121,14 @@ the top of the capsule and the last one ends at the bottom while the selection
 still loops.
 
 Pointer hover is deliberately kept **separate** from the scrolling tween:
-`DockState::hovered` (and `AltTabSwitcher::hovered`) only move the highlight and
-never retarget `position`. Otherwise moving the cursor changes the carousel
-offset, which changes hit-testing, which moves the cursor target again — a
-feedback loop that made the highlight jump around. Pointer motion and touch
-motion both call `update_hover`; a touch tap on an icon launches/focuses it and
-a tap outside dismisses the overlay.
+`DockState::hovered` (and `AltTabSwitcher::hovered`) only retarget the dedicated
+`highlight` tween and never move `position`. Otherwise moving the cursor changes
+the carousel offset, which changes hit-testing, which moves the cursor target
+again — a feedback loop that made the highlight jump around. The highlight
+glides between icons with `HOVER_DURATION` (140 ms, `EaseOutCubic`); keyboard and
+repeat steps use `NAVIGATION_DURATION` / the 70 ms linear step. Pointer motion
+and touch motion both call `update_hover`; a touch tap on an icon
+launches/focuses it and a tap outside dismisses the overlay.
 
 ### 2.5 Cache invalidation
 
@@ -149,6 +151,11 @@ gradient spans `0..gradient_w` with the darkest stop at the **right** edge.
   (200 ms / 240 ms), replacing fixed 8.33 ms timers.
 - **Window animations**: Tween-driven open/close/minimize/restore/geometry
   transitions using the `WINDOW_*_DURATION` constants above.
+- **3-finger gestures** (touchscreen and touchpad): a horizontal drag opens the
+  Alt+Tab switcher and scrubs the active entry live (about 60 px per icon,
+  wrapping at the ends). Lifting the fingers commits the current entry (focus
+  and close) immediately — no extra Enter is needed. Vertical 3-finger swipes
+  keep their maximize/minimize behaviour.
 
 ## 3. Constants
 

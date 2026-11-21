@@ -9,7 +9,7 @@ use ui_kit::drawing::{app_color, draw_text, fit_text, paint_rounded, rounded_rec
 
 use super::{
     LauncherApp, LABEL_FONT_SIZE, LABEL_GAP, LABEL_HEIGHT, LABEL_MAX_TEXT, LABEL_MAX_WIDTH,
-    LABEL_PAD, SLOT, VISIBLE_SLOTS,
+    LABEL_PAD, SLOT,
 };
 
 /// Draws an app icon centred on `(center_x, center_y)`.
@@ -123,6 +123,7 @@ pub(super) fn draw_scene(
     apps: &[LauncherApp],
     panel: &DockLayout,
     position: f64,
+    highlight_position: f64,
     selected: Option<usize>,
     logical_w: f64,
     presence: f64,
@@ -134,6 +135,7 @@ pub(super) fn draw_scene(
         panel,
         apps.len(),
         position,
+        highlight_position,
         selected,
         presence,
         slide_x,
@@ -151,16 +153,7 @@ pub(super) fn draw_scene(
     if let Some(index) = selected {
         if let Some(app) = apps.get(index) {
             let visual = visual_center(apps.len(), position);
-            let active_rel = if apps.len() <= VISIBLE_SLOTS {
-                index as f64 - visual
-            } else {
-                let n = apps.len() as f64;
-                let mut d = (index as f64 - visual).rem_euclid(n);
-                if d > n / 2.0 {
-                    d -= n;
-                }
-                d
-            };
+            let active_rel = highlight_position - visual;
             let active_y = panel.center_y + active_rel * SLOT;
             draw_label(
                 context,
@@ -201,6 +194,7 @@ mod tests {
             &context,
             &panel,
             7,
+            3.0,
             3.0,
             Some(3),
             1.0,

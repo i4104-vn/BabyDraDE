@@ -41,6 +41,7 @@ pub(crate) fn on_touch_down(
 ) {
     // Reset consumed flag whenever a finger count changes so a new gesture can start.
     state.touch_gesture.consumed = false;
+    state.touch_gesture.scrubbing = false;
     state.touch_gesture.slots.insert(
         slot,
         TouchSlotData {
@@ -70,6 +71,45 @@ pub(crate) fn on_touch_motion(
     if let Some(data) = state.touch_gesture.slots.get_mut(&slot) {
         data.current = position;
     }
+
+    // 3-finger horizontal drag: show the switcher and scrub its active entry
+    // live with the fingers instead of switching focus at gesture end.
+    let snapshot: Vec<_> = state
+        .touch_gesture
+        .slots
+        .values()
+        .map(|data| (data.start, data.current))
+        .collect();
+    if snapshot.len() >= 3 {
+        let (start_x, current_x, start_y, current_y) = {
+            let first = &snapshot[..3];
+            (
+                first.iter().map(|v| v.0.x).sum::<f64>() / 3.0,
+                first.iter().map(|v| v.1.x).sum::<f64>() / 3.0,
+                first.iter().map(|v| v.0.y).sum::<f64>() / 3.0,
+                first.iter().map(|v| v.1.y).sum::<f64>() / 3.0,
+            )
+        };
+        let dx = current_x - start_x;
+        let dy = current_y - start_y;
+        let scrubbing = state.touch_gesture.scrubbing;
+        if !scrubbing
+            && load_gesture_config().three_finger_swipe_window
+            && dx.abs() >= 40.0
+            && dx.abs() > dy.abs()
+        {
+            if let Some(base_index) = state.begin_switcher_scrub() {
+                state.touch_gesture.scrubbing = true;
+                state.touch_gesture.scrub_start_x = start_x;
+                state.touch_gesture.scrub_base_index = base_index;
+            }
+        }
+        if state.touch_gesture.scrubbing {
+            let start_x = state.touch_gesture.scrub_start_x;
+            let base_index = state.touch_gesture.scrub_base_index;
+            state.scrub_switcher(start_x, base_index, current_x);
+        }
+    }
 }
 
 // ----- up ----------------------------------------------------------------
@@ -90,7 +130,12 @@ pub(crate) fn on_touch_motion(
 /// * `time_ms` - Current event timestamp in milliseconds.
 pub(crate) fn on_touch_up(state: &mut BabydraState, slot: TouchSlot, time_ms: u64) {
     let n = state.touch_gesture.slots.len();
-    let consumed = state.touch_gesture.consumed;
+    let scrubbing = state.touch_gesture.scrubbing;
+    if scrubbing {
+        // Releasing the fingers commits the entry currently under them.
+        state.commit_switcher_selection();
+    }
+    let consumed = state.touch_gesture.consumed || scrubbing;
 
     if !consumed && n >= 2 {
         let cfg = load_gesture_config();
@@ -99,9 +144,11 @@ pub(crate) fn on_touch_up(state: &mut BabydraState, slot: TouchSlot, time_ms: u6
 
     state.touch_gesture.slots.remove(&slot);
 
-    // Reset consumed flag once all fingers are off the screen.
+    // Reset consumed flag once all fingers are off the screen. The switcher
+    // stays open on the last active entry.
     if state.touch_gesture.slots.is_empty() {
         state.touch_gesture.consumed = false;
+        state.touch_gesture.scrubbing = false;
     }
 }
 

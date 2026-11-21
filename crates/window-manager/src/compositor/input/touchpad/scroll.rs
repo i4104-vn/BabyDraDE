@@ -66,7 +66,7 @@ where
     E: PointerAxisEvent<B>,
 {
     state.cursor_visible = true;
-
+    
     let source = event.source();
 
     let natural_scroll = match source {

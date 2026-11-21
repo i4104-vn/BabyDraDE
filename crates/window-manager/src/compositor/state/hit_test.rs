@@ -166,11 +166,7 @@ impl BabydraState {
     pub(crate) fn window_border_under(
         &self,
         point: Point<f64, Logical>,
-    ) -> Option<(
-        Window,
-        Point<i32, Logical>,
-        ResizeEdge,
-    )> {
+    ) -> Option<(Window, Point<i32, Logical>, ResizeEdge)> {
         for window in self.space.elements().rev() {
             if super::is_window_exiting(window) {
                 continue;

@@ -15,7 +15,7 @@ pub(crate) use state::LauncherState;
 
 use common::constants::launcher::{
     BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO, LABEL_FONT_SIZE, LABEL_GAP, LABEL_HEIGHT,
-    LABEL_MAX_TEXT, LABEL_MAX_WIDTH, LABEL_PAD, SHADOW_PAD, SLOT, VISIBLE_SLOTS,
+    LABEL_MAX_TEXT, LABEL_MAX_WIDTH, LABEL_PAD, SHADOW_PAD, SLOT,
 };
 use gtk4::{gdk_pixbuf::Pixbuf, gio::AppInfo};
 

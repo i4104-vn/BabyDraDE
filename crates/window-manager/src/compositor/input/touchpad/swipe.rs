@@ -51,6 +51,9 @@ where
             time,
             total_delta: Point::from((0.0, 0.0)),
             updates: Vec::new(),
+            scrubbing: false,
+            scrub_start_x: 0.0,
+            scrub_base_index: 0,
         });
         return;
     }
@@ -81,10 +84,51 @@ where
     let delta = event.delta();
     let time = event.time_msec();
 
-    if let Some(gesture) = state.trackpad_swipe.as_mut() {
-        gesture.total_delta.x += delta.x;
-        gesture.total_delta.y += delta.y;
-        gesture.updates.push((delta, time));
+    if state.trackpad_swipe.is_some() {
+        {
+            let gesture = state.trackpad_swipe.as_mut().unwrap();
+            gesture.total_delta.x += delta.x;
+            gesture.total_delta.y += delta.y;
+            gesture.updates.push((delta, time));
+        }
+
+        // 3-finger horizontal drag scrubs the switcher live instead of
+        // cycling focus only when the gesture ends.
+        let snapshot = state.trackpad_swipe.as_ref().map(|gesture| {
+            (
+                gesture.fingers,
+                gesture.scrubbing,
+                gesture.total_delta.x,
+                gesture.total_delta.y,
+            )
+        });
+        if let Some((fingers, scrubbing, dx, dy)) = snapshot {
+            if fingers == THREE_FINGERS
+                && !scrubbing
+                && load_gesture_config().three_finger_swipe_window
+                && dx.abs() > dy.abs()
+                && dx.abs() >= 40.0
+            {
+                if let Some(base_index) = state.begin_switcher_scrub() {
+                    let gesture = state.trackpad_swipe.as_mut().unwrap();
+                    gesture.scrubbing = true;
+                    gesture.scrub_start_x = dx;
+                    gesture.scrub_base_index = base_index;
+                }
+            }
+
+            let scrub = state.trackpad_swipe.as_ref().map(|gesture| {
+                (
+                    gesture.scrubbing,
+                    gesture.scrub_start_x,
+                    gesture.scrub_base_index,
+                    dx,
+                )
+            });
+            if let Some((true, start_x, base_index, current_x)) = scrub {
+                state.scrub_switcher(start_x, base_index, current_x);
+            }
+        }
         return;
     }
 
@@ -125,6 +169,12 @@ where
 
     match state.trackpad_swipe.take() {
         Some(gesture) => {
+            // A live switcher scrub commits the current entry on release and
+            // does not replay the swipe to clients.
+            if gesture.scrubbing {
+                state.commit_switcher_selection();
+                return;
+            }
             if !cancelled {
                 let cfg = load_gesture_config();
                 let threshold = if gesture.fingers == FOUR_FINGERS {
@@ -153,8 +203,8 @@ where
 
             replay_swipe(state, gesture, cancelled, time);
         }
-        None => match state.seat.get_pointer() {
-            Some(pointer) => {
+        None => {
+            if let Some(pointer) = state.seat.get_pointer() {
                 pointer.gesture_swipe_end(
                     state,
                     &GestureSwipeEndEvent {
@@ -164,8 +214,7 @@ where
                     },
                 );
             }
-            None => {}
-        },
+        }
     }
 }
 
@@ -184,12 +233,9 @@ fn handle_three_finger(
     cfg: &services::models::GestureConfig,
 ) -> bool {
     match dir {
-        SwipeDirection::Left if cfg.three_finger_swipe_window => {
-            cycle_window_focus(state, false, SERIAL_COUNTER.next_serial())
-        }
-        SwipeDirection::Right if cfg.three_finger_swipe_window => {
-            cycle_window_focus(state, true, SERIAL_COUNTER.next_serial())
-        }
+        // Horizontal 3-finger swipes are handled live during the drag by
+        // scrubbing the switcher, so they are simply consumed here.
+        SwipeDirection::Left | SwipeDirection::Right if cfg.three_finger_swipe_window => true,
         SwipeDirection::Up if cfg.three_finger_swipe_up_maximize => {
             if let Some(window) = state.active_window() {
                 state.toggle_maximize(&window);

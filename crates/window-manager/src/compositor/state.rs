@@ -2,9 +2,9 @@ use std::{collections::HashMap, ffi::OsString, sync::Arc, time::Instant};
 
 pub(crate) use common::SwipeDirection;
 use smithay::{
-    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
     desktop::{PopupManager, Space, Window},
     input::{Seat, SeatState},
+    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
     reexports::{
         calloop::{
             generic::Generic, EventLoop, Interest, LoopSignal, Mode as CalloopMode, PostAction,
@@ -96,6 +96,10 @@ pub(crate) struct TrackpadSwipeBuffer {
     pub(crate) time: u32,
     pub(crate) total_delta: Point<f64, Logical>,
     pub(crate) updates: Vec<(Point<f64, Logical>, u32)>,
+    /// 3-finger horizontal drag is scrubbing the switcher selection.
+    pub(crate) scrubbing: bool,
+    pub(crate) scrub_start_x: f64,
+    pub(crate) scrub_base_index: usize,
 }
 
 /// Per-slot data accumulated while tracking a multi-touch gesture on a touchscreen.
@@ -116,6 +120,10 @@ pub(crate) struct TouchGestureBuffer {
     pub(crate) slots: HashMap<smithay::backend::input::TouchSlot, TouchSlotData>,
     /// Whether the gesture has already been consumed (action was fired).
     pub(crate) consumed: bool,
+    /// 3-finger horizontal drag is scrubbing the switcher selection.
+    pub(crate) scrubbing: bool,
+    pub(crate) scrub_start_x: f64,
+    pub(crate) scrub_base_index: usize,
 }
 
 pub(crate) struct BabydraState {

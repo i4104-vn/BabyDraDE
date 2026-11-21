@@ -144,7 +144,12 @@ impl BabydraState {
         let is_text = cached_mime.starts_with("text/")
             || matches!(cached_mime.as_str(), "UTF8_STRING" | "STRING");
         if is_text {
-            for alias in ["UTF8_STRING", "STRING", "text/plain", "text/plain;charset=utf-8"] {
+            for alias in [
+                "UTF8_STRING",
+                "STRING",
+                "text/plain",
+                "text/plain;charset=utf-8",
+            ] {
                 if !offered.iter().any(|mime| mime == alias) {
                     offered.push(alias.to_string());
                 }

@@ -41,24 +41,13 @@ pub(crate) fn compute_layout(
         switcher.entries.len(),
         switcher.visual_selection(),
         switcher.stage_progress(),
+        switcher.selected_index,
+        switcher.highlight_position(),
         screen_w,
         screen_h,
     );
     if let Some(hovered) = switcher.hovered {
         layout.selected = hovered.min(switcher.entries.len() - 1);
-        let active_rel = if switcher.entries.len() <= VISIBLE_SLOTS {
-            layout.selected as f64 - visual_center(switcher.entries.len(), switcher.visual_selection())
-        } else {
-            let n = switcher.entries.len() as f64;
-            let visual = visual_center(switcher.entries.len(), switcher.visual_selection());
-            let mut d = (layout.selected as f64 - visual).rem_euclid(n);
-            if d > n / 2.0 {
-                d -= n;
-            }
-            d
-        };
-        layout.preview.y = (layout.panel.center_y + active_rel * SLOT - PREVIEW_H / 2.0)
-            .clamp(8.0, screen_h - PREVIEW_H - 8.0);
     }
     Some(layout)
 }
@@ -74,13 +63,15 @@ fn dock_active_rel(count: usize, position: f64) -> f64 {
 
 fn compute_layout_metrics(
     count: usize,
-    position: f64,
+    _position: f64,
     stage_progress: f64,
+    selected: usize,
+    highlight_position: f64,
     screen_w: f64,
     screen_h: f64,
 ) -> SwitcherLayout {
     let panel = DockLayout::new(count, screen_h / 2.0, screen_w, DockSide::Right);
-    let active_y = panel.center_y + dock_active_rel(count, position) * SLOT;
+    let active_y = panel.center_y + dock_active_rel(count, highlight_position) * SLOT;
 
     let preview = Rect::new(
         (panel.x - PREVIEW_GAP - PREVIEW_W).max(8.0),
@@ -91,7 +82,7 @@ fn compute_layout_metrics(
 
     SwitcherLayout {
         panel,
-        selected: 0,
+        selected: selected.min(count - 1),
         preview,
         preview_alpha: stage_progress.clamp(0.0, 1.0),
     }
@@ -109,13 +100,12 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    let display_position = switcher.visual_selection();
-
     draw_dock(
         context,
         &layout.panel,
         switcher.entries.len(),
-        display_position,
+        switcher.visual_selection(),
+        switcher.highlight_position(),
         Some(layout.selected),
         presence,
         slide_x,
@@ -170,6 +160,7 @@ mod tests {
             selected_index: 0,
             hovered: None,
             scroll: Tween::settled(0.0),
+            highlight: Tween::settled(0.0),
             stage: Tween::settled(1.0),
             presence: Tween::settled(1.0),
             closing: false,
@@ -188,15 +179,15 @@ mod tests {
 
     #[test]
     fn preview_sits_left_of_the_right_capsule() {
-        let layout = compute_layout_metrics(4, 0.0, 1.0, 1920.0, 1080.0);
+        let layout = compute_layout_metrics(4, 0.0, 1.0, 0, 0.0, 1920.0, 1080.0);
         assert_eq!(layout.panel.x + layout.panel.width, 1920.0);
         assert!(layout.preview.x + layout.preview.width <= layout.panel.x);
     }
 
     #[test]
     fn short_and_long_lists_share_the_dock_geometry() {
-        let short = compute_layout_metrics(5, 4.0, 1.0, 1920.0, 1080.0);
-        let long = compute_layout_metrics(12, 11.0, 1.0, 1920.0, 1080.0);
+        let short = compute_layout_metrics(5, 4.0, 1.0, 4, 4.0, 1920.0, 1080.0);
+        let long = compute_layout_metrics(12, 11.0, 1.0, 11, 11.0, 1920.0, 1080.0);
         assert_eq!(short.panel.width, long.panel.width);
         assert_eq!(visual_center(5, 7.0), 2.0);
         assert_eq!(visual_center(12, 11.0), 7.0);

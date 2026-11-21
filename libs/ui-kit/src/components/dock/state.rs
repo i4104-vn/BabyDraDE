@@ -1,6 +1,8 @@
 //! Dock selection, presence and hold-to-repeat state.
 
-use animation::{Easing, Tween, FADE_IN_DURATION, FADE_OUT_DURATION, SCROLL_DURATION};
+use animation::{
+    Easing, Tween, FADE_IN_DURATION, FADE_OUT_DURATION, HOVER_DURATION, SCROLL_DURATION,
+};
 use common::constants::{launcher::PANEL_WIDTH, KEY_REPEAT_DELAY_MS, KEY_REPEAT_INTERVAL_MS};
 use std::time::{Duration, Instant};
 
@@ -22,6 +24,8 @@ fn step_target(current: f64, delta: f64, count: usize) -> (f64, bool) {
 /// Selection, presence and hold-to-repeat state shared by both docks.
 pub struct DockState {
     pub position: Tween,
+    /// Animated highlight position; follows the hovered or selected icon.
+    pub highlight: Tween,
     pub presence: Tween,
     pub selected: Option<usize>,
     /// Icon currently under the pointer. Kept separate from `position` so
@@ -43,6 +47,7 @@ impl DockState {
     pub fn new() -> Self {
         Self {
             position: Tween::settled(0.0),
+            highlight: Tween::settled(0.0),
             presence: Tween::settled(0.0),
             selected: None,
             hovered: None,
@@ -61,10 +66,10 @@ impl DockState {
         self.presence.value()
     }
 
-    /// Position used for rendering: always follows the smooth carousel position.
-    /// Hovering never shifts the carousel position, so icons stay stationary.
+    /// Animated highlight position. Hovering glides this tween without ever
+    /// moving `position`, so hit-testing and icon layout stay stable.
     pub fn display_position(&self) -> f64 {
-        self.position.value()
+        self.highlight.value()
     }
 
     pub fn display_selected(&self) -> Option<usize> {
@@ -72,11 +77,18 @@ impl DockState {
     }
 
     pub fn set_hover(&mut self, index: usize) {
-        self.hovered = Some(index);
+        if self.hovered != Some(index) {
+            self.hovered = Some(index);
+            self.highlight
+                .retarget(index as f64, HOVER_DURATION, Easing::EaseOutCubic);
+        }
     }
 
     pub fn clear_hover(&mut self) {
-        self.hovered = None;
+        if self.hovered.take().is_some() {
+            self.highlight
+                .retarget(self.position.target(), HOVER_DURATION, Easing::EaseOutCubic);
+        }
     }
 
     pub fn is_closing(&self) -> bool {
@@ -88,6 +100,7 @@ impl DockState {
         self.hovered = None;
         self.selected = Some(index);
         self.position = Tween::settled(index as f64);
+        self.highlight = Tween::settled(index as f64);
         if animate {
             self.presence
                 .retarget(1.0, FADE_IN_DURATION, Easing::EaseOutCubic);
@@ -112,6 +125,7 @@ impl DockState {
         self.hovered = None;
         self.selected = None;
         self.position = Tween::settled(0.0);
+        self.highlight = Tween::settled(0.0);
         self.presence = Tween::settled(0.0);
     }
 
@@ -132,8 +146,11 @@ impl DockState {
         self.selected = Some(next as usize);
         if wrapped {
             self.position.snap_to(next);
+            self.highlight.snap_to(next);
         } else {
             self.position.retarget(next, duration, Easing::EaseOutCubic);
+            self.highlight
+                .retarget(next, duration, Easing::EaseOutCubic);
         }
     }
 
@@ -141,6 +158,8 @@ impl DockState {
         self.hovered = None;
         self.selected = Some(index);
         self.position
+            .retarget(index as f64, duration, Easing::EaseOutCubic);
+        self.highlight
             .retarget(index as f64, duration, Easing::EaseOutCubic);
     }
 
@@ -153,12 +172,11 @@ impl DockState {
         self.selected = Some(next as usize);
         if wrapped {
             self.position.snap_to(next);
+            self.highlight.snap_to(next);
         } else {
-            self.position.retarget(
-                next,
-                Duration::from_millis(KEY_REPEAT_INTERVAL_MS),
-                Easing::Linear,
-            );
+            let duration = Duration::from_millis(KEY_REPEAT_INTERVAL_MS);
+            self.position.retarget(next, duration, Easing::Linear);
+            self.highlight.retarget(next, duration, Easing::Linear);
         }
     }
 
@@ -176,8 +194,11 @@ impl DockState {
         self.selected = Some(next as usize);
         if wrapped {
             self.position.snap_to(next);
+            self.highlight.snap_to(next);
         } else {
             self.position
+                .retarget(next, SCROLL_DURATION, Easing::EaseOutCubic);
+            self.highlight
                 .retarget(next, SCROLL_DURATION, Easing::EaseOutCubic);
         }
     }
@@ -192,6 +213,7 @@ impl DockState {
         let (next, _) = step_target(current, delta, count);
         self.selected = Some(next.round() as usize);
         self.position.snap_to(next);
+        self.highlight.snap_to(next);
     }
 
     /// Snaps to the nearest slot when a drag gesture finishes.
@@ -202,6 +224,8 @@ impl DockState {
         let nearest = self.position.value().round().rem_euclid(count as f64);
         self.selected = Some(nearest as usize);
         self.position
+            .retarget(nearest, SCROLL_DURATION, Easing::EaseOutCubic);
+        self.highlight
             .retarget(nearest, SCROLL_DURATION, Easing::EaseOutCubic);
     }
 
@@ -246,15 +270,19 @@ impl DockState {
         }
     }
 
-    /// Cache tick for animation frames; `u64::MAX` when both tweens rest.
+    /// Cache tick for animation frames; `u64::MAX` when all tweens rest.
     pub fn animation_tick(&self) -> u64 {
-        let presence = self.presence.is_animating();
-        let position = self.position.is_animating();
-        match (presence, position) {
-            (true, true) => self.presence.frame_tick().max(self.position.frame_tick()),
-            (true, false) => self.presence.frame_tick(),
-            (false, true) => self.position.frame_tick(),
-            (false, false) => u64::MAX,
-        }
+        let ticks = [
+            self.presence
+                .is_animating()
+                .then(|| self.presence.frame_tick()),
+            self.position
+                .is_animating()
+                .then(|| self.position.frame_tick()),
+            self.highlight
+                .is_animating()
+                .then(|| self.highlight.frame_tick()),
+        ];
+        ticks.into_iter().flatten().max().unwrap_or(u64::MAX)
     }
 }

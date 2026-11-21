@@ -225,7 +225,8 @@ impl LauncherState {
         let tick = self.dock.animation_tick();
         let presence = self.dock.presence();
         let slide_x = self.slide_offset();
-        let position = self.dock.display_position();
+        let position = self.dock.position();
+        let highlight_position = self.dock.display_position();
         let selected = self.dock.display_selected();
         let key = (self.apps.len(), selected, tick, region);
 
@@ -246,7 +247,15 @@ impl LauncherState {
             if let Some(pixels) =
                 render_pixels(region.2, region.3, scale, (region.0, region.1), |ctx| {
                     draw_scene(
-                        ctx, apps, &panel, position, selected, logical_w, presence, slide_x,
+                        ctx,
+                        apps,
+                        &panel,
+                        position,
+                        highlight_position,
+                        selected,
+                        logical_w,
+                        presence,
+                        slide_x,
                     )
                 })
             {
