@@ -1,17 +1,27 @@
+//! Right-side Alt+Tab switcher: a docked capsule styled like the launcher,
+//! with one small live preview beside the active icon and its title at the
+//! bottom of that preview. The old centre stage is gone.
+
 use cairo::{Context, Operator};
+use common::constants::launcher::{
+    HAIRLINE, ICON, ICON_SELECTED, PANEL_CORNER_RADIUS, PANEL_FILLET_RADIUS, PANEL_PAD,
+    PANEL_SURFACE, PANEL_WIDTH, SELECTION_SIZE, SLOT, VISIBLE_SLOTS,
+};
+use services::graphics::{
+    docked_panel_path, draw_docked_panel, draw_text, fit_text, paint_rounded, set_bold_font,
+    DockSide,
+};
 
 use crate::compositor::AltTabSwitcher;
 
-use services::graphics::rounded_rect;
-
 use super::draw::{draw_app_badge, Rect};
 
-pub(crate) use common::constants::DOCK_MAX_VISIBLE_ITEMS;
-use common::constants::{
-    DOCK_BOTTOM_MARGIN, DOCK_GAP, DOCK_THUMBNAIL_HEIGHT, DOCK_THUMBNAIL_WIDTH, DOCK_TOP_MARGIN,
-    DOCK_X, STAGE_ASPECT_RATIO, STAGE_RIGHT_MARGIN, STAGE_SCALE_GROW, STAGE_SIDE_GAP,
-    STAGE_SLIDE_DISTANCE,
-};
+const PREVIEW_W: f64 = 300.0;
+const PREVIEW_H: f64 = 176.0;
+const PREVIEW_GAP: f64 = 14.0;
+const TITLE_H: f64 = 34.0;
+const TITLE_FONT: f64 = 13.5;
+const TITLE_PAD: f64 = 12.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct CardLayout {
@@ -22,12 +32,28 @@ pub(crate) struct CardLayout {
 }
 
 pub(crate) struct SwitcherLayout {
-    pub(crate) stage: (usize, CardLayout),
-    pub(crate) dock_viewport: Rect,
+    /// Right-edge capsule body.
+    pub(crate) panel: Rect,
+    /// Icon slots inside the capsule.
     pub(crate) dock_items: Vec<(usize, CardLayout)>,
-    /// Khung target cố định ở giữa dock. Không di chuyển, không đổi màu —
-    /// các item cuộn qua bên dưới nó.
-    pub(crate) dock_target: Rect,
+    /// Highlight behind the active icon.
+    pub(crate) active: Rect,
+    /// Small live preview of the active window.
+    pub(crate) preview: Rect,
+    /// Fade of the preview while switching.
+    pub(crate) preview_alpha: f64,
+}
+
+/// Slot at the capsule centre. Short lists stay still; long lists scroll but
+/// stop before leaving an empty rounded end.
+fn visual_center(count: usize, position: f64) -> f64 {
+    let count = count as f64;
+    if count <= VISIBLE_SLOTS as f64 {
+        (count - 1.0) / 2.0
+    } else {
+        let half = (VISIBLE_SLOTS / 2) as f64;
+        position.clamp(half, count - 1.0 - half)
+    }
 }
 
 pub(crate) fn compute_layout(
@@ -38,281 +64,86 @@ pub(crate) fn compute_layout(
     if switcher.entries.is_empty() {
         return None;
     }
-
-    let n = switcher.entries.len();
-    let sel = switcher.selected_index.min(n - 1);
-    let progress = switcher.stage_progress();
-
-    // Dock is a continuous carousel: `visual_selection` may be fractional,
-    // and entries are positioned relative to it. This makes the list scroll
-    // smoothly instead of swapping content in fixed slots.
-    // Với ít hơn 5 app, tất cả item đứng yên và khung active di chuyển tới
-    // item được chọn thay vì cuộn.
-    let visual_selection = switcher.visual_selection();
-    let (dock_viewport, dock_items, dock_target) =
-        compute_dock_layout_mode(n, sel, visual_selection, screen_h);
-    let base_thumb_w = DOCK_THUMBNAIL_WIDTH;
-
-    // Center stage: a fixed 16:9 presentation area. The selected app is fit
-    // into this area by the renderer below; its native aspect ratio must not
-    // change the stage geometry.
-    let stage_min_x = DOCK_X + base_thumb_w + STAGE_SIDE_GAP;
-    let stage_max_x = screen_w - STAGE_RIGHT_MARGIN;
-    let avail_w = (stage_max_x - stage_min_x).max(240.0);
-    let avail_h = (screen_h - 48.0).max(200.0);
-
-    // Occupy most of the available area while remaining stable for every app.
-    let max_stage_w = avail_w * 0.96;
-    let max_stage_h = avail_h * 0.94;
-    let mut stage_w = max_stage_w;
-    let mut stage_h = stage_w / STAGE_ASPECT_RATIO;
-    if stage_h > max_stage_h {
-        stage_h = max_stage_h;
-        stage_w = stage_h * STAGE_ASPECT_RATIO;
-    }
-
-    let stage_x = stage_min_x + (avail_w - stage_w) / 2.0;
-    let stage_y = ((screen_h - stage_h) / 2.0).max(36.0);
-
-    let stage_card = Rect::new(stage_x, stage_y, stage_w, stage_h);
-    let stage_preview = stage_card;
-    let stage_center = (
-        stage_card.center_x(),
-        stage_card.y + stage_card.height / 2.0,
-    );
-    // Chuyển app: stage phóng nhẹ và trượt rồi trở về đúng kích thước.
-    // Dùng nửa chu kỳ sin: pulse bằng 0 ở cả đầu và cuối nên việc restart
-    // pulse ở mỗi lần bấm Tab không bao giờ làm nhảy kích thước.
-    //
-    let pulse = stage_pulse(progress);
-    let stage_card = animated_stage_rect(stage_card, stage_center, pulse, switcher.scroll_direction);
-    let stage_preview =
-        animated_stage_rect(stage_preview, stage_center, pulse, switcher.scroll_direction);
-    let stage = (
-        sel,
-        CardLayout {
-            card: stage_card,
-            preview: stage_preview,
-            radius: 18.0,
-            // Không fade để tránh cảm giác nhấp nháy; hiệu ứng chuyển app
-            // nằm ở chuyển động scale/trượt nhẹ phía trên.
-            opacity: 1.0,
-        },
-    );
-
-    Some(SwitcherLayout {
-        stage,
-        dock_viewport,
-        dock_items,
-        dock_target,
-    })
+    Some(compute_layout_metrics(
+        switcher.entries.len(),
+        switcher.visual_selection(),
+        switcher.stage_progress(),
+        screen_w,
+        screen_h,
+    ))
 }
 
-struct DockMetrics {
-    viewport: Rect,
-    center_y: f64,
-    item_step: f64,
-    thumbnail_x: f64,
-    thumbnail_width: f64,
-    thumbnail_height: f64,
-    thumb_pad: f64,
-}
-
-fn compute_dock_metrics(entry_count: usize, screen_h: f64) -> DockMetrics {
-    let viewport_y = DOCK_TOP_MARGIN.min((screen_h - 1.0).max(0.0));
-    let viewport_bottom = (screen_h - DOCK_BOTTOM_MARGIN).max(viewport_y + 1.0);
-    let viewport = Rect::new(
-        DOCK_X,
-        viewport_y,
-        DOCK_THUMBNAIL_WIDTH,
-        viewport_bottom - viewport_y,
-    );
-
-    let visible_count = entry_count.clamp(1, DOCK_MAX_VISIBLE_ITEMS);
-    let desired_height = visible_count as f64 * DOCK_THUMBNAIL_HEIGHT
-        + visible_count.saturating_sub(1) as f64 * DOCK_GAP;
-    let scale = (viewport.height / desired_height).min(1.0);
-    let thumbnail_width = DOCK_THUMBNAIL_WIDTH * scale;
-    let thumbnail_height = DOCK_THUMBNAIL_HEIGHT * scale;
-    let gap = DOCK_GAP * scale;
-    let item_step = thumbnail_height + gap;
-    let thumb_pad = 3.0 * scale;
-    let thumbnail_x = DOCK_X + (DOCK_THUMBNAIL_WIDTH - thumbnail_width) / 2.0;
-    let center_y = viewport.y + viewport.height / 2.0;
-
-    DockMetrics {
-        viewport,
-        center_y,
-        item_step,
-        thumbnail_x,
-        thumbnail_width,
-        thumbnail_height,
-        thumb_pad,
-    }
-}
-
-fn dock_card(metrics: &DockMetrics, slot: f64, opacity: f64) -> CardLayout {
-    let card = Rect::new(
-        metrics.thumbnail_x,
-        metrics.center_y + slot * metrics.item_step - metrics.thumbnail_height / 2.0,
-        metrics.thumbnail_width,
-        metrics.thumbnail_height,
-    );
-    let preview = Rect::new(
-        card.x + metrics.thumb_pad,
-        card.y + metrics.thumb_pad,
-        (card.width - 2.0 * metrics.thumb_pad).max(0.0),
-        (card.height - 2.0 * metrics.thumb_pad).max(0.0),
-    );
-
-    CardLayout {
-        card,
-        preview,
-        radius: (metrics.thumbnail_height * 0.13).clamp(4.0, 14.0),
-        opacity,
-    }
-}
-
-fn compute_dock_items(
-    metrics: &DockMetrics,
-    entry_count: usize,
-    center: f64,
-) -> Vec<(usize, CardLayout)> {
-    let count = entry_count as i64;
-    let base = center.floor() as i64;
-    let mut items = Vec::new();
-
-    // Enumerate by slot (not by entry) around the carousel centre. With a
-    // circular list of exactly 5 entries the item leaving the top and the one
-    // entering the bottom are the same entry; generating slots independently
-    // lets both copies exist at once, so the wrap is seamless instead of
-    // teleporting across the dock.
-    for offset in -3..=3 {
-        let unwrapped = base + offset;
-        let index = unwrapped.rem_euclid(count) as usize;
-        let slot = unwrapped as f64 - center;
-        // Năm slot lõi nằm trong [-2, 2]. Item mới đi vào / item cũ đi ra
-        // mờ dần trong đúng một slot kế tiếp, nên không bao giờ "pop"
-        // hoặc nhấp nháy khi bắt đầu/kết thúc cuộn.
-        let fade = (3.0 - slot.abs()).clamp(0.0, 1.0);
-        if fade <= 0.001 {
-            continue;
-        }
-        items.push((index, dock_card(metrics, slot, fade)));
-    }
-
-    items.sort_by(|a, b| a.1.card.y.total_cmp(&b.1.card.y));
-    items
-}
-
-/// Layout tĩnh cho trường hợp dưới 5 app: mọi item đứng yên, nhóm được căn
-/// giữa dock theo thứ tự 0..n.
-fn compute_static_dock_items(
-    metrics: &DockMetrics,
-    entry_count: usize,
-) -> Vec<(usize, CardLayout)> {
-    let center_slot = (entry_count as f64 - 1.0) / 2.0;
-    (0..entry_count)
-        .map(|index| (index, dock_card(metrics, index as f64 - center_slot, 1.0)))
-        .collect()
-}
-
-fn compute_dock_layout_static(
-    entry_count: usize,
-    visual_selection: f64,
+/// Pure geometry, independent of `AltTabEntry` so it can be tested without
+/// constructing real Wayland windows.
+fn compute_layout_metrics(
+    count: usize,
+    position: f64,
+    stage_progress: f64,
+    screen_w: f64,
     screen_h: f64,
-) -> (Rect, Vec<(usize, CardLayout)>, Rect) {
-    if entry_count == 0 {
-        let empty = Rect::new(DOCK_X, 0.0, DOCK_THUMBNAIL_WIDTH, 0.0);
-        return (empty, Vec::new(), empty);
-    }
+) -> SwitcherLayout {
+    let visual = visual_center(count, position);
 
-    let metrics = compute_dock_metrics(entry_count, screen_h);
-    let items = compute_static_dock_items(&metrics, entry_count);
-    // Các item đứng yên, nhưng khung active trượt liên tục theo tween chọn
-    // (có phần lẻ) thay vì nhảy thẳng tới slot của item mới.
-    let center_slot = (entry_count as f64 - 1.0) / 2.0;
-    let target = dock_card(&metrics, visual_selection - center_slot, 1.0).preview;
+    let slots = count.clamp(1, VISIBLE_SLOTS) as f64;
+    let panel_h = slots * SLOT + PANEL_PAD * 2.0;
+    let panel_x = screen_w - PANEL_WIDTH;
+    let panel_y = (screen_h - panel_h) / 2.0;
+    let center_y = screen_h / 2.0;
+    let panel = Rect::new(panel_x, panel_y, PANEL_WIDTH, panel_h);
 
-    (metrics.viewport, items, target)
-}
-
-/// Chọn chế độ dock: từ 5 app trở lên cuộn như carousel, dưới 5 app thì
-/// hiển thị cố định và chỉ di chuyển khung active.
-fn compute_dock_layout_mode(
-    entry_count: usize,
-    _selected_index: usize,
-    visual_selection: f64,
-    screen_h: f64,
-) -> (Rect, Vec<(usize, CardLayout)>, Rect) {
-    if entry_count >= DOCK_MAX_VISIBLE_ITEMS {
-        compute_dock_layout_animated(entry_count, visual_selection, screen_h)
+    let (first, last) = if count <= VISIBLE_SLOTS {
+        (0, count)
     } else {
-        compute_dock_layout_static(entry_count, visual_selection, screen_h)
+        let half = (VISIBLE_SLOTS / 2) as f64;
+        (
+            (visual - half - 1.0).floor().max(0.0) as usize,
+            ((visual + half + 1.0).ceil() as usize).min(count),
+        )
+    };
+
+    let mut dock_items = Vec::new();
+    for index in first..last {
+        let rel = index as f64 - visual;
+        let selection_rel = index as f64 - position;
+        let proximity = (1.0 - selection_rel.abs()).clamp(0.0, 1.0);
+        let size = ICON + (ICON_SELECTED - ICON) * proximity * proximity;
+        let center_x = panel_x + PANEL_WIDTH / 2.0;
+        let center_y = center_y + rel * SLOT;
+        let card = Rect::new(center_x - size / 2.0, center_y - size / 2.0, size, size);
+        dock_items.push((
+            index,
+            CardLayout {
+                card,
+                preview: card,
+                radius: size * 0.24,
+                opacity: 1.0,
+            },
+        ));
+    }
+
+    let active_center_y = center_y + (position - visual) * SLOT;
+    let active = Rect::new(
+        panel_x + (PANEL_WIDTH - SELECTION_SIZE) / 2.0,
+        active_center_y - SELECTION_SIZE / 2.0,
+        SELECTION_SIZE,
+        SELECTION_SIZE,
+    );
+
+    let preview_x = (panel_x - PREVIEW_GAP - PREVIEW_W).max(8.0);
+    let preview_y = (active_center_y - PREVIEW_H / 2.0).clamp(8.0, screen_h - PREVIEW_H - 8.0);
+    let preview = Rect::new(preview_x, preview_y, PREVIEW_W, PREVIEW_H);
+
+    SwitcherLayout {
+        panel,
+        dock_items,
+        active,
+        preview,
+        preview_alpha: stage_progress.clamp(0.0, 1.0),
     }
 }
 
-fn compute_dock_layout_animated(
-    entry_count: usize,
-    center: f64,
-    screen_h: f64,
-) -> (Rect, Vec<(usize, CardLayout)>, Rect) {
-    if entry_count == 0 {
-        let empty = Rect::new(DOCK_X, 0.0, DOCK_THUMBNAIL_WIDTH, 0.0);
-        return (empty, Vec::new(), empty);
-    }
-
-    let metrics = compute_dock_metrics(entry_count, screen_h);
-    let items = compute_dock_items(&metrics, entry_count, center);
-    // Target luôn ở slot 0 (giữa) và không phụ thuộc vào animation.
-    let target = dock_card(&metrics, 0.0, 1.0).preview;
-
-    (metrics.viewport, items, target)
-}
-
-#[cfg(test)]
-fn compute_dock_layout(
-    entry_count: usize,
-    selected_index: usize,
-    screen_h: f64,
-) -> (Rect, Vec<(usize, CardLayout)>) {
-    let (viewport, items, _) =
-        compute_dock_layout_mode(entry_count, selected_index, selected_index as f64, screen_h);
-    (viewport, items)
-}
-
-/// Nửa chu kỳ sin dùng cho pulse của stage: bằng 0 ở cả hai đầu nên việc
-/// restart pulse khi bấm Tab liên tiếp không bao giờ làm nhảy khung hình.
-pub(crate) fn stage_pulse(progress: f64) -> f64 {
-    (std::f64::consts::PI * progress.clamp(0.0, 1.0)).sin()
-}
-
-/// Áp dụng pulse cho stage. Phóng to thay vì thu nhỏ và mở rộng thêm theo độ
-/// trượt để sau khi dịch, preview vẫn phủ kín slot gốc — nền tối của canvas
-/// không bao giờ lộ ra thành viền đen quanh app.
-fn animated_stage_rect(base: Rect, center: (f64, f64), pulse: f64, direction: f64) -> Rect {
-    let slide = direction * pulse * STAGE_SLIDE_DISTANCE;
-    let grown = scale_rect_around(base, center, 1.0 + STAGE_SCALE_GROW * pulse);
-    let pad = slide.abs();
-    Rect::new(
-        grown.x - pad + slide,
-        grown.y,
-        grown.width + 2.0 * pad,
-        grown.height,
-    )
-}
-
-fn scale_rect_around(rect: Rect, center: (f64, f64), scale: f64) -> Rect {
-    let width = rect.width * scale;
-    let height = rect.height * scale;
-    Rect::new(
-        center.0 - width / 2.0,
-        center.1 - height / 2.0,
-        width,
-        height,
-    )
-}
-
+/// Draws the capsule, icon slots and the title strip of the small preview.
+/// The live window pixels are composited by `element.rs` underneath this.
 pub(crate) fn draw_switcher_foreground(
     context: &Context,
     switcher: &AltTabSwitcher,
@@ -323,77 +154,94 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    let vp = layout.dock_viewport;
+    draw_docked_panel(
+        context,
+        layout.panel.x,
+        layout.panel.y,
+        layout.panel.width,
+        layout.panel.height,
+        PANEL_CORNER_RADIUS,
+        PANEL_FILLET_RADIUS,
+        PANEL_SURFACE,
+        HAIRLINE,
+        DockSide::Right,
+    )?;
 
     context.save()?;
-    context.rectangle(vp.x, vp.y, vp.width, vp.height);
+    docked_panel_path(
+        context,
+        layout.panel.x,
+        layout.panel.y,
+        layout.panel.width,
+        layout.panel.height,
+        PANEL_CORNER_RADIUS,
+        PANEL_FILLET_RADIUS,
+        DockSide::Right,
+    )?;
     context.clip();
 
-    let target = layout.dock_target;
-    let target_radius = target.height * 0.10;
-
-    // Vùng target tĩnh: nền rất nhẹ để mắt bám vào đích đến, nhưng không đổi
-    // màu và không di chuyển nên không gây nhấp nháy.
-    context.save()?;
-    rounded_rect(
+    paint_rounded(
         context,
-        target.x,
-        target.y,
-        target.width,
-        target.height,
-        target_radius,
-    );
-    context.set_source_rgba(1.0, 1.0, 1.0, 0.045);
-    context.fill()?;
-    context.restore()?;
+        layout.active.x,
+        layout.active.y,
+        layout.active.width,
+        layout.active.height,
+        17.0,
+        (1.0, 1.0, 1.0, 0.09),
+        None,
+    )?;
 
-    // Các card trượt qua bên dưới target.
-    for (entry_idx, item) in &layout.dock_items {
-        let opacity = item.opacity;
-        if opacity <= 0.01 {
-            continue;
-        }
-
-        let c = item.card;
-        let p = item.preview;
-
-        if let Some(entry) = switcher.entries.get(*entry_idx) {
-            // Nền card bo tròn, lấp đầy toàn bộ vùng item.
-            context.save()?;
-            rounded_rect(context, c.x, c.y, c.width, c.height, c.height * 0.12);
-            context.set_source_rgba(0.14, 0.14, 0.18, 0.60 * opacity);
-            context.fill()?;
-            context.restore()?;
-
-            // Badge bo góc, gắn sát góc dưới-trái của preview, không padding thừa.
-            let badge_size = (c.height * 0.30).clamp(20.0, 30.0);
+    for (index, item) in &layout.dock_items {
+        if let Some(entry) = switcher.entries.get(*index) {
+            let card = item.card;
             draw_app_badge(
                 context,
                 entry,
-                p.x,
-                p.y + p.height - badge_size,
-                badge_size,
-                0.85 * opacity,
+                card.x,
+                card.y,
+                card.width.min(card.height),
+                item.opacity,
             )?;
         }
     }
 
-    // Viền target luôn nằm trên cùng, cố định ở giữa.
-    context.save()?;
-    rounded_rect(
+    // White pill on the inner edge, mirroring the launcher workspace dot.
+    paint_rounded(
         context,
-        target.x,
-        target.y,
-        target.width,
-        target.height,
-        target_radius,
-    );
-    context.set_source_rgba(0.88, 0.92, 1.0, 0.90);
-    context.set_line_width(2.0);
-    context.stroke()?;
+        layout.panel.x + layout.panel.width - 11.0,
+        layout.active.y + (layout.active.height - 16.0) / 2.0,
+        3.0,
+        16.0,
+        1.5,
+        (1.0, 1.0, 1.0, 0.92),
+        None,
+    )?;
     context.restore()?;
 
-    context.restore()?;
+    // Title inside the bottom of the small preview.
+    if let Some(entry) = switcher.entries.get(switcher.selected_index) {
+        let p = layout.preview;
+        context.save()?;
+        context.rectangle(p.x, p.y + p.height - TITLE_H, p.width, TITLE_H);
+        context.clip();
+
+        let gradient =
+            cairo::LinearGradient::new(0.0, p.y + p.height - TITLE_H, 0.0, p.y + p.height);
+        gradient.add_color_stop_rgba(0.0, 0.0, 0.0, 0.0, 0.0);
+        gradient.add_color_stop_rgba(0.45, 0.0, 0.0, 0.0, 0.62);
+        gradient.add_color_stop_rgba(1.0, 0.0, 0.0, 0.0, 0.88);
+        context.set_source(&gradient).ok();
+        context.paint()?;
+
+        set_bold_font(context, TITLE_FONT);
+        let title = fit_text(context, &entry.app_name, p.width - TITLE_PAD * 2.0)?;
+        let extents = context.text_extents(&title)?;
+        let tx = p.x + (p.width - extents.x_advance()) / 2.0 - extents.x_bearing();
+        let ty =
+            p.y + p.height - TITLE_H + (TITLE_H - extents.height()) / 2.0 - extents.y_bearing();
+        draw_text(context, &title, tx, ty, (1.0, 1.0, 1.0, 0.96))?;
+        context.restore()?;
+    }
 
     Ok(())
 }
@@ -405,32 +253,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn stage_pulse_starts_and_ends_at_rest() {
-        assert!(stage_pulse(0.0).abs() < 1e-9);
-        assert!(stage_pulse(1.0).abs() < 1e-9);
-        assert!((stage_pulse(0.5) - 1.0).abs() < 1e-9);
-        assert!(stage_pulse(-1.0).abs() < 1e-9);
-        assert!(stage_pulse(2.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn stage_preview_always_covers_its_base_slot() {
-        let base = Rect::new(260.0, 90.0, 1600.0, 900.0);
-        let center = (base.center_x(), base.y + base.height / 2.0);
-
-        for direction in [-1.0, 1.0] {
-            for progress in [0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0] {
-                let rect = animated_stage_rect(base, center, stage_pulse(progress), direction);
-                assert!(rect.x <= base.x + 1e-6);
-                assert!(rect.y <= base.y + 1e-6);
-                assert!(rect.x + rect.width >= base.x + base.width - 1e-6);
-                assert!(rect.y + rect.height >= base.y + base.height - 1e-6);
-            }
-        }
-    }
-
-    #[test]
-    fn test_compute_layout_empty() {
+    fn empty_switcher_has_no_layout() {
         let switcher = AltTabSwitcher {
             entries: Vec::new(),
             selected_index: 0,
@@ -442,137 +265,27 @@ mod tests {
     }
 
     #[test]
-    fn dock_viewport_is_bounded_and_thumbnail_size_is_fixed() {
-        let (short_viewport, short_items) = compute_dock_layout(2, 0, 1080.0);
-        let (long_viewport, long_items) = compute_dock_layout(30, 12, 1080.0);
+    fn capsule_is_docked_to_the_right_and_preview_sits_left_of_it() {
+        let layout = compute_layout_metrics(4, 0.0, 1.0, 1920.0, 1080.0);
 
-        assert_eq!(short_viewport.height, 1016.0);
-        assert_eq!(long_viewport.height, short_viewport.height);
-        assert_eq!(short_items[0].1.card.width, DOCK_THUMBNAIL_WIDTH);
-        assert_eq!(short_items[0].1.card.height, DOCK_THUMBNAIL_HEIGHT);
-        assert_eq!(long_items[0].1.card.width, DOCK_THUMBNAIL_WIDTH);
-        assert_eq!(long_items[0].1.card.height, DOCK_THUMBNAIL_HEIGHT);
+        assert_eq!(layout.panel.x + layout.panel.width, 1920.0);
+        assert!(layout.preview.x + layout.preview.width <= layout.panel.x);
+        assert_eq!(layout.preview_alpha, 1.0);
     }
 
     #[test]
-    fn selected_dock_item_stays_centered_at_both_ends_and_in_the_middle() {
-        let entry_count = 30;
-
-        for selected_index in [0, 14, entry_count - 1] {
-            let (viewport, items) = compute_dock_layout(entry_count, selected_index, 1080.0);
-            let (_, selected) = items
-                .iter()
-                .find(|(idx, _)| *idx == selected_index)
-                .expect("selected item should intersect the viewport");
-            let selected_center = selected.card.y + selected.card.height / 2.0;
-            let viewport_center = viewport.y + viewport.height / 2.0;
-
-            assert!((selected_center - viewport_center).abs() < 0.001);
-        }
+    fn short_lists_keep_all_icons_visible() {
+        let layout = compute_layout_metrics(3, 0.0, 1.0, 1920.0, 1080.0);
+        assert_eq!(layout.dock_items.len(), 3);
+        assert_eq!(layout.panel.height, 3.0 * SLOT + PANEL_PAD * 2.0);
     }
 
     #[test]
-    fn visible_dock_items_keep_top_to_bottom_entry_order() {
-        let (_, items) = compute_dock_layout(30, 12, 1080.0);
+    fn long_lists_clamp_the_visual_center() {
+        assert_eq!(visual_center(12, 0.0), 4.0);
+        assert_eq!(visual_center(12, 11.0), 7.0);
 
-        assert!(items
-            .windows(2)
-            .all(|pair| { pair[0].0 < pair[1].0 && pair[0].1.card.y < pair[1].1.card.y }));
-    }
-
-    #[test]
-    fn dock_scroll_moves_entries_up_by_one_slot() {
-        let (_, before, _) = compute_dock_layout_animated(30, 12.0, 1080.0);
-        let (_, after, _) = compute_dock_layout_animated(30, 13.0, 1080.0);
-        let y_before = before.iter().find(|(idx, _)| *idx == 13).unwrap().1.card.y;
-        let y_after = after.iter().find(|(idx, _)| *idx == 13).unwrap().1.card.y;
-
-        // Ở 1080p, 5 item vừa đủ nên scale = 1: bước = 115 + 12.
-        assert!((y_before - y_after - 127.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn target_frame_stays_fixed_while_dock_scrolls() {
-        let (_, _, target_at_rest) = compute_dock_layout_animated(30, 12.0, 1080.0);
-        let (_, _, target_mid_scroll) = compute_dock_layout_animated(30, 12.5, 1080.0);
-
-        assert_eq!(target_at_rest, target_mid_scroll);
-    }
-
-    #[test]
-    fn entering_item_fades_instead_of_popping() {
-        let (_, items, _) = compute_dock_layout_animated(30, 12.5, 1080.0);
-        let (_, entering) = items
-            .iter()
-            .find(|(idx, _)| *idx == 15)
-            .expect("item below the target should be entering");
-
-        assert!(entering.opacity > 0.0 && entering.opacity < 1.0);
-    }
-
-    #[test]
-    fn fewer_than_five_items_stay_static_and_active_frame_moves() {
-        let (_, items_first, target_first) = compute_dock_layout_mode(3, 0, 0.0, 1080.0);
-        let (_, items_last, target_last) = compute_dock_layout_mode(3, 2, 2.0, 1080.0);
-
-        // Vị trí từng item không đổi khi chọn item khác.
-        for ((first_index, first), (last_index, last)) in items_first.iter().zip(items_last.iter())
-        {
-            assert_eq!(first_index, last_index);
-            assert_eq!(first.card, last.card);
-            assert_eq!(first.preview, last.preview);
-        }
-
-        // Khung active di chuyển tới item đang chọn.
-        assert_eq!(target_first, items_first[0].1.preview);
-        assert_eq!(target_last, items_last[2].1.preview);
-        assert_ne!(target_first, target_last);
-    }
-
-    #[test]
-    fn static_dock_group_is_vertically_centered() {
-        let (viewport, items, _) = compute_dock_layout_mode(3, 1, 1.0, 1080.0);
-        let first = items.first().unwrap().1.card;
-        let last = items.last().unwrap().1.card;
-        let group_center = (first.y + last.y + last.height) / 2.0;
-        let viewport_center = viewport.y + viewport.height / 2.0;
-
-        assert!((group_center - viewport_center).abs() < 0.001);
-    }
-
-    #[test]
-    fn five_items_keep_the_scrolling_carousel_with_a_fixed_target() {
-        let (_, _, target_before) = compute_dock_layout_mode(5, 0, 0.0, 1080.0);
-        let (_, _, target_after) = compute_dock_layout_mode(5, 1, 1.0, 1080.0);
-
-        // Với 5 app, target vẫn cố định ở giữa và item sẽ cuộn qua.
-        assert_eq!(target_before, target_after);
-    }
-
-    #[test]
-    fn five_app_wrap_renders_both_edge_copies_mid_scroll() {
-        // Đúng 5 app: item rời mép trên và item vào mép dưới là cùng một item.
-        // Ở giữa bước cuộn phải có 2 bản sao để không bị teleport.
-        let (_, items, _) = compute_dock_layout_animated(5, 0.5, 1080.0);
-        let copies = items
-            .iter()
-            .filter(|(index, _)| *index == 3)
-            .map(|(_, item)| item.card.y)
-            .collect::<Vec<_>>();
-
-        assert_eq!(copies.len(), 2);
-        assert!(copies[0] < copies[1]);
-    }
-
-    #[test]
-    fn five_apps_at_rest_show_exactly_five_unique_items() {
-        let (_, items, _) = compute_dock_layout_animated(5, 0.0, 1080.0);
-        let mut indices = items.iter().map(|(index, _)| *index).collect::<Vec<_>>();
-        indices.sort_unstable();
-        indices.dedup();
-
-        assert_eq!(items.len(), 5);
-        assert_eq!(indices.len(), 5);
-        assert!(items.iter().all(|(_, item)| item.opacity >= 1.0));
+        let layout = compute_layout_metrics(12, 11.0, 1.0, 1920.0, 1080.0);
+        assert!(layout.dock_items.len() <= VISIBLE_SLOTS + 2);
     }
 }

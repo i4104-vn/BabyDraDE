@@ -5,4 +5,7 @@
 
 mod draw;
 
-pub use draw::{app_color, draw_text, fit_text, paint_rounded, rounded_rect, set_bold_font};
+pub use draw::{
+    app_color, docked_panel_path, draw_docked_panel, draw_text, fit_text, paint_rounded,
+    rounded_rect, set_bold_font, DockSide,
+};

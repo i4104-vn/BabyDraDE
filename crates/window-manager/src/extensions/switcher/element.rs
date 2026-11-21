@@ -34,7 +34,7 @@ pub struct SwitcherOverlay {
     /// Chỉ chứa dock thay vì toàn màn hình, nên mỗi frame animation chỉ phải
     /// cấp phát và copy vài trăm KB thay vì toàn bộ framebuffer.
     fg_region: Option<(i32, i32, i32, i32)>,
-    last_rendered: Option<(Instant, usize, usize, u64)>,
+    last_rendered: Option<(Instant, usize, usize, u64, u64)>,
 }
 
 impl SwitcherOverlay {
@@ -62,7 +62,7 @@ impl SwitcherOverlay {
             return Vec::new();
         };
 
-        let region = dock_region(&layout, scale, width, height);
+        let region = overlay_region(&layout, scale, width, height);
         if self.fg_region != Some(region) {
             self.fg_buffer = Some(MemoryRenderBuffer::new(
                 smithay::backend::allocator::Fourcc::Argb8888,
@@ -85,11 +85,17 @@ impl SwitcherOverlay {
         } else {
             u64::MAX
         };
+        let stage_tick = if switcher.stage.is_animating() {
+            switcher.stage.frame_tick()
+        } else {
+            u64::MAX
+        };
         let render_key = (
             switcher.scroll.started_at(),
             switcher.selected_index,
             switcher.entries.len(),
             animation_tick,
+            stage_tick,
         );
 
         if self.last_rendered != Some(render_key) {
@@ -136,57 +142,39 @@ impl SwitcherOverlay {
             }
         }
 
-        // 2. Center window preview. Its size and opacity animate during selection.
-        let (front_idx, front_layout) = &layout.stage;
-        if let Some(entry) = switcher.entries.get(*front_idx) {
+        // 2. One small live preview beside the active icon; the big centre
+        // stage no longer exists.
+        if let Some(entry) = switcher.entries.get(switcher.selected_index) {
+            let preview_rect = layout.preview;
+            let crop = Rectangle::<i32, Physical>::new(
+                Point::<i32, Physical>::from((
+                    (preview_rect.x * scale.x).floor() as i32,
+                    (preview_rect.y * scale.y).floor() as i32,
+                )),
+                Size::<i32, Physical>::from((
+                    ((preview_rect.x + preview_rect.width) * scale.x).ceil() as i32
+                        - (preview_rect.x * scale.x).floor() as i32,
+                    ((preview_rect.y + preview_rect.height) * scale.y).ceil() as i32
+                        - (preview_rect.y * scale.y).floor() as i32,
+                )),
+            );
+
             elements.extend(
                 render_window_preview(
                     renderer,
                     &entry.window,
-                    front_layout.preview,
+                    preview_rect,
                     scale,
-                    front_layout.opacity as f32,
-                    ConstrainScaleBehavior::Stretch,
+                    layout.preview_alpha as f32,
+                    ConstrainScaleBehavior::Zoom,
                     ConstrainReference::Geometry,
                 )
                 .into_iter()
-                .map(CustomRenderElements::Constrained),
+                .filter_map(|preview| {
+                    CropRenderElement::from_element(preview, scale, crop)
+                        .map(CustomRenderElements::DockClipped)
+                }),
             );
-        }
-
-        // 3. Dock thumbnails stay stationary with their aspect ratios preserved.
-        let dock_crop = Rectangle::<i32, Physical>::new(
-            Point::<i32, Physical>::from((
-                (layout.dock_viewport.x * scale.x).floor() as i32,
-                (layout.dock_viewport.y * scale.y).floor() as i32,
-            )),
-            Size::<i32, Physical>::from((
-                ((layout.dock_viewport.x + layout.dock_viewport.width) * scale.x).ceil() as i32
-                    - (layout.dock_viewport.x * scale.x).floor() as i32,
-                ((layout.dock_viewport.y + layout.dock_viewport.height) * scale.y).ceil() as i32
-                    - (layout.dock_viewport.y * scale.y).floor() as i32,
-            )),
-        );
-
-        for (dock_idx, dock_layout) in &layout.dock_items {
-            if let Some(entry) = switcher.entries.get(*dock_idx) {
-                elements.extend(
-                    render_window_preview(
-                        renderer,
-                        &entry.window,
-                        dock_layout.preview,
-                        scale,
-                        (0.95 * dock_layout.opacity) as f32,
-                        ConstrainScaleBehavior::Zoom,
-                        ConstrainReference::Geometry,
-                    )
-                    .into_iter()
-                    .filter_map(|preview| {
-                        CropRenderElement::from_element(preview, scale, dock_crop)
-                            .map(CustomRenderElements::DockClipped)
-                    }),
-                );
-            }
         }
 
         elements
@@ -253,22 +241,25 @@ fn render_window_preview(
     .collect()
 }
 
-/// Vùng vật lý của dock, làm tròn ra ngoài để không cắt mất cạnh khử răng cưa.
-fn dock_region(
+/// Physical region containing the right capsule, its shadow and the small
+/// preview. Rounded outwards so anti-aliased edges are never clipped.
+fn overlay_region(
     layout: &SwitcherLayout,
     scale: Scale<f64>,
     screen_w: i32,
     screen_h: i32,
 ) -> (i32, i32, i32, i32) {
-    let vp = layout.dock_viewport;
-    let x0 = (vp.x * scale.x).floor().clamp(0.0, screen_w as f64) as i32;
-    let y0 = (vp.y * scale.y).floor().clamp(0.0, screen_h as f64) as i32;
-    let x1 = ((vp.x + vp.width) * scale.x)
-        .ceil()
-        .clamp(0.0, screen_w as f64) as i32;
-    let y1 = ((vp.y + vp.height) * scale.y)
-        .ceil()
-        .clamp(0.0, screen_h as f64) as i32;
+    let left = layout.preview.x.min(layout.panel.x) - 24.0;
+    let right =
+        (layout.panel.x + layout.panel.width).max(layout.preview.x + layout.preview.width) + 24.0;
+    let top = layout.preview.y.min(layout.panel.y) - 24.0;
+    let bottom =
+        (layout.preview.y + layout.preview.height).max(layout.panel.y + layout.panel.height) + 24.0;
+
+    let x0 = (left * scale.x).floor().clamp(0.0, screen_w as f64) as i32;
+    let y0 = (top * scale.y).floor().clamp(0.0, screen_h as f64) as i32;
+    let x1 = (right * scale.x).ceil().clamp(0.0, screen_w as f64) as i32;
+    let y1 = (bottom * scale.y).ceil().clamp(0.0, screen_h as f64) as i32;
 
     (x0, y0, (x1 - x0).max(1), (y1 - y0).max(1))
 }
@@ -299,37 +290,38 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::extensions::switcher::view::CardLayout;
 
-    fn test_layout(viewport: Rect) -> SwitcherLayout {
+    fn test_layout(panel: Rect, preview: Rect) -> SwitcherLayout {
         SwitcherLayout {
-            stage: (
-                0,
-                CardLayout {
-                    card: viewport,
-                    preview: viewport,
-                    radius: 0.0,
-                    opacity: 1.0,
-                },
-            ),
-            dock_viewport: viewport,
+            panel,
             dock_items: Vec::new(),
-            dock_target: viewport,
+            active: panel,
+            preview,
+            preview_alpha: 1.0,
         }
     }
 
     #[test]
-    fn dock_region_rounds_outward_and_clamps_to_screen() {
-        let layout = test_layout(Rect::new(24.0, 32.0, 175.0, 1016.0));
+    fn overlay_region_covers_capsule_and_preview() {
+        let layout = test_layout(
+            Rect::new(1848.0, 32.0, 72.0, 1016.0),
+            Rect::new(1534.0, 400.0, 300.0, 176.0),
+        );
 
-        assert_eq!(
-            dock_region(&layout, Scale::from(2.0), 3840, 2160),
-            (48, 64, 350, 2032)
+        let region = overlay_region(&layout, Scale::from(1.0), 1920, 1080);
+        assert_eq!(region, (1510, 8, 410, 1064));
+    }
+
+    #[test]
+    fn overlay_region_clamps_to_screen() {
+        let layout = test_layout(
+            Rect::new(24.0, 32.0, 72.0, 1016.0),
+            Rect::new(8.0, 400.0, 300.0, 176.0),
         );
-        assert_eq!(
-            dock_region(&layout, Scale::from(2.0), 300, 1000),
-            (48, 64, 252, 936)
-        );
+        let region = overlay_region(&layout, Scale::from(1.0), 300, 1000);
+        assert_eq!(region.0, 0);
+        assert!(region.2 <= 300);
+        assert!(region.3 <= 1000);
     }
 
     #[test]

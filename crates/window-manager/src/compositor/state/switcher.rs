@@ -33,33 +33,34 @@ pub(crate) struct AltTabEntry {
 pub(crate) struct AltTabSwitcher {
     pub(crate) entries: Vec<AltTabEntry>,
     pub(crate) selected_index: usize,
-    /// Vị trí cuộn carousel (đơn vị slot, có phần lẻ) của dock bên trái.
-    /// Dùng `Tween` để mọi lần bấm Tab cộng dồn mượt mà ở mọi tần số quét.
+    /// Continuous carousel position (fractional slots) of the right-side dock.
+    /// Driven by `Tween` so repeated Tab presses accumulate smoothly.
     pub(crate) scroll: Tween,
-    /// Tiến trình 0..1 của hiệu ứng stage (scale + trượt ngang).
+    /// 0..1 fade of the small preview beside the active icon.
     pub(crate) stage: Tween,
-    /// +1.0 khi chọn app kế tiếp, -1.0 khi Shift+Tab lùi lại.
-    /// Dùng để animation stage trượt đúng hướng.
+    /// +1.0 when moving forward, -1.0 when going backwards with Shift+Tab.
     pub(crate) scroll_direction: f64,
 }
 
 impl AltTabSwitcher {
-    /// Vị trí chọn liên tục (có phần lẻ) dùng cho carousel bên trái.
+    /// Continuous (fractional) selection position for the right-side dock.
     pub(crate) fn visual_selection(&self) -> f64 {
         self.scroll.value()
     }
 
-    /// Tiến trình 0..1 của animation stage.
+    /// 0..1 progress of the small preview fade.
     pub(crate) fn stage_progress(&self) -> f64 {
         self.stage.value()
     }
 
-    /// Chạy lại pulse của stage từ 0 -> 1. Dùng Linear vì hình dạng pulse được
-    /// tạo bằng sin(pi * progress) ở view.rs — nó đã có đầu/cuối mềm và bằng
-    /// nhau, nên việc restart từ 1 về 0 không gây nhảy khung hình.
+    /// Restarts the preview fade from 0 -> 1 after a selection change.
     fn restart_stage(&mut self) {
-        self.stage
-            .restart(0.0, 1.0, Duration::from_millis(STAGE_ANIM_MS), Easing::Linear);
+        self.stage.restart(
+            0.0,
+            1.0,
+            Duration::from_millis(STAGE_ANIM_MS),
+            Easing::Linear,
+        );
     }
 }
 

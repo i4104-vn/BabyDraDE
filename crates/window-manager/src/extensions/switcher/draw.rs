@@ -21,10 +21,6 @@ impl Rect {
             height: height.max(1.0),
         }
     }
-
-    pub(crate) fn center_x(&self) -> f64 {
-        self.x + self.width / 2.0
-    }
 }
 
 /// Vẽ badge app bo góc, gắn sát góc dưới-trái của preview, không có padding thừa.

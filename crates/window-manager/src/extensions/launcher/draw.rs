@@ -4,7 +4,8 @@
 use cairo::Context;
 use gtk4::gdk::prelude::GdkCairoContextExt;
 use services::graphics::{
-    app_color, draw_text, fit_text, paint_rounded, rounded_rect, set_bold_font,
+    app_color, docked_panel_path, draw_docked_panel, draw_text, fit_text, paint_rounded,
+    rounded_rect, set_bold_font, DockSide,
 };
 
 use super::layout::{visual_center, Panel};
@@ -14,106 +15,9 @@ use super::{
     PANEL_FILLET_RADIUS, PANEL_SURFACE, SELECTION_SIZE, SLOT,
 };
 
-/// Path along the outer contour of the docked panel (excluding the left screen edge).
-/// Curves smoothly out from the screen edge with concave fillets, spans around
-/// the outer corners with convex rounded radii, and curves smoothly back to the screen edge.
-fn edge_panel_contour(
-    context: &Context,
-    x: f64,
-    y: f64,
-    width: f64,
-    height: f64,
-    corner_radius: f64,
-    fillet_radius: f64,
-) {
-    let r_convex = corner_radius.min(width / 2.0).min(height / 2.0);
-    let r_concave = fillet_radius;
-
-    // Start on the left edge just above the panel body
-    context.move_to(x, y - r_concave);
-
-    // Top concave fillet: curves from (x, y - r_concave) to (x + r_concave, y)
-    context.arc_negative(
-        x + r_concave,
-        y - r_concave,
-        r_concave,
-        std::f64::consts::PI,
-        std::f64::consts::FRAC_PI_2,
-    );
-
-    // Top horizontal edge
-    context.line_to(x + width - r_convex, y);
-
-    // Top-right convex corner
-    context.arc(
-        x + width - r_convex,
-        y + r_convex,
-        r_convex,
-        -std::f64::consts::FRAC_PI_2,
-        0.0,
-    );
-
-    // Right vertical edge
-    context.line_to(x + width, y + height - r_convex);
-
-    // Bottom-right convex corner
-    context.arc(
-        x + width - r_convex,
-        y + height - r_convex,
-        r_convex,
-        0.0,
-        std::f64::consts::FRAC_PI_2,
-    );
-
-    // Bottom horizontal edge
-    context.line_to(x + r_concave, y + height);
-
-    // Bottom concave fillet: curves from (x + r_concave, y + height) to (x, y + height + r_concave)
-    context.arc_negative(
-        x + r_concave,
-        y + height + r_concave,
-        r_concave,
-        -std::f64::consts::FRAC_PI_2,
-        -std::f64::consts::PI,
-    );
-}
-
-/// Closed polygon path covering the entire panel including its concave ear fillets.
-fn edge_panel_path(
-    context: &Context,
-    x: f64,
-    y: f64,
-    width: f64,
-    height: f64,
-    corner_radius: f64,
-    fillet_radius: f64,
-) {
-    context.new_path();
-    edge_panel_contour(context, x, y, width, height, corner_radius, fillet_radius);
-    let r_concave = fillet_radius;
-    context.line_to(x, y - r_concave);
-    context.close_path();
-}
-
 /// Docked panel surface with layered soft shadow, matching the notch style.
 fn draw_panel(context: &Context, panel: &Panel) -> Result<(), cairo::Error> {
-    // Layered soft shadow extending out from the docked panel into the screen
-    for (dx, alpha) in [(14.0, 0.04), (8.0, 0.07), (3.0, 0.11)] {
-        edge_panel_path(
-            context,
-            panel.x,
-            panel.y,
-            panel.width + dx,
-            panel.height,
-            PANEL_CORNER_RADIUS + dx * 0.4,
-            PANEL_FILLET_RADIUS + dx * 0.4,
-        );
-        context.set_source_rgba(0.0, 0.0, 0.0, alpha);
-        context.fill()?;
-    }
-
-    // Panel surface fill
-    edge_panel_path(
+    draw_docked_panel(
         context,
         panel.x,
         panel.y,
@@ -121,31 +25,10 @@ fn draw_panel(context: &Context, panel: &Panel) -> Result<(), cairo::Error> {
         panel.height,
         PANEL_CORNER_RADIUS,
         PANEL_FILLET_RADIUS,
-    );
-    context.set_source_rgba(
-        PANEL_SURFACE.0,
-        PANEL_SURFACE.1,
-        PANEL_SURFACE.2,
-        PANEL_SURFACE.3,
-    );
-    context.fill()?;
-
-    // Hairline border along outer contours (excluding screen edge)
-    context.new_path();
-    edge_panel_contour(
-        context,
-        panel.x,
-        panel.y,
-        panel.width,
-        panel.height,
-        PANEL_CORNER_RADIUS,
-        PANEL_FILLET_RADIUS,
-    );
-    context.set_source_rgba(HAIRLINE.0, HAIRLINE.1, HAIRLINE.2, HAIRLINE.3);
-    context.set_line_width(1.0);
-    context.stroke()?;
-
-    Ok(())
+        PANEL_SURFACE,
+        HAIRLINE,
+        DockSide::Left,
+    )
 }
 
 /// Draws an app icon centred on `(center_x, center_y)`.
@@ -294,7 +177,7 @@ fn draw_content(
 
     // Icons stay inside the docked panel while their list scrolls.
     context.save()?;
-    edge_panel_path(
+    docked_panel_path(
         context,
         panel.x,
         panel.y,
@@ -302,7 +185,8 @@ fn draw_content(
         panel.height,
         PANEL_CORNER_RADIUS,
         PANEL_FILLET_RADIUS,
-    );
+        DockSide::Left,
+    )?;
     context.clip();
 
     if selected.is_some() {

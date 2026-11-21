@@ -137,6 +137,135 @@ pub fn app_color(name: &str) -> (f64, f64, f64) {
     (red + offset, green + offset, blue + offset)
 }
 
+/// Which screen edge a docked capsule attaches to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DockSide {
+    Left,
+    Right,
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn docked_panel_path(
+    context: &Context,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    corner_radius: f64,
+    fillet_radius: f64,
+    side: DockSide,
+) -> Result<(), cairo::Error> {
+    context.new_path();
+    if side == DockSide::Right {
+        // Draw the left-handed contour mirrored around the capsule centre.
+        context.save()?;
+        context.translate(x + width, 0.0);
+        context.scale(-1.0, 1.0);
+    }
+
+    let r_convex = corner_radius.min(width / 2.0).min(height / 2.0);
+    let r_concave = fillet_radius;
+    let left = if side == DockSide::Right { 0.0 } else { x };
+
+    context.move_to(left, y - r_concave);
+    context.arc_negative(
+        left + r_concave,
+        y - r_concave,
+        r_concave,
+        std::f64::consts::PI,
+        std::f64::consts::FRAC_PI_2,
+    );
+    context.line_to(left + width - r_convex, y);
+    context.arc(
+        left + width - r_convex,
+        y + r_convex,
+        r_convex,
+        -std::f64::consts::FRAC_PI_2,
+        0.0,
+    );
+    context.line_to(left + width, y + height - r_convex);
+    context.arc(
+        left + width - r_convex,
+        y + height - r_convex,
+        r_convex,
+        0.0,
+        std::f64::consts::FRAC_PI_2,
+    );
+    context.line_to(left + r_concave, y + height);
+    context.arc_negative(
+        left + r_concave,
+        y + height + r_concave,
+        r_concave,
+        -std::f64::consts::FRAC_PI_2,
+        -std::f64::consts::PI,
+    );
+    context.line_to(left, y - r_concave);
+    context.close_path();
+
+    if side == DockSide::Right {
+        context.restore()?;
+    }
+    Ok(())
+}
+
+/// Draws a screen-edge capsule with concave fillets, soft shadow, surface fill
+/// and a hairline border. Shared by the launcher (left) and switcher (right).
+#[allow(clippy::too_many_arguments)]
+pub fn draw_docked_panel(
+    context: &Context,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    corner_radius: f64,
+    fillet_radius: f64,
+    surface: Color,
+    border: Color,
+    side: DockSide,
+) -> Result<(), cairo::Error> {
+    for (grow, alpha) in [(18.0, 0.06), (10.0, 0.09), (4.0, 0.13)] {
+        docked_panel_path(
+            context,
+            x - grow,
+            y - grow + 6.0,
+            width + grow * 2.0,
+            height + grow * 2.0,
+            corner_radius + grow,
+            fillet_radius + grow,
+            side,
+        )?;
+        context.set_source_rgba(0.0, 0.0, 0.0, alpha);
+        context.fill()?;
+    }
+
+    docked_panel_path(
+        context,
+        x,
+        y,
+        width,
+        height,
+        corner_radius,
+        fillet_radius,
+        side,
+    )?;
+    context.set_source_rgba(surface.0, surface.1, surface.2, surface.3);
+    context.fill()?;
+
+    docked_panel_path(
+        context,
+        x,
+        y,
+        width,
+        height,
+        corner_radius,
+        fillet_radius,
+        side,
+    )?;
+    context.set_source_rgba(border.0, border.1, border.2, border.3);
+    context.set_line_width(1.0);
+    context.stroke()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

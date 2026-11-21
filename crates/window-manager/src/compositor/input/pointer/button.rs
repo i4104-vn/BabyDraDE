@@ -52,26 +52,26 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 let logical_w = (size.w as f64 / scale.x).max(1.0);
                 let logical_h = (size.h as f64 / scale.y).max(1.0);
 
-                if let Some(layout) =
-                    crate::extensions::switcher::view::compute_layout(switcher, logical_w, logical_h)
-                {
+                if let Some(layout) = crate::extensions::switcher::view::compute_layout(
+                    switcher, logical_w, logical_h,
+                ) {
                     let px = state.pointer_location.x;
                     let py = state.pointer_location.y;
-                    let in_rect = |r: &crate::extensions::switcher::draw::Rect| {
-                        px >= r.x && px <= r.x + r.width && py >= r.y && py <= r.y + r.height
+                    let in_panel = px >= layout.panel.x
+                        && px <= layout.panel.x + layout.panel.width
+                        && py >= layout.panel.y
+                        && py <= layout.panel.y + layout.panel.height;
+                    let clicked_idx = if in_panel {
+                        layout
+                            .dock_items
+                            .iter()
+                            .find(|(_, item)| {
+                                py >= item.card.y && py <= item.card.y + item.card.height
+                            })
+                            .map(|(idx, _)| *idx)
+                    } else {
+                        None
                     };
-                    let clicked_idx = layout
-                        .dock_items
-                        .iter()
-                        .find(|(_, item)| in_rect(&layout.dock_viewport) && in_rect(&item.card))
-                        .map(|(idx, _)| *idx)
-                        .or_else(|| {
-                            if in_rect(&layout.stage.1.card) {
-                                Some(layout.stage.0)
-                            } else {
-                                None
-                            }
-                        });
 
                     if let Some(switcher) = state.alt_tab_switcher.take() {
                         state.restore_alt_tab_windows(&switcher);
