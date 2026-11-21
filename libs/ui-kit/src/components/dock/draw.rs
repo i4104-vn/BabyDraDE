@@ -132,12 +132,12 @@ where
 }
 
 fn active_center_y(layout: &DockLayout, count: usize, position: f64, visual: f64) -> f64 {
-    let rel = if count <= VISIBLE_SLOTS {
-        position.rem_euclid(count as f64) - visual
+    let current = if count <= VISIBLE_SLOTS {
+        position.rem_euclid(count as f64)
     } else {
-        0.0
+        position
     };
-    layout.center_y + rel * SLOT
+    layout.center_y + (current - visual) * SLOT
 }
 
 fn draw_items<F>(
@@ -160,12 +160,13 @@ where
             draw_item(context, index, cx, cy, size, 1.0)?;
         }
     } else {
-        let base = position.floor() as i64;
+        let base = visual.floor() as i64;
         for offset in -4..=4 {
             let unwrapped = base + offset;
             let index = unwrapped.rem_euclid(count as i64) as usize;
-            let slot = unwrapped as f64 - position;
-            let (cx, cy, size) = layout.icon_geometry(slot, slot);
+            let slot = unwrapped as f64 - visual;
+            let selection_rel = unwrapped as f64 - position;
+            let (cx, cy, size) = layout.icon_geometry(slot, selection_rel);
             draw_item(context, index, cx, cy, size, 1.0)?;
         }
     }

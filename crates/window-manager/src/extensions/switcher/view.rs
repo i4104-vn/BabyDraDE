@@ -56,7 +56,7 @@ fn compute_layout_metrics(
     let active_rel = if count <= VISIBLE_SLOTS {
         position.rem_euclid(count as f64) - visual
     } else {
-        0.0
+        position - visual
     };
     let active_y = panel.center_y + active_rel * SLOT;
 
@@ -173,6 +173,6 @@ mod tests {
         let long = compute_layout_metrics(12, 11.0, 1.0, 1920.0, 1080.0);
         assert_eq!(short.panel.width, long.panel.width);
         assert_eq!(visual_center(5, 7.0), 2.0);
-        assert_eq!(visual_center(12, 11.0), 11.0);
+        assert_eq!(visual_center(12, 11.0), 7.0);
     }
 }

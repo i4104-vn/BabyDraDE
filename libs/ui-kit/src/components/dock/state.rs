@@ -6,6 +6,19 @@ use std::time::{Duration, Instant};
 
 use super::DockSide;
 
+/// Next dock position, wrapping straight to the first/last entry at a boundary.
+fn step_target(current: f64, delta: f64, count: usize) -> (f64, bool) {
+    let raw = current + delta;
+    let n = count as f64;
+    if raw >= n {
+        (0.0, true)
+    } else if raw < 0.0 {
+        (n - 1.0, true)
+    } else {
+        (raw, false)
+    }
+}
+
 /// Selection, presence and hold-to-repeat state shared by both docks.
 pub struct DockState {
     pub position: Tween,
@@ -89,14 +102,13 @@ impl DockState {
         if count == 0 || self.closing {
             return;
         }
-        let current = self.selected.unwrap_or(0) as i32;
-        let next = (current + delta).clamp(0, count as i32 - 1) as usize;
-        if next as i32 == current {
-            return;
+        let (next, wrapped) = step_target(self.position.target(), delta as f64, count);
+        self.selected = Some(next as usize);
+        if wrapped {
+            self.position.snap_to(next);
+        } else {
+            self.position.retarget(next, duration, Easing::EaseOutCubic);
         }
-        self.position
-            .retarget(next as f64, duration, Easing::EaseOutCubic);
-        self.selected = Some(next);
     }
 
     pub fn select(&mut self, index: usize, duration: Duration) {
@@ -109,31 +121,31 @@ impl DockState {
         if count == 0 || self.closing {
             return;
         }
-        let target = self.position.target();
-        let next = (target + direction as f64).clamp(0.0, count as f64 - 1.0);
-        if (next - target).abs() < f64::EPSILON {
-            return;
-        }
+        let (next, wrapped) = step_target(self.position.target(), direction as f64, count);
         self.selected = Some(next as usize);
-        self.position.retarget(
-            next,
-            Duration::from_millis(KEY_REPEAT_INTERVAL_MS),
-            Easing::Linear,
-        );
+        if wrapped {
+            self.position.snap_to(next);
+        } else {
+            self.position.retarget(
+                next,
+                Duration::from_millis(KEY_REPEAT_INTERVAL_MS),
+                Easing::Linear,
+            );
+        }
     }
 
     pub fn scroll_by(&mut self, count: usize, slots: f64) {
         if count == 0 || self.closing {
             return;
         }
-        let current = self.position.target();
-        let next = (current + slots).round().clamp(0.0, count as f64 - 1.0);
-        if (next - current).abs() < f64::EPSILON {
-            return;
-        }
+        let (next, wrapped) = step_target(self.position.target(), slots.round(), count);
         self.selected = Some(next as usize);
-        self.position
-            .retarget(next, SCROLL_DURATION, Easing::EaseOutCubic);
+        if wrapped {
+            self.position.snap_to(next);
+        } else {
+            self.position
+                .retarget(next, SCROLL_DURATION, Easing::EaseOutCubic);
+        }
     }
 
     /// First key press starts repeat tracking; backend repeats are ignored.

@@ -30,7 +30,9 @@ mod tests {
         let mut state = DockState::new();
         state.open(4, false);
         assert_eq!(state.selected, Some(4));
+        // A step past the last entry snaps straight back to the first.
         state.move_selection(5, 1, Duration::ZERO);
-        assert_eq!(state.selected, Some(4));
+        assert_eq!(state.selected, Some(0));
+        assert_eq!(state.position(), 0.0);
     }
 }

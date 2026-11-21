@@ -113,9 +113,12 @@ Transitions:
    continuous glide instead of restarting a long easing curve and “rushing” at
    the end.
 
-The switcher additionally snaps straight to the first/last entry when a step
-crosses a list boundary (`step_target` in
-`compositor/state/switcher.rs`), avoiding an empty scroll before the wrap.
+Both docks snap straight to the first/last entry when a step crosses a list
+boundary (`step_target` in `DockState`, plus the switcher's Tab repeat helper),
+avoiding an empty scroll before the wrap. For long lists `visual_center` clamps
+the scrolled content to `[half, count - 1 - half]`, so the first icon starts at
+the top of the capsule and the last one ends at the bottom while the selection
+still loops.
 
 ### 2.5 Cache invalidation
 
@@ -213,8 +216,8 @@ lives in `libs/animation/src/curves/`.
 - `mod.rs` — re-exports (`DockLayout`, `DockState`, `DockSide`, `draw_dock`,
   `visual_center`) and unit tests.
 - `layout.rs` — capsule rectangle, pointer hit-test, icon geometry,
-  `visual_center` (short lists stay still; long lists follow the unbounded
-  carousel position).
+  `visual_center` (short lists stay still; long lists scroll between clamped
+  ends).
 - `state.rs` — selection/presence tweens, open/close, held-key repeat, cache tick.
 - `draw.rs` — `draw_dock`: draws the capsule, selection highlight, items via a
   caller-supplied closure, and the inner white pill; applies the presence fade

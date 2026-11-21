@@ -71,12 +71,14 @@ impl DockLayout {
     }
 }
 
-/// Slot at the capsule centre. Short lists stay still; long lists follow the
-/// unbounded carousel position.
+/// Slot at the capsule centre. Short lists stay still; long lists scroll but
+/// clamp at the ends so the first icon starts at the top and the last at the
+/// bottom. Selection itself still wraps (`DockState::step_target`).
 pub fn visual_center(count: usize, position: f64) -> f64 {
     if count <= VISIBLE_SLOTS {
         (count as f64 - 1.0) / 2.0
     } else {
-        position
+        let half = (VISIBLE_SLOTS / 2) as f64;
+        position.clamp(half, count as f64 - 1.0 - half)
     }
 }

@@ -154,7 +154,7 @@ pub(super) fn draw_scene(
             let active_rel = if apps.len() <= VISIBLE_SLOTS {
                 position.rem_euclid(apps.len() as f64) - visual
             } else {
-                0.0
+                position - visual
             };
             let active_y = panel.center_y + active_rel * SLOT;
             draw_label(
