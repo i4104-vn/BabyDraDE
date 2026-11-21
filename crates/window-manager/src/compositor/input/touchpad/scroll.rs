@@ -67,30 +67,50 @@ where
 {
     state.cursor_visible = true;
 
-    // Wheel/touchpad scrolling over the visible launcher scrolls its app list
-    // instead of the window under the pointer.
-    if state.launcher.is_over_panel(state.pointer_location) {
-        let delta = event
-            .amount(Axis::Vertical)
-            .filter(|amount| *amount != 0.0)
-            .unwrap_or_else(|| {
-                event
-                    .amount_v120(Axis::Vertical)
-                    .map(|amount| amount as f64 / 120.0)
-                    .unwrap_or(0.0)
-            });
-        if delta != 0.0 {
-            state.launcher.scroll_by(delta);
-        }
-        return;
-    }
-
     let source = event.source();
 
     let natural_scroll = match source {
         AxisSource::Finger | AxisSource::Continuous => state.touchpad_natural_scroll,
         AxisSource::Wheel | AxisSource::WheelTilt => state.mouse_natural_scroll,
     };
+
+    let (_vert_amount, vert_v120, _vert_dir) = apply_natural_scroll(
+        natural_scroll,
+        event.relative_direction(Axis::Vertical),
+        event.amount(Axis::Vertical),
+        event.amount_v120(Axis::Vertical),
+    );
+
+    // Compute slot displacement: prioritize v120 discrete notches (120 units = 1 slot),
+    // otherwise convert pixel displacement to fractional slots.
+    let scroll_slots = if let Some(v120) = vert_v120 {
+        if v120 != 0.0 {
+            v120 / 120.0
+        } else {
+            0.0
+        }
+    } else if let Some(amount) = event.amount(Axis::Vertical) {
+        amount / common::constants::launcher::SLOT
+    } else {
+        0.0
+    };
+
+    // Wheel/touchpad scrolling over the visible launcher scrolls its app list
+    // instead of the window under the pointer.
+    if state.launcher.is_over_panel(state.pointer_location) {
+        if scroll_slots != 0.0 {
+            state.launcher.scroll_by(scroll_slots);
+        }
+        return;
+    }
+
+    // Scrolling while the Alt+Tab switcher is open cycles through windows.
+    if state.alt_tab_switcher.is_some() {
+        if scroll_slots != 0.0 {
+            state.cycle_alt_tab(scroll_slots < 0.0);
+        }
+        return;
+    }
 
     let (horiz_amount, horiz_v120, horiz_dir) = apply_natural_scroll(
         natural_scroll,

@@ -158,6 +158,8 @@ pub(crate) struct BabydraState {
     pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
     pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
     pub(crate) windows: Vec<Window>,
+    /// Active single-finger touch interaction with compositor overlays (launcher or switcher).
+    pub(crate) overlay_touch: Option<crate::compositor::input::touch::events::OverlayTouchState>,
     /// Accumulated per-slot data for multi-touch gesture detection on touchscreens.
     pub(crate) touch_gesture: TouchGestureBuffer,
 
@@ -224,6 +226,7 @@ impl BabydraState {
             pointer_pressed_buttons: std::collections::HashSet::new(),
             touch_slots: std::collections::HashSet::new(),
             windows: Vec::new(),
+            overlay_touch: None,
             touch_gesture: TouchGestureBuffer::default(),
             touchpad_natural_scroll: services::config::load_touchpad_config().natural_scroll,
             mouse_natural_scroll: services::config::load_mouse_config().natural_scroll,

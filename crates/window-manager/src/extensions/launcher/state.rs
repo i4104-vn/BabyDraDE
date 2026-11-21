@@ -145,6 +145,16 @@ impl LauncherState {
         self.cache_key = None;
     }
 
+    pub(crate) fn drag_by(&mut self, slots: f64) {
+        self.dock.drag_by(self.apps.len(), slots);
+        self.cache_key = None;
+    }
+
+    pub(crate) fn finish_drag(&mut self) {
+        self.dock.finish_drag(self.apps.len());
+        self.cache_key = None;
+    }
+
     pub(crate) fn index_at(&self, point: Point<f64, Logical>) -> Option<usize> {
         if !self.visible || self.dock.is_closing() {
             return None;

@@ -152,9 +152,14 @@ pub(super) fn draw_scene(
         if let Some(app) = apps.get(index) {
             let visual = visual_center(apps.len(), position);
             let active_rel = if apps.len() <= VISIBLE_SLOTS {
-                position.rem_euclid(apps.len() as f64) - visual
+                index as f64 - visual
             } else {
-                position - visual
+                let n = apps.len() as f64;
+                let mut d = (index as f64 - visual).rem_euclid(n);
+                if d > n / 2.0 {
+                    d -= n;
+                }
+                d
             };
             let active_y = panel.center_y + active_rel * SLOT;
             draw_label(

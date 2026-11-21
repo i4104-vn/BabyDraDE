@@ -141,6 +141,30 @@ impl AltTabSwitcher {
         self.presence
             .retarget(0.0, SWITCHER_PREVIEW_DURATION, Easing::EaseInOutCubic);
     }
+
+    pub(crate) fn drag_by(&mut self, slots: f64) {
+        let count = self.entries.len();
+        if count < 2 || self.closing {
+            return;
+        }
+        self.hovered = None;
+        let current = self.scroll.target();
+        let (next, _) = step_target(current, slots, count);
+        self.selected_index = next.round() as usize;
+        self.scroll.snap_to(next);
+    }
+
+    pub(crate) fn finish_drag(&mut self) {
+        let count = self.entries.len();
+        if count < 2 || self.closing {
+            return;
+        }
+        let nearest = self.scroll.value().round().rem_euclid(count as f64);
+        self.selected_index = nearest as usize;
+        self.scroll
+            .retarget(nearest, SWITCHER_SCROLL_DURATION, Easing::EaseOutCubic);
+        self.restart_stage();
+    }
 }
 
 /// Next dock position plus whether it wrapped past an end. Wrapping snaps

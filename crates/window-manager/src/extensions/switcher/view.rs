@@ -46,9 +46,18 @@ pub(crate) fn compute_layout(
     );
     if let Some(hovered) = switcher.hovered {
         layout.selected = hovered.min(switcher.entries.len() - 1);
-        layout.preview.y = (layout.panel.center_y
-            + dock_active_rel(switcher.entries.len(), switcher.visual_selection()) * SLOT
-            - PREVIEW_H / 2.0)
+        let active_rel = if switcher.entries.len() <= VISIBLE_SLOTS {
+            layout.selected as f64 - visual_center(switcher.entries.len(), switcher.visual_selection())
+        } else {
+            let n = switcher.entries.len() as f64;
+            let visual = visual_center(switcher.entries.len(), switcher.visual_selection());
+            let mut d = (layout.selected as f64 - visual).rem_euclid(n);
+            if d > n / 2.0 {
+                d -= n;
+            }
+            d
+        };
+        layout.preview.y = (layout.panel.center_y + active_rel * SLOT - PREVIEW_H / 2.0)
             .clamp(8.0, screen_h - PREVIEW_H - 8.0);
     }
     Some(layout)
@@ -100,10 +109,7 @@ pub(crate) fn draw_switcher_foreground(
     context.paint()?;
     context.set_operator(Operator::Over);
 
-    let display_position = switcher
-        .hovered
-        .map(|index| index as f64)
-        .unwrap_or_else(|| switcher.visual_selection());
+    let display_position = switcher.visual_selection();
 
     draw_dock(
         context,

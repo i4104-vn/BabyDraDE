@@ -94,8 +94,8 @@ where
     context.clip();
 
     let visual = visual_center(count, position);
-    if selected.is_some() {
-        let active_y = active_center_y(layout, count, position, visual);
+    if let Some(sel) = selected {
+        let active_y = active_center_y(layout, count, sel, visual);
         paint_rounded(
             context,
             x + (layout.width - SELECTION_SIZE) / 2.0,
@@ -108,10 +108,10 @@ where
         )?;
     }
 
-    draw_items(context, layout, x, count, position, visual, draw_item)?;
+    draw_items(context, layout, x, count, position, visual, selected, draw_item)?;
 
-    if selected.is_some() {
-        let active_y = active_center_y(layout, count, position, visual);
+    if let Some(sel) = selected {
+        let active_y = active_center_y(layout, count, sel, visual);
         let pill_x = match side {
             GraphicsSide::Left => x + 8.0,
             GraphicsSide::Right => x + layout.width - 11.0,
@@ -131,13 +131,18 @@ where
     Ok(())
 }
 
-fn active_center_y(layout: &DockLayout, count: usize, position: f64, visual: f64) -> f64 {
-    let current = if count <= VISIBLE_SLOTS {
-        position.rem_euclid(count as f64)
+fn active_center_y(layout: &DockLayout, count: usize, selected_index: usize, visual: f64) -> f64 {
+    let rel = if count <= VISIBLE_SLOTS {
+        selected_index as f64 - visual
     } else {
-        position
+        let n = count as f64;
+        let mut diff = (selected_index as f64 - visual).rem_euclid(n);
+        if diff > n / 2.0 {
+            diff -= n;
+        }
+        diff
     };
-    layout.center_y + (current - visual) * SLOT
+    layout.center_y + rel * SLOT
 }
 
 fn draw_items<F>(
@@ -147,6 +152,7 @@ fn draw_items<F>(
     count: usize,
     position: f64,
     visual: f64,
+    selected: Option<usize>,
     draw_item: &mut F,
 ) -> Result<(), cairo::Error>
 where
@@ -156,7 +162,10 @@ where
         let wrapped = position.rem_euclid(count as f64);
         for index in 0..count {
             let rel = index as f64 - visual;
-            let (cx, cy, size) = layout.icon_geometry(rel, index as f64 - wrapped);
+            let sel_rel = selected
+                .map(|s| index as f64 - s as f64)
+                .unwrap_or(index as f64 - wrapped);
+            let (cx, cy, size) = layout.icon_geometry(rel, sel_rel);
             draw_item(context, index, cx, cy, size, 1.0)?;
         }
     } else {
@@ -165,8 +174,17 @@ where
             let unwrapped = base + offset;
             let index = unwrapped.rem_euclid(count as i64) as usize;
             let slot = unwrapped as f64 - visual;
-            let selection_rel = unwrapped as f64 - position;
-            let (cx, cy, size) = layout.icon_geometry(slot, selection_rel);
+            let sel_rel = if let Some(sel) = selected {
+                let n = count as i64;
+                let mut d = (index as i64 - sel as i64).rem_euclid(n);
+                if d > n / 2 {
+                    d -= n;
+                }
+                d as f64
+            } else {
+                unwrapped as f64 - position
+            };
+            let (cx, cy, size) = layout.icon_geometry(slot, sel_rel);
             draw_item(context, index, cx, cy, size, 1.0)?;
         }
     }

@@ -15,69 +15,41 @@ use crate::compositor::input::touch::gestures::{on_touch_down, on_touch_motion, 
 use crate::compositor::state::BabydraState;
 use crate::rendering::titlebar::Action;
 
-/// Tap routing for the compositor-owned overlays. Returns true when the touch
-/// was consumed and must not reach Wayland clients.
-fn handle_overlay_touch(
+#[derive(Debug, Clone)]
+pub(crate) struct OverlayTouchState {
+    pub(crate) slot: smithay::backend::input::TouchSlot,
+    pub(crate) start_pos: smithay::utils::Point<f64, smithay::utils::Logical>,
+    pub(crate) last_pos: smithay::utils::Point<f64, smithay::utils::Logical>,
+    pub(crate) has_dragged: bool,
+    pub(crate) is_switcher: bool,
+}
+
+/// Checks whether a touch-down occurs on an active overlay (launcher or switcher)
+/// and registers tracking state instead of immediately launching/activating.
+fn handle_overlay_touch_down(
     state: &mut BabydraState,
+    slot: smithay::backend::input::TouchSlot,
     position: smithay::utils::Point<f64, smithay::utils::Logical>,
 ) -> bool {
     if state.alt_tab_switcher.is_none() && state.launcher.is_visible() {
-        if let Some(index) = state.launcher.index_at(position) {
-            state.launcher.launch(index);
-        } else {
-            state.launcher.close();
-        }
+        state.overlay_touch = Some(OverlayTouchState {
+            slot,
+            start_pos: position,
+            last_pos: position,
+            has_dragged: false,
+            is_switcher: false,
+        });
         return true;
     }
 
     if state.alt_tab_switcher.is_some() {
-        let serial = SERIAL_COUNTER.next_serial();
-        let output = state.space.outputs().next().cloned();
-        let (size, scale) = output
-            .as_ref()
-            .and_then(|output| {
-                let mode = output.current_mode()?;
-                let size = output.current_transform().transform_size(mode.size);
-                Some((
-                    size,
-                    smithay::utils::Scale::from(output.current_scale().fractional_scale()),
-                ))
-            })
-            .unwrap_or(((1920, 1080).into(), smithay::utils::Scale::from(1.0)));
-        let logical_w = (size.w as f64 / scale.x).max(1.0);
-        let logical_h = (size.h as f64 / scale.y).max(1.0);
-
-        let tapped = state
-            .alt_tab_switcher
-            .as_ref()
-            .and_then(|switcher| {
-                let layout = crate::extensions::switcher::view::compute_layout(
-                    switcher, logical_w, logical_h,
-                )?;
-                let slide = (1.0 - switcher.presence().clamp(0.0, 1.0))
-                    * common::constants::launcher::PANEL_WIDTH;
-                layout.panel.index_at(
-                    (position.x, position.y),
-                    slide,
-                    switcher.entries.len(),
-                    switcher.visual_selection(),
-                )
-            })
-            .and_then(|index| {
-                state
-                    .alt_tab_switcher
-                    .as_ref()
-                    .and_then(|switcher| switcher.entries.get(index))
-                    .map(|entry| entry.window.clone())
-            });
-
-        if let Some(window) = tapped {
-            state.unminimize_window(&window);
-            crate::compositor::input::keyboard::focus::focus_window(state, window, serial);
-        }
-        if let Some(switcher) = state.alt_tab_switcher.as_mut() {
-            switcher.begin_close();
-        }
+        state.overlay_touch = Some(OverlayTouchState {
+            slot,
+            start_pos: position,
+            last_pos: position,
+            has_dragged: false,
+            is_switcher: true,
+        });
         return true;
     }
 
@@ -105,7 +77,7 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
     state.cursor_visible = false;
     state.touch_slots.insert(event.slot());
 
-    if handle_overlay_touch(state, position) {
+    if handle_overlay_touch_down(state, event.slot(), position) {
         return;
     }
 
@@ -246,9 +218,31 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
     // Update gesture tracking position for this slot.
     on_touch_motion(state, event.slot(), position);
 
-    if state.alt_tab_switcher.is_none() && state.launcher.is_visible() {
-        state.launcher.update_hover(position);
-        return;
+    if let Some(mut touch) = state.overlay_touch.take() {
+        if touch.slot == event.slot() {
+            let dy = position.y - touch.last_pos.y;
+            let total_dy = (position.y - touch.start_pos.y).abs();
+            touch.last_pos = position;
+
+            if total_dy > 8.0 || touch.has_dragged {
+                touch.has_dragged = true;
+                let slots = -dy / common::constants::launcher::SLOT;
+                if touch.is_switcher {
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.drag_by(slots);
+                    }
+                } else if state.launcher.is_visible() {
+                    state.launcher.drag_by(slots);
+                }
+            } else if !touch.is_switcher && state.launcher.is_visible() {
+                state.launcher.update_hover(position);
+            }
+
+            state.overlay_touch = Some(touch);
+            return;
+        } else {
+            state.overlay_touch = Some(touch);
+        }
     }
 
     if handle_touch_resize(state, position) {
@@ -290,6 +284,82 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
     on_touch_up(state, event.slot(), event.time_msec() as u64);
 
     state.touch_slots.remove(&event.slot());
+
+    if let Some(touch) = state.overlay_touch.take() {
+        if touch.slot == event.slot() {
+            if touch.has_dragged {
+                // Drag completed: snap to nearest slot
+                if touch.is_switcher {
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.finish_drag();
+                    }
+                } else if state.launcher.is_visible() {
+                    state.launcher.finish_drag();
+                }
+            } else {
+                // Tap gesture: launch app or select window
+                if touch.is_switcher {
+                    let serial = SERIAL_COUNTER.next_serial();
+                    let output = state.space.outputs().next().cloned();
+                    let (size, scale) = output
+                        .as_ref()
+                        .and_then(|output| {
+                            let mode = output.current_mode()?;
+                            let size = output.current_transform().transform_size(mode.size);
+                            Some((
+                                size,
+                                smithay::utils::Scale::from(output.current_scale().fractional_scale()),
+                            ))
+                        })
+                        .unwrap_or(((1920, 1080).into(), smithay::utils::Scale::from(1.0)));
+                    let logical_w = (size.w as f64 / scale.x).max(1.0);
+                    let logical_h = (size.h as f64 / scale.y).max(1.0);
+
+                    let tapped = state
+                        .alt_tab_switcher
+                        .as_ref()
+                        .and_then(|switcher| {
+                            let layout = crate::extensions::switcher::view::compute_layout(
+                                switcher, logical_w, logical_h,
+                            )?;
+                            let slide = (1.0 - switcher.presence().clamp(0.0, 1.0))
+                                * common::constants::launcher::PANEL_WIDTH;
+                            layout.panel.index_at(
+                                (touch.start_pos.x, touch.start_pos.y),
+                                slide,
+                                switcher.entries.len(),
+                                switcher.visual_selection(),
+                            )
+                        })
+                        .and_then(|index| {
+                            state
+                                .alt_tab_switcher
+                                .as_ref()
+                                .and_then(|switcher| switcher.entries.get(index))
+                                .map(|entry| entry.window.clone())
+                        });
+
+                    if let Some(window) = tapped {
+                        state.unminimize_window(&window);
+                        crate::compositor::input::keyboard::focus::focus_window(state, window, serial);
+                    }
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.begin_close();
+                    }
+                } else if state.launcher.is_visible() {
+                    if let Some(index) = state.launcher.index_at(touch.start_pos) {
+                        state.launcher.launch(index);
+                    } else {
+                        state.launcher.close();
+                    }
+                }
+            }
+            return;
+        } else {
+            state.overlay_touch = Some(touch);
+        }
+    }
+
     if state.touch_slots.is_empty() {
         if let Some(move_state) = state.move_state.take() {
             if move_state.has_dragged {
@@ -337,6 +407,24 @@ pub(crate) fn handle_touch_cancel<B: InputBackend, T: TouchCancelEvent<B>>(
     event: T,
 ) {
     state.touch_slots.remove(&event.slot());
+
+    if let Some(touch) = state.overlay_touch.take() {
+        if touch.slot == event.slot() {
+            if touch.has_dragged {
+                if touch.is_switcher {
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.finish_drag();
+                    }
+                } else if state.launcher.is_visible() {
+                    state.launcher.finish_drag();
+                }
+            }
+            return;
+        } else {
+            state.overlay_touch = Some(touch);
+        }
+    }
+
     if state.touch_slots.is_empty() {
         if let Some(move_state) = state.move_state.take() {
             if move_state.has_dragged {

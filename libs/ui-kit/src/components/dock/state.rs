@@ -61,12 +61,10 @@ impl DockState {
         self.presence.value()
     }
 
-    /// Position used for rendering: the hovered slot when the pointer is over
-    /// the dock, otherwise the keyboard/scroll selection.
+    /// Position used for rendering: always follows the smooth carousel position.
+    /// Hovering never shifts the carousel position, so icons stay stationary.
     pub fn display_position(&self) -> f64 {
-        self.hovered
-            .map(|index| index as f64)
-            .unwrap_or_else(|| self.position.value())
+        self.position.value()
     }
 
     pub fn display_selected(&self) -> Option<usize> {
@@ -169,7 +167,12 @@ impl DockState {
             return;
         }
         self.hovered = None;
-        let (next, wrapped) = step_target(self.position.target(), slots.round(), count);
+        let delta = if slots.abs() < 1.0 {
+            slots.signum()
+        } else {
+            slots.round()
+        };
+        let (next, wrapped) = step_target(self.position.target(), delta, count);
         self.selected = Some(next as usize);
         if wrapped {
             self.position.snap_to(next);
@@ -177,6 +180,29 @@ impl DockState {
             self.position
                 .retarget(next, SCROLL_DURATION, Easing::EaseOutCubic);
         }
+    }
+
+    /// Continuous drag by a fractional slot delta (e.g. from touch drag).
+    pub fn drag_by(&mut self, count: usize, delta: f64) {
+        if count == 0 || self.closing {
+            return;
+        }
+        self.hovered = None;
+        let current = self.position.target();
+        let (next, _) = step_target(current, delta, count);
+        self.selected = Some(next.round() as usize);
+        self.position.snap_to(next);
+    }
+
+    /// Snaps to the nearest slot when a drag gesture finishes.
+    pub fn finish_drag(&mut self, count: usize) {
+        if count == 0 || self.closing {
+            return;
+        }
+        let nearest = self.position.value().round().rem_euclid(count as f64);
+        self.selected = Some(nearest as usize);
+        self.position
+            .retarget(nearest, SCROLL_DURATION, Easing::EaseOutCubic);
     }
 
     /// First key press starts repeat tracking; backend repeats are ignored.
