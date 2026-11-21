@@ -65,8 +65,9 @@ pub(crate) fn render_right_backdrop_pixels(
     {
         let context = Context::new(&surface).ok()?;
         context.scale(scale.x, scale.y);
-        let logical_w = width as f64 / scale.x;
-        let gradient = cairo::LinearGradient::new(logical_w, 0.0, logical_w - gradient_w, 0.0);
+        // The buffer only covers the backdrop strip, so the gradient must span
+        // 0..gradient_w: dark at its right edge, fading out to the left.
+        let gradient = cairo::LinearGradient::new(gradient_w, 0.0, 0.0, 0.0);
         gradient.add_color_stop_rgba(0.0, 0.0, 0.0, 0.0, 0.70 * presence);
         gradient.add_color_stop_rgba(0.30, 0.0, 0.0, 0.0, 0.45 * presence);
         gradient.add_color_stop_rgba(0.65, 0.0, 0.0, 0.0, 0.18 * presence);
@@ -106,4 +107,19 @@ pub(super) fn render_backdrop_pixels(
     }
     surface.flush();
     surface.data().ok().map(|data| data.to_vec())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn right_backdrop_is_darkest_at_the_right_edge() {
+        let pixels = render_right_backdrop_pixels(400, 100, Scale::from(1.0), 400.0, 1.0)
+            .expect("backdrop pixels");
+        let alpha_at = |x: usize| pixels[(50 * 400 + x) * 4 + 3];
+
+        assert!(alpha_at(390) > 100);
+        assert!(alpha_at(10) < 20);
+    }
 }

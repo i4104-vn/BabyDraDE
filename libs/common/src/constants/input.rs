@@ -28,7 +28,7 @@ pub const SWIPE_FOUR_FINGERS: u32 = 4;
 pub const DEFAULT_SWIPE_THRESHOLD: f64 = 120.0;
 
 /// Delay before a held navigation key starts auto-repeating (milliseconds).
-pub const KEY_REPEAT_DELAY_MS: u64 = 120;
+pub const KEY_REPEAT_DELAY_MS: u64 = 250;
 
 /// Interval between auto-repeat steps once the delay has elapsed (milliseconds).
 pub const KEY_REPEAT_INTERVAL_MS: u64 = 70;
