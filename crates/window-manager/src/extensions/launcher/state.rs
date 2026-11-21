@@ -21,8 +21,8 @@ use super::buffer::{buffer_damage, physical_region, render_backdrop_pixels, rend
 use super::draw::draw_scene;
 use super::layout::{visual_center, Panel};
 use super::{
-    BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MAX, BACKDROP_WIDTH_MIN,
-    BACKDROP_WIDTH_RATIO, MOVE_ANIM_MS, SCROLL_ANIM_MS, SLOT, VISIBLE_SLOTS,
+    BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO,
+    MOVE_ANIM_MS, SCROLL_ANIM_MS, SLOT, VISIBLE_SLOTS,
 };
 
 /// State of the launcher.
@@ -259,7 +259,7 @@ impl LauncherState {
         }
 
         let gradient_w =
-            (logical_w * BACKDROP_WIDTH_RATIO).clamp(BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_MAX);
+            (logical_w * BACKDROP_WIDTH_RATIO).max(BACKDROP_WIDTH_MIN).min(logical_w);
         let backdrop_w = ((gradient_w * scale.x).ceil() as i32).clamp(1, screen_w);
         let backdrop_h = screen_h;
         let backdrop_size = (backdrop_w, backdrop_h);

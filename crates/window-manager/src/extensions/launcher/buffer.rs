@@ -70,9 +70,9 @@ pub(super) fn render_backdrop_pixels(
         let context = Context::new(&surface).ok()?;
         context.scale(scale.x, scale.y);
         let gradient = cairo::LinearGradient::new(0.0, 0.0, gradient_w, 0.0);
-        gradient.add_color_stop_rgba(0.0, 0.0, 0.0, 0.0, 0.65);
-        gradient.add_color_stop_rgba(0.35, 0.0, 0.0, 0.0, 0.40);
-        gradient.add_color_stop_rgba(0.70, 0.0, 0.0, 0.0, 0.15);
+        gradient.add_color_stop_rgba(0.0, 0.0, 0.0, 0.0, 0.70);
+        gradient.add_color_stop_rgba(0.30, 0.0, 0.0, 0.0, 0.45);
+        gradient.add_color_stop_rgba(0.65, 0.0, 0.0, 0.0, 0.18);
         gradient.add_color_stop_rgba(1.0, 0.0, 0.0, 0.0, 0.0);
         context.set_source(&gradient).ok()?;
         context.paint().ok()?;

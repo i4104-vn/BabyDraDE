@@ -39,9 +39,8 @@ pub(super) const SHADOW_PAD: f64 = 30.0;
 pub(super) const MOVE_ANIM_MS: u64 = 220;
 pub(super) const SCROLL_ANIM_MS: u64 = 180;
 
-pub(super) const BACKDROP_WIDTH_MIN: f64 = 420.0;
-pub(super) const BACKDROP_WIDTH_MAX: f64 = 560.0;
-pub(super) const BACKDROP_WIDTH_RATIO: f64 = 0.35;
+pub(super) const BACKDROP_WIDTH_MIN: f64 = 600.0;
+pub(super) const BACKDROP_WIDTH_RATIO: f64 = 0.60;
 
 // Matches the topbar capsules (`rgb(14, 14, 18)` with a 12% white hairline).
 pub(super) const PANEL_SURFACE: (f64, f64, f64, f64) =
