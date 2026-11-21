@@ -10,7 +10,7 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale},
 };
 
-use crate::compositor::window_animation_factors;
+use crate::compositor::window_animation_frame;
 use crate::enums::TITLEBAR_HEIGHT;
 use crate::rendering::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::rendering::blur::{BlurEngine, BlurRenderElement};
@@ -37,7 +37,7 @@ fn corner_radius_for_window(window: &Window, floating_radius: f32) -> f32 {
 /// Renders native Wayland client surface elements (including CSD/GTK titlebar & decorations)
 /// and attaches a Dual Kawase blur backdrop behind windows configured for blur.
 ///
-/// Automatically delegates to [`render_animated_window`] when an opening or closing transition is active.
+/// Automatically delegates to [`render_animated_window`] whenever a window transition is active.
 pub fn render_window(
     renderer: &mut GlowRenderer,
     window: &Window,
@@ -66,9 +66,10 @@ pub fn render_window(
     };
     let corner_radius = corner_radius_for_window(window, configured_corner_radius);
 
-    // If window is animating (open zoom-in or close shrink-to-center + fade), delegate to animation renderer
-    let (scale_factor, alpha_factor) = window_animation_factors(window);
-    if scale_factor < 0.999 || alpha_factor < 0.999 {
+    // Delegate to the animation renderer while any transition is in flight
+    // (open, close, minimize, restore or fullscreen/maximize geometry change).
+    let frame = window_animation_frame(window);
+    if frame.active {
         return render_animated_window(
             renderer,
             window,
@@ -76,8 +77,9 @@ pub fn render_window(
             scale,
             blur_engine,
             WindowAnimationRenderParams {
-                scale_factor,
-                alpha_factor,
+                scale_factor: frame.scale_factor,
+                alpha_factor: frame.alpha_factor,
+                target_rect: frame.target_rect,
                 base_opacity: opacity,
                 should_blur,
                 corner_radius,

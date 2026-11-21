@@ -1,6 +1,6 @@
 use smithay::{desktop::Window, utils::IsAlive, wayland::shell::xdg::ToplevelSurface};
 
-use super::animation::is_window_closing;
+use super::animation::is_window_exiting;
 use crate::compositor::state::BabydraState;
 
 impl BabydraState {
@@ -23,14 +23,14 @@ impl BabydraState {
         self.windows
             .iter()
             .rev()
-            .filter(|w| !is_window_closing(w))
+            .filter(|w| !is_window_exiting(w))
             .find(|w| w.alive())
             .cloned()
             .or_else(|| {
                 self.space
                     .elements()
                     .rev()
-                    .find(|w| !is_window_closing(w))
+                    .find(|w| !is_window_exiting(w))
                     .cloned()
             })
     }

@@ -23,15 +23,20 @@ use crate::rendering::elements::types::{ConstrainedSurface, CustomRenderElements
 pub struct WindowAnimationRenderParams {
     pub scale_factor: f64,
     pub alpha_factor: f32,
+    /// Absolute interpolated rectangle for geometry transitions. When set, the
+    /// window is rendered into this rect instead of being scaled around its
+    /// current center.
+    pub target_rect: Option<Rectangle<f64, Logical>>,
     pub base_opacity: f32,
     pub should_blur: bool,
     pub corner_radius: f32,
 }
 
-/// Renders a window during an active animation transition (opening or closing).
+/// Renders a window during any active animation (opening, closing, minimize,
+/// restore or a fullscreen/maximize geometry transition).
 ///
-/// Anchors scaling strictly at the window's geometric center so that closing windows
-/// shrink inwards and opening windows expand outward.
+/// Scale-only transitions anchor at the window's geometric center. Geometry
+/// transitions instead render into their interpolated target rectangle.
 pub fn render_animated_window(
     renderer: &mut GlowRenderer,
     window: &Window,
@@ -56,16 +61,38 @@ pub fn render_animated_window(
     let center_x = bbox_origin_x + (base_size.w as f64) / 2.0;
     let center_y = bbox_origin_y + (base_size.h as f64) / 2.0;
 
-    // Shrink/expand symmetrically from the exact center
-    let new_w = ((base_size.w as f64) * params.scale_factor).max(4.0);
-    let new_h = ((base_size.h as f64) * params.scale_factor).max(4.0);
-    let new_x = center_x - new_w / 2.0;
-    let new_y = center_y - new_h / 2.0;
-
-    let constrain = Rectangle::<i32, Logical>::new(
-        Point::from((new_x.round() as i32, new_y.round() as i32)),
-        Size::from(((new_w.round() as i32).max(4), (new_h.round() as i32).max(4))),
-    );
+    // Geometry transitions provide their own interpolated destination rect,
+    // including position, so the window moves and resizes in one smooth step.
+    // Scale-only transitions (open/close/minimize/restore) keep the historic
+    // center-anchored behaviour.
+    let (constrain, effective_scale) = match params.target_rect {
+        Some(target) => {
+            let constrain = Rectangle::<i32, Logical>::new(
+                Point::from((target.loc.x.round() as i32, target.loc.y.round() as i32)),
+                Size::from((
+                    (target.size.w.round() as i32).max(4),
+                    (target.size.h.round() as i32).max(4),
+                )),
+            );
+            let scale = if base_size.w > 0 {
+                constrain.size.w as f64 / base_size.w as f64
+            } else {
+                1.0
+            };
+            (constrain, scale)
+        }
+        None => {
+            let new_w = ((base_size.w as f64) * params.scale_factor).max(4.0);
+            let new_h = ((base_size.h as f64) * params.scale_factor).max(4.0);
+            let new_x = center_x - new_w / 2.0;
+            let new_y = center_y - new_h / 2.0;
+            let constrain = Rectangle::<i32, Logical>::new(
+                Point::from((new_x.round() as i32, new_y.round() as i32)),
+                Size::from(((new_w.round() as i32).max(4), (new_h.round() as i32).max(4))),
+            );
+            (constrain, params.scale_factor)
+        }
+    };
 
     let behavior = ConstrainBehavior {
         reference: ConstrainReference::BoundingBox,
@@ -102,7 +129,7 @@ pub fn render_animated_window(
             let blur_elem = BlurRenderElement::new(
                 blur_id,
                 constrain,
-                params.corner_radius * (params.scale_factor as f32),
+                params.corner_radius * (effective_scale as f32),
                 engine_lock.clone(),
             );
             elements.push(CustomRenderElements::Blur(blur_elem));

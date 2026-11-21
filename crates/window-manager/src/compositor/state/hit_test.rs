@@ -15,7 +15,7 @@ impl BabydraState {
             if other == window {
                 return false;
             }
-            if super::is_window_closing(other) {
+            if super::is_window_exiting(other) {
                 continue;
             }
             let Some(location) = self.space.element_location(other) else {
@@ -40,7 +40,7 @@ impl BabydraState {
     ) -> Option<(Window, Point<i32, Logical>)> {
         // The compositor-owned frame sits just above the client surface.
         for window in self.space.elements().rev() {
-            if super::is_window_closing(window) {
+            if super::is_window_exiting(window) {
                 continue;
             }
             let Some(location) = self.space.element_location(window) else {
@@ -55,7 +55,7 @@ impl BabydraState {
         }
         // 1. First check via Smithay's element_under (handles exact input regions)
         if let Some((window, _render_loc)) = self.space.element_under(point) {
-            if !super::is_window_closing(window) {
+            if !super::is_window_exiting(window) {
                 if let Some(loc) = self.space.element_location(window) {
                     return Some((window.clone(), loc));
                 }
@@ -64,7 +64,7 @@ impl BabydraState {
 
         // 2. Fallback: check window bounding box and geometry in space
         for window in self.space.elements().rev() {
-            if super::is_window_closing(window) {
+            if super::is_window_exiting(window) {
                 continue;
             }
             if let Some(bbox) = self.space.element_bbox(window) {
@@ -103,7 +103,7 @@ impl BabydraState {
 
         // 2. Check normal desktop windows
         if let Some((window, location)) = self.space.element_under(position) {
-            if !super::is_window_closing(window) {
+            if !super::is_window_exiting(window) {
                 if let Some((surface, point)) =
                     window.surface_under(position - location.to_f64(), WindowSurfaceType::ALL)
                 {
@@ -174,7 +174,7 @@ impl BabydraState {
         use crate::enums::BORDER_MARGIN;
 
         for window in self.space.elements().rev() {
-            if super::is_window_closing(window) {
+            if super::is_window_exiting(window) {
                 continue;
             }
 

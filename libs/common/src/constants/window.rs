@@ -22,3 +22,12 @@ pub const WINDOW_OPEN_ANIM_MS: u64 = 220;
 
 /// Default duration for window closing transition in milliseconds.
 pub const WINDOW_CLOSE_ANIM_MS: u64 = 200;
+
+/// Duration for the minimize shrink animation in milliseconds.
+pub const WINDOW_MINIMIZE_ANIM_MS: u64 = 220;
+
+/// Duration for the restore (unminimize) grow animation in milliseconds.
+pub const WINDOW_RESTORE_ANIM_MS: u64 = 240;
+
+/// Duration for geometry transitions such as fullscreen/maximize enter and exit.
+pub const WINDOW_GEOMETRY_ANIM_MS: u64 = 280;

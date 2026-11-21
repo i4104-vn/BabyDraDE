@@ -157,7 +157,7 @@ impl BabydraState {
             .windows
             .iter()
             .rev()
-            .filter(|w| !super::is_window_closing(w))
+            .filter(|w| !super::is_window_exiting(w))
             .filter_map(|window| {
                 let toplevel = window.toplevel()?;
                 let (app_id, title) = with_states(toplevel.wl_surface(), |states| {

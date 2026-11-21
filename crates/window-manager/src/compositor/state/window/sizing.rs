@@ -4,11 +4,14 @@ use smithay::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
         wayland_server::protocol::{wl_output::WlOutput, wl_surface::WlSurface},
     },
-    utils::{Point, SERIAL_COUNTER},
+    utils::{Point, Rectangle, SERIAL_COUNTER},
 };
 
 use super::state_data::window_state;
-use crate::compositor::state::BabydraState;
+use crate::compositor::state::{
+    cancel_minimizing_animation, is_window_exiting, start_window_minimizing,
+    start_window_restoring, start_window_transition, BabydraState,
+};
 
 impl BabydraState {
     pub(crate) fn maximize_window(&mut self, window: &Window) {
@@ -61,12 +64,24 @@ impl BabydraState {
             state.size = Some(target_size);
         });
         toplevel.send_configure();
+
+        start_window_transition(
+            window,
+            Rectangle::new(current_loc, current_size),
+            Rectangle::new(target_loc, target_size),
+        );
     }
 
     pub(crate) fn unmaximize_window(&mut self, window: &Window) {
         let Some(toplevel) = window.toplevel() else {
             return;
         };
+
+        let current_loc = self
+            .space
+            .element_location(window)
+            .unwrap_or_else(|| Point::from((48, 48)));
+        let current_size = window.geometry().size;
 
         let (saved_loc, saved_size) = {
             let mut state_guard = window_state(window).lock().unwrap();
@@ -77,13 +92,20 @@ impl BabydraState {
         };
 
         let restore_loc = saved_loc.unwrap_or_else(|| Point::from((48, 48)));
+        let restore_size = saved_size.unwrap_or(current_size);
         self.space.map_element(window.clone(), restore_loc, false);
 
         toplevel.with_pending_state(|state| {
             state.states.unset(xdg_toplevel::State::Maximized);
-            state.size = saved_size;
+            state.size = Some(restore_size);
         });
         toplevel.send_configure();
+
+        start_window_transition(
+            window,
+            Rectangle::new(current_loc, current_size),
+            Rectangle::new(restore_loc, restore_size),
+        );
     }
 
     pub(crate) fn toggle_maximize(&mut self, window: &Window) {
@@ -111,10 +133,16 @@ impl BabydraState {
             }
         }
 
-        self.space.unmap_elem(window);
-        self.space.refresh();
+        // Keep the window mapped while it collapses; `update_window_animations`
+        // unmaps it once the shrink finishes.
+        start_window_minimizing(window);
 
-        let next_top = self.space.elements().next_back().cloned();
+        let next_top = self
+            .space
+            .elements()
+            .rev()
+            .find(|w| *w != window && !is_window_exiting(w))
+            .cloned();
         match next_top.as_ref() {
             Some(next) => {
                 next.set_activated(true);
@@ -166,7 +194,14 @@ impl BabydraState {
                     .saved_location
                     .unwrap_or_else(|| Point::from((48, 48)))
             };
+            // If the shrink animation is still running, abort it so it cannot
+            // unmap the window we are bringing back.
+            cancel_minimizing_animation(window);
             self.space.map_element(window.clone(), loc, true);
+        }
+
+        if was_minimized {
+            start_window_restoring(window);
         }
 
         self.space.raise_element(window, true);
@@ -238,12 +273,24 @@ impl BabydraState {
             state.fullscreen_output = target_output;
         });
         toplevel.send_configure();
+
+        start_window_transition(
+            window,
+            Rectangle::new(current_loc, current_size),
+            Rectangle::new(output_geometry.loc, output_geometry.size),
+        );
     }
 
     pub(crate) fn unfullscreen_window(&mut self, window: &Window) {
         let Some(toplevel) = window.toplevel() else {
             return;
         };
+
+        let current_loc = self
+            .space
+            .element_location(window)
+            .unwrap_or_else(|| Point::from((48, 48)));
+        let current_size = window.geometry().size;
 
         let (saved_loc, saved_size) = {
             let mut state_guard = window_state(window).lock().unwrap();
@@ -254,14 +301,21 @@ impl BabydraState {
         };
 
         let restore_loc = saved_loc.unwrap_or_else(|| Point::from((48, 48)));
+        let restore_size = saved_size.unwrap_or(current_size);
         self.space.map_element(window.clone(), restore_loc, false);
 
         toplevel.with_pending_state(|state| {
             state.states.unset(xdg_toplevel::State::Fullscreen);
             state.fullscreen_output = None;
-            state.size = saved_size;
+            state.size = Some(restore_size);
         });
         toplevel.send_configure();
+
+        start_window_transition(
+            window,
+            Rectangle::new(current_loc, current_size),
+            Rectangle::new(restore_loc, restore_size),
+        );
     }
 
     pub(crate) fn toggle_fullscreen(&mut self, window: &Window) {
