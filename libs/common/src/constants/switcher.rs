@@ -35,10 +35,12 @@ pub const STAGE_SLIDE_DISTANCE: f64 = 24.0;
 
 /// Duration of the large stage pulse in milliseconds. Deliberately slower than
 /// the dock so the main preview settles gently instead of snapping.
-pub const STAGE_ANIM_MS: u64 = 780;
+pub const STAGE_ANIM_MS: u64 = 500;
 
 /// Duration of the moving highlight when fewer than five apps are open.
-pub const DOCK_TARGET_ANIM_MS: u64 = 620;
+pub const DOCK_TARGET_ANIM_MS: u64 = 420;
 
-/// How far the stage shrinks at the peak of a switch pulse (0..1).
-pub const STAGE_SCALE_DIP: f64 = 0.065;
+/// How far the stage grows at the peak of a switch pulse (0..1).
+/// Growing instead of shrinking keeps the preview covering its slot, so the
+/// dark canvas can never show through as a black border around the app.
+pub const STAGE_SCALE_GROW: f64 = 0.02;

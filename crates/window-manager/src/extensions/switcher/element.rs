@@ -147,6 +147,7 @@ impl SwitcherOverlay {
                     scale,
                     front_layout.opacity as f32,
                     ConstrainScaleBehavior::Stretch,
+                    ConstrainReference::Geometry,
                 )
                 .into_iter()
                 .map(CustomRenderElements::Constrained),
@@ -176,7 +177,8 @@ impl SwitcherOverlay {
                         dock_layout.preview,
                         scale,
                         (0.95 * dock_layout.opacity) as f32,
-                        ConstrainScaleBehavior::Fit,
+                        ConstrainScaleBehavior::Zoom,
+                        ConstrainReference::Geometry,
                     )
                     .into_iter()
                     .filter_map(|preview| {
@@ -194,8 +196,8 @@ impl SwitcherOverlay {
 /// Render a window scaled into `target_rect` (logical coordinates).
 ///
 /// `scale_behavior` controls whether the window is stretched to fill the slot
-/// (`Stretch`, used for the center stage) or fitted while preserving aspect ratio
-/// (`Fit`, used for dock thumbnails).
+/// (`Stretch`, used for the center stage) or zoomed to cover it (`Zoom`, used
+/// for dock thumbnails so the dark card behind never shows at their edges).
 ///
 /// Uses smithay's `constrain_space_element` pipeline so that the compositor's damage
 /// tracker sees the correct physical geometry of every sub-surface element.
@@ -206,6 +208,7 @@ fn render_window_preview(
     output_scale: Scale<f64>,
     alpha: f32,
     scale_behavior: ConstrainScaleBehavior,
+    reference: ConstrainReference,
 ) -> Vec<ConstrainedSurface> {
     // Guard: window must have a valid bounding-box so constrain can compute scale.
     let bbox = window.bbox();
@@ -226,14 +229,14 @@ fn render_window_preview(
         )),
     );
 
-    // `location` is the top-left of the window's *bounding box* in logical space.
-    // constrain_space_element uses `location - bbox.loc` internally to anchor the
-    // window, so passing `constrain.loc` here positions the bbox origin at the
-    // top-left of the slot and the function then centres/fits it within `constrain`.
+    // `location` anchors the chosen reference rectangle (window geometry, not
+    // the bbox with client-side shadows) at the top-left of the slot. Smithay
+    // then scales/crops it into `constrain`, so CSD drop shadows outside the
+    // geometry never become a dark rim around the preview.
     let location: Point<i32, Logical> = constrain.loc;
 
     let behavior = ConstrainBehavior {
-        reference: ConstrainReference::BoundingBox,
+        reference,
         behavior: scale_behavior,
         align: ConstrainAlign::CENTER,
     };

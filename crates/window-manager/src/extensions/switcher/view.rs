@@ -7,7 +7,7 @@ use super::draw::{draw_app_badge, rounded_rect, Rect};
 pub(crate) use crate::enums::constants::DOCK_MAX_VISIBLE_ITEMS;
 use crate::enums::constants::{
     DOCK_BOTTOM_MARGIN, DOCK_GAP, DOCK_THUMBNAIL_HEIGHT, DOCK_THUMBNAIL_WIDTH, DOCK_TOP_MARGIN,
-    DOCK_X, STAGE_ASPECT_RATIO, STAGE_RIGHT_MARGIN, STAGE_SCALE_DIP, STAGE_SIDE_GAP,
+    DOCK_X, STAGE_ASPECT_RATIO, STAGE_RIGHT_MARGIN, STAGE_SCALE_GROW, STAGE_SIDE_GAP,
     STAGE_SLIDE_DISTANCE,
 };
 
@@ -78,27 +78,14 @@ pub(crate) fn compute_layout(
         stage_card.center_x(),
         stage_card.y + stage_card.height / 2.0,
     );
-    // Chuyển app: stage thu nhỏ và trượt nhẹ rồi trở về đúng kích thước.
+    // Chuyển app: stage phóng nhẹ và trượt rồi trở về đúng kích thước.
     // Dùng nửa chu kỳ sin: pulse bằng 0 ở cả đầu và cuối nên việc restart
-    // pulse ở mỗi lần bấm Tab không bao giờ làm nhảy kích thước. Chuyển động
-    // liên tục trong suốt 780ms nên không có các frame bị đứng yên rồi giật.
+    // pulse ở mỗi lần bấm Tab không bao giờ làm nhảy kích thước.
+    //
     let pulse = stage_pulse(progress);
-    let stage_scale = 1.0 - STAGE_SCALE_DIP * pulse;
-    let stage_slide = switcher.scroll_direction * pulse * STAGE_SLIDE_DISTANCE;
-    let stage_card = scale_rect_around(stage_card, stage_center, stage_scale);
-    let stage_preview = scale_rect_around(stage_preview, stage_center, stage_scale);
-    let stage_card = Rect::new(
-        stage_card.x + stage_slide,
-        stage_card.y,
-        stage_card.width,
-        stage_card.height,
-    );
-    let stage_preview = Rect::new(
-        stage_preview.x + stage_slide,
-        stage_preview.y,
-        stage_preview.width,
-        stage_preview.height,
-    );
+    let stage_card = animated_stage_rect(stage_card, stage_center, pulse, switcher.scroll_direction);
+    let stage_preview =
+        animated_stage_rect(stage_preview, stage_center, pulse, switcher.scroll_direction);
     let stage = (
         sel,
         CardLayout {
@@ -298,6 +285,21 @@ pub(crate) fn stage_pulse(progress: f64) -> f64 {
     (std::f64::consts::PI * progress.clamp(0.0, 1.0)).sin()
 }
 
+/// Áp dụng pulse cho stage. Phóng to thay vì thu nhỏ và mở rộng thêm theo độ
+/// trượt để sau khi dịch, preview vẫn phủ kín slot gốc — nền tối của canvas
+/// không bao giờ lộ ra thành viền đen quanh app.
+fn animated_stage_rect(base: Rect, center: (f64, f64), pulse: f64, direction: f64) -> Rect {
+    let slide = direction * pulse * STAGE_SLIDE_DISTANCE;
+    let grown = scale_rect_around(base, center, 1.0 + STAGE_SCALE_GROW * pulse);
+    let pad = slide.abs();
+    Rect::new(
+        grown.x - pad + slide,
+        grown.y,
+        grown.width + 2.0 * pad,
+        grown.height,
+    )
+}
+
 fn scale_rect_around(rect: Rect, center: (f64, f64), scale: f64) -> Rect {
     let width = rect.width * scale;
     let height = rect.height * scale;
@@ -407,6 +409,22 @@ mod tests {
         assert!((stage_pulse(0.5) - 1.0).abs() < 1e-9);
         assert!(stage_pulse(-1.0).abs() < 1e-9);
         assert!(stage_pulse(2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn stage_preview_always_covers_its_base_slot() {
+        let base = Rect::new(260.0, 90.0, 1600.0, 900.0);
+        let center = (base.center_x(), base.y + base.height / 2.0);
+
+        for direction in [-1.0, 1.0] {
+            for progress in [0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0] {
+                let rect = animated_stage_rect(base, center, stage_pulse(progress), direction);
+                assert!(rect.x <= base.x + 1e-6);
+                assert!(rect.y <= base.y + 1e-6);
+                assert!(rect.x + rect.width >= base.x + base.width - 1e-6);
+                assert!(rect.y + rect.height >= base.y + base.height - 1e-6);
+            }
+        }
     }
 
     #[test]
