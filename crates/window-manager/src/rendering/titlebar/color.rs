@@ -1,6 +1,10 @@
 //! Sampling the color that the client has actually rendered.
 
-use smithay::{backend::allocator::Fourcc, desktop::Window, wayland::compositor::with_states};
+use smithay::{
+    backend::allocator::{Buffer as _, Fourcc},
+    desktop::Window,
+    wayland::compositor::with_states,
+};
 
 const FALLBACK_COLOR: [f64; 3] = [0.0, 0.0, 0.0];
 const SAMPLE_DISTANCE_SQUARED: f64 = 0.008;
@@ -26,7 +30,6 @@ fn sample_dmabuf_color(window: &Window) -> Option<[f64; 3]> {
         let buffer = state.buffer()?;
         let dmabuf = smithay::wayland::dmabuf::get_dmabuf(buffer).ok()?;
 
-        use smithay::backend::allocator::Buffer as _;
         let size = dmabuf.size();
         if size.w <= 0 || size.h <= 0 {
             return None;

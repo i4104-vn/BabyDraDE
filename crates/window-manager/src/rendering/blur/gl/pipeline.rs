@@ -12,7 +12,7 @@ use crate::rendering::blur::config::BlurParams;
 
 pub use super::projection::project_rect_to_gl;
 
-use crate::enums::constants::MAX_BLUR_PASSES;
+use common::constants::MAX_BLUR_PASSES;
 
 /// Cached state of a single blur element.
 ///

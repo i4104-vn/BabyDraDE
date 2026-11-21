@@ -2,6 +2,9 @@
 
 //! Touchpad device configuration, tap-to-click settings, and hotplug management.
 
+use smithay::reexports::input::ClickMethod;
+use tracing::{info, warn};
+
 /// Touchpad configuration options loaded from `~/.babydra/babydra.conf`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TouchpadConfig {
@@ -139,9 +142,6 @@ pub(crate) fn configure_touchpad(
     device: &mut smithay::reexports::input::Device,
     config: &TouchpadConfig,
 ) {
-    use smithay::reexports::input::ClickMethod;
-    use tracing::{info, warn};
-
     let name = device.name().to_string();
     let sysname = device.sysname().to_string();
 

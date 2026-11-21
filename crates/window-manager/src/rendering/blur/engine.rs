@@ -10,7 +10,7 @@ use tracing::{error, info};
 
 use super::{config, config::BlurParams, gl::BlurCache, gl::BlurPipeline};
 
-use crate::enums::constants::{
+use common::constants::{
     BLUR_CACHE_LIFETIME as CACHE_LIFETIME, MAX_BLUR_CACHE_BYTES as MAX_CACHE_BYTES,
 };
 

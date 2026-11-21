@@ -2,10 +2,12 @@ use cairo::{Context, Operator};
 
 use crate::compositor::AltTabSwitcher;
 
-use super::draw::{draw_app_badge, rounded_rect, Rect};
+use services::graphics::rounded_rect;
 
-pub(crate) use crate::enums::constants::DOCK_MAX_VISIBLE_ITEMS;
-use crate::enums::constants::{
+use super::draw::{draw_app_badge, Rect};
+
+pub(crate) use common::constants::DOCK_MAX_VISIBLE_ITEMS;
+use common::constants::{
     DOCK_BOTTOM_MARGIN, DOCK_GAP, DOCK_THUMBNAIL_HEIGHT, DOCK_THUMBNAIL_WIDTH, DOCK_TOP_MARGIN,
     DOCK_X, STAGE_ASPECT_RATIO, STAGE_RIGHT_MARGIN, STAGE_SCALE_GROW, STAGE_SIDE_GAP,
     STAGE_SLIDE_DISTANCE,

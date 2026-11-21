@@ -12,6 +12,7 @@ use gtk4::glib;
 
 pub use crate::theme::is_dark_mode;
 pub use filesystem::{get_icon_pixbuf_from_filesystem, pixbuf_from_gicon};
+pub use resolver::resolve_icon_pair;
 
 /// Resolves an app id to its `gio::Icon` via the desktop files, with a
 /// case-insensitive match. Shared by every GTK-side consumer so the
@@ -35,7 +36,6 @@ pub fn resolve_app_gicon(app_id: &str) -> Option<gtk4::gio::Icon> {
         })
         .and_then(|info| info.icon())
 }
-pub use resolver::resolve_icon_pair;
 
 /// Converts SVG string content into a `gtk4::Image` at the requested pixel size.
 pub fn get_icon_from_svg(svg_content: &str, size: i32) -> gtk4::Image {

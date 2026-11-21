@@ -17,7 +17,7 @@ use services::config::load_gesture_config;
 
 // ----- constants ---------------------------------------------------------
 
-use crate::enums::constants::BTN_MIDDLE;
+use common::constants::BTN_MIDDLE;
 
 // ----- down --------------------------------------------------------------
 

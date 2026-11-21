@@ -8,7 +8,7 @@ use super::focus::{cycle_window_focus, focus_window};
 use crate::compositor::state::BabydraState;
 use crate::extensions::lock;
 
-pub(crate) use crate::enums::KeyboardAction;
+pub(crate) use common::KeyboardAction;
 
 /// Evaluates a pressed keysym against registered global shortcuts.
 ///

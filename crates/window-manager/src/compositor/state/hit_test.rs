@@ -1,6 +1,10 @@
+use common::BORDER_MARGIN;
 use smithay::{
     desktop::{layer_map_for_output, Window, WindowSurfaceType},
-    reexports::wayland_server::protocol::wl_surface::WlSurface,
+    reexports::{
+        wayland_protocols::xdg::shell::server::xdg_toplevel::{ResizeEdge, State},
+        wayland_server::protocol::wl_surface::WlSurface,
+    },
     utils::{Logical, Point},
     wayland::shell::wlr_layer::Layer,
 };
@@ -165,14 +169,8 @@ impl BabydraState {
     ) -> Option<(
         Window,
         Point<i32, Logical>,
-        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
+        ResizeEdge,
     )> {
-        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::{
-            ResizeEdge, State,
-        };
-
-        use crate::enums::BORDER_MARGIN;
-
         for window in self.space.elements().rev() {
             if super::is_window_exiting(window) {
                 continue;

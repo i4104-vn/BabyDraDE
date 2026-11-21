@@ -14,9 +14,7 @@ use crate::compositor::input::keyboard::cycle_window_focus;
 use crate::compositor::state::{BabydraState, SwipeDirection, TrackpadSwipeBuffer};
 use services::config::load_gesture_config;
 
-use crate::enums::constants::{
-    SWIPE_FOUR_FINGERS as FOUR_FINGERS, SWIPE_THREE_FINGERS as THREE_FINGERS,
-};
+use common::constants::{SWIPE_FOUR_FINGERS as FOUR_FINGERS, SWIPE_THREE_FINGERS as THREE_FINGERS};
 
 /// Returns `true` if the given finger count should be captured by the compositor
 /// for window management rather than forwarded to clients.

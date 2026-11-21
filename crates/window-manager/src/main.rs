@@ -4,12 +4,11 @@ mod extensions;
 mod keymap;
 pub mod rendering;
 
-pub use common as enums;
-
 use std::error::Error;
 
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
 use tracing::{info, warn};
+use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 use compositor::{BabydraState, CalloopData};
 
@@ -122,8 +121,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 }
 
 fn init_tracing() {
-    use tracing_subscriber::fmt::writer::MakeWriterExt;
-
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
 

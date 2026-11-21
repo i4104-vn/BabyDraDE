@@ -13,6 +13,7 @@ use super::drag::{handle_touch_drag, handle_touch_resize};
 use crate::compositor::input::common::transform_absolute_position;
 use crate::compositor::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
 use crate::compositor::state::BabydraState;
+use crate::rendering::titlebar::Action;
 
 /// Handles a touchscreen contact press (touch down).
 ///
@@ -86,7 +87,6 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
 
         // Check titlebar action on touch
         if let Some(action) = crate::rendering::titlebar::hit_test(&window, location, position) {
-            use crate::rendering::titlebar::Action;
             match action {
                 Action::Close => {
                     state.last_titlebar_click = None;
@@ -109,8 +109,8 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
                         let dx = position.x - last_pos.x;
                         let dy = position.y - last_pos.y;
                         last_win == &window
-                            && elapsed <= crate::enums::DOUBLE_CLICK_TIMEOUT_MS
-                            && (dx * dx + dy * dy) <= crate::enums::DOUBLE_CLICK_DISTANCE_SQ
+                            && elapsed <= common::DOUBLE_CLICK_TIMEOUT_MS
+                            && (dx * dx + dy * dy) <= common::DOUBLE_CLICK_DISTANCE_SQ
                     } else {
                         false
                     };

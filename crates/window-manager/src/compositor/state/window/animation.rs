@@ -79,7 +79,7 @@ pub(crate) fn start_window_opening(window: &Window) {
         state_guard.animation = Some(WindowAnimation::Opening(Tween::new(
             0.0,
             1.0,
-            Duration::from_millis(crate::enums::constants::WINDOW_OPEN_ANIM_MS),
+            Duration::from_millis(common::constants::WINDOW_OPEN_ANIM_MS),
             Easing::EaseOutCubic,
         )));
     }
@@ -91,7 +91,7 @@ pub(crate) fn start_window_minimizing(window: &Window) {
     state_guard.animation = Some(WindowAnimation::Minimizing(Tween::new(
         0.0,
         1.0,
-        Duration::from_millis(crate::enums::constants::WINDOW_MINIMIZE_ANIM_MS),
+        Duration::from_millis(common::constants::WINDOW_MINIMIZE_ANIM_MS),
         Easing::EaseInCubic,
     )));
 }
@@ -110,7 +110,7 @@ pub(crate) fn start_window_restoring(window: &Window) {
     state_guard.animation = Some(WindowAnimation::Restoring(Tween::new(
         0.0,
         1.0,
-        Duration::from_millis(crate::enums::constants::WINDOW_RESTORE_ANIM_MS),
+        Duration::from_millis(common::constants::WINDOW_RESTORE_ANIM_MS),
         Easing::EaseOutCubic,
     )));
 }
@@ -134,7 +134,7 @@ pub(crate) fn start_window_transition(
         tween: Tween::new(
             0.0,
             1.0,
-            Duration::from_millis(crate::enums::constants::WINDOW_GEOMETRY_ANIM_MS),
+            Duration::from_millis(common::constants::WINDOW_GEOMETRY_ANIM_MS),
             Easing::EaseInOutCubic,
         ),
         geometry: GeometryTransition {
@@ -229,7 +229,7 @@ impl BabydraState {
             state_guard.animation = Some(WindowAnimation::Closing(Tween::new(
                 0.0,
                 1.0,
-                Duration::from_millis(crate::enums::constants::WINDOW_CLOSE_ANIM_MS),
+                Duration::from_millis(common::constants::WINDOW_CLOSE_ANIM_MS),
                 Easing::EaseOutCubic,
             )));
         }

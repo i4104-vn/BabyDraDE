@@ -1,7 +1,12 @@
 //! Launcher state: app list, selection, pointer/wheel/keyboard input and the
 //! render entry point. Drawing and geometry live in sibling modules.
 
-use animation::{Easing, Tween};
+use animation::{
+    Easing, Tween, FADE_IN_DURATION, FADE_OUT_DURATION, NAVIGATION_DURATION, SCROLL_DURATION,
+};
+use common::{
+    KEY_REPEAT_DELAY_MS as REPEAT_DELAY_MS, KEY_REPEAT_INTERVAL_MS as REPEAT_INTERVAL_MS,
+};
 use gtk4::gio::{prelude::*, AppInfo};
 use smithay::{
     backend::{
@@ -13,7 +18,7 @@ use smithay::{
     },
     utils::{Logical, Physical, Point, Scale, Transform},
 };
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::rendering::CustomRenderElements;
 
@@ -21,8 +26,8 @@ use super::buffer::{buffer_damage, physical_region, render_backdrop_pixels, rend
 use super::draw::draw_scene;
 use super::layout::{visual_center, Panel};
 use super::{
-    BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO,
-    MOVE_ANIM_MS, SCROLL_ANIM_MS, SLOT, VISIBLE_SLOTS,
+    BackdropKey, BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO,
+    SLOT, VISIBLE_SLOTS,
 };
 
 /// State of the launcher.
@@ -31,6 +36,10 @@ pub(crate) struct LauncherState {
     visible: bool,
     /// Continuous selection position (index, fractional while animating).
     position: Tween,
+    /// 0 while closed, 1 while open; drives the fade animation.
+    presence: Tween,
+    /// Still rendered while the close animation plays out.
+    closing: bool,
     selected: Option<usize>,
     /// Vertical centre of the capsule in logical coordinates.
     center_y: f64,
@@ -39,6 +48,11 @@ pub(crate) struct LauncherState {
     cache_key: Option<CacheKey>,
     backdrop_buffer: Option<MemoryRenderBuffer>,
     backdrop_size: Option<(i32, i32)>,
+    backdrop_cache_key: Option<BackdropKey>,
+    /// Held arrow direction and timers used for auto-repeat.
+    held_direction: Option<i32>,
+    repeat_started: Option<Instant>,
+    last_repeat: Option<Instant>,
 }
 
 impl Default for LauncherState {
@@ -67,6 +81,8 @@ impl LauncherState {
             apps,
             visible: false,
             position: Tween::settled(0.0),
+            presence: Tween::settled(0.0),
+            closing: false,
             selected: None,
             center_y: 0.0,
             buffer: None,
@@ -74,6 +90,10 @@ impl LauncherState {
             cache_key: None,
             backdrop_buffer: None,
             backdrop_size: None,
+            backdrop_cache_key: None,
+            held_direction: None,
+            repeat_started: None,
+            last_repeat: None,
         }
     }
 
@@ -82,57 +102,124 @@ impl LauncherState {
     }
 
     pub(crate) fn is_visible(&self) -> bool {
-        self.visible
+        self.visible && !self.closing
     }
 
-    /// Opens the launcher with the current app selected.
+    /// Toggles between opening and starting the close animation. Toggling
+    /// again mid-close reopens the launcher.
     pub(crate) fn toggle(&mut self) -> bool {
-        self.visible = !self.visible;
-        if self.visible {
-            let selected = self
-                .selected
-                .unwrap_or(0)
-                .min(self.apps.len().saturating_sub(1));
-            self.selected = Some(selected);
-            self.position = Tween::settled(selected as f64);
-        } else {
+        if self.visible && !self.closing {
             self.close();
+        } else {
+            self.open();
         }
-        self.cache_key = None;
         self.visible
     }
 
+    fn open(&mut self) {
+        self.visible = true;
+        self.closing = false;
+        let selected = self
+            .selected
+            .unwrap_or(0)
+            .min(self.apps.len().saturating_sub(1));
+        self.selected = Some(selected);
+        self.position = Tween::settled(selected as f64);
+        self.presence
+            .retarget(1.0, FADE_IN_DURATION, Easing::EaseOutCubic);
+        self.cache_key = None;
+    }
+
+    /// Starts the close animation; `render` finalises it when the fade ends.
     pub(crate) fn close(&mut self) {
+        if !self.visible {
+            return;
+        }
+        self.closing = true;
+        self.stop_key_repeat();
+        self.presence
+            .retarget(0.0, FADE_OUT_DURATION, Easing::EaseInCubic);
+        self.cache_key = None;
+    }
+
+    fn finish_close(&mut self) {
         self.visible = false;
+        self.closing = false;
         self.selected = None;
         self.position = Tween::settled(0.0);
+        self.presence = Tween::settled(0.0);
         self.cache_key = None;
+        self.backdrop_cache_key = None;
+    }
+
+    /// First press of an arrow key starts repeat tracking; backend-generated
+    /// auto-repeat presses are ignored because `tick_key_repeat` drives them.
+    /// Returns `true` only for the initial press.
+    pub(crate) fn arrow_pressed(&mut self, direction: i32) -> bool {
+        if !self.visible || self.closing || self.held_direction == Some(direction) {
+            return false;
+        }
+        self.held_direction = Some(direction);
+        let now = Instant::now();
+        self.repeat_started = Some(now);
+        self.last_repeat = Some(now);
+        true
+    }
+
+    pub(crate) fn arrow_released(&mut self, direction: i32) {
+        if self.held_direction == Some(direction) {
+            self.stop_key_repeat();
+        }
+    }
+
+    fn stop_key_repeat(&mut self) {
+        self.held_direction = None;
+        self.repeat_started = None;
+        self.last_repeat = None;
+    }
+
+    /// Called once per frame to implement hold-to-navigate independently of
+    /// whether the input backend generates auto-repeat events.
+    fn tick_key_repeat(&mut self) {
+        let Some(direction) = self.held_direction else {
+            return;
+        };
+        let Some(started) = self.repeat_started else {
+            return;
+        };
+        let now = Instant::now();
+        if repeat_due(started, self.last_repeat.unwrap_or(started), now) {
+            self.last_repeat = Some(now);
+            self.move_selection(direction);
+        }
     }
 
     /// Moves the keyboard selection with a smooth transition.
     pub(crate) fn move_selection(&mut self, delta: i32) {
-        if self.apps.is_empty() {
+        if !self.visible || self.closing || self.apps.is_empty() {
             return;
         }
         let current = self.selected.unwrap_or(0) as i32;
         let next = (current + delta).clamp(0, self.apps.len() as i32 - 1) as usize;
-        self.position.retarget(
-            next as f64,
-            Duration::from_millis(MOVE_ANIM_MS),
-            Easing::EaseOutCubic,
-        );
+        if next as i32 == current {
+            return;
+        }
+        self.position
+            .retarget(next as f64, NAVIGATION_DURATION, Easing::EaseOutCubic);
         self.selected = Some(next);
         self.cache_key = None;
     }
 
     pub(crate) fn activate(&mut self) {
-        if let Some(index) = self.selected {
-            self.launch(index);
+        if !self.closing {
+            if let Some(index) = self.selected {
+                self.launch(index);
+            }
         }
     }
 
     pub(crate) fn scroll_by(&mut self, slots: f64) {
-        if self.apps.is_empty() {
+        if self.closing || self.apps.is_empty() {
             return;
         }
         let current = self.position.target();
@@ -141,17 +228,14 @@ impl LauncherState {
             .clamp(0.0, self.apps.len() as f64 - 1.0);
         if (next - current).abs() > f64::EPSILON {
             self.selected = Some(next as usize);
-            self.position.retarget(
-                next,
-                Duration::from_millis(SCROLL_ANIM_MS),
-                Easing::EaseOutCubic,
-            );
+            self.position
+                .retarget(next, SCROLL_DURATION, Easing::EaseOutCubic);
             self.cache_key = None;
         }
     }
 
     pub(crate) fn index_at(&self, point: Point<f64, Logical>) -> Option<usize> {
-        if !self.visible || self.apps.is_empty() {
+        if !self.visible || self.closing || self.apps.is_empty() {
             return None;
         }
         let panel = self.panel();
@@ -171,7 +255,7 @@ impl LauncherState {
     }
 
     pub(crate) fn is_over_panel(&self, point: Point<f64, Logical>) -> bool {
-        self.visible && !self.apps.is_empty() && self.panel().contains(point)
+        self.visible && !self.closing && !self.apps.is_empty() && self.panel().contains(point)
     }
 
     pub(crate) fn update_hover(&mut self, point: Point<f64, Logical>) -> bool {
@@ -183,11 +267,8 @@ impl LauncherState {
         if Some(index) == self.selected {
             return false;
         }
-        self.position.retarget(
-            index as f64,
-            Duration::from_millis(MOVE_ANIM_MS),
-            Easing::EaseOutCubic,
-        );
+        self.position
+            .retarget(index as f64, NAVIGATION_DURATION, Easing::EaseOutCubic);
         self.selected = Some(index);
         true
     }
@@ -209,6 +290,12 @@ impl LauncherState {
             return Vec::new();
         }
 
+        self.tick_key_repeat();
+        if self.closing && !self.presence.is_animating() {
+            self.finish_close();
+            return Vec::new();
+        }
+
         let (screen_w, screen_h) = (output_size.0.max(1), output_size.1.max(1));
         let logical_w = (screen_w as f64 / scale.x).max(1.0);
         let logical_h = (screen_h as f64 / scale.y).max(1.0);
@@ -216,11 +303,20 @@ impl LauncherState {
 
         let panel = self.panel();
         let region = physical_region(&panel, scale, screen_w, screen_h);
-        let tick = if self.position.is_animating() {
-            self.position.frame_tick()
+        let presence_animating = self.presence.is_animating();
+        let position_animating = self.position.is_animating();
+        let presence_tick = if presence_animating {
+            self.presence.frame_tick()
         } else {
             u64::MAX
         };
+        let tick = match (presence_animating, position_animating) {
+            (true, true) => presence_tick ^ self.position.frame_tick(),
+            (true, false) => presence_tick,
+            (false, true) => self.position.frame_tick(),
+            (false, false) => u64::MAX,
+        };
+        let presence = self.presence.value();
         let key = (self.apps.len(), self.selected, tick, region);
 
         if self.buffer.is_none() || self.region != Some(region) {
@@ -241,7 +337,7 @@ impl LauncherState {
             let selected = self.selected;
             if let Some(pixels) =
                 render_pixels(region.2, region.3, scale, (region.0, region.1), |ctx| {
-                    draw_scene(ctx, apps, &panel, position, selected, logical_w)
+                    draw_scene(ctx, apps, &panel, position, selected, logical_w, presence)
                 })
             {
                 if let Some(buffer) = self.buffer.as_mut() {
@@ -258,15 +354,20 @@ impl LauncherState {
             }
         }
 
-        let gradient_w =
-            (logical_w * BACKDROP_WIDTH_RATIO).max(BACKDROP_WIDTH_MIN).min(logical_w);
+        let gradient_w = (logical_w * BACKDROP_WIDTH_RATIO)
+            .max(BACKDROP_WIDTH_MIN)
+            .min(logical_w);
         let backdrop_w = ((gradient_w * scale.x).ceil() as i32).clamp(1, screen_w);
         let backdrop_h = screen_h;
         let backdrop_size = (backdrop_w, backdrop_h);
 
-        if self.backdrop_buffer.is_none() || self.backdrop_size != Some(backdrop_size) {
+        let backdrop_key = (backdrop_size, presence_tick);
+        if self.backdrop_buffer.is_none()
+            || self.backdrop_size != Some(backdrop_size)
+            || self.backdrop_cache_key != Some(backdrop_key)
+        {
             if let Some(pixels) =
-                render_backdrop_pixels(backdrop_w, backdrop_h, scale, gradient_w)
+                render_backdrop_pixels(backdrop_w, backdrop_h, scale, gradient_w, presence)
             {
                 let mut buffer = MemoryRenderBuffer::new(
                     Fourcc::Argb8888,
@@ -287,6 +388,7 @@ impl LauncherState {
                 }
                 self.backdrop_buffer = Some(buffer);
                 self.backdrop_size = Some(backdrop_size);
+                self.backdrop_cache_key = Some(backdrop_key);
             }
         }
 
@@ -323,5 +425,40 @@ impl LauncherState {
         }
 
         elements
+    }
+}
+
+/// Whether a held arrow should step again at `now`.
+fn repeat_due(started: Instant, last: Instant, now: Instant) -> bool {
+    now.duration_since(started) >= Duration::from_millis(REPEAT_DELAY_MS)
+        && now.duration_since(last) >= Duration::from_millis(REPEAT_INTERVAL_MS)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn repeat_waits_for_delay_then_runs_at_interval() {
+        let started = Instant::now();
+        let now = started + Duration::from_millis(REPEAT_DELAY_MS - 1);
+        assert!(!repeat_due(started, started, now));
+
+        let now = started + Duration::from_millis(REPEAT_DELAY_MS);
+        assert!(repeat_due(started, started, now));
+
+        // After a repeat, the interval — not the initial delay — gates the
+        // next step.
+        let last = started + Duration::from_millis(REPEAT_DELAY_MS);
+        assert!(!repeat_due(
+            started,
+            last,
+            last + Duration::from_millis(REPEAT_INTERVAL_MS - 1)
+        ));
+        assert!(repeat_due(
+            started,
+            last,
+            last + Duration::from_millis(REPEAT_INTERVAL_MS)
+        ));
     }
 }

@@ -5,9 +5,7 @@ use smithay::{
     utils::{Logical, Point},
 };
 
-use crate::enums::{
-    Action, CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT,
-};
+use common::{Action, CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT};
 
 pub fn hit_test(
     window: &Window,

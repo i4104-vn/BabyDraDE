@@ -49,7 +49,7 @@ pub(crate) fn handle_window_drag(
         let dist_sq = move_delta.x * move_delta.x + move_delta.y * move_delta.y;
 
         // Require at least a 4-pixel movement threshold before window dragging starts
-        if !move_state.has_dragged && dist_sq < crate::enums::DRAG_THRESHOLD_SQ {
+        if !move_state.has_dragged && dist_sq < common::DRAG_THRESHOLD_SQ {
             state.move_state = Some(move_state);
             return true;
         }
@@ -123,8 +123,8 @@ pub(crate) fn handle_window_resize(
         let init_size = resize_state.initial_window_size;
 
         let (min_w, min_h, max_w, max_h) = (
-            crate::enums::WINDOW_MIN_WIDTH,
-            crate::enums::WINDOW_MIN_HEIGHT,
+            common::WINDOW_MIN_WIDTH,
+            common::WINDOW_MIN_HEIGHT,
             i32::MAX,
             i32::MAX,
         );

@@ -1,6 +1,8 @@
 use std::{collections::HashMap, ffi::OsString, sync::Arc, time::Instant};
 
+pub(crate) use common::SwipeDirection;
 use smithay::{
+    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
     desktop::{PopupManager, Space, Window},
     input::{Seat, SeatState},
     reexports::{
@@ -57,35 +59,30 @@ pub(crate) struct ResizeState {
     pub(crate) initial_window_location: Point<i32, Logical>,
     pub(crate) initial_window_size: smithay::utils::Size<i32, Logical>,
     pub(crate) initial_pointer_location: Point<f64, Logical>,
-    pub(crate) edges:
-        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
+    pub(crate) edges: ResizeEdge,
     pub(crate) button: u32,
 }
 
 impl ResizeState {
     pub(crate) fn resizes_left(&self) -> bool {
-        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
         matches!(
             self.edges,
             ResizeEdge::Left | ResizeEdge::TopLeft | ResizeEdge::BottomLeft
         )
     }
     pub(crate) fn resizes_right(&self) -> bool {
-        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
         matches!(
             self.edges,
             ResizeEdge::Right | ResizeEdge::TopRight | ResizeEdge::BottomRight
         )
     }
     pub(crate) fn resizes_top(&self) -> bool {
-        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
         matches!(
             self.edges,
             ResizeEdge::Top | ResizeEdge::TopLeft | ResizeEdge::TopRight
         )
     }
     pub(crate) fn resizes_bottom(&self) -> bool {
-        use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
         matches!(
             self.edges,
             ResizeEdge::Bottom | ResizeEdge::BottomLeft | ResizeEdge::BottomRight
@@ -100,8 +97,6 @@ pub(crate) struct TrackpadSwipeBuffer {
     pub(crate) total_delta: Point<f64, Logical>,
     pub(crate) updates: Vec<(Point<f64, Logical>, u32)>,
 }
-
-pub(crate) use crate::enums::SwipeDirection;
 
 /// Per-slot data accumulated while tracking a multi-touch gesture on a touchscreen.
 #[derive(Debug, Clone)]

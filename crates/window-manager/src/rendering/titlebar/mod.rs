@@ -22,18 +22,17 @@ use smithay::{
 
 use super::elements::types::CustomRenderElements;
 
-pub use crate::enums::constants::{
+pub use common::constants::{
     CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT,
 };
-pub use crate::enums::Action;
+pub use common::Action;
 pub use hit_test::{hit_test, hit_test_geometry};
+// Keep old public name as an alias for external callers / tests
+pub use get_or_sample_color as sample_window_color_cached;
 
 pub fn get_or_sample_color(window: &Window) -> [f64; 3] {
     color::current_color(window)
 }
-
-// Keep old public name as an alias for external callers / tests
-pub use get_or_sample_color as sample_window_color_cached;
 
 pub fn render(
     renderer: &mut GlowRenderer,

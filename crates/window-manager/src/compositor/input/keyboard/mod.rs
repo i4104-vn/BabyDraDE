@@ -45,26 +45,37 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
             let switcher_active = state.alt_tab_switcher.is_some();
 
             // The launcher owns keyboard input while open: Up/Down move the
-            // selection, Return launches, Escape closes.
-            if state.launcher.is_visible() && event.state() == KeyState::Pressed {
-                match sym {
-                    keysyms::KEY_Up => {
-                        state.launcher.move_selection(-1);
-                        return FilterResult::Intercept(());
+            // selection (held keys auto-repeat), Return launches, Escape closes.
+            if state.launcher.is_visible() {
+                let arrow = match sym {
+                    keysyms::KEY_Up => Some(-1),
+                    keysyms::KEY_Down => Some(1),
+                    _ => None,
+                };
+                if let Some(direction) = arrow {
+                    match event.state() {
+                        KeyState::Pressed => {
+                            if state.launcher.arrow_pressed(direction) {
+                                state.launcher.move_selection(direction);
+                            }
+                        }
+                        KeyState::Released => state.launcher.arrow_released(direction),
                     }
-                    keysyms::KEY_Down => {
-                        state.launcher.move_selection(1);
-                        return FilterResult::Intercept(());
+                    return FilterResult::Intercept(());
+                }
+
+                if event.state() == KeyState::Pressed {
+                    match sym {
+                        keysyms::KEY_Return | keysyms::KEY_KP_Enter => {
+                            state.launcher.activate();
+                            return FilterResult::Intercept(());
+                        }
+                        keysyms::KEY_Escape => {
+                            state.launcher.close();
+                            return FilterResult::Intercept(());
+                        }
+                        _ => {}
                     }
-                    keysyms::KEY_Return | keysyms::KEY_KP_Enter => {
-                        state.launcher.activate();
-                        return FilterResult::Intercept(());
-                    }
-                    keysyms::KEY_Escape => {
-                        state.launcher.close();
-                        return FilterResult::Intercept(());
-                    }
-                    _ => {}
                 }
             }
 

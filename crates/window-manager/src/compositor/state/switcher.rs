@@ -10,7 +10,7 @@ use smithay::{
 };
 
 use super::{window_state, BabydraState};
-use crate::enums::constants::{DOCK_MAX_VISIBLE_ITEMS, DOCK_TARGET_ANIM_MS, STAGE_ANIM_MS};
+use common::constants::{DOCK_MAX_VISIBLE_ITEMS, DOCK_TARGET_ANIM_MS, STAGE_ANIM_MS};
 
 /// One entry in the Alt+Tab switcher list.
 /// `icon_pixbuf` is resolved eagerly when the switcher opens so that

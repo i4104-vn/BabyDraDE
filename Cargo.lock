@@ -2096,6 +2096,7 @@ dependencies = [
 name = "services"
 version = "0.1.0"
 dependencies = [
+ "cairo-rs",
  "dirs",
  "gio",
  "libc",
@@ -2103,7 +2104,6 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
- "tracing",
 ]
 
 [[package]]

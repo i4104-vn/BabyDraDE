@@ -37,5 +37,8 @@ pub use gtk::{
     SlideDirection,
 };
 pub use spring::{Spring, SpringConfig};
-pub use time::{tick_between, tick_since, DEFAULT_DURATION, FRAME_INTERVAL, TARGET_FPS};
+pub use time::{
+    tick_between, tick_since, DEFAULT_DURATION, FADE_IN_DURATION, FADE_OUT_DURATION,
+    FRAME_INTERVAL, NAVIGATION_DURATION, SCROLL_DURATION, TARGET_FPS,
+};
 pub use tween::Tween;

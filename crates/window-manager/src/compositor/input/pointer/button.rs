@@ -8,6 +8,7 @@ use smithay::{
 };
 
 use crate::compositor::state::{BabydraState, MoveState};
+use crate::rendering::titlebar::Action;
 
 /// Handles pointer button clicks, focus switching, window raising, and Super+Drag initiation.
 ///
@@ -91,7 +92,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
             // The launcher is compositor-owned UI: a click on one of its icons
             // launches that app and must not reach (or raise) any window.
             if state.alt_tab_switcher.is_none()
-                && button_code == crate::enums::BTN_LEFT
+                && button_code == common::BTN_LEFT
                 && !pointer.is_grabbed()
             {
                 if let Some(index) = state.launcher.index_at(state.pointer_location) {
@@ -106,7 +107,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
 
             if !pointer.is_grabbed() {
                 // 1. Check window border for interactive resize
-                if button_code == crate::enums::BTN_LEFT {
+                if button_code == common::BTN_LEFT {
                     if let Some((window, loc, edge)) =
                         state.window_border_under(state.pointer_location)
                     {
@@ -160,7 +161,6 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                         location,
                         state.pointer_location,
                     ) {
-                        use crate::rendering::titlebar::Action;
                         match action {
                             Action::Close => {
                                 state.last_titlebar_click = None;
@@ -184,9 +184,9 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                                         let dx = state.pointer_location.x - last_pos.x;
                                         let dy = state.pointer_location.y - last_pos.y;
                                         last_win == &window
-                                            && elapsed <= crate::enums::DOUBLE_CLICK_TIMEOUT_MS
+                                            && elapsed <= common::DOUBLE_CLICK_TIMEOUT_MS
                                             && (dx * dx + dy * dy)
-                                                <= crate::enums::DOUBLE_CLICK_DISTANCE_SQ
+                                                <= common::DOUBLE_CLICK_DISTANCE_SQ
                                     } else {
                                         false
                                     };
@@ -227,7 +227,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     // Drag or resize window from anywhere if holding Super (Win) key
                     let mods = keyboard.modifier_state();
                     if mods.logo {
-                        if button_code == crate::enums::BTN_RIGHT {
+                        if button_code == common::BTN_RIGHT {
                             let size = window.geometry().size;
                             state.resize_state = Some(crate::compositor::state::ResizeState {
                                 window: window.clone(),

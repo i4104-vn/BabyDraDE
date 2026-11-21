@@ -1,10 +1,11 @@
 //! All Cairo drawing for the launcher. Shared helpers keep the capsule, icon
 //! tiles and label surfaces consistent with the topbar style.
 
-use cairo::{Context, FontSlant, FontWeight};
+use cairo::Context;
 use gtk4::gdk::prelude::GdkCairoContextExt;
-
-use crate::extensions::switcher::draw::{app_color, draw_text, rounded_rect};
+use services::graphics::{
+    app_color, draw_text, fit_text, paint_rounded, rounded_rect, set_bold_font,
+};
 
 use super::layout::{visual_center, Panel};
 use super::{
@@ -12,8 +13,6 @@ use super::{
     LABEL_HEIGHT, LABEL_MAX_TEXT, LABEL_MAX_WIDTH, LABEL_PAD, PANEL_CORNER_RADIUS,
     PANEL_FILLET_RADIUS, PANEL_SURFACE, SELECTION_SIZE, SLOT,
 };
-
-type Color = (f64, f64, f64, f64);
 
 /// Path along the outer contour of the docked panel (excluding the left screen edge).
 /// Curves smoothly out from the screen edge with concave fillets, spans around
@@ -94,44 +93,6 @@ fn edge_panel_path(
     let r_concave = fillet_radius;
     context.line_to(x, y - r_concave);
     context.close_path();
-}
-
-/// Rounded shape with an optional 1px hairline. Used for shadows,
-/// the selected highlight, icon fallbacks and the name label.
-#[allow(clippy::too_many_arguments)]
-fn paint_rounded(
-    context: &Context,
-    x: f64,
-    y: f64,
-    width: f64,
-    height: f64,
-    radius: f64,
-    fill: Color,
-    border: Option<Color>,
-) -> Result<(), cairo::Error> {
-    rounded_rect(context, x, y, width, height, radius);
-    context.set_source_rgba(fill.0, fill.1, fill.2, fill.3);
-    context.fill()?;
-
-    if let Some(border) = border {
-        rounded_rect(
-            context,
-            x + 0.5,
-            y + 0.5,
-            width - 1.0,
-            height - 1.0,
-            (radius - 0.5).max(0.0),
-        );
-        context.set_source_rgba(border.0, border.1, border.2, border.3);
-        context.set_line_width(1.0);
-        context.stroke()?;
-    }
-    Ok(())
-}
-
-fn set_bold_font(context: &Context, size: f64) {
-    context.select_font_face("Sans", FontSlant::Normal, FontWeight::Bold);
-    context.set_font_size(size);
 }
 
 /// Docked panel surface with layered soft shadow, matching the notch style.
@@ -289,29 +250,28 @@ fn draw_label(
     )
 }
 
-/// Truncates `text` with an ellipsis so it fits within `max_width`.
-fn fit_text(context: &Context, text: &str, max_width: f64) -> Result<String, cairo::Error> {
-    if context.text_extents(text)?.x_advance() <= max_width {
-        return Ok(text.to_string());
-    }
-
-    let ellipsis = "…";
-    let ellipsis_width = context.text_extents(ellipsis)?.x_advance();
-    let mut fitted = String::new();
-    for character in text.chars() {
-        let mut candidate = fitted.clone();
-        candidate.push(character);
-        if context.text_extents(&candidate)?.x_advance() + ellipsis_width > max_width {
-            break;
-        }
-        fitted = candidate;
-    }
-    fitted.push_str(ellipsis);
-    Ok(fitted)
+/// Draws the whole overlay: capsule, selection, icons, indicator and label.
+/// `presence` (0..=1) drives the open/close fade of the complete scene.
+pub(super) fn draw_scene(
+    context: &Context,
+    apps: &[LauncherApp],
+    panel: &Panel,
+    position: f64,
+    selected: Option<usize>,
+    logical_w: f64,
+    presence: f64,
+) -> Result<(), cairo::Error> {
+    // Fade the composited scene as a whole so the panel, icons, label and
+    // shadow all appear and disappear together.
+    context.push_group();
+    let drawn = draw_content(context, apps, panel, position, selected, logical_w);
+    let group = context.pop_group()?;
+    context.set_source(&group)?;
+    context.paint_with_alpha(presence)?;
+    drawn
 }
 
-/// Draws the whole overlay: capsule, selection, icons, indicator and label.
-pub(super) fn draw_scene(
+fn draw_content(
     context: &Context,
     apps: &[LauncherApp],
     panel: &Panel,
@@ -391,6 +351,7 @@ pub(super) fn draw_scene(
 
 #[cfg(test)]
 mod tests {
+    use super::super::buffer::render_backdrop_pixels;
     use super::*;
 
     #[test]
@@ -406,7 +367,8 @@ mod tests {
 
     #[test]
     fn draws_docked_panel_surface_and_hairline() {
-        let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 200, 600).expect("surface");
+        let surface =
+            cairo::ImageSurface::create(cairo::Format::ARgb32, 200, 600).expect("surface");
         let context = Context::new(&surface).expect("context");
         let panel = Panel::new(7, 300.0);
         assert!(draw_panel(&context, &panel).is_ok());
@@ -414,9 +376,8 @@ mod tests {
 
     #[test]
     fn renders_backdrop_gradient() {
-        use super::super::buffer::render_backdrop_pixels;
         let scale = smithay::utils::Scale::from((1.0, 1.0));
-        let pixels = render_backdrop_pixels(400, 800, scale, 400.0);
+        let pixels = render_backdrop_pixels(400, 800, scale, 400.0, 1.0);
         assert!(pixels.is_some());
         assert_eq!(pixels.unwrap().len(), 400 * 800 * 4);
     }

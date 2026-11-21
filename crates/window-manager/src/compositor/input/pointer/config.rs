@@ -1,5 +1,7 @@
 //! Mouse and pointer device configuration, natural scrolling, and acceleration.
 
+use tracing::{info, warn};
+
 /// Pointer / mouse configuration options loaded from `~/.babydra/babydra.conf`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseConfig {
@@ -74,8 +76,6 @@ pub(crate) fn configure_mouse(
     device: &mut smithay::reexports::input::Device,
     config: &MouseConfig,
 ) {
-    use tracing::{info, warn};
-
     let name = device.name().to_string();
 
     // 1. Natural scrolling

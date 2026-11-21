@@ -11,10 +11,10 @@ use smithay::{
 };
 
 use crate::compositor::window_animation_frame;
-use crate::enums::TITLEBAR_HEIGHT;
 use crate::rendering::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::rendering::blur::{BlurEngine, BlurRenderElement};
 use crate::rendering::titlebar;
+use common::TITLEBAR_HEIGHT;
 
 use super::types::{CustomRenderElements, WindowBlurId};
 
@@ -59,10 +59,10 @@ pub fn render_window(
                 engine.params.corner_radius,
             )
         } else {
-            (false, 1.0, crate::enums::CORNER_RADIUS_F32)
+            (false, 1.0, common::CORNER_RADIUS_F32)
         }
     } else {
-        (false, 1.0, crate::enums::CORNER_RADIUS_F32)
+        (false, 1.0, common::CORNER_RADIUS_F32)
     };
     let corner_radius = corner_radius_for_window(window, configured_corner_radius);
 
