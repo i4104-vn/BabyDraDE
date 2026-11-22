@@ -28,7 +28,6 @@ pub(crate) fn init(
     let gpu_result = scan_and_init_gpu(&mut udev_session.session, &udev_session.seat_name, data)?;
 
     let theme = DesktopTheme::default();
-    std::env::set_var("WAYLAND_DISPLAY", &data.state.socket_name);
 
     let state = Rc::new(RefCell::new(UdevState {
         surfaces: gpu_result.surfaces,

@@ -62,8 +62,6 @@ pub(crate) fn init(
     output.set_preferred(mode);
 
     data.state.space.map_output(&output, (0, 0));
-    std::env::set_var("WAYLAND_DISPLAY", &data.state.socket_name);
-
     let mut damage_tracker = OutputDamageTracker::from_output(&output);
     let mut switcher_overlay = SwitcherOverlay::default();
     backend.window().request_redraw();

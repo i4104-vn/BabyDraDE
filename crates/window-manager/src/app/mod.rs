@@ -1,0 +1,82 @@
+//! Application composition root: lifecycle, bootstrap and subcommand dispatch.
+
+pub mod bootstrap;
+pub mod commands;
+
+use std::error::Error;
+
+use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
+use tracing::{info, warn};
+
+use crate::{
+    backends,
+    compositor::{BabydraState, CalloopData},
+};
+
+pub fn run() -> Result<(), Box<dyn Error>> {
+    bootstrap::ensure_runtime_dir();
+
+    // Create the Wayland display before GTK starts so all environment
+    // variables are exported before any toolkit or thread observes them.
+    let mut event_loop: EventLoop<'_, CalloopData> = EventLoop::try_new()?;
+    let display: Display<BabydraState> = Display::new()?;
+    let display_handle = display.handle();
+    let state = BabydraState::new(&mut event_loop, display);
+
+    bootstrap::export_env(&state.socket_name);
+    bootstrap::init_gtk();
+    services::config::ensure_babydra_dirs();
+
+    let mut data = CalloopData {
+        state,
+        display_handle,
+    };
+
+    let (clipboard_tx, clipboard_rx) =
+        smithay::reexports::calloop::channel::channel::<Option<String>>();
+    data.state.clipboard_sender = Some(clipboard_tx);
+    event_loop
+        .handle()
+        .insert_source(clipboard_rx, |event, _, data| {
+            if let smithay::reexports::calloop::channel::Event::Msg(mime) = event {
+                data.state.complete_clipboard_capture(mime);
+            }
+        })
+        .expect("failed to register clipboard completion channel");
+
+    backends::init(&mut event_loop, &mut data)?;
+
+    info!(
+        "BabyDraDE is running. Wayland socket: {}",
+        data.state.socket_name.to_string_lossy()
+    );
+
+    let mut autostart_children = Vec::new();
+    for cmd_str in &services::config::load_autostart_config().commands {
+        let trimmed = cmd_str.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        info!("Spawning autostart command: {trimmed}");
+        match std::process::Command::new("sh")
+            .arg("-c")
+            .arg(trimmed)
+            .env("WAYLAND_DISPLAY", &data.state.socket_name)
+            .spawn()
+        {
+            Ok(child) => autostart_children.push(child),
+            Err(err) => warn!("Failed to spawn autostart command '{trimmed}': {err}"),
+        }
+    }
+
+    let run_res = event_loop.run(None, &mut data, |_| {});
+
+    info!("BabyDraDE compositor stopping, terminating autostart processes...");
+    for mut child in autostart_children {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+
+    run_res?;
+    Ok(())
+}

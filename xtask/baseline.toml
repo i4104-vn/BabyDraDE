@@ -17,6 +17,9 @@ layering = [
     "crates/window-manager/src/input/touch/events.rs|input|shell",
 ]
 visibility = [
+    "crates/window-manager/src/app/bootstrap.rs",
+    "crates/window-manager/src/app/commands.rs",
+    "crates/window-manager/src/app/mod.rs",
     "crates/window-manager/src/backends/udev/gpu.rs",
     "crates/window-manager/src/backends/udev/mod.rs",
     "crates/window-manager/src/backends/udev/render.rs",
@@ -95,7 +98,7 @@ hot_path = [
 unsafe_blocks = [
     "crates/window-manager/src/backends/udev/gpu.rs|146",
     "crates/window-manager/src/backends/udev/gpu.rs|170",
-    "crates/window-manager/src/backends/winit.rs|159",
+    "crates/window-manager/src/backends/winit.rs|157",
     "crates/window-manager/src/compositor/state.rs|304",
     "crates/window-manager/src/rendering/blur/engine.rs|220",
     "crates/window-manager/src/rendering/blur/engine.rs|258",
