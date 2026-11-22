@@ -29,7 +29,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Guardrails shared by every workspace member. Lints that still have existing
-# debt are tracked in `xtask-baseline.toml` and enabled as that debt is cleared.
+# debt are tracked in `xtask/baseline.toml` and enabled as that debt is cleared.
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "warn"
 unused_must_use = "deny"

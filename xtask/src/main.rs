@@ -2,7 +2,7 @@
 //!
 //! `cargo xtask check` verifies the dependency matrix, binary-crate visibility,
 //! hot-path purity and unsafe-block documentation. `cargo xtask baseline`
-//! records the current debt in `xtask-baseline.toml` so CI fails on new
+//! records the current debt in `xtask/baseline.toml` so CI fails on new
 //! violations only.
 
 use serde::{Deserialize, Serialize};
@@ -37,7 +37,7 @@ fn main() -> ExitCode {
     match command.as_str() {
         "baseline" => match write_baseline(root) {
             Ok(()) => {
-                println!("baseline written to xtask-baseline.toml");
+                println!("baseline written to xtask/baseline.toml");
                 ExitCode::SUCCESS
             }
             Err(err) => {
@@ -66,7 +66,7 @@ fn architecture(root: &Path) -> Result<Architecture, String> {
 }
 
 fn baseline(root: &Path) -> Result<Baseline, String> {
-    let path = root.join("xtask-baseline.toml");
+    let path = root.join("xtask").join("baseline.toml");
     if !path.exists() {
         return Ok(Baseline::default());
     }
@@ -323,7 +323,7 @@ fn collect(root: &Path) -> Result<Baseline, String> {
 
 fn write_baseline(root: &Path) -> Result<(), String> {
     let baseline = collect(root)?;
-    let path = root.join("xtask-baseline.toml");
+    let path = root.join("xtask").join("baseline.toml");
     let content = toml::to_string_pretty(&baseline).map_err(|e| e.to_string())?;
     fs::write(path, content).map_err(|e| e.to_string())
 }
