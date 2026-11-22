@@ -32,29 +32,6 @@ pub(super) fn physical_region(
     (x0, y0, (x1 - x0).max(1), (y1 - y0).max(1))
 }
 
-/// Renders `draw_fn` into a buffer that only spans `origin..(width, height)`,
-/// while letting the drawing code keep using logical screen coordinates.
-pub(super) fn render_pixels<F>(
-    width: i32,
-    height: i32,
-    scale: Scale<f64>,
-    origin: (i32, i32),
-    draw_fn: F,
-) -> Option<Vec<u8>>
-where
-    F: FnOnce(&Context) -> Result<(), cairo::Error>,
-{
-    let mut surface = ImageSurface::create(Format::ARgb32, width, height).ok()?;
-    {
-        let context = Context::new(&surface).ok()?;
-        context.scale(scale.x, scale.y);
-        context.translate(-(origin.0 as f64) / scale.x, -(origin.1 as f64) / scale.y);
-        draw_fn(&context).ok()?;
-    }
-    surface.flush();
-    surface.data().ok().map(|data| data.to_vec())
-}
-
 /// Same backdrop mirrored for a right-side dock: darkest at the right edge.
 pub(crate) fn render_right_backdrop_pixels(
     width: i32,

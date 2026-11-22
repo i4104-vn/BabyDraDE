@@ -2,7 +2,6 @@
 
 pub mod canvas;
 pub mod handle;
-mod layer_shell;
 pub mod model;
 pub mod popovers;
 mod view;

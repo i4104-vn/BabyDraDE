@@ -1,8 +1,8 @@
-//! Layer-shell initialization helper for the screenshot editor.
+//! Shared GTK layer-shell initialization.
 
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
-/// Configures a window as a desktop shell layer.
+/// Configures a GTK window as a layer-shell surface.
 #[allow(clippy::too_many_arguments)]
 pub fn init_layer_window(
     window: &gtk4::ApplicationWindow,
@@ -18,8 +18,8 @@ pub fn init_layer_window(
     }
 
     window.init_layer_shell();
-    if let Some(ns) = namespace {
-        window.set_namespace(Some(ns));
+    if let Some(namespace) = namespace {
+        window.set_namespace(Some(namespace));
     }
     window.set_layer(layer);
     window.set_keyboard_mode(kbd_mode);

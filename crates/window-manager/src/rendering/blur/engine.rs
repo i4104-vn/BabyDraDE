@@ -124,6 +124,10 @@ impl BlurEngine {
 
     /// Check if an app_id or window title matches any configured blur rule
     pub fn matches_app_or_title(&self, app_id: Option<&str>, title: Option<&str>) -> bool {
+        if self.params.blur_all {
+            return true;
+        }
+
         let app_lower = app_id.map(str::to_lowercase);
         let title_lower = title.map(str::to_lowercase);
 
@@ -416,5 +420,16 @@ mod tests {
         assert!(engine.matches_layer("babydra-panel"));
         assert!(!engine.matches_layer("babydra-topbar"));
         assert!(!engine.matches_layer("random-layer"));
+    }
+
+    #[test]
+    fn blur_all_matches_every_app() {
+        let mut engine = BlurEngine::new();
+        engine.params.blur_all = true;
+        assert!(engine.matches_app_or_title(Some("unknown-app"), Some("anything")));
+        assert!(engine.matches_app_or_title(None, None));
+
+        engine.params.blur_all = false;
+        assert!(!engine.matches_app_or_title(Some("unknown-app"), Some("anything")));
     }
 }

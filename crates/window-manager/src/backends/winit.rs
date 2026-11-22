@@ -14,7 +14,7 @@ use smithay::{
 use crate::{
     compositor::{BabydraState, CalloopData, Cursor},
     extensions::SwitcherOverlay,
-    rendering::{render_layer_surfaces, render_window, CustomRenderElements},
+    rendering::{compose_frame, CustomRenderElements, FrameContext},
 };
 
 const OUTPUT_REFRESH_MHZ: i32 = animation::TARGET_FPS as i32 * 1000;
@@ -98,75 +98,41 @@ pub(crate) fn init(
                     state.update_clipboard();
                     let size = backend.window_size();
 
-                    let mut render_elements: Vec<CustomRenderElements> = Vec::new();
                     let scale = Scale::from(1.0);
-                    let blur_engine = Some(&state.blur_engine);
-
-                    // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
-                    cursor.set_icon(state.effective_cursor_icon());
-                    if state.cursor_visible {
-                        if let Some(cursor_elem) =
-                            cursor.element(backend.renderer(), state.pointer_location, scale)
-                        {
-                            render_elements.push(cursor_elem);
-                        }
-                    }
-
                     let oriented_size = output.current_transform().transform_size(size);
 
-                    // 2. Render Overlay & Top layer surfaces (topbar, dynamic island, notification popups)
-                    render_elements.extend(render_layer_surfaces(
-                        backend.renderer(),
-                        &output,
-                        scale,
-                        &[
-                            smithay::wayland::shell::wlr_layer::Layer::Overlay,
-                            smithay::wayland::shell::wlr_layer::Layer::Top,
-                        ],
-                        blur_engine,
-                    ));
+                    cursor.set_icon(state.effective_cursor_icon());
+                    let cursor_element = if state.cursor_visible {
+                        cursor.element(backend.renderer(), state.pointer_location, scale)
+                    } else {
+                        None
+                    };
 
-                    // Compositor-owned launcher (above windows, below switcher)
-                    render_elements.extend(state.launcher.render(
+                    let below_windows = state.launcher.render(
                         backend.renderer(),
                         (oriented_size.w, oriented_size.h),
                         scale,
-                    ));
-
-                    // 3. Switcher sits above the live windows; windows stay
-                    // exactly where they are (no "show desktop" mode).
-                    render_elements.extend(switcher_overlay.render(
+                    );
+                    let above_windows = switcher_overlay.render(
                         backend.renderer(),
                         state.alt_tab_switcher.as_ref(),
                         (oriented_size.w, oriented_size.h),
                         scale,
-                    ));
+                    );
 
-                    // 4. Render each mapped window in front-to-back order.
-                    for window in state.space.elements().rev() {
-                        if let Some(loc) = state.space.element_location(window) {
-                            render_elements.extend(render_window(
-                                backend.renderer(),
-                                window,
-                                loc,
-                                scale,
-                                blur_engine,
-                                state.pointer_location,
-                            ));
-                        }
-                    }
-
-                    // 4. Render Bottom & Background layer surfaces (wallpaper, desktop background)
-                    render_elements.extend(render_layer_surfaces(
-                        backend.renderer(),
-                        &output,
-                        scale,
-                        &[
-                            smithay::wayland::shell::wlr_layer::Layer::Bottom,
-                            smithay::wayland::shell::wlr_layer::Layer::Background,
-                        ],
-                        blur_engine,
-                    ));
+                    let render_elements: Vec<CustomRenderElements> = {
+                        let ctx = FrameContext {
+                            output: &output,
+                            scale,
+                            cursor: cursor_element,
+                            below_windows,
+                            above_windows,
+                            space: &state.space,
+                            blur_engine: Some(&state.blur_engine),
+                            pointer: state.pointer_location,
+                        };
+                        compose_frame(backend.renderer(), ctx)
+                    };
 
                     let render_damage = {
                         let age = backend.buffer_age().unwrap_or(0);

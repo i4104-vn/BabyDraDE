@@ -19,7 +19,7 @@ use tracing::{error, info, warn};
 use crate::{
     compositor::CalloopData,
     extensions::SwitcherOverlay,
-    rendering::{render_layer_surfaces, render_window, CustomRenderElements},
+    rendering::{compose_frame, CustomRenderElements, FrameContext},
 };
 
 use super::surface::UdevState;
@@ -119,82 +119,49 @@ pub fn setup_render_loop(
                     ..
                 } = *s;
 
+                let mut screenshot_requested =
+                    crate::extensions::screenshot::capture::take_requested();
+
                 for surface_data in surfaces.iter_mut() {
-                    let mut render_elements: Vec<CustomRenderElements> = Vec::new();
-
-                    // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
-                    cursor.set_icon(state.effective_cursor_icon());
-                    if state.cursor_visible {
-                        if let Some(cursor_elem) =
-                            cursor.element(renderer, state.pointer_location, scale)
-                        {
-                            render_elements.push(cursor_elem);
-                        }
-                    }
-
                     let output = &surface_data.output;
-                    let blur_engine = Some(&state.blur_engine);
                     let oriented_size = output
                         .current_mode()
                         .map(|mode| output.current_transform().transform_size(mode.size));
 
-                    // 2. Render Overlay & Top layer surfaces (topbar, dynamic island, notification popups)
-                    render_elements.extend(render_layer_surfaces(
-                        renderer,
-                        output,
-                        scale,
-                        &[
-                            smithay::wayland::shell::wlr_layer::Layer::Overlay,
-                            smithay::wayland::shell::wlr_layer::Layer::Top,
-                        ],
-                        blur_engine,
-                    ));
+                    cursor.set_icon(state.effective_cursor_icon());
+                    let cursor_element = if state.cursor_visible {
+                        cursor.element(renderer, state.pointer_location, scale)
+                    } else {
+                        None
+                    };
 
-                    // Compositor-owned launcher (above windows, below switcher)
-                    if let Some(size) = oriented_size {
-                        render_elements.extend(state.launcher.render(
-                            renderer,
-                            (size.w, size.h),
-                            scale,
-                        ));
-                    }
-
-                    // 3. Switcher sits above the live windows; no show-desktop
-                    // mode — open windows keep their current state and geometry.
-                    if let Some(size) = oriented_size {
-                        render_elements.extend(switcher_overlay.render(
-                            renderer,
-                            state.alt_tab_switcher.as_ref(),
-                            (size.w, size.h),
-                            scale,
-                        ));
-                    }
-
-                    // 4. Render each mapped window in front-to-back order.
-                    for window in state.space.elements().rev() {
-                        if let Some(loc) = state.space.element_location(window) {
-                            render_elements.extend(render_window(
+                    let below_windows = oriented_size
+                        .map(|size| state.launcher.render(renderer, (size.w, size.h), scale))
+                        .unwrap_or_default();
+                    let above_windows = oriented_size
+                        .map(|size| {
+                            switcher_overlay.render(
                                 renderer,
-                                window,
-                                loc,
+                                state.alt_tab_switcher.as_ref(),
+                                (size.w, size.h),
                                 scale,
-                                blur_engine,
-                                state.pointer_location,
-                            ));
-                        }
-                    }
+                            )
+                        })
+                        .unwrap_or_default();
 
-                    // 4. Render Bottom & Background layer surfaces (wallpaper, desktop background)
-                    render_elements.extend(render_layer_surfaces(
-                        renderer,
-                        output,
-                        scale,
-                        &[
-                            smithay::wayland::shell::wlr_layer::Layer::Bottom,
-                            smithay::wayland::shell::wlr_layer::Layer::Background,
-                        ],
-                        blur_engine,
-                    ));
+                    let render_elements: Vec<CustomRenderElements> = {
+                        let ctx = FrameContext {
+                            output,
+                            scale,
+                            cursor: cursor_element,
+                            below_windows,
+                            above_windows,
+                            space: &state.space,
+                            blur_engine: Some(&state.blur_engine),
+                            pointer: state.pointer_location,
+                        };
+                        compose_frame(renderer, ctx)
+                    };
 
                     match surface_data
                         .compositor
@@ -216,15 +183,15 @@ pub fn setup_render_loop(
                         }
                     }
 
-                    if crate::extensions::screenshot::capture::take_requested() {
+                    if screenshot_requested {
                         let _ = crate::extensions::screenshot::capture::capture_screen(
                             renderer,
                             &render_elements,
                             output,
                         );
+                        screenshot_requested = false;
                     }
 
-                    let output = &surface_data.output;
                     state.space.elements().for_each(|window| {
                         window.send_frame(
                             output,

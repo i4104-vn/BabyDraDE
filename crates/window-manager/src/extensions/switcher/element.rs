@@ -1,6 +1,5 @@
 use std::time::Instant;
 
-use cairo::{Context, Format, ImageSurface};
 use smithay::{
     backend::renderer::element::utils::{ConstrainAlign, ConstrainScaleBehavior},
     backend::renderer::{
@@ -22,6 +21,7 @@ use common::constants::launcher::{BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO};
 
 use crate::compositor::AltTabSwitcher;
 use crate::extensions::launcher::buffer::render_right_backdrop_pixels;
+use crate::rendering::buffer::render_pixels;
 
 use super::{
     draw::Rect,
@@ -343,29 +343,6 @@ fn overlay_region(
     let y1 = (bottom * scale.y).ceil().clamp(0.0, screen_h as f64) as i32;
 
     (x0, y0, (x1 - x0).max(1), (y1 - y0).max(1))
-}
-
-fn render_pixels<F>(
-    width: i32,
-    height: i32,
-    scale: Scale<f64>,
-    origin: (i32, i32),
-    draw_fn: F,
-) -> Option<Vec<u8>>
-where
-    F: FnOnce(&Context) -> Result<(), cairo::Error>,
-{
-    let mut surface = ImageSurface::create(Format::ARgb32, width, height).ok()?;
-    {
-        let context = Context::new(&surface).ok()?;
-        context.scale(scale.x, scale.y);
-        // Buffer chỉ phủ vùng dock: dịch hệ trục để phần vẽ vẫn dùng toạ độ
-        // logic của toàn màn hình.
-        context.translate(-(origin.0 as f64) / scale.x, -(origin.1 as f64) / scale.y);
-        draw_fn(&context).ok()?;
-    }
-    surface.flush();
-    surface.data().ok().map(|data| data.to_vec())
 }
 
 #[cfg(test)]

@@ -5,40 +5,14 @@ use animation::{Easing, Tween};
 use super::auth::verify_password;
 use gtk4::prelude::*;
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
+
+use crate::platform::gtk::init_layer_window;
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const BLUR_DIVISORS: [i32; 3] = [8, 16, 28];
-
-fn init_layer_window(
-    window: &gtk4::ApplicationWindow,
-    layer: Layer,
-    kbd_mode: KeyboardMode,
-    exclusive_zone: i32,
-    anchors: &[(Edge, bool)],
-    margin_bottom: i32,
-    namespace: Option<&str>,
-) {
-    if !gtk4_layer_shell::is_supported() {
-        return;
-    }
-
-    window.init_layer_shell();
-    if let Some(namespace) = namespace {
-        window.set_namespace(Some(namespace));
-    }
-    window.set_layer(layer);
-    window.set_keyboard_mode(kbd_mode);
-    window.set_exclusive_zone(exclusive_zone);
-    for &(edge, anchor) in anchors {
-        window.set_anchor(edge, anchor);
-    }
-    if margin_bottom > 0 {
-        window.set_margin(Edge::Bottom, margin_bottom);
-    }
-}
 
 #[derive(Clone)]
 pub struct LockTransition {

@@ -14,10 +14,11 @@ use smithay::{
     utils::{Logical, Physical, Point, Scale, Transform},
 };
 
+use crate::rendering::buffer::render_pixels;
 use crate::rendering::CustomRenderElements;
 use ui_kit::components::dock::DockSide;
 
-use super::buffer::{buffer_damage, physical_region, render_backdrop_pixels, render_pixels};
+use super::buffer::{buffer_damage, physical_region, render_backdrop_pixels};
 use super::draw::draw_scene;
 use super::{
     BackdropKey, BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO,
