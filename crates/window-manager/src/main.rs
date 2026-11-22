@@ -5,7 +5,6 @@ mod app;
 mod backends;
 mod compositor;
 mod input;
-mod keymap;
 mod model;
 mod platform;
 pub(crate) mod rendering;

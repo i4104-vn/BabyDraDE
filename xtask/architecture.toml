@@ -20,9 +20,8 @@ platform = ["model"]
 # The compositor is the orchestration layer: it owns protocol state plus the
 # rendering and shell state it coordinates. It never imports a backend.
 compositor = ["model", "rendering", "shell", "input"]
-keymap = ["model", "platform"]
-input = ["model", "platform", "compositor", "keymap", "shell"]
+input = ["model", "platform", "compositor", "shell"]
 rendering = ["model", "platform"]
 shell = ["model", "platform", "compositor", "rendering"]
 backends = ["model", "platform", "compositor", "input", "rendering", "shell"]
-app = ["model", "platform", "compositor", "input", "rendering", "shell", "keymap", "backends"]
+app = ["model", "platform", "compositor", "input", "rendering", "shell", "backends"]

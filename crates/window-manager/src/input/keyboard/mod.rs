@@ -139,12 +139,12 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                 // Configurable shortcuts use the layout-independent raw keysym
                 // so Shift does not change letter matching.
                 if let Some(raw_sym) = handle.raw_latin_sym_or_raw_current_sym() {
-                    if let Some(command) = crate::keymap::matcher::command_for(
+                    if let Some(command) = crate::input::keymap::matcher::command_for(
                         modifiers,
                         raw_sym.into(),
-                        crate::keymap::shortcuts(),
+                        crate::input::keymap::shortcuts(),
                     ) {
-                        crate::keymap::spawn_command(command);
+                        crate::input::keymap::spawn_command(command);
                         return FilterResult::Intercept(());
                     }
                 }

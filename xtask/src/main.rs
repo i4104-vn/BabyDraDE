@@ -110,8 +110,8 @@ fn layer_for(path: &Path, src: &Path) -> Option<String> {
     match first {
         "main.rs" => Some("app".to_string()),
         "extensions" => Some("shell".to_string()),
-        "backends" | "compositor" | "input" | "rendering" | "keymap" | "model" | "platform"
-        | "shell" | "app" => Some(first.to_string()),
+        "backends" | "compositor" | "input" | "rendering" | "model" | "platform" | "shell"
+        | "app" => Some(first.to_string()),
         _ => None,
     }
 }

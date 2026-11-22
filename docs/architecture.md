@@ -24,8 +24,7 @@ src/
 ├── app/          # composition root, env bootstrap, subcommand dispatch
 ├── backends/     # Winit / Udev adapters
 ├── compositor/   # Wayland protocol, space, seat and window state
-├── input/        # keyboard, pointer, touch and touchpad pipelines
-├── keymap/       # shortcut configuration and matching
+├── input/        # keyboard (incl. keymap), pointer, touch, touchpad pipelines
 ├── model/        # plain shared types (leaf layer)
 ├── platform/     # brand, GTK helpers and future OS adapters
 ├── rendering/    # frame composition, elements, blur, titlebar, animation

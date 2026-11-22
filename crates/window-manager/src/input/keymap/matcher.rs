@@ -37,7 +37,7 @@ pub(crate) fn command_for(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::keymap::mapping::Shortcut;
+    use crate::input::keymap::mapping::Shortcut;
     use smithay::input::keyboard::keysyms;
     use std::sync::{Arc, RwLock};
 

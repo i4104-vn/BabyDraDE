@@ -5,6 +5,7 @@
 
 pub(crate) mod common;
 pub(crate) mod keyboard;
+pub(crate) mod keymap;
 pub(crate) mod pointer;
 pub(crate) mod touch;
 pub(crate) mod touchpad;

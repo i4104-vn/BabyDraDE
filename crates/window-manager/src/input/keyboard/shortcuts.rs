@@ -136,7 +136,7 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
             lock::spawn();
         }
         KeyboardAction::ReloadConfig => {
-            crate::keymap::reload();
+            crate::input::keymap::reload();
             state.reload_config();
         }
         KeyboardAction::ClipboardPicker => {
