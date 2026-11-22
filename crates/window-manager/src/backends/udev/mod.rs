@@ -9,7 +9,7 @@ use services::theme::DesktopTheme;
 use smithay::reexports::calloop::EventLoop;
 use tracing::info;
 
-use crate::{compositor::CalloopData, extensions::Cursor};
+use crate::compositor::{CalloopData, Cursor};
 
 use self::{
     gpu::scan_and_init_gpu, render::setup_render_loop, session::UdevSession, surface::UdevState,

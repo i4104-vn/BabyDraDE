@@ -3,7 +3,7 @@ use std::{collections::HashMap, ffi::OsString, sync::Arc, time::Instant};
 pub(crate) use common::SwipeDirection;
 use smithay::{
     desktop::{PopupManager, Space, Window},
-    input::{Seat, SeatState},
+    input::{pointer::CursorIcon, Seat, SeatState},
     reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
     reexports::{
         calloop::{
@@ -17,6 +17,7 @@ use smithay::{
     utils::{Logical, Point},
     wayland::{
         compositor::{CompositorClientState, CompositorState},
+        cursor_shape::CursorShapeManagerState,
         output::OutputManagerState,
         pointer_gestures::PointerGesturesState,
         selection::data_device::DataDeviceState,
@@ -90,6 +91,23 @@ impl ResizeState {
     }
 }
 
+/// Maps the edge being dragged to the matching resize cursor direction.
+fn resize_cursor_icon(edges: ResizeEdge) -> CursorIcon {
+    use ResizeEdge::*;
+
+    match edges {
+        TopLeft => CursorIcon::NwResize,
+        TopRight => CursorIcon::NeResize,
+        BottomLeft => CursorIcon::SwResize,
+        BottomRight => CursorIcon::SeResize,
+        Top => CursorIcon::NResize,
+        Bottom => CursorIcon::SResize,
+        Left => CursorIcon::WResize,
+        Right => CursorIcon::EResize,
+        _ => CursorIcon::AllResize,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct TrackpadSwipeBuffer {
     pub(crate) fingers: u32,
@@ -138,6 +156,8 @@ pub(crate) struct BabydraState {
     pub(crate) _xdg_decoration_state: XdgDecorationState,
     pub(crate) wlr_layer_shell_state: WlrLayerShellState,
     pub(crate) _pointer_gestures_state: PointerGesturesState,
+    /// Lets clients request named cursor shapes (text, wait, resize, ...).
+    pub(crate) _cursor_shape_state: CursorShapeManagerState,
     pub(crate) shm_state: ShmState,
     pub(crate) _output_manager_state: OutputManagerState,
     pub(crate) seat_state: SeatState<BabydraState>,
@@ -163,6 +183,8 @@ pub(crate) struct BabydraState {
     pub(crate) blur_engine: std::sync::Arc<std::sync::Mutex<crate::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) cursor_visible: bool,
+    /// Last cursor shape requested by the focused Wayland client.
+    pub(crate) cursor_icon: CursorIcon,
     pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
     pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
     pub(crate) windows: Vec<Window>,
@@ -186,6 +208,7 @@ impl BabydraState {
         let xdg_decoration_state = XdgDecorationState::new::<Self>(&display_handle);
         let wlr_layer_shell_state = WlrLayerShellState::new::<Self>(&display_handle);
         let pointer_gestures_state = PointerGesturesState::new::<Self>(&display_handle);
+        let cursor_shape_state = CursorShapeManagerState::new::<Self>(&display_handle);
         let shm_state = ShmState::new::<Self>(&display_handle, vec![]);
         let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&display_handle);
         let data_device_state = DataDeviceState::new::<Self>(&display_handle);
@@ -211,6 +234,7 @@ impl BabydraState {
             _xdg_decoration_state: xdg_decoration_state,
             wlr_layer_shell_state,
             _pointer_gestures_state: pointer_gestures_state,
+            _cursor_shape_state: cursor_shape_state,
             shm_state,
             _output_manager_state: output_manager_state,
             seat_state,
@@ -231,6 +255,7 @@ impl BabydraState {
             )),
             pointer_location: Point::from((100.0, 100.0)),
             cursor_visible: true,
+            cursor_icon: CursorIcon::Default,
             pointer_pressed_buttons: std::collections::HashSet::new(),
             touch_slots: std::collections::HashSet::new(),
             windows: Vec::new(),
@@ -249,6 +274,41 @@ impl BabydraState {
         services::config::invalidate_cache();
         self.touchpad_natural_scroll = services::config::load_touchpad_config().natural_scroll;
         self.mouse_natural_scroll = services::config::load_mouse_config().natural_scroll;
+    }
+
+    /// Cursor shape the renderer should show this frame.
+    ///
+    /// Compositor-owned drag operations and hover targets override the client's
+    /// last request: borders show the matching directional resize cursor (both
+    /// on hover and while dragging), the draggable titlebar shows a grab cursor,
+    /// and active moves show a grabbing cursor.
+    pub(crate) fn effective_cursor_icon(&self) -> CursorIcon {
+        if let Some(ref resize) = self.resize_state {
+            return resize_cursor_icon(resize.edges);
+        }
+        if self.move_state.is_some() {
+            return CursorIcon::Grabbing;
+        }
+
+        let point = self.pointer_location;
+
+        // Hovering a resize border shows the same arrow that a drag would use.
+        if let Some((_, _, edge)) = self.window_border_under(point) {
+            return resize_cursor_icon(edge);
+        }
+
+        // Hovering the draggable part of a server-side titlebar shows a grab
+        // cursor. Buttons keep whatever the client requested.
+        if let Some((window, location)) = self.window_under(point) {
+            if matches!(
+                crate::rendering::titlebar::hit_test(&window, location, point),
+                Some(common::Action::Move)
+            ) {
+                return CursorIcon::Grab;
+            }
+        }
+
+        self.cursor_icon
     }
 
     fn init_wayland_listener(
@@ -298,4 +358,33 @@ impl ClientData for ClientState {
     fn initialized(&self, _client_id: ClientId) {}
 
     fn disconnected(&self, _client_id: ClientId, _reason: DisconnectReason) {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resize_edges_map_to_directional_cursor_icons() {
+        assert_eq!(
+            resize_cursor_icon(ResizeEdge::TopLeft),
+            CursorIcon::NwResize
+        );
+        assert_eq!(
+            resize_cursor_icon(ResizeEdge::TopRight),
+            CursorIcon::NeResize
+        );
+        assert_eq!(
+            resize_cursor_icon(ResizeEdge::BottomLeft),
+            CursorIcon::SwResize
+        );
+        assert_eq!(
+            resize_cursor_icon(ResizeEdge::BottomRight),
+            CursorIcon::SeResize
+        );
+        assert_eq!(resize_cursor_icon(ResizeEdge::Top), CursorIcon::NResize);
+        assert_eq!(resize_cursor_icon(ResizeEdge::Bottom), CursorIcon::SResize);
+        assert_eq!(resize_cursor_icon(ResizeEdge::Left), CursorIcon::WResize);
+        assert_eq!(resize_cursor_icon(ResizeEdge::Right), CursorIcon::EResize);
+    }
 }

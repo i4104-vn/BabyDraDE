@@ -12,8 +12,8 @@ use smithay::{
 };
 
 use crate::{
-    compositor::{BabydraState, CalloopData},
-    extensions::{Cursor, SwitcherOverlay},
+    compositor::{BabydraState, CalloopData, Cursor},
+    extensions::SwitcherOverlay,
     rendering::{render_layer_surfaces, render_window, CustomRenderElements},
 };
 
@@ -30,9 +30,12 @@ pub(crate) fn init(
         ))
     })?;
     backend.window().set_title("BabyDraDE");
-    backend.window().set_cursor_visible(true);
+    // The compositor draws its own themed cursor into the frame; leaving the
+    // host cursor visible would stack an arrow on top of it (and hide shape
+    // changes) when running nested.
+    backend.window().set_cursor_visible(false);
 
-    let cursor = Cursor::new();
+    let mut cursor = Cursor::new();
     let theme = DesktopTheme::default();
 
     let output = Output::new(
@@ -100,6 +103,7 @@ pub(crate) fn init(
                     let blur_engine = Some(&state.blur_engine);
 
                     // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
+                    cursor.set_icon(state.effective_cursor_icon());
                     if state.cursor_visible {
                         if let Some(cursor_elem) =
                             cursor.element(backend.renderer(), state.pointer_location, scale)
@@ -222,7 +226,6 @@ pub(crate) fn init(
                     state.space.refresh();
                     state.popups.cleanup();
                     let _ = display_handle.flush_clients();
-                    backend.window().set_cursor_visible(true);
                     backend.window().request_redraw();
                 }
                 WinitEvent::CloseRequested => state.loop_signal.stop(),

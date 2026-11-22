@@ -115,7 +115,7 @@ pub fn setup_render_loop(
                     ref mut surfaces,
                     ref mut renderer,
                     theme,
-                    ref cursor,
+                    ref mut cursor,
                     ..
                 } = *s;
 
@@ -123,6 +123,7 @@ pub fn setup_render_loop(
                     let mut render_elements: Vec<CustomRenderElements> = Vec::new();
 
                     // 1. Mouse cursor MUST BE FIRST in front-to-back order (index 0 is on top of everything)
+                    cursor.set_icon(state.effective_cursor_icon());
                     if state.cursor_visible {
                         if let Some(cursor_elem) =
                             cursor.element(renderer, state.pointer_location, scale)

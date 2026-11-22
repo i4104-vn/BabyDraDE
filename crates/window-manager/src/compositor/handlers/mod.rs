@@ -6,7 +6,8 @@ mod xdg_shell;
 use std::{io::Write, os::unix::io::OwnedFd, time::Duration};
 
 use smithay::{
-    delegate_data_device, delegate_output, delegate_pointer_gestures, delegate_seat,
+    delegate_cursor_shape, delegate_data_device, delegate_output, delegate_pointer_gestures,
+    delegate_seat,
     input::{pointer::CursorImageStatus, Seat, SeatHandler, SeatState},
     reexports::wayland_server::{protocol::wl_surface::WlSurface, Resource},
     wayland::{
@@ -18,6 +19,7 @@ use smithay::{
             },
             SelectionHandler, SelectionSource, SelectionTarget,
         },
+        tablet_manager::TabletSeatHandler,
     },
 };
 
@@ -32,7 +34,18 @@ impl SeatHandler for BabydraState {
         &mut self.seat_state
     }
 
-    fn cursor_image(&mut self, _seat: &Seat<Self>, _image: CursorImageStatus) {}
+    fn cursor_image(&mut self, _seat: &Seat<Self>, image: CursorImageStatus) {
+        match image {
+            CursorImageStatus::Hidden => self.cursor_visible = false,
+            CursorImageStatus::Named(icon) => {
+                self.cursor_icon = icon;
+                self.cursor_visible = true;
+            }
+            // Client-supplied cursor surfaces are not part of a theme; keep the
+            // last themed shape visible instead of dropping the pointer.
+            CursorImageStatus::Surface(_) => self.cursor_visible = true,
+        }
+    }
 
     fn focus_changed(&mut self, seat: &Seat<Self>, focused: Option<&WlSurface>) {
         let client = focused.and_then(|surface| self.display_handle.get_client(surface.id()).ok());
@@ -41,6 +54,11 @@ impl SeatHandler for BabydraState {
 }
 
 delegate_seat!(BabydraState);
+delegate_cursor_shape!(BabydraState);
+
+// Required by the cursor-shape delegate; the tablet protocol itself is not
+// advertised, so there are no tool images to handle.
+impl TabletSeatHandler for BabydraState {}
 
 impl SelectionHandler for BabydraState {
     type SelectionUserData = ();
