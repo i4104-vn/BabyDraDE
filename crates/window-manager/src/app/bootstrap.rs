@@ -54,11 +54,13 @@ pub(crate) fn ensure_runtime_dir() {
     }
 }
 
-/// Exports Wayland and desktop environment variables before GTK starts.
-pub(crate) fn export_env(socket_name: &OsStr) {
+/// Exports toolkit hints before GTK starts.
+///
+/// `WAYLAND_DISPLAY` is intentionally *not* set here: doing so before GTK
+/// initializes would make GTK connect to the compositor's own, not-yet-running
+/// socket.
+pub(crate) fn export_toolkit_env() {
     // SAFETY: called from `app::run` before GTK initialization or threads.
-    std::env::set_var("WAYLAND_DISPLAY", socket_name);
-    // SAFETY: see above.
     std::env::set_var("ELECTRON_OZONE_PLATFORM_HINT", "auto");
     // SAFETY: see above.
     std::env::set_var("MOZ_ENABLE_WAYLAND", "1");
@@ -72,6 +74,12 @@ pub(crate) fn export_env(socket_name: &OsStr) {
     std::env::set_var("XDG_SESSION_DESKTOP", brand::DISPLAY_NAME);
     // SAFETY: see above.
     std::env::set_var("XDG_SESSION_TYPE", "wayland");
+}
+
+/// Publishes the compositor's own Wayland socket for child processes.
+pub(crate) fn export_wayland_display(socket_name: &OsStr) {
+    // SAFETY: GTK and the selected backend are already initialized.
+    std::env::set_var("WAYLAND_DISPLAY", socket_name);
 }
 
 /// Initializes GTK after the environment is fully configured.

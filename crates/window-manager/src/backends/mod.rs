@@ -10,18 +10,13 @@ use crate::compositor::CalloopData;
 pub(crate) fn init(
     event_loop: &mut EventLoop<'_, CalloopData>,
     data: &mut CalloopData,
+    host_has_display: bool,
 ) -> Result<(), Box<dyn Error>> {
-    match (
-        std::env::var_os("WAYLAND_DISPLAY"),
-        std::env::var_os("DISPLAY"),
-    ) {
-        (Some(_), _) | (_, Some(_)) => {
-            info!("Active graphical host display detected ($WAYLAND_DISPLAY or $DISPLAY is set). Initializing nested Winit backend.");
-            winit::init(event_loop, data)
-        }
-        _ => {
-            info!("No host display detected. Initializing autonomous Udev/DRM hardware backend for direct TTY scanout.");
-            udev::init(event_loop, data)
-        }
+    if host_has_display {
+        info!("Active graphical host display detected. Initializing nested Winit backend.");
+        winit::init(event_loop, data)
+    } else {
+        info!("No host display detected. Initializing autonomous Udev/DRM hardware backend for direct TTY scanout.");
+        udev::init(event_loop, data)
     }
 }

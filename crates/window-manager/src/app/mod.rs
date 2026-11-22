@@ -16,14 +16,20 @@ use crate::{
 pub(crate) fn run() -> Result<(), Box<dyn Error>> {
     bootstrap::ensure_runtime_dir();
 
-    // Create the Wayland display before GTK starts so all environment
-    // variables are exported before any toolkit or thread observes them.
+    // Capture the *host* display before exporting our own WAYLAND_DISPLAY,
+    // otherwise the backend would always think it is nested.
+    let host_has_display = std::env::var_os("WAYLAND_DISPLAY").is_some()
+        || std::env::var_os("WAYLAND_SOCKET").is_some()
+        || std::env::var_os("DISPLAY").is_some();
+
     let mut event_loop: EventLoop<'_, CalloopData> = EventLoop::try_new()?;
     let display: Display<BabydraState> = Display::new()?;
     let display_handle = display.handle();
     let state = BabydraState::new(&mut event_loop, display);
 
-    bootstrap::export_env(&state.socket_name);
+    // Toolkit hints must be visible to GTK, but WAYLAND_DISPLAY must still
+    // point at the host session here (if any) until the backend is chosen.
+    bootstrap::export_toolkit_env();
     bootstrap::init_gtk();
     services::config::ensure_babydra_dirs();
 
@@ -44,7 +50,10 @@ pub(crate) fn run() -> Result<(), Box<dyn Error>> {
         })
         .expect("failed to register clipboard completion channel");
 
-    backends::init(&mut event_loop, &mut data)?;
+    backends::init(&mut event_loop, &mut data, host_has_display)?;
+
+    // Only now publish our own socket; GTK and the backend already started.
+    bootstrap::export_wayland_display(&data.state.socket_name);
 
     info!(
         "BabyDraDE is running. Wayland socket: {}",
