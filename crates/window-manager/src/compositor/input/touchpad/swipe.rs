@@ -12,7 +12,6 @@ use smithay::{
 
 use crate::compositor::input::keyboard::cycle_window_focus;
 use crate::compositor::state::{BabydraState, SwipeDirection, TrackpadSwipeBuffer};
-use services::config::load_gesture_config;
 
 use common::constants::{SWIPE_FOUR_FINGERS as FOUR_FINGERS, SWIPE_THREE_FINGERS as THREE_FINGERS};
 
@@ -105,7 +104,7 @@ where
         if let Some((fingers, scrubbing, dx, dy)) = snapshot {
             if fingers == THREE_FINGERS
                 && !scrubbing
-                && load_gesture_config().three_finger_swipe_window
+                && state.gesture_config.three_finger_swipe_window
                 && dx.abs() > dy.abs()
                 && dx.abs() >= 40.0
             {
@@ -176,7 +175,7 @@ where
                 return;
             }
             if !cancelled {
-                let cfg = load_gesture_config();
+                let cfg = state.gesture_config.clone();
                 let threshold = if gesture.fingers == FOUR_FINGERS {
                     cfg.four_finger_swipe_threshold
                 } else {

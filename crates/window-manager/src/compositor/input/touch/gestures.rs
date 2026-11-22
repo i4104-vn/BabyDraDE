@@ -13,7 +13,6 @@ use smithay::{
 
 use crate::compositor::input::keyboard::cycle_window_focus;
 use crate::compositor::state::{BabydraState, SwipeDirection, TouchSlotData};
-use services::config::load_gesture_config;
 
 // ----- constants ---------------------------------------------------------
 
@@ -94,7 +93,7 @@ pub(crate) fn on_touch_motion(
         let dy = current_y - start_y;
         let scrubbing = state.touch_gesture.scrubbing;
         if !scrubbing
-            && load_gesture_config().three_finger_swipe_window
+            && state.gesture_config.three_finger_swipe_window
             && dx.abs() >= 40.0
             && dx.abs() > dy.abs()
         {
@@ -138,7 +137,7 @@ pub(crate) fn on_touch_up(state: &mut BabydraState, slot: TouchSlot, time_ms: u6
     let consumed = state.touch_gesture.consumed || scrubbing;
 
     if !consumed && n >= 2 {
-        let cfg = load_gesture_config();
+        let cfg = state.gesture_config.clone();
         let _ = try_fire_touch_gesture(state, n, time_ms, &cfg);
     }
 

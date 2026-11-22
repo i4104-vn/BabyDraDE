@@ -198,6 +198,8 @@ pub(crate) struct BabydraState {
     pub(crate) touchpad_natural_scroll: bool,
     /// Cached mouse/pointer configuration natural scroll setting.
     pub(crate) mouse_natural_scroll: bool,
+    /// Gesture settings snapshot, refreshed only on config reload.
+    pub(crate) gesture_config: services::models::GestureConfig,
 }
 
 impl BabydraState {
@@ -263,6 +265,7 @@ impl BabydraState {
             touch_gesture: TouchGestureBuffer::default(),
             touchpad_natural_scroll: services::config::load_touchpad_config().natural_scroll,
             mouse_natural_scroll: services::config::load_mouse_config().natural_scroll,
+            gesture_config: services::config::load_gesture_config(),
         }
     }
 
@@ -274,6 +277,7 @@ impl BabydraState {
         services::config::invalidate_cache();
         self.touchpad_natural_scroll = services::config::load_touchpad_config().natural_scroll;
         self.mouse_natural_scroll = services::config::load_mouse_config().natural_scroll;
+        self.gesture_config = services::config::load_gesture_config();
     }
 
     /// Cursor shape the renderer should show this frame.
