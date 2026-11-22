@@ -320,15 +320,13 @@ pub fn get_app_icon_pixbuf_any(app_id: &str, size: i32) -> Option<Pixbuf> {
         .strip_suffix(".desktop")
         .unwrap_or(app_id.trim());
 
-    let info = gtk4::gio::AppInfo::all()
-        .into_iter()
-        .find(|info| {
-            info.id().is_some_and(|id| {
-                id.strip_suffix(".desktop")
-                    .unwrap_or(id.as_str())
-                    .eq_ignore_ascii_case(clean_id)
-            })
-        });
+    let info = gtk4::gio::AppInfo::all().into_iter().find(|info| {
+        info.id().is_some_and(|id| {
+            id.strip_suffix(".desktop")
+                .unwrap_or(id.as_str())
+                .eq_ignore_ascii_case(clean_id)
+        })
+    });
     if let Some(info) = info {
         if let Some(icon) = info.icon() {
             if let Some(pb) = pixbuf_from_gicon(&icon, size) {

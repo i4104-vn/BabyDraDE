@@ -34,7 +34,12 @@ impl Spring {
 
     /// Create a spring with initial velocity.
     #[inline]
-    pub fn new_with_velocity(from: f64, to: f64, initial_velocity: f64, config: SpringConfig) -> Self {
+    pub fn new_with_velocity(
+        from: f64,
+        to: f64,
+        initial_velocity: f64,
+        config: SpringConfig,
+    ) -> Self {
         Self::new_with_velocity_at(from, to, initial_velocity, config, Instant::now())
     }
 
@@ -80,7 +85,11 @@ impl Spring {
 
     /// Adjust precision thresholds for settling detection.
     #[inline]
-    pub fn with_settle_threshold(mut self, position_threshold: f64, velocity_threshold: f64) -> Self {
+    pub fn with_settle_threshold(
+        mut self,
+        position_threshold: f64,
+        velocity_threshold: f64,
+    ) -> Self {
         self.settle_threshold = position_threshold.max(1e-6);
         self.settle_velocity_threshold = velocity_threshold.max(1e-6);
         self
@@ -103,13 +112,8 @@ impl Spring {
         {
             *self = Self::settled_at(to, now);
         } else {
-            *self = Self::new_with_velocity_at(
-                current_value,
-                to,
-                current_velocity,
-                self.config,
-                now,
-            );
+            *self =
+                Self::new_with_velocity_at(current_value, to, current_velocity, self.config, now);
         }
     }
 
@@ -176,7 +180,8 @@ impl Spring {
 
         let (y, v) = solve_spring(&self.config, y0, v0, elapsed);
 
-        let is_settled = y.abs() <= self.settle_threshold && v.abs() <= self.settle_velocity_threshold;
+        let is_settled =
+            y.abs() <= self.settle_threshold && v.abs() <= self.settle_velocity_threshold;
         if is_settled {
             (self.to, 0.0, true)
         } else {
@@ -222,13 +227,7 @@ mod tests {
     #[test]
     fn critically_damped_reaches_target_smoothly() {
         let start = Instant::now();
-        let spring = Spring::new_with_velocity_at(
-            0.0,
-            100.0,
-            0.0,
-            SpringConfig::SMOOTH,
-            start,
-        );
+        let spring = Spring::new_with_velocity_at(0.0, 100.0, 0.0, SpringConfig::SMOOTH, start);
 
         assert_eq!(spring.value_at(start), 0.0);
         assert!(spring.is_animating_at(start));
@@ -245,13 +244,7 @@ mod tests {
     #[test]
     fn bouncy_spring_overshoots_target() {
         let start = Instant::now();
-        let spring = Spring::new_with_velocity_at(
-            0.0,
-            100.0,
-            0.0,
-            SpringConfig::BOUNCY,
-            start,
-        );
+        let spring = Spring::new_with_velocity_at(0.0, 100.0, 0.0, SpringConfig::BOUNCY, start);
 
         let mut overshot = false;
         for ms in (50..1000).step_by(10) {
@@ -267,13 +260,7 @@ mod tests {
     #[test]
     fn momentum_is_preserved_on_retarget() {
         let start = Instant::now();
-        let mut spring = Spring::new_with_velocity_at(
-            0.0,
-            100.0,
-            0.0,
-            SpringConfig::SMOOTH,
-            start,
-        );
+        let mut spring = Spring::new_with_velocity_at(0.0, 100.0, 0.0, SpringConfig::SMOOTH, start);
 
         let mid = start + Duration::from_millis(100);
         let vel_before = spring.velocity_at(mid);

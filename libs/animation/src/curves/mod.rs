@@ -206,7 +206,10 @@ mod tests {
     fn ease_out_back_overshoots() {
         let easing = Easing::EaseOutBack;
         let mid_val = easing.apply(0.7);
-        assert!(mid_val > 1.0, "EaseOutBack should overshoot target, got {mid_val}");
+        assert!(
+            mid_val > 1.0,
+            "EaseOutBack should overshoot target, got {mid_val}"
+        );
         assert_close(easing.apply(1.0), 1.0);
     }
 

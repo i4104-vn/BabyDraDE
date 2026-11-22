@@ -8,7 +8,7 @@ use tracing::info;
 use crate::compositor::CalloopData;
 
 pub(crate) fn init(
-    event_loop: &mut EventLoop<CalloopData>,
+    event_loop: &mut EventLoop<'_, CalloopData>,
     data: &mut CalloopData,
 ) -> Result<(), Box<dyn Error>> {
     match (

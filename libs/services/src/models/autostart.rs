@@ -3,10 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 fn default_autostart_commands() -> Vec<String> {
-    vec![
-        "babydra-desktop".to_string(),
-        "babydra-topbar".to_string(),
-    ]
+    vec!["babydra-desktop".to_string(), "babydra-topbar".to_string()]
 }
 
 /// Autostart configuration model matching `[autostart]` in `~/.babydra/babydra.conf`.

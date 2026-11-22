@@ -18,7 +18,7 @@ pub struct UdevSession {
 }
 
 impl UdevSession {
-    pub fn new(event_loop: &mut EventLoop<CalloopData>) -> Result<Self, Box<dyn Error>> {
+    pub fn new(event_loop: &mut EventLoop<'_, CalloopData>) -> Result<Self, Box<dyn Error>> {
         // Claim seat via LibSeat (logind / seatd)
         let (session, notifier) = LibSeatSession::new().map_err(|err| {
             std::io::Error::new(

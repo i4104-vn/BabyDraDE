@@ -25,7 +25,7 @@ use crate::{
 use super::surface::UdevState;
 
 pub fn setup_render_loop(
-    event_loop: &mut EventLoop<CalloopData>,
+    event_loop: &mut EventLoop<'_, CalloopData>,
     state: Rc<RefCell<UdevState>>,
     notifier: smithay::backend::session::libseat::LibSeatSessionNotifier,
     drm_notifier: smithay::backend::drm::DrmDeviceNotifier,

@@ -308,7 +308,9 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
                             let size = output.current_transform().transform_size(mode.size);
                             Some((
                                 size,
-                                smithay::utils::Scale::from(output.current_scale().fractional_scale()),
+                                smithay::utils::Scale::from(
+                                    output.current_scale().fractional_scale(),
+                                ),
                             ))
                         })
                         .unwrap_or(((1920, 1080).into(), smithay::utils::Scale::from(1.0)));
@@ -341,7 +343,9 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
 
                     if let Some(window) = tapped {
                         state.unminimize_window(&window);
-                        crate::compositor::input::keyboard::focus::focus_window(state, window, serial);
+                        crate::compositor::input::keyboard::focus::focus_window(
+                            state, window, serial,
+                        );
                     }
                     if let Some(switcher) = state.alt_tab_switcher.as_mut() {
                         switcher.begin_close();

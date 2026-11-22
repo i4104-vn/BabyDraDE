@@ -7,10 +7,8 @@ use std::time::Duration;
 
 use gtk4::prelude::*;
 
-use animation::{
-    current_anim_gen, island_animate_size, island_zoom_in, island_zoom_out,
-};
 use crate::center::engine::IslandEngine;
+use animation::{current_anim_gen, island_animate_size, island_zoom_in, island_zoom_out};
 
 const EXPAND_MS: u64 = 350;
 const COLLAPSE_MS: u64 = 500;
@@ -61,10 +59,7 @@ pub(crate) fn apply_transition(
             if let Ok(mut feature) = view.feature.try_borrow_mut() {
                 feature.on_show();
             }
-            let size = view
-                .feature
-                .borrow()
-                .size();
+            let size = view.feature.borrow().size();
             animate_expand(engine, size, true, engine_rc);
         }
         None => animate_collapse(engine, engine_rc),
@@ -110,19 +105,11 @@ fn animate_expand(
         });
     } else {
         let rc_on_complete = engine_rc.clone();
-        island_animate_size(
-            capsule.upcast_ref(),
-            cur_w,
-            tw,
-            cur_h,
-            th,
-            ms,
-            move || {
-                if let Ok(core) = rc_on_complete.try_borrow_mut() {
-                    core.animating.set(false);
-                }
-            },
-        );
+        island_animate_size(capsule.upcast_ref(), cur_w, tw, cur_h, th, ms, move || {
+            if let Ok(core) = rc_on_complete.try_borrow_mut() {
+                core.animating.set(false);
+            }
+        });
         let anim_gen = current_anim_gen();
         let rc3 = engine_rc.clone();
         glib::timeout_add_local_once(Duration::from_millis(ms + 120), move || {

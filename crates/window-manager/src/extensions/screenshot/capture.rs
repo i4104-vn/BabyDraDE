@@ -49,7 +49,11 @@ pub fn take_requested() -> bool {
 
 /// Captures the desktop frame directly through the compositor renderer and
 /// saves it as a lossless PNG. Opens the annotation editor on the saved image.
-pub fn capture_screen<E>(renderer: &mut GlowRenderer, elements: &[E], output: &Output) -> Option<PathBuf>
+pub fn capture_screen<E>(
+    renderer: &mut GlowRenderer,
+    elements: &[E],
+    output: &Output,
+) -> Option<PathBuf>
 where
     E: RenderElement<GlowRenderer>,
 {
@@ -62,7 +66,11 @@ where
     // inverse output transform itself. The offscreen target must use that same
     // size, otherwise a rotated output yields a sideways, partially blank PNG.
     let raw = mode.size;
-    tracing::debug!("[screenshot] raw mode size {:?}, transform {:?}", raw, transform);
+    tracing::debug!(
+        "[screenshot] raw mode size {:?}, transform {:?}",
+        raw,
+        transform
+    );
     let buffer_size = Size::<i32, BufferCoord>::from((raw.w, raw.h));
 
     let mut target: GlesRenderbuffer = match renderer.create_buffer(Fourcc::Argb8888, buffer_size) {
@@ -138,7 +146,11 @@ where
             }
 
             let raw_surface = match ImageSurface::create_for_data(
-                bgra, Format::ARgb32, width as i32, height as i32, row as i32,
+                bgra,
+                Format::ARgb32,
+                width as i32,
+                height as i32,
+                row as i32,
             ) {
                 Ok(surface) => surface,
                 Err(e) => {
@@ -148,7 +160,8 @@ where
             };
 
             // Rotate the physical frame into the output's logical orientation.
-            let logical = transform.transform_size(Size::<i32, Physical>::from((width as i32, height as i32)));
+            let logical = transform
+                .transform_size(Size::<i32, Physical>::from((width as i32, height as i32)));
             let surface = match ImageSurface::create(Format::ARgb32, logical.w, logical.h) {
                 Ok(surface) => surface,
                 Err(e) => {
@@ -157,8 +170,11 @@ where
                 }
             };
             {
-                let Ok(cr) = Context::new(&surface) else { return };
-                let (a, b, c, d, tx, ty) = transform_matrix(rotation_only(transform), width as i32, height as i32);
+                let Ok(cr) = Context::new(&surface) else {
+                    return;
+                };
+                let (a, b, c, d, tx, ty) =
+                    transform_matrix(rotation_only(transform), width as i32, height as i32);
                 cr.set_matrix(Matrix::new(a, b, c, d, tx, ty));
                 if cr.set_source_surface(&raw_surface, 0.0, 0.0).is_err() {
                     return;
@@ -269,15 +285,18 @@ mod tests {
             let (a, b, c, d, tx, ty) = transform_matrix(transform, w, h);
             for x in 0..=w {
                 for y in 0..=h {
-                    let expected = transform.transform_point_in(
-                        Point::<i32, Physical>::from((x, y)),
-                        &area,
-                    );
+                    let expected =
+                        transform.transform_point_in(Point::<i32, Physical>::from((x, y)), &area);
                     let actual = (
                         (a * x as f64 + c * y as f64 + tx) as i32,
                         (b * x as f64 + d * y as f64 + ty) as i32,
                     );
-                    assert_eq!(actual, (expected.x, expected.y), "transform {:?}", transform);
+                    assert_eq!(
+                        actual,
+                        (expected.x, expected.y),
+                        "transform {:?}",
+                        transform
+                    );
                 }
             }
         }

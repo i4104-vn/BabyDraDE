@@ -43,3 +43,6 @@ dirs = "5.0"
 ui-kit = { path = "../../libs/ui-kit" }
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.2"
+
+[lints]
+workspace = true

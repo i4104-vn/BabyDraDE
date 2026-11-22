@@ -12,15 +12,7 @@ use gtk4::{
 
 /// Common icon-theme subdirectory names, largest first.
 const SIZES: &[&str] = &[
-    "scalable",
-    "128x128",
-    "96x96",
-    "64x64",
-    "48x48",
-    "32x32",
-    "24x24",
-    "22x22",
-    "16x16",
+    "scalable", "128x128", "96x96", "64x64", "48x48", "32x32", "24x24", "22x22", "16x16",
 ];
 
 fn load_at(path: &str, size: i32) -> Option<Pixbuf> {
@@ -96,7 +88,11 @@ pub fn get_icon_pixbuf_from_filesystem(name: &str, size: i32) -> Option<Pixbuf> 
 fn theme_icon(base: &Path, theme: &str, sub: &str, name: &str, size: i32) -> Option<Pixbuf> {
     for s in SIZES {
         for ext in ["png", "svg"] {
-            let candidate = base.join(theme).join(s).join(sub).join(format!("{name}.{ext}"));
+            let candidate = base
+                .join(theme)
+                .join(s)
+                .join(sub)
+                .join(format!("{name}.{ext}"));
             if let Some(pb) = load_at(&candidate.to_string_lossy(), size) {
                 return Some(pb);
             }

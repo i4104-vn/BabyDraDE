@@ -24,3 +24,6 @@ ui-kit = { path = "../../../libs/ui-kit" }
 animation = { path = "../../../libs/animation" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

@@ -72,7 +72,9 @@ pub struct IslandViewHandle {
 impl IslandViewHandle {
     pub fn show(&self) {
         if !self.state.requested.get() {
-            self.state.request_seq.set(REQUEST_SEQ.fetch_add(1, Ordering::Relaxed));
+            self.state
+                .request_seq
+                .set(REQUEST_SEQ.fetch_add(1, Ordering::Relaxed));
             self.state.requested.set(true);
             self.state.auto_hide_at.borrow_mut().take();
         }
@@ -91,7 +93,9 @@ impl IslandViewHandle {
 
     pub fn override_show(&self) {
         self.show();
-        self.state.request_seq.set(REQUEST_SEQ.fetch_add(1, Ordering::Relaxed));
+        self.state
+            .request_seq
+            .set(REQUEST_SEQ.fetch_add(1, Ordering::Relaxed));
         self.state.override_active.set(true);
         self.state.release_at.borrow_mut().take();
         self.state.auto_hide_at.borrow_mut().take();

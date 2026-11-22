@@ -127,10 +127,10 @@ pub fn wait_and_read_current(mime_type: &str, timeout: Duration) -> Option<Vec<u
     let deadline = std::time::Instant::now() + timeout;
     loop {
         if let Some((mime, data)) = read_current() {
-            let cached_text = mime.starts_with("text/")
-                || matches!(mime.as_str(), "UTF8_STRING" | "STRING");
-            let request_text = mime_type.starts_with("text/")
-                || matches!(mime_type, "UTF8_STRING" | "STRING");
+            let cached_text =
+                mime.starts_with("text/") || matches!(mime.as_str(), "UTF8_STRING" | "STRING");
+            let request_text =
+                mime_type.starts_with("text/") || matches!(mime_type, "UTF8_STRING" | "STRING");
             // Text MIME names differ between GTK/Qt/XWayland. Any text request
             // can be satisfied by our single cached text representation.
             if mime == mime_type || (cached_text && request_text) {
@@ -148,14 +148,17 @@ pub fn wait_and_read_current(mime_type: &str, timeout: Duration) -> Option<Vec<u
 
 /// MIME types advertised by the cached selection.
 pub fn current_mime_types() -> Vec<String> {
-    serde_json::from_str::<CurrentSelection>(&fs::read_to_string(current_meta_path()).unwrap_or_default())
-        .map(|meta| meta.mime_types)
-        .unwrap_or_default()
+    serde_json::from_str::<CurrentSelection>(
+        &fs::read_to_string(current_meta_path()).unwrap_or_default(),
+    )
+    .map(|meta| meta.mime_types)
+    .unwrap_or_default()
 }
 
 /// Returns the clipboard history, newest first.
 pub fn history() -> Vec<ClipboardEntry> {
-    serde_json::from_str(&fs::read_to_string(history_path()).unwrap_or_default()).unwrap_or_default()
+    serde_json::from_str(&fs::read_to_string(history_path()).unwrap_or_default())
+        .unwrap_or_default()
 }
 
 /// Removes all history entries but keeps the current selection.

@@ -22,3 +22,6 @@ services = { path = "../../../libs/services" }
 ui-kit = { path = "../../../libs/ui-kit" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

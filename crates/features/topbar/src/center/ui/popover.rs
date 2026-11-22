@@ -58,11 +58,8 @@ impl IslandPopover {
         box_css_class: &str,
         duration_ms: u64,
     ) -> Self {
-        let popover = ui_kit::components::create_popover(
-            capsule,
-            gtk4::PositionType::Bottom,
-            css_class,
-        );
+        let popover =
+            ui_kit::components::create_popover(capsule, gtk4::PositionType::Bottom, css_class);
         popover.set_has_arrow(false);
         popover.set_offset(0, 10);
         popover.set_autohide(true);

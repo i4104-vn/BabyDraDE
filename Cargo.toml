@@ -8,6 +8,7 @@ members = [
     "libs/common",
     "libs/services",
     "libs/ui-kit",
+    "xtask",
 ]
 default-members = [
     "crates/window-manager",
@@ -26,3 +27,13 @@ authors = ["BabyDraDE Contributors"]
 [workspace.dependencies]
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Guardrails shared by every workspace member. Lints that still have existing
+# debt are tracked in `xtask-baseline.toml` and enabled as that debt is cleared.
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+unused_must_use = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+all = "deny"

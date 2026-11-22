@@ -1,0 +1,13 @@
+# Allowed dependency edges between top-level layers of `crates/window-manager`.
+# Anything not listed here is rejected by `cargo xtask check`.
+
+[matrix]
+model = []
+platform = ["model"]
+compositor = ["model"]
+keymap = ["model", "platform"]
+input = ["model", "platform", "compositor", "keymap"]
+rendering = ["model", "platform"]
+shell = ["model", "platform", "compositor", "rendering"]
+backends = ["model", "platform", "compositor", "input", "rendering"]
+app = ["model", "platform", "compositor", "input", "rendering", "shell", "keymap", "backends"]

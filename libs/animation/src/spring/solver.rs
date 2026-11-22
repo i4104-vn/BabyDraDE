@@ -2,12 +2,7 @@ use super::config::SpringConfig;
 
 /// Solves harmonic oscillator displacement and velocity analytically.
 #[inline]
-pub fn solve_spring(
-    config: &SpringConfig,
-    y0: f64,
-    v0: f64,
-    elapsed: f64,
-) -> (f64, f64) {
+pub fn solve_spring(config: &SpringConfig, y0: f64, v0: f64, elapsed: f64) -> (f64, f64) {
     let k = config.stiffness;
     let m = config.mass;
     let c = config.damping;

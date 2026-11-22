@@ -159,6 +159,13 @@ mod tests {
         };
         let resolved = ResolvedShortcut::resolve(&shortcut).unwrap();
         assert_eq!(resolved.keysym, keysyms::KEY_s);
-        assert_eq!(resolved.mods, Mods { shift: true, win: true, ..Mods::default() });
+        assert_eq!(
+            resolved.mods,
+            Mods {
+                shift: true,
+                win: true,
+                ..Mods::default()
+            }
+        );
     }
 }

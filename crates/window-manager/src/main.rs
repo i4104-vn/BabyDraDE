@@ -1,3 +1,6 @@
+// TODO(phase5): wrap unsafe fn bodies in explicit unsafe blocks, then remove.
+#![allow(unsafe_op_in_unsafe_fn)]
+
 mod backends;
 mod compositor;
 mod extensions;
@@ -47,7 +50,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         info!("No host display detected; starting autonomous Udev/DRM hardware backend for direct TTY scanout.");
     }
 
-    let mut event_loop: EventLoop<CalloopData> = EventLoop::try_new()?;
+    let mut event_loop: EventLoop<'_, CalloopData> = EventLoop::try_new()?;
     let display: Display<BabydraState> = Display::new()?;
     let display_handle = display.handle();
     let state = BabydraState::new(&mut event_loop, display);
@@ -128,15 +131,13 @@ fn init_tracing() {
     // can be inspected afterwards.
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
     let log_dir = std::path::PathBuf::from(home).join(".babydra").join("logs");
-    let file_writer = std::fs::create_dir_all(&log_dir)
-        .ok()
-        .and_then(|_| {
-            std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(log_dir.join("window-manager.log"))
-                .ok()
-        });
+    let file_writer = std::fs::create_dir_all(&log_dir).ok().and_then(|_| {
+        std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_dir.join("window-manager.log"))
+            .ok()
+    });
 
     let subscriber = tracing_subscriber::fmt().with_env_filter(filter);
     match file_writer {

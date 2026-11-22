@@ -6,8 +6,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::handle::drawing::trigger_save;
-use super::model::{EditorState, Tool};
 use super::layer_shell::init_layer_window;
+use super::model::{EditorState, Tool};
 
 use super::canvas::{draw_editor_canvas, setup_editor_gest};
 use super::handle::clipboard::copy_to_clipboard;

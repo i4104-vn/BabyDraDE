@@ -201,7 +201,7 @@ pub(crate) struct BabydraState {
 }
 
 impl BabydraState {
-    pub(crate) fn new(event_loop: &mut EventLoop<CalloopData>, display: Display<Self>) -> Self {
+    pub(crate) fn new(event_loop: &mut EventLoop<'_, CalloopData>, display: Display<Self>) -> Self {
         let display_handle = display.handle();
         let compositor_state = CompositorState::new::<Self>(&display_handle);
         let xdg_shell_state = XdgShellState::new::<Self>(&display_handle);
@@ -313,7 +313,7 @@ impl BabydraState {
 
     fn init_wayland_listener(
         display: Display<Self>,
-        event_loop: &mut EventLoop<CalloopData>,
+        event_loop: &mut EventLoop<'_, CalloopData>,
     ) -> OsString {
         let listening_socket =
             ListeningSocketSource::new_auto().expect("failed to create Wayland socket");

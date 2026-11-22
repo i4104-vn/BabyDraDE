@@ -41,10 +41,16 @@ pub fn reload() {
 pub fn spawn_command(command: String) {
     if let Err(e) = std::thread::Builder::new()
         .name("babydra-keymap-command".to_string())
-        .spawn(move || match std::process::Command::new("sh").arg("-c").arg(&command).status() {
-            Ok(status) if status.success() => {}
-            Ok(status) => tracing::warn!("keymap command {:?} exited with {}", command, status),
-            Err(e) => tracing::error!("failed to run keymap command {:?}: {}", command, e),
+        .spawn(move || {
+            match std::process::Command::new("sh")
+                .arg("-c")
+                .arg(&command)
+                .status()
+            {
+                Ok(status) if status.success() => {}
+                Ok(status) => tracing::warn!("keymap command {:?} exited with {}", command, status),
+                Err(e) => tracing::error!("failed to run keymap command {:?}: {}", command, e),
+            }
         })
     {
         tracing::error!("failed to spawn keymap command thread: {}", e);

@@ -20,7 +20,7 @@ use crate::{
 const OUTPUT_REFRESH_MHZ: i32 = animation::TARGET_FPS as i32 * 1000;
 
 pub(crate) fn init(
-    event_loop: &mut EventLoop<CalloopData>,
+    event_loop: &mut EventLoop<'_, CalloopData>,
     data: &mut CalloopData,
 ) -> Result<(), Box<dyn Error>> {
     let (mut backend, winit) = winit::init::<GlowRenderer>().map_err(|err| {

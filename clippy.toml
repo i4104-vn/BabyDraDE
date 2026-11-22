@@ -1,0 +1,3 @@
+# Clippy configuration shared by the workspace.
+too-many-arguments-threshold = 8
+type-complexity-threshold = 300

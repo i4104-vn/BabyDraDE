@@ -2,9 +2,7 @@
 
 pub mod render;
 
-use crate::right::control_center::{
-    register_panel, setup_click_outside_dismiss, unregister_panel,
-};
+use crate::right::control_center::{register_panel, setup_click_outside_dismiss, unregister_panel};
 use chrono::Local;
 use gtk4::prelude::*;
 use services::i18n::trans;
