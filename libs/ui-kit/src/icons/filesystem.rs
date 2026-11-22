@@ -117,7 +117,7 @@ pub fn pixbuf_from_gicon(icon: &Icon, size: i32) -> Option<Pixbuf> {
     }
     if let Ok(themed) = icon.clone().downcast::<ThemedIcon>() {
         for name in themed.names() {
-            if let Some(pb) = get_icon_pixbuf_from_filesystem(&name.to_string(), size) {
+            if let Some(pb) = get_icon_pixbuf_from_filesystem(name.as_ref(), size) {
                 return Some(pb);
             }
         }

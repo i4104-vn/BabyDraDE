@@ -153,7 +153,7 @@ impl MediaFeature {
             _ => format!("{} - {}", meta.artist, meta.title),
         };
         let display = if self.player_active && !self.cached.playing {
-            format!("{base}")
+            base.to_string()
         } else {
             base
         };

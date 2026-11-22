@@ -45,8 +45,7 @@ fn sample_dmabuf_color(window: &Window) -> Option<[f64; 3]> {
             .ok()?;
         let pixels =
             unsafe { std::slice::from_raw_parts(mapping.ptr() as *const u8, mapping.length()) };
-        let color = representative_color(pixels, size.w, size.h, stride, format);
-        color
+        representative_color(pixels, size.w, size.h, stride, format)
     })
 }
 

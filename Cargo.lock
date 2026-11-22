@@ -111,7 +111,6 @@ version = "0.1.0"
 dependencies = [
  "animation",
  "cairo-rs",
- "chrono",
  "dirs",
  "gdk-pixbuf",
  "gio",
@@ -121,7 +120,6 @@ dependencies = [
  "libc",
  "serde",
  "services",
- "tokio",
  "toml",
  "tracing",
  "tracing-subscriber",
