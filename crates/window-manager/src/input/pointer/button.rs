@@ -52,9 +52,9 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 let logical_w = (size.w as f64 / scale.x).max(1.0);
                 let logical_h = (size.h as f64 / scale.y).max(1.0);
 
-                if let Some(layout) = crate::extensions::switcher::view::compute_layout(
-                    switcher, logical_w, logical_h,
-                ) {
+                if let Some(layout) =
+                    crate::shell::switcher::view::compute_layout(switcher, logical_w, logical_h)
+                {
                     let px = state.pointer_location.x;
                     let py = state.pointer_location.y;
                     let clicked_idx = layout.panel.index_at(
@@ -71,9 +71,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     });
                     if let Some(window) = clicked_window {
                         state.unminimize_window(&window);
-                        crate::compositor::input::keyboard::focus::focus_window(
-                            state, window, serial,
-                        );
+                        crate::input::keyboard::focus::focus_window(state, window, serial);
                     }
                     if let Some(switcher) = state.alt_tab_switcher.as_mut() {
                         switcher.begin_close();

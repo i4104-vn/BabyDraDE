@@ -3,11 +3,12 @@
 
 mod backends;
 mod compositor;
-mod extensions;
+mod input;
 mod keymap;
 mod model;
 mod platform;
 pub mod rendering;
+mod shell;
 
 use std::error::Error;
 
@@ -160,11 +161,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // GLib main context is already acquired there, so it runs in a subprocess.
     let args: Vec<String> = std::env::args().collect();
     if args.len() == 3 && args[1] == "--screenshot-editor" {
-        extensions::screenshot::open_editor(args[2].clone());
+        shell::screenshot::open_editor(args[2].clone());
         return Ok(());
     }
     if args.len() == 2 && args[1] == "--clipboard-picker" {
-        extensions::clipboard::open_picker();
+        shell::clipboard::open_picker();
         return Ok(());
     }
 

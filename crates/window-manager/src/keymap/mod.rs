@@ -3,7 +3,7 @@
 //! The compositor owns the input devices (libinput grabs them on a TTY), so a
 //! separate evdev listener can never see key presses. Instead this module only
 //! owns the configuration and exposes a matcher that
-//! [`crate::compositor::input::keyboard`] calls for every key press.
+//! [`crate::input::keyboard`] calls for every key press.
 
 pub mod config;
 pub mod mapping;

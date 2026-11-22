@@ -11,7 +11,7 @@ pub mod touchpad;
 
 use smithay::backend::input::{InputBackend, InputEvent};
 
-use super::state::BabydraState;
+use crate::compositor::state::BabydraState;
 
 impl BabydraState {
     /// Central dispatch function for all hardware and synthetic input events.

@@ -10,9 +10,9 @@ use smithay::{
 };
 
 use super::drag::{handle_touch_drag, handle_touch_resize};
-use crate::compositor::input::common::transform_absolute_position;
-use crate::compositor::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
 use crate::compositor::state::BabydraState;
+use crate::input::common::transform_absolute_position;
+use crate::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
 use crate::rendering::titlebar::Action;
 
 #[derive(Debug, Clone)]
@@ -321,7 +321,7 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
                         .alt_tab_switcher
                         .as_ref()
                         .and_then(|switcher| {
-                            let layout = crate::extensions::switcher::view::compute_layout(
+                            let layout = crate::shell::switcher::view::compute_layout(
                                 switcher, logical_w, logical_h,
                             )?;
                             let slide = (1.0 - switcher.presence().clamp(0.0, 1.0))
@@ -343,9 +343,7 @@ pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
 
                     if let Some(window) = tapped {
                         state.unminimize_window(&window);
-                        crate::compositor::input::keyboard::focus::focus_window(
-                            state, window, serial,
-                        );
+                        crate::input::keyboard::focus::focus_window(state, window, serial);
                     }
                     if let Some(switcher) = state.alt_tab_switcher.as_mut() {
                         switcher.begin_close();

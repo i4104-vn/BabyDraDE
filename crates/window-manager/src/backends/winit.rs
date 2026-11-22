@@ -13,8 +13,8 @@ use smithay::{
 
 use crate::{
     compositor::{BabydraState, CalloopData, Cursor},
-    extensions::SwitcherOverlay,
     rendering::{compose_frame, CustomRenderElements, FrameContext},
+    shell::SwitcherOverlay,
 };
 
 const OUTPUT_REFRESH_MHZ: i32 = animation::TARGET_FPS as i32 * 1000;
@@ -151,13 +151,13 @@ pub(crate) fn init(
                         render_result.damage.cloned()
                     };
 
-                    if crate::extensions::screenshot::capture::take_requested() {
+                    if crate::shell::screenshot::capture::take_requested() {
                         // Offscreen capture binds an FBO, which leaves the EGL
                         // context current *without* the window surface. Restore
                         // it or the following swap_buffers() fails with BadAlloc
                         // and takes down the compositor.
                         let surface = backend.egl_surface() as *const _;
-                        let _ = crate::extensions::screenshot::capture::capture_screen(
+                        let _ = crate::shell::screenshot::capture::capture_screen(
                             backend.renderer(),
                             &render_elements,
                             &output,

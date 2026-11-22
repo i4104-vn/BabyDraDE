@@ -6,7 +6,7 @@ use tracing::info;
 
 use super::focus::{cycle_window_focus, focus_window};
 use crate::compositor::state::BabydraState;
-use crate::extensions::lock;
+use crate::shell::lock;
 
 pub(crate) use common::KeyboardAction;
 
@@ -141,7 +141,7 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
         }
         KeyboardAction::ClipboardPicker => {
             info!("Super+V pressed: opening clipboard history");
-            crate::extensions::clipboard::trigger_picker();
+            crate::shell::clipboard::trigger_picker();
         }
         KeyboardAction::ToggleLauncher => {
             info!("Super+Space pressed: toggling app launcher");
@@ -149,7 +149,7 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
         }
         KeyboardAction::Screenshot => {
             info!("Super+Shift+S pressed: taking screenshot");
-            crate::extensions::screenshot::trigger();
+            crate::shell::screenshot::trigger();
         }
         KeyboardAction::ToggleMaximize => {
             let active = state.space.elements().next_back().cloned();

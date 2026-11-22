@@ -2,7 +2,7 @@ use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::extensions::screenshot::editor::model::{Drawing, EditorState, STROKE_WIDTHS};
+use crate::shell::screenshot::editor::model::{Drawing, EditorState, STROKE_WIDTHS};
 
 /// Creates a Popover containing the color palette grid, stroke-width choices,
 /// and a delete action for the currently selected drawing.

@@ -179,7 +179,7 @@ pub(crate) struct BabydraState {
     pub(crate) trackpad_swipe: Option<TrackpadSwipeBuffer>,
     pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
     /// Compositor-owned application launcher (shown via its shortcut).
-    pub(crate) launcher: crate::extensions::launcher::LauncherState,
+    pub(crate) launcher: crate::shell::launcher::LauncherState,
     pub(crate) blur_engine: std::sync::Arc<std::sync::Mutex<crate::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) cursor_visible: bool,
@@ -189,7 +189,7 @@ pub(crate) struct BabydraState {
     pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
     pub(crate) windows: Vec<Window>,
     /// Active single-finger touch interaction with compositor overlays (launcher or switcher).
-    pub(crate) overlay_touch: Option<crate::compositor::input::touch::events::OverlayTouchState>,
+    pub(crate) overlay_touch: Option<crate::input::touch::events::OverlayTouchState>,
     /// Accumulated per-slot data for multi-touch gesture detection on touchscreens.
     pub(crate) touch_gesture: TouchGestureBuffer,
 
@@ -251,7 +251,7 @@ impl BabydraState {
             last_titlebar_click: None,
             trackpad_swipe: None,
             alt_tab_switcher: None,
-            launcher: crate::extensions::launcher::LauncherState::new(),
+            launcher: crate::shell::launcher::LauncherState::new(),
             blur_engine: std::sync::Arc::new(std::sync::Mutex::new(
                 crate::rendering::blur::BlurEngine::new(),
             )),

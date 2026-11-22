@@ -7,8 +7,8 @@ use smithay::{
 };
 
 use super::drag::{handle_window_drag, handle_window_resize};
-use crate::compositor::input::common::transform_absolute_position;
 use crate::compositor::state::BabydraState;
+use crate::input::common::transform_absolute_position;
 
 fn update_overlay_hover(state: &mut BabydraState, position: Point<f64, Logical>) {
     if state.alt_tab_switcher.is_none() {
@@ -32,8 +32,7 @@ fn update_overlay_hover(state: &mut BabydraState, position: Point<f64, Logical>)
     let logical_h = (size.h as f64 / scale.y).max(1.0);
 
     let index = state.alt_tab_switcher.as_ref().and_then(|switcher| {
-        let layout =
-            crate::extensions::switcher::view::compute_layout(switcher, logical_w, logical_h)?;
+        let layout = crate::shell::switcher::view::compute_layout(switcher, logical_w, logical_h)?;
         let slide =
             (1.0 - switcher.presence().clamp(0.0, 1.0)) * common::constants::launcher::PANEL_WIDTH;
         layout.panel.index_at(

@@ -108,7 +108,7 @@ fn layer_for(path: &Path, src: &Path) -> Option<String> {
         "main.rs" => Some("app".to_string()),
         "extensions" => Some("shell".to_string()),
         "backends" | "compositor" | "input" | "rendering" | "keymap" | "model" | "platform"
-        | "app" => Some(first.to_string()),
+        | "shell" | "app" => Some(first.to_string()),
         _ => None,
     }
 }

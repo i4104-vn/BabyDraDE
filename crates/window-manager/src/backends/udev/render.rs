@@ -18,8 +18,8 @@ use tracing::{error, info, warn};
 
 use crate::{
     compositor::CalloopData,
-    extensions::SwitcherOverlay,
     rendering::{compose_frame, CustomRenderElements, FrameContext},
+    shell::SwitcherOverlay,
 };
 
 use super::surface::UdevState;
@@ -119,8 +119,7 @@ pub fn setup_render_loop(
                     ..
                 } = *s;
 
-                let mut screenshot_requested =
-                    crate::extensions::screenshot::capture::take_requested();
+                let mut screenshot_requested = crate::shell::screenshot::capture::take_requested();
 
                 for surface_data in surfaces.iter_mut() {
                     let output = &surface_data.output;
@@ -185,7 +184,7 @@ pub fn setup_render_loop(
                     }
 
                     if screenshot_requested {
-                        let _ = crate::extensions::screenshot::capture::capture_screen(
+                        let _ = crate::shell::screenshot::capture::capture_screen(
                             renderer,
                             &render_elements,
                             output,

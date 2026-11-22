@@ -10,8 +10,8 @@ use smithay::{
     utils::{Point, SERIAL_COUNTER},
 };
 
-use crate::compositor::input::keyboard::cycle_window_focus;
 use crate::compositor::state::{BabydraState, SwipeDirection, TrackpadSwipeBuffer};
+use crate::input::keyboard::cycle_window_focus;
 
 use common::constants::{SWIPE_FOUR_FINGERS as FOUR_FINGERS, SWIPE_THREE_FINGERS as THREE_FINGERS};
 

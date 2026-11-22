@@ -371,11 +371,7 @@ impl BabydraState {
         });
         if let Some(window) = window {
             self.unminimize_window(&window);
-            crate::compositor::input::keyboard::focus::focus_window(
-                self,
-                window,
-                SERIAL_COUNTER.next_serial(),
-            );
+            crate::input::keyboard::focus::focus_window(self, window, SERIAL_COUNTER.next_serial());
         }
         if let Some(switcher) = self.alt_tab_switcher.as_mut() {
             switcher.begin_close();

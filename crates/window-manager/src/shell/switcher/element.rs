@@ -20,8 +20,8 @@ use smithay::{
 use common::constants::launcher::{BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO};
 
 use crate::compositor::AltTabSwitcher;
-use crate::extensions::launcher::buffer::render_right_backdrop_pixels;
 use crate::rendering::buffer::render_pixels;
+use crate::shell::launcher::buffer::render_right_backdrop_pixels;
 
 use super::{
     draw::Rect,
