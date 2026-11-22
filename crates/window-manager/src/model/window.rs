@@ -6,8 +6,29 @@ use std::sync::{OnceLock, RwLock};
 use smithay::{
     desktop::Window,
     reexports::wayland_server::{backend::ObjectId, Resource},
+    utils::{Logical, Rectangle},
     wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData},
 };
+
+/// Per-frame animation values consumed by the renderer.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WindowVisualState {
+    pub active: bool,
+    pub scale_factor: f64,
+    pub alpha_factor: f32,
+    pub target_rect: Option<Rectangle<f64, Logical>>,
+}
+
+impl WindowVisualState {
+    pub fn idle() -> Self {
+        Self {
+            active: false,
+            scale_factor: 1.0,
+            alpha_factor: 1.0,
+            target_rect: None,
+        }
+    }
+}
 
 /// Identity and display data extracted once from a Wayland toplevel.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

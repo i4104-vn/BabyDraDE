@@ -130,6 +130,7 @@ pub(crate) fn init(
                             space: &state.space,
                             blur_engine: Some(&state.blur_engine),
                             pointer: state.pointer_location,
+                            visuals: &crate::compositor::window_animation_frame,
                         };
                         compose_frame(backend.renderer(), ctx)
                     };

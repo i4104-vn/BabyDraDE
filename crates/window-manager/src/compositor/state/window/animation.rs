@@ -36,31 +36,7 @@ pub(crate) enum WindowAnimation {
     },
 }
 
-/// Per-frame values consumed by the animation renderer.
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct WindowAnimationFrame {
-    /// Whether an animation is currently active for this window.
-    pub active: bool,
-    /// Center-anchored scale factor (used by scale-only transitions).
-    pub scale_factor: f64,
-    /// Opacity multiplier.
-    pub alpha_factor: f32,
-    /// Absolute target rectangle for geometry transitions. When present the
-    /// renderer constrains the window into this rect instead of using
-    /// `scale_factor`.
-    pub target_rect: Option<Rectangle<f64, Logical>>,
-}
-
-impl WindowAnimationFrame {
-    fn idle() -> Self {
-        Self {
-            active: false,
-            scale_factor: 1.0,
-            alpha_factor: 1.0,
-            target_rect: None,
-        }
-    }
-}
+use crate::model::WindowVisualState;
 
 /// Checks if a window is leaving the screen (closing or minimizing) and should
 /// therefore be excluded from hit-testing, focus and window switching.
@@ -158,13 +134,13 @@ fn lerp_rect(
 }
 
 /// Computes the current render parameters for a window transition.
-pub(crate) fn window_animation_frame(window: &Window) -> WindowAnimationFrame {
+pub(crate) fn window_animation_frame(window: &Window) -> WindowVisualState {
     let guard = window_state(window).lock().unwrap();
     match &guard.animation {
         Some(WindowAnimation::Opening(tween)) => {
             let p = tween.value().clamp(0.0, 1.0);
             // Expands smoothly from 85% to 100% size while fading in from 0% to 100%
-            WindowAnimationFrame {
+            WindowVisualState {
                 active: true,
                 scale_factor: 0.85 + 0.15 * p,
                 alpha_factor: p as f32,
@@ -174,7 +150,7 @@ pub(crate) fn window_animation_frame(window: &Window) -> WindowAnimationFrame {
         Some(WindowAnimation::Closing(tween)) => {
             let p = tween.value().clamp(0.0, 1.0);
             // Shrinks towards center (100% down to 72%) and dims gently before fading out completely
-            WindowAnimationFrame {
+            WindowVisualState {
                 active: true,
                 scale_factor: 1.0 - 0.28 * p,
                 alpha_factor: ((1.0 - p * p) as f32).max(0.0),
@@ -184,7 +160,7 @@ pub(crate) fn window_animation_frame(window: &Window) -> WindowAnimationFrame {
         Some(WindowAnimation::Minimizing(tween)) => {
             let p = tween.value().clamp(0.0, 1.0);
             // Collapses into a point at the window center while fading out.
-            WindowAnimationFrame {
+            WindowVisualState {
                 active: true,
                 scale_factor: (1.0 - 0.94 * p).max(0.02),
                 alpha_factor: ((1.0 - p * p) as f32).max(0.0),
@@ -194,7 +170,7 @@ pub(crate) fn window_animation_frame(window: &Window) -> WindowAnimationFrame {
         Some(WindowAnimation::Restoring(tween)) => {
             let p = tween.value().clamp(0.0, 1.0);
             // Grows out of the center while fading in.
-            WindowAnimationFrame {
+            WindowVisualState {
                 active: true,
                 scale_factor: 0.25 + 0.75 * p,
                 alpha_factor: p as f32,
@@ -203,14 +179,14 @@ pub(crate) fn window_animation_frame(window: &Window) -> WindowAnimationFrame {
         }
         Some(WindowAnimation::Transition { tween, geometry }) => {
             let p = tween.value().clamp(0.0, 1.0);
-            WindowAnimationFrame {
+            WindowVisualState {
                 active: true,
                 scale_factor: 1.0,
                 alpha_factor: 1.0,
                 target_rect: Some(lerp_rect(geometry.from, geometry.to, p)),
             }
         }
-        None => WindowAnimationFrame::idle(),
+        None => WindowVisualState::idle(),
     }
 }
 

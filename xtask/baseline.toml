@@ -15,7 +15,6 @@ layering = [
     "crates/window-manager/src/compositor/state.rs|compositor|extensions",
     "crates/window-manager/src/compositor/state.rs|compositor|rendering",
     "crates/window-manager/src/compositor/state/hit_test.rs|compositor|rendering",
-    "crates/window-manager/src/rendering/elements/window.rs|rendering|compositor",
 ]
 visibility = [
     "crates/window-manager/src/backends/udev/gpu.rs",
@@ -96,7 +95,7 @@ hot_path = [
 unsafe_blocks = [
     "crates/window-manager/src/backends/udev/gpu.rs|146",
     "crates/window-manager/src/backends/udev/gpu.rs|170",
-    "crates/window-manager/src/backends/winit.rs|158",
+    "crates/window-manager/src/backends/winit.rs|159",
     "crates/window-manager/src/compositor/state.rs|304",
     "crates/window-manager/src/extensions/lock/auth.rs|101",
     "crates/window-manager/src/extensions/lock/auth.rs|152",

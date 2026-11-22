@@ -13,6 +13,8 @@ use smithay::{
     wayland::shell::wlr_layer::Layer,
 };
 
+use crate::model::WindowVisualState;
+
 use super::{
     blur::BlurEngine,
     elements::{render_layer_surfaces, render_window, CustomRenderElements},
@@ -30,6 +32,7 @@ pub struct FrameContext<'a> {
     pub space: &'a Space<Window>,
     pub blur_engine: Option<&'a Arc<Mutex<BlurEngine>>>,
     pub pointer: smithay::utils::Point<f64, smithay::utils::Logical>,
+    pub visuals: &'a dyn Fn(&Window) -> WindowVisualState,
 }
 
 /// Builds the frame element list in front-to-back order.
@@ -46,6 +49,7 @@ pub fn compose_frame(
         space,
         blur_engine,
         pointer,
+        visuals,
     } = ctx;
     let mut elements: Vec<CustomRenderElements> = Vec::new();
 
@@ -77,6 +81,7 @@ pub fn compose_frame(
                 scale,
                 blur_engine,
                 pointer,
+                visuals,
             ));
         }
     }

@@ -7,3 +7,4 @@ pub mod titlebar;
 pub mod window;
 
 pub use titlebar::TitlebarLayout;
+pub use window::WindowVisualState;

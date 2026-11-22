@@ -10,7 +10,7 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale},
 };
 
-use crate::compositor::window_animation_frame;
+use crate::model::WindowVisualState;
 use crate::rendering::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::rendering::blur::{BlurEngine, BlurRenderElement};
 use crate::rendering::titlebar;
@@ -45,6 +45,7 @@ pub fn render_window(
     scale: Scale<f64>,
     blur_engine: Option<&Arc<Mutex<BlurEngine>>>,
     pointer_location: Point<f64, Logical>,
+    visuals: &dyn Fn(&Window) -> WindowVisualState,
 ) -> Vec<CustomRenderElements> {
     let (should_blur, opacity, configured_corner_radius) = if let Some(engine_lock) = blur_engine {
         if let Ok(mut engine) = engine_lock.lock() {
@@ -68,7 +69,7 @@ pub fn render_window(
 
     // Delegate to the animation renderer while any transition is in flight
     // (open, close, minimize, restore or fullscreen/maximize geometry change).
-    let frame = window_animation_frame(window);
+    let frame = visuals(window);
     if frame.active {
         return render_animated_window(
             renderer,
