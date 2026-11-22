@@ -40,6 +40,7 @@ visibility = [
     "crates/window-manager/src/model/mod.rs",
     "crates/window-manager/src/model/titlebar.rs",
     "crates/window-manager/src/model/window.rs",
+    "crates/window-manager/src/platform/brand.rs",
     "crates/window-manager/src/platform/gtk.rs",
     "crates/window-manager/src/platform/mod.rs",
     "crates/window-manager/src/rendering/animation/mod.rs",

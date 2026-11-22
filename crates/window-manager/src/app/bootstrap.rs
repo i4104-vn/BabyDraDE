@@ -2,6 +2,8 @@
 
 use std::ffi::OsStr;
 use tracing::{info, warn};
+
+use crate::platform::brand;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 /// Initializes tracing to stdout and the per-user log file.
@@ -35,7 +37,7 @@ pub fn ensure_runtime_dir() {
         let uid = std::env::var("UID")
             .or_else(|_| std::env::var("USER"))
             .unwrap_or_else(|_| "1000".into());
-        let fallback = std::env::temp_dir().join(format!("babydra-runtime-{uid}"));
+        let fallback = std::env::temp_dir().join(format!("{}-runtime-{uid}", brand::ID));
         if let Err(err) = std::fs::create_dir_all(&fallback) {
             warn!("cannot create runtime dir {}: {err}", fallback.display());
         }
@@ -65,9 +67,9 @@ pub fn export_env(socket_name: &OsStr) {
     // SAFETY: see above.
     std::env::set_var("GDK_BACKEND", "wayland,x11,*");
     // SAFETY: see above.
-    std::env::set_var("XDG_CURRENT_DESKTOP", "BabyDra");
+    std::env::set_var("XDG_CURRENT_DESKTOP", brand::DISPLAY_NAME);
     // SAFETY: see above.
-    std::env::set_var("XDG_SESSION_DESKTOP", "BabyDra");
+    std::env::set_var("XDG_SESSION_DESKTOP", brand::DISPLAY_NAME);
     // SAFETY: see above.
     std::env::set_var("XDG_SESSION_TYPE", "wayland");
 }

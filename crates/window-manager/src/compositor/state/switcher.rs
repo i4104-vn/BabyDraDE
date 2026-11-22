@@ -13,10 +13,6 @@ use super::BabydraState;
 /// the render path never has to call into GTK/GIO.
 pub(crate) struct AltTabEntry {
     pub(crate) window: Window,
-    /// Wayland app_id (e.g. "org.mozilla.firefox"). Kept for debugging and
-    /// potential future use; icon resolution happens at construction time.
-    #[allow(dead_code)]
-    pub(crate) app_id: String,
     pub(crate) app_name: String,
     /// Pre-loaded icon, or `None` if the app has no resolvable icon.
     pub(crate) icon_pixbuf: Option<Pixbuf>,
@@ -317,7 +313,6 @@ impl BabydraState {
 
                 Some(AltTabEntry {
                     window: window.clone(),
-                    app_id,
                     app_name,
                     icon_pixbuf,
                 })
