@@ -4,5 +4,6 @@
 //! other layers of `crates/window-manager`.
 
 pub mod titlebar;
+pub mod window;
 
 pub use titlebar::TitlebarLayout;

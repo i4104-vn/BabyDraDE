@@ -4,7 +4,6 @@ use smithay::{
     backend::renderer::element::Id,
     desktop::Window,
     utils::{Physical, Rectangle},
-    wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData},
 };
 use tracing::{error, info};
 
@@ -170,26 +169,14 @@ impl BlurEngine {
         false
     }
 
-    /// Get the XDG app_id of a window
+    /// Get the cached XDG app_id of a window
     pub fn get_window_app_id(&self, window: &Window) -> Option<String> {
-        let toplevel = window.toplevel()?;
-        with_states(toplevel.wl_surface(), |states| {
-            states
-                .data_map
-                .get::<XdgToplevelSurfaceData>()
-                .and_then(|d| d.lock().ok().and_then(|role| role.app_id.clone()))
-        })
+        crate::model::window::get(window).map(|metadata| metadata.app_id)
     }
 
-    /// Get the XDG title of a window
+    /// Get the cached XDG title of a window
     pub fn get_window_title(&self, window: &Window) -> Option<String> {
-        let toplevel = window.toplevel()?;
-        with_states(toplevel.wl_surface(), |states| {
-            states
-                .data_map
-                .get::<XdgToplevelSurfaceData>()
-                .and_then(|d| d.lock().ok().and_then(|role| role.title.clone()))
-        })
+        crate::model::window::get(window).map(|metadata| metadata.title)
     }
 
     /// Add an app rule to the blur engine and persist configuration

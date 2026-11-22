@@ -4,7 +4,7 @@ use animation::{
     Easing, Tween, HOVER_DURATION, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION,
 };
 use gtk4::gdk_pixbuf::Pixbuf;
-use smithay::{desktop::Window, utils::SERIAL_COUNTER, wayland::compositor::with_states};
+use smithay::{desktop::Window, utils::SERIAL_COUNTER};
 
 use super::BabydraState;
 
@@ -298,25 +298,12 @@ impl BabydraState {
             .rev()
             .filter(|w| !super::is_window_exiting(w))
             .filter_map(|window| {
-                let toplevel = window.toplevel()?;
-                let (app_id, title) = with_states(toplevel.wl_surface(), |states| {
-                    states
-                        .data_map
-                        .get::<smithay::wayland::shell::xdg::XdgToplevelSurfaceData>()
-                        .map(|data| {
-                            let guard = data.lock().unwrap();
-                            (
-                                guard.app_id.clone().unwrap_or_default(),
-                                guard.title.clone().unwrap_or_default(),
-                            )
-                        })
-                })
-                .unwrap_or_default();
-                let app_name = services::system::window::get_app_display_name(&app_id, &title);
-                let app_name = if app_name.is_empty() {
+                let metadata = crate::model::window::get(window)?;
+                let app_id = metadata.app_id;
+                let app_name = if metadata.app_name.is_empty() {
                     "Application".to_string()
                 } else {
-                    app_name
+                    metadata.app_name
                 };
 
                 // Resolve the icon eagerly here (on the event-loop thread, before any

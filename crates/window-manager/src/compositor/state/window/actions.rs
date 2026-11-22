@@ -8,6 +8,15 @@ impl BabydraState {
     /// active-window state in sync (so widgets hide the name of closed apps).
     pub(crate) fn cleanup_windows(&mut self) {
         let before = self.windows.len();
+        for window in self
+            .windows
+            .iter()
+            .filter(|w| !w.alive())
+            .cloned()
+            .collect::<Vec<_>>()
+        {
+            crate::model::window::remove(&window);
+        }
         self.windows.retain(|w| w.alive());
 
         if self.windows.len() != before || self.windows.is_empty() {
