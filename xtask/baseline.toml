@@ -61,6 +61,8 @@ visibility = [
     "crates/window-manager/src/keymap/matcher.rs",
     "crates/window-manager/src/keymap/mod.rs",
     "crates/window-manager/src/main.rs",
+    "crates/window-manager/src/model/mod.rs",
+    "crates/window-manager/src/model/titlebar.rs",
     "crates/window-manager/src/rendering/animation/mod.rs",
     "crates/window-manager/src/rendering/animation/window.rs",
     "crates/window-manager/src/rendering/blur/config.rs",
@@ -76,7 +78,6 @@ visibility = [
     "crates/window-manager/src/rendering/elements/window.rs",
     "crates/window-manager/src/rendering/mod.rs",
     "crates/window-manager/src/rendering/titlebar/hit_test.rs",
-    "crates/window-manager/src/rendering/titlebar/input.rs",
     "crates/window-manager/src/rendering/titlebar/mod.rs",
 ]
 hot_path = [

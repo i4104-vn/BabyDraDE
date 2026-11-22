@@ -5,6 +5,7 @@ mod backends;
 mod compositor;
 mod extensions;
 mod keymap;
+mod model;
 pub mod rendering;
 
 use std::error::Error;

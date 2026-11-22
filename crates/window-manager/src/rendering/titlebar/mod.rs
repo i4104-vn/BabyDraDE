@@ -2,7 +2,6 @@
 
 mod color;
 mod hit_test;
-pub mod input;
 
 use cairo::{Context, Format, ImageSurface};
 use smithay::{
@@ -21,19 +20,13 @@ use smithay::{
 };
 
 use super::elements::types::CustomRenderElements;
+use crate::model::TitlebarLayout;
 
 pub use common::constants::{
     CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT,
 };
 pub use common::Action;
-pub use hit_test::{hit_test, hit_test_geometry};
-// Keep old public name as an alias for external callers / tests
-pub use get_or_sample_color as sample_window_color_cached;
-
-pub fn get_or_sample_color(window: &Window) -> [f64; 3] {
-    color::current_color(window)
-}
-
+pub use hit_test::hit_test;
 pub fn render(
     renderer: &mut GlowRenderer,
     window: &Window,
@@ -72,7 +65,7 @@ pub fn render(
         ctx.scale(scale.x, scale.y);
         let w_local = width as f64 / scale.x;
 
-        let color = get_or_sample_color(window);
+        let color = color::current_color(window);
 
         // Clear surface to ensure transparency outside rounded corners
         ctx.set_operator(cairo::Operator::Clear);
@@ -122,16 +115,13 @@ pub fn render(
         ctx.rectangle(0.0, h_local - 1.0, w_local, 1.0);
         ctx.fill().ok()?;
 
-        let cy = HEIGHT as f64 / 2.0;
-        let close_x = w_local - 22.0;
-        let max_x = w_local - 46.0;
-        let min_x = w_local - 70.0;
+        let layout = TitlebarLayout::new(w_local, maximized);
+        let cy = layout.button(Action::Close).y;
+        let close_x = layout.button(Action::Close).x;
+        let max_x = layout.button(Action::Maximize).x;
+        let min_x = layout.button(Action::Minimize).x;
 
-        let frame_y = if maximized {
-            location.y as f64
-        } else {
-            location.y as f64 - HEIGHT as f64
-        };
+        let frame_y = layout.frame_y(location, maximized);
         let local_pointer =
             Point::<f64, Logical>::from((pointer.x - location.x as f64, pointer.y - frame_y));
 
@@ -242,12 +232,9 @@ pub fn render(
             }
         })
         .ok()?;
-    let frame_y = if maximized {
-        location.y
-    } else {
-        location.y - HEIGHT
-    };
-    let titlebar_loc = Point::<i32, Logical>::from((location.x, frame_y));
+    let titlebar_y =
+        TitlebarLayout::new(width as f64 / scale.x, maximized).frame_y(location, maximized) as i32;
+    let titlebar_loc = Point::<i32, Logical>::from((location.x, titlebar_y));
     let titlebar_phys: Point<i32, smithay::utils::Physical> =
         titlebar_loc.to_physical_precise_round(scale);
     let point = titlebar_phys.to_f64();
