@@ -91,11 +91,12 @@ pub fn list_available_cursor_themes() -> Vec<String> {
     themes
 }
 
-fn get_icon_search_paths() -> Vec<PathBuf> {
-    let mut paths = vec![
-        PathBuf::from("/usr/share/icons"),
-        PathBuf::from("/usr/local/share/icons"),
-    ];
+/// Directories that contain cursor theme folders (`<theme>/cursors/`).
+///
+/// `~/.babydra/cursor` takes priority so locally installed themes can override
+/// system-wide ones with the same name.
+pub(crate) fn get_cursor_theme_search_paths() -> Vec<PathBuf> {
+    let mut paths = vec![crate::config::get_cursor_dir()];
 
     if let Ok(home) = std::env::var("HOME") {
         let home_p = PathBuf::from(home);
@@ -103,5 +104,12 @@ fn get_icon_search_paths() -> Vec<PathBuf> {
         paths.push(home_p.join(".local/share/icons"));
     }
 
+    paths.push(PathBuf::from("/usr/share/icons"));
+    paths.push(PathBuf::from("/usr/local/share/icons"));
+
     paths
+}
+
+fn get_icon_search_paths() -> Vec<PathBuf> {
+    get_cursor_theme_search_paths()
 }

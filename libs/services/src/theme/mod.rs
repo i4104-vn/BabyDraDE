@@ -4,8 +4,8 @@ pub mod icons;
 pub mod model;
 
 pub use cursor::{
-    find_cursor_theme_path, list_available_cursor_themes, read_active_cursor_theme,
-    read_default_index_theme, CursorThemeInfo,
+    find_cursor_theme_path, list_available_cursor_themes, load_cursor_icon, load_cursor_image,
+    read_active_cursor_theme, read_default_index_theme, CursorIcon, CursorImage, CursorThemeInfo,
 };
 pub use gtk::{
     find_gtk4_css_path, find_settings_ini_path, parse_settings_ini, read_gtk4_css,

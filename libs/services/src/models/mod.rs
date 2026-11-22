@@ -6,6 +6,7 @@ pub mod autostart;
 pub mod babydra;
 pub mod blur;
 pub mod clipboard;
+pub mod cursor;
 pub mod desktop;
 pub mod display;
 pub mod gestures;
@@ -20,6 +21,7 @@ pub use autostart::AutostartConfig;
 pub use babydra::BabyDraConfig;
 pub use blur::BlurConfig;
 pub use clipboard::ClipboardConfig;
+pub use cursor::CursorConfig;
 pub use desktop::{CustomContextItem, DesktopConfig};
 pub use display::{DisplayConfig, DisplayMonitorSetting};
 pub use gestures::GestureConfig;
@@ -88,6 +90,31 @@ middle_emulation = true
         assert!(config.mouse.natural_scroll);
         assert_eq!(config.mouse.speed, Some(-0.2));
         assert!(config.mouse.middle_emulation);
+    }
+
+    #[test]
+    fn test_cursor_config_defaults() {
+        let config = CursorConfig::default();
+        assert_eq!(config.theme, "Adwaita");
+        assert_eq!(config.size, 24);
+        assert_eq!(config.hotspot_x, 0);
+        assert_eq!(config.hotspot_y, 0);
+    }
+
+    #[test]
+    fn test_cursor_config_toml_roundtrip() {
+        let toml_str = r#"
+[cursor]
+theme = "Breeze"
+size = 32
+hotspot_x = 2
+hotspot_y = 1
+"#;
+        let config: BabyDraConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.cursor.theme, "Breeze");
+        assert_eq!(config.cursor.size, 32);
+        assert_eq!(config.cursor.hotspot_x, 2);
+        assert_eq!(config.cursor.hotspot_y, 1);
     }
 
     #[test]

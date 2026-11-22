@@ -1,8 +1,8 @@
 //! Configuration load/save logic for `~/.babydra/babydra.conf` matching babydra-core.
 
 use crate::models::{
-    AutostartConfig, BabyDraConfig, BlurConfig, DesktopConfig, GestureConfig, MouseConfig,
-    TouchpadConfig,
+    AutostartConfig, BabyDraConfig, BlurConfig, CursorConfig, DesktopConfig, GestureConfig,
+    MouseConfig, TouchpadConfig,
 };
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
@@ -43,6 +43,14 @@ pub fn get_logs_dir() -> PathBuf {
     get_babydra_dir().join("logs")
 }
 
+/// Resolves the root directory for installed cursor themes: `~/.babydra/cursor/`.
+///
+/// Each theme is expected to live in `<theme-name>/cursors/` underneath this
+/// directory, mirroring the layout of a standard GTK/Xcursor theme.
+pub fn get_cursor_dir() -> PathBuf {
+    get_babydra_dir().join("cursor")
+}
+
 /// Resolves the path to system keymap configuration: `~/.babydra/keymap.toml`.
 pub fn get_keymap_path() -> PathBuf {
     get_babydra_dir().join("keymap.toml")
@@ -54,8 +62,15 @@ pub fn ensure_babydra_dirs() {
     let configs_dir = get_config_dir();
     let wallpaper_dir = get_wallpaper_dir();
     let logs_dir = get_logs_dir();
+    let cursor_dir = get_cursor_dir();
 
-    for dir in &[&babydra_dir, &configs_dir, &wallpaper_dir, &logs_dir] {
+    for dir in &[
+        &babydra_dir,
+        &configs_dir,
+        &wallpaper_dir,
+        &logs_dir,
+        &cursor_dir,
+    ] {
         let _ = std::fs::create_dir_all(dir);
     }
 
@@ -254,6 +269,21 @@ pub fn load_mouse_config() -> MouseConfig {
 pub fn save_mouse_config(mouse: &MouseConfig) {
     let mut config = load_babydra_config();
     config.mouse = mouse.clone();
+    save_babydra_config(&config);
+}
+
+/// Loads cursor theme configuration from `~/.babydra/babydra.conf`.
+///
+/// Reads the `[cursor]` section, falling back to the built-in cursor theme
+/// defaults when the section is absent.
+pub fn load_cursor_config() -> CursorConfig {
+    load_babydra_config().cursor
+}
+
+/// Persists cursor theme configuration into `~/.babydra/babydra.conf`.
+pub fn save_cursor_config(cursor: &CursorConfig) {
+    let mut config = load_babydra_config();
+    config.cursor = cursor.clone();
     save_babydra_config(&config);
 }
 

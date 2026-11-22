@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{
-    autostart::AutostartConfig, blur::BlurConfig, clipboard::ClipboardConfig,
+    autostart::AutostartConfig, blur::BlurConfig, clipboard::ClipboardConfig, cursor::CursorConfig,
     desktop::DesktopConfig, display::DisplayConfig, gestures::GestureConfig,
     lockscreen::LockscreenConfig, mouse::MouseConfig, notification::NotificationConfig,
     power::PowerConfig, touchpad::TouchpadConfig, wallpaper::WallpaperConfig,
@@ -48,6 +48,9 @@ pub struct BabyDraConfig {
     /// Mouse pointer speed and natural scroll settings.
     #[serde(default)]
     pub mouse: MouseConfig,
+    /// Cursor theme and appearance settings.
+    #[serde(default)]
+    pub cursor: CursorConfig,
     /// Multi-finger swipe and touchscreen gesture settings.
     #[serde(default)]
     pub gestures: GestureConfig,

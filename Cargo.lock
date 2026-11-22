@@ -2097,6 +2097,8 @@ dependencies = [
 name = "services"
 version = "0.1.0"
 dependencies = [
+ "cairo-rs",
+ "cursor-icon",
  "dirs",
  "gio",
  "libc",
