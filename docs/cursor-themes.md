@@ -59,7 +59,7 @@ setting applies to all PNG cursors in the theme.
 
 ## Selecting a theme
 
-Edit `~/.babydra/babydra.conf`:
+Edit `~/.babydra/configs/cursor.toml`:
 
 ```toml
 [cursor]

@@ -36,10 +36,10 @@ pub fn get_wallpaper_dir() -> PathBuf {
 
 pub fn get_wallpaper() -> Option<PathBuf> {
     crate::config::invalidate_cache();
-    let conf = crate::config::load_babydra_config();
+    let wallpaper = crate::config::load_wallpaper_config();
 
-    if !conf.wallpaper.current.is_empty() {
-        let path = PathBuf::from(&conf.wallpaper.current);
+    if !wallpaper.current.is_empty() {
+        let path = PathBuf::from(&wallpaper.current);
         if path.exists() {
             return Some(path);
         }
@@ -86,10 +86,10 @@ pub fn set_wallpaper(source_path: &Path) -> Result<PathBuf, std::io::Error> {
         "static"
     };
 
-    let mut conf = crate::config::load_babydra_config();
-    conf.wallpaper.current = target_path.to_string_lossy().to_string();
-    conf.wallpaper.mode = mode.to_string();
-    crate::config::save_babydra_config(&conf);
+    let mut wallpaper = crate::config::load_wallpaper_config();
+    wallpaper.current = target_path.to_string_lossy().to_string();
+    wallpaper.mode = mode.to_string();
+    crate::config::save_wallpaper_config(&wallpaper);
 
     Ok(target_path)
 }

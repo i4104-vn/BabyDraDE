@@ -14,7 +14,7 @@ The workspace is cleanly divided into executables (`crates/`) and libraries (`li
 - App launching is handled by the compositor-owned launcher (`Super+Space`) in `crates/window-manager/src/extensions/launcher/` — a vertically centred icon bar on the left (no separate launcher executable).
 
 ### Libraries (`libs/` with `src/lib.rs`)
-- `libs/services`: Core OS integration, hardware readers (battery, disk, CPU, RAM, network, volume, VPN), desktop configuration, themes, tray, and i18n localization.
+- `libs/services`: Core OS integration, hardware readers (battery, disk, CPU, RAM, network, volume, VPN), desktop configuration, themes, tray, and i18n localization. Configuration is split into `~/.babydra/babydra.conf` (main settings) and small files under `~/.babydra/configs/`; see [Configuration](configuration.md).
 - `libs/ui-kit`: Reusable GTK4 design system, components, icons, theme engine, and stylesheets.
 
 See [Animations, Constants and Enums](animations-constants-enums.md) for frame pacing, shared dock behaviour and the full token catalogue.

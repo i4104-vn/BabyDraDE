@@ -31,7 +31,8 @@ pub struct CustomContextItem {
     pub icon: Option<String>,
 }
 
-/// Desktop icon grid and context menu configuration persisted in `~/.babydra/babydra.conf` under `[desktop]`.
+/// Desktop icon grid and context menu configuration persisted in
+/// `~/.babydra/configs/desktop.toml` under `[desktop]`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct DesktopConfig {
     /// Whether file and application icons are displayed on the desktop background.

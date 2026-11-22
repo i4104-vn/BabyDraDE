@@ -1,11 +1,9 @@
 //! Touchpad device configuration, tap-to-click settings, and hotplug management.
 
-//! Touchpad device configuration, tap-to-click settings, and hotplug management.
-
 use smithay::reexports::input::ClickMethod;
 use tracing::{info, warn};
 
-/// Touchpad configuration options loaded from `~/.babydra/babydra.conf`.
+/// Touchpad configuration options loaded from `~/.babydra/configs/input.toml`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TouchpadConfig {
     /// Whether tap-to-click is enabled (1-finger left click, 2-finger right click).
@@ -49,12 +47,12 @@ impl Default for TouchpadConfig {
 }
 
 impl From<services::models::TouchpadConfig> for TouchpadConfig {
-    /// Converts a persistent [`services::models::TouchpadConfig`] from `babydra.conf`
+    /// Converts a persistent [`services::models::TouchpadConfig`] from `configs/input.toml`
     /// into compositor runtime [`TouchpadConfig`] with Smithay input types.
     ///
     /// # Arguments
     ///
-    /// * `cfg` - The deserialized touchpad configuration from `babydra.conf`.
+    /// * `cfg` - The deserialized touchpad configuration from `configs/input.toml`.
     ///
     /// # Returns
     ///
@@ -78,7 +76,7 @@ impl From<services::models::TouchpadConfig> for TouchpadConfig {
 }
 
 impl TouchpadConfig {
-    /// Loads the touchpad configuration directly from `~/.babydra/babydra.conf` under `[touchpad]`.
+    /// Loads the touchpad configuration directly from `~/.babydra/configs/input.toml` under `[touchpad]`.
     ///
     /// # Returns
     ///

@@ -22,7 +22,7 @@ fn default_touch_tap_timeout_ms() -> u64 {
     200
 }
 
-/// Gesture configuration persisted in `~/.babydra/babydra.conf` under `[gestures]`.
+/// Gesture configuration persisted in `~/.babydra/configs/input.toml` under `[gestures]`.
 ///
 /// Controls which multi-finger swipe and touch gestures are active, and
 /// their activation distance thresholds.

@@ -1,6 +1,7 @@
-//! Subsystem configuration data models matching `~/.babydra/babydra.conf`.
+//! Data models for the split BabyDraDE configuration.
 //!
-//! Organized into granular submodules per desktop service.
+//! Main settings live in `~/.babydra/babydra.conf`; subsystem settings live in
+//! `~/.babydra/configs/*.toml`. Organized into granular submodules per service.
 
 pub mod autostart;
 pub mod babydra;
@@ -51,7 +52,6 @@ mod tests {
     #[test]
     fn test_touchpad_config_toml_roundtrip() {
         let toml_str = r#"
-[touchpad]
 tap_to_click = true
 tap_drag = false
 tap_drag_lock = true
@@ -60,14 +60,14 @@ dwt = false
 natural_scroll = true
 speed = 0.5
 "#;
-        let config: BabyDraConfig = toml::from_str(toml_str).unwrap();
-        assert!(config.touchpad.tap_to_click);
-        assert!(!config.touchpad.tap_drag);
-        assert!(config.touchpad.tap_drag_lock);
-        assert_eq!(config.touchpad.button_map, "lmr");
-        assert!(!config.touchpad.dwt);
-        assert!(config.touchpad.natural_scroll);
-        assert_eq!(config.touchpad.speed, Some(0.5));
+        let config: TouchpadConfig = toml::from_str(toml_str).unwrap();
+        assert!(config.tap_to_click);
+        assert!(!config.tap_drag);
+        assert!(config.tap_drag_lock);
+        assert_eq!(config.button_map, "lmr");
+        assert!(!config.dwt);
+        assert!(config.natural_scroll);
+        assert_eq!(config.speed, Some(0.5));
     }
 
     #[test]
@@ -81,15 +81,14 @@ speed = 0.5
     #[test]
     fn test_mouse_config_toml_roundtrip() {
         let toml_str = r#"
-[mouse]
 natural_scroll = true
 speed = -0.2
 middle_emulation = true
 "#;
-        let config: BabyDraConfig = toml::from_str(toml_str).unwrap();
-        assert!(config.mouse.natural_scroll);
-        assert_eq!(config.mouse.speed, Some(-0.2));
-        assert!(config.mouse.middle_emulation);
+        let config: MouseConfig = toml::from_str(toml_str).unwrap();
+        assert!(config.natural_scroll);
+        assert_eq!(config.speed, Some(-0.2));
+        assert!(config.middle_emulation);
     }
 
     #[test]
@@ -104,17 +103,16 @@ middle_emulation = true
     #[test]
     fn test_cursor_config_toml_roundtrip() {
         let toml_str = r#"
-[cursor]
 theme = "Breeze"
 size = 32
 hotspot_x = 2
 hotspot_y = 1
 "#;
-        let config: BabyDraConfig = toml::from_str(toml_str).unwrap();
-        assert_eq!(config.cursor.theme, "Breeze");
-        assert_eq!(config.cursor.size, 32);
-        assert_eq!(config.cursor.hotspot_x, 2);
-        assert_eq!(config.cursor.hotspot_y, 1);
+        let config: CursorConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.theme, "Breeze");
+        assert_eq!(config.size, 32);
+        assert_eq!(config.hotspot_x, 2);
+        assert_eq!(config.hotspot_y, 1);
     }
 
     #[test]
@@ -123,5 +121,26 @@ hotspot_y = 1
         let serialized = toml::to_string(&config).unwrap();
         let deserialized: BabyDraConfig = toml::from_str(&serialized).unwrap();
         assert_eq!(config, deserialized);
+    }
+
+    #[test]
+    fn test_main_config_omits_subsystem_sections() {
+        let serialized = toml::to_string(&BabyDraConfig::default()).unwrap();
+        for section in [
+            "[blur]",
+            "[clipboard]",
+            "[cursor]",
+            "[desktop]",
+            "[display]",
+            "[gestures]",
+            "[lockscreen]",
+            "[mouse]",
+            "[touchpad]",
+        ] {
+            assert!(
+                !serialized.contains(section),
+                "main config must not contain {section}"
+            );
+        }
     }
 }

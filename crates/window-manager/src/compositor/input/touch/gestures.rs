@@ -165,7 +165,7 @@ pub(crate) fn on_touch_up(state: &mut BabydraState, slot: TouchSlot, time_ms: u6
 /// * `state`   - Mutable reference to [`BabydraState`].
 /// * `n`       - Number of currently tracked slots (finger count at gesture end).
 /// * `time_ms` - Current event timestamp in milliseconds.
-/// * `cfg`     - Current gesture configuration loaded from `babydra.conf`.
+/// * `cfg`     - Current gesture configuration loaded from `configs/input.toml`.
 ///
 /// # Returns
 ///

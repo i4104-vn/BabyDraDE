@@ -1,4 +1,4 @@
-//! Cursor appearance configuration persisted in `~/.babydra/babydra.conf`.
+//! Cursor appearance configuration persisted in `~/.babydra/configs/cursor.toml`.
 
 use serde::{Deserialize, Serialize};
 

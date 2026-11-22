@@ -79,7 +79,8 @@ impl Default for DisplayMonitorSetting {
     }
 }
 
-/// Multi-monitor layout configuration persisted in `~/.babydra/babydra.conf` under `[display]`.
+/// Multi-monitor layout configuration persisted in
+/// `~/.babydra/configs/display.toml` under `[display]`.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct DisplayConfig {
     /// List of configured display monitor outputs.

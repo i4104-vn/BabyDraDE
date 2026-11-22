@@ -16,7 +16,7 @@ struct ConfigFile {
     shortcuts: HashMap<String, String>,
 }
 
-/// Loads global shortcuts from `~/.babydra/keymap.toml`.
+/// Loads global shortcuts from `~/.babydra/configs/keymap.toml`.
 pub fn load() -> Vec<Shortcut> {
     let path = services::config::get_keymap_path();
     export_default_if_missing(&path);

@@ -2,7 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Mouse / pointer configuration persisted in `~/.babydra/babydra.conf` under `[mouse]`.
+/// Mouse / pointer configuration persisted in
+/// `~/.babydra/configs/input.toml` under `[mouse]`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct MouseConfig {
     /// Whether natural (reverse) scrolling direction is enabled for mouse wheels.

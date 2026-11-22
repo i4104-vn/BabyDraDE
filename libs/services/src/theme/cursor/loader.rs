@@ -180,7 +180,7 @@ fn parse_png(bytes: &[u8], hotspot_x: u32, hotspot_y: u32) -> Option<CursorImage
     let mut pixels = Vec::with_capacity(row_bytes * height as usize);
     for y in 0..height as usize {
         let row = &data[y * stride..y * stride + row_bytes];
-        for chunk in row.chunks_exact(4) {
+        for chunk in row.as_chunks::<4>().0 {
             // cairo ARGB32 is premultiplied and stored in native byte order.
             let argb = u32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
             let a = (argb >> 24) as u8;

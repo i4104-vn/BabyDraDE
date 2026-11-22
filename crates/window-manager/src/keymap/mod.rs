@@ -29,7 +29,7 @@ pub fn shortcuts() -> &'static SharedShortcuts {
     })
 }
 
-/// Reloads shortcuts from `~/.babydra/keymap.toml` immediately.
+/// Reloads shortcuts from `~/.babydra/configs/keymap.toml` immediately.
 pub fn reload() {
     if let Some(shared) = SHORTCUTS.get() {
         *shared.write().unwrap() = config::load();

@@ -1,6 +1,6 @@
 //! Runtime overrides for the shared compositor blur configuration.
 //!
-//! The persisted configuration lives in `services::models::BabyDraConfig`.
+//! The persisted configuration lives in `~/.babydra/configs/blur.toml`.
 //! This module only keeps command-line/environment compatibility local to the
 //! compositor and does not create a second configuration file.
 

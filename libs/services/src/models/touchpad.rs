@@ -10,7 +10,8 @@ fn default_button_map() -> String {
     "lrm".to_string()
 }
 
-/// Touchpad / trackpad configuration persisted in `~/.babydra/babydra.conf` under `[touchpad]`.
+/// Touchpad / trackpad configuration persisted in
+/// `~/.babydra/configs/input.toml` under `[touchpad]`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct TouchpadConfig {
     /// Whether tap-to-click is enabled (1-finger left click, 2-finger right click).

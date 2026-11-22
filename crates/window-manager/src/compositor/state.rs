@@ -193,7 +193,7 @@ pub(crate) struct BabydraState {
     /// Accumulated per-slot data for multi-touch gesture detection on touchscreens.
     pub(crate) touch_gesture: TouchGestureBuffer,
 
-    /// Cached touchpad configuration loaded from `~/.babydra/babydra.conf`.
+    /// Cached touchpad configuration loaded from `~/.babydra/configs/input.toml`.
     /// Updated when a device is added/configured; avoids per-event disk reads.
     pub(crate) touchpad_natural_scroll: bool,
     /// Cached mouse/pointer configuration natural scroll setting.
@@ -266,7 +266,7 @@ impl BabydraState {
         }
     }
 
-    /// Reloads input device configuration from `~/.babydra/babydra.conf`.
+    /// Reloads input device configuration from `~/.babydra/configs/input.toml`.
     ///
     /// Flushes the shared configuration cache and refreshes cached touchpad
     /// and mouse settings including natural scroll toggles.

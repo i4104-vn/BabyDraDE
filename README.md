@@ -17,13 +17,16 @@ input, and launches one Wayland app for a smoke run.
     cargo run
 
 Launch a terminal (or any app) with a configurable shortcut in
-`~/.babydra/keymap.toml`:
+`~/.babydra/configs/keymap.toml`:
 
     [shortcuts]
     "W-S-t" = "foot"
 
 Change the command to `alacritty`, `kitty`, or any other executable. Changes
 reload within 2 seconds.
+
+The full config layout (main `babydra.conf` plus split files in `configs/`) is
+documented in [docs/configuration.md](docs/configuration.md).
 
 ## Clipboard
 

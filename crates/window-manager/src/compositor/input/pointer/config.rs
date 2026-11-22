@@ -2,7 +2,7 @@
 
 use tracing::{info, warn};
 
-/// Pointer / mouse configuration options loaded from `~/.babydra/babydra.conf`.
+/// Pointer / mouse configuration options loaded from `~/.babydra/configs/input.toml`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseConfig {
     /// Whether natural (reverse) scrolling direction is enabled for mouse wheels.
@@ -30,12 +30,12 @@ impl Default for MouseConfig {
 }
 
 impl From<services::models::MouseConfig> for MouseConfig {
-    /// Converts a persistent [`services::models::MouseConfig`] from `babydra.conf`
+    /// Converts a persistent [`services::models::MouseConfig`] from `configs/input.toml`
     /// into compositor runtime [`MouseConfig`].
     ///
     /// # Arguments
     ///
-    /// * `cfg` - The deserialized mouse configuration from `babydra.conf`.
+    /// * `cfg` - The deserialized mouse configuration from `configs/input.toml`.
     ///
     /// # Returns
     ///
@@ -50,7 +50,7 @@ impl From<services::models::MouseConfig> for MouseConfig {
 }
 
 impl MouseConfig {
-    /// Loads the mouse configuration directly from `~/.babydra/babydra.conf` under `[mouse]`.
+    /// Loads the mouse configuration directly from `~/.babydra/configs/input.toml` under `[mouse]`.
     ///
     /// # Returns
     ///

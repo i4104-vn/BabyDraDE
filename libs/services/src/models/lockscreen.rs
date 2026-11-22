@@ -2,7 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Lockscreen configuration persisted in `~/.babydra/babydra.conf` under `[lockscreen]`.
+/// Lockscreen configuration persisted in
+/// `~/.babydra/configs/lockscreen.toml` under `[lockscreen]`.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct LockscreenConfig {
     /// Path to background wallpaper or solid color for the lock screen.

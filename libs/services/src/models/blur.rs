@@ -53,7 +53,8 @@ fn default_blur_app_rules() -> Vec<String> {
     ]
 }
 
-/// Shared compositor dual-Kawase blur configuration persisted in `~/.babydra/babydra.conf` under `[blur]`.
+/// Shared compositor dual-Kawase blur configuration persisted in
+/// `~/.babydra/configs/blur.toml` under `[blur]`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct BlurConfig {
     /// Whether background blur is globally enabled.

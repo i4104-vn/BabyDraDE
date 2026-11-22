@@ -261,8 +261,10 @@ micro  : 4px - 6px   → Nút bấm thu nhỏ, app icon taskbar, thẻ tag
 ## 7. Cấu trúc Quản lý Cấu hình và Tệp tin
 
 * **Đường dẫn thư mục**: Toàn bộ cấu hình hệ thống lưu trữ tại thư mục gốc `~/.babydra/`:
-  * `~/.babydra/babydra.conf`: Cấu hình TOML chính.
+  * `~/.babydra/babydra.conf`: Cấu hình TOML chính (`1st`, `autostart`, `power`, `wallpaper`, `notification`).
+  * `~/.babydra/configs/*.toml`: Cấu hình subsystem (`blur`, `clipboard`, `cursor`, `desktop`, `display`, `input`, `keymap`, `lockscreen`).
   * `~/.babydra/configs/desktop.json`: Tọa độ icon desktop debounced.
   * `~/.babydra/wallpaper/`: Thư mục chứa hình nền người dùng và ảnh mặc định `wallpaper.jpeg`.
   * `~/.babydra/logs/`: Thư mục log ứng dụng.
+  * Xem [Cấu hình](configuration.md) để biết chi tiết từng file và quy trình migration.
 

@@ -93,7 +93,7 @@ impl Default for Cursor {
 }
 
 impl Cursor {
-    /// Builds the cursor cache from the theme selected in `babydra.conf`.
+    /// Builds the cursor cache from the theme selected in `configs/cursor.toml`.
     ///
     /// Individual roles missing from the theme fall back to the built-in
     /// pixel arrow, so partial themes still work.

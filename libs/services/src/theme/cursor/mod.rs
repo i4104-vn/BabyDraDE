@@ -36,7 +36,7 @@ impl CursorImage {
         }
 
         let mut pixels = Vec::with_capacity(expected);
-        for chunk in rgba.chunks_exact(4) {
+        for chunk in rgba.as_chunks::<4>().0 {
             let (r, g, b, a) = (chunk[0], chunk[1], chunk[2], chunk[3]);
             pixels.extend_from_slice(&[premultiply(b, a), premultiply(g, a), premultiply(r, a), a]);
         }

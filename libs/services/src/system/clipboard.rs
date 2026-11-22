@@ -84,7 +84,7 @@ pub fn store_selection(mime: &str, mime_types: &[String], data: &[u8]) {
         let _ = fs::write(current_meta_path(), json);
     }
 
-    let config = crate::config::load_babydra_config().clipboard;
+    let config = crate::config::load_clipboard_config();
     if !config.enabled || data.is_empty() {
         return;
     }

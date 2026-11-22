@@ -18,7 +18,8 @@ fn default_clipboard_key() -> String {
     "v".to_string()
 }
 
-/// Clipboard manager configuration persisted in `~/.babydra/babydra.conf` under `[clipboard]`.
+/// Clipboard manager configuration persisted in
+/// `~/.babydra/configs/clipboard.toml` under `[clipboard]`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClipboardConfig {
     /// Whether clipboard history tracking daemon is active.
