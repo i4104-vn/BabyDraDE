@@ -10,7 +10,7 @@ use ui_kit::components::dock::DockLayout;
 use super::{BufferRegion, LABEL_GAP, LABEL_MAX_WIDTH, SHADOW_PAD};
 
 /// Physical region covered by the capsule, its shadow and the name label.
-pub(super) fn physical_region(
+pub(crate) fn physical_region(
     panel: &DockLayout,
     scale: Scale<f64>,
     screen_w: i32,
@@ -59,13 +59,13 @@ pub(crate) fn render_right_backdrop_pixels(
 }
 
 /// Damage rectangle for a freshly written buffer.
-pub(super) fn buffer_damage(width: i32, height: i32) -> Vec<Rectangle<i32, Buffer>> {
+pub(crate) fn buffer_damage(width: i32, height: i32) -> Vec<Rectangle<i32, Buffer>> {
     vec![Rectangle::<i32, Buffer>::from_size((width, height).into())]
 }
 
 /// Renders a full-height dark backdrop fading out smoothly to the right.
 /// `presence` (0..=1) fades it together with the launcher capsule.
-pub(super) fn render_backdrop_pixels(
+pub(crate) fn render_backdrop_pixels(
     width: i32,
     height: i32,
     scale: Scale<f64>,

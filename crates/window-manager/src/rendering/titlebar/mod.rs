@@ -1,7 +1,6 @@
 //! Compositor-owned titlebar rendering and hit testing.
 
 mod color;
-mod hit_test;
 
 use cairo::{Context, Format, ImageSurface};
 use smithay::{
@@ -25,8 +24,7 @@ use crate::model::TitlebarLayout;
 pub use common::constants::{
     CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT,
 };
-pub use common::Action;
-pub use hit_test::hit_test;
+use common::Action;
 pub fn render(
     renderer: &mut GlowRenderer,
     window: &Window,

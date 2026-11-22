@@ -34,6 +34,7 @@ mod active_window;
 mod blur;
 mod clipboard;
 mod hit_test;
+pub(crate) mod launcher;
 mod switcher;
 pub(crate) mod window;
 
@@ -179,7 +180,7 @@ pub(crate) struct BabydraState {
     pub(crate) trackpad_swipe: Option<TrackpadSwipeBuffer>,
     pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
     /// Compositor-owned application launcher (shown via its shortcut).
-    pub(crate) launcher: crate::shell::launcher::LauncherState,
+    pub(crate) launcher: launcher::LauncherState,
     pub(crate) blur_engine: std::sync::Arc<std::sync::Mutex<crate::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) cursor_visible: bool,
@@ -251,7 +252,7 @@ impl BabydraState {
             last_titlebar_click: None,
             trackpad_swipe: None,
             alt_tab_switcher: None,
-            launcher: crate::shell::launcher::LauncherState::new(),
+            launcher: launcher::LauncherState::new(),
             blur_engine: std::sync::Arc::new(std::sync::Mutex::new(
                 crate::rendering::blur::BlurEngine::new(),
             )),
@@ -305,7 +306,7 @@ impl BabydraState {
         // cursor. Buttons keep whatever the client requested.
         if let Some((window, location)) = self.window_under(point) {
             if matches!(
-                crate::rendering::titlebar::hit_test(&window, location, point),
+                crate::model::titlebar::hit_test(&window, location, point),
                 Some(common::Action::Move)
             ) {
                 return CursorIcon::Grab;

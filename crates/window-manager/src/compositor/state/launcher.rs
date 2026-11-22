@@ -18,9 +18,9 @@ use crate::rendering::buffer::render_pixels;
 use crate::rendering::CustomRenderElements;
 use ui_kit::components::dock::DockSide;
 
-use super::buffer::{buffer_damage, physical_region, render_backdrop_pixels};
-use super::draw::draw_scene;
-use super::{
+use crate::shell::launcher::buffer::{buffer_damage, physical_region, render_backdrop_pixels};
+use crate::shell::launcher::draw::draw_scene;
+use crate::shell::launcher::{
     BackdropKey, BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO,
 };
 

@@ -8,7 +8,7 @@ use smithay::{
 };
 
 use crate::compositor::state::{BabydraState, MoveState};
-use crate::rendering::titlebar::Action;
+use common::Action;
 
 /// Handles pointer button clicks, focus switching, window raising, and Super+Drag initiation.
 ///
@@ -147,11 +147,9 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                     });
                     state.update_active_window(Some(&window));
 
-                    if let Some(action) = crate::rendering::titlebar::hit_test(
-                        &window,
-                        location,
-                        state.pointer_location,
-                    ) {
+                    if let Some(action) =
+                        crate::model::titlebar::hit_test(&window, location, state.pointer_location)
+                    {
                         match action {
                             Action::Close => {
                                 state.last_titlebar_click = None;

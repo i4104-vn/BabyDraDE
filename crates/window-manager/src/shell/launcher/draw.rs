@@ -118,7 +118,7 @@ fn draw_label(
 /// `presence` (0..=1) drives the fade, `slide_x` slides the docked capsule in
 /// from / out to the left screen edge.
 #[allow(clippy::too_many_arguments)]
-pub(super) fn draw_scene(
+pub(crate) fn draw_scene(
     context: &Context,
     apps: &[LauncherApp],
     panel: &DockLayout,

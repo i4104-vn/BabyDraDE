@@ -4,7 +4,31 @@
 //! positions can never drift apart.
 
 use common::{Action, CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS, TITLEBAR_HEIGHT};
-use smithay::utils::{Logical, Point};
+use smithay::{
+    desktop::Window,
+    utils::{Logical, Point},
+};
+
+/// Hit-tests the compositor frame for a window.
+pub fn hit_test(
+    window: &Window,
+    location: Point<i32, Logical>,
+    point: Point<f64, Logical>,
+) -> Option<Action> {
+    let state = window.toplevel()?.current_state();
+    if state.decoration_mode != Some(
+        smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode::ServerSide,
+    ) || state.states.contains(
+        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Fullscreen,
+    ) {
+        return None;
+    }
+    let maximized = state.states.contains(
+        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Maximized,
+    );
+    let width = window.geometry().size.w as f64;
+    TitlebarLayout::new(width, maximized).hit_test(location, width, maximized, point)
+}
 
 /// A circular titlebar button.
 #[derive(Debug, Clone, Copy, PartialEq)]

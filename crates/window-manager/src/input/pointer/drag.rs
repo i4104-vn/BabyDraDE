@@ -76,7 +76,7 @@ pub(crate) fn handle_window_drag(
                 let size = saved_size.unwrap_or_else(|| window.geometry().size);
                 let desired = Point::from((
                     position.x.round() as i32 - size.w / 2,
-                    position.y.round() as i32 + crate::rendering::titlebar::HEIGHT / 2,
+                    position.y.round() as i32 + common::TITLEBAR_HEIGHT / 2,
                 ));
                 move_state.initial_window_location = desired
                     - Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));

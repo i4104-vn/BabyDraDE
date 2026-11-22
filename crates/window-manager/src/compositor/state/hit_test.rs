@@ -50,7 +50,7 @@ impl BabydraState {
             let Some(location) = self.space.element_location(window) else {
                 continue;
             };
-            if crate::rendering::titlebar::hit_test(window, location, point).is_some() {
+            if crate::model::titlebar::hit_test(window, location, point).is_some() {
                 if self.is_occluded_by_window_above(window, point) {
                     break;
                 }
@@ -198,12 +198,12 @@ impl BabydraState {
                     smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode::ServerSide,
                 );
             let top_y = if has_ssd {
-                y - crate::rendering::titlebar::HEIGHT as f64
+                y - common::TITLEBAR_HEIGHT as f64
             } else {
                 y
             };
             let total_h = if has_ssd {
-                h + crate::rendering::titlebar::HEIGHT as f64
+                h + common::TITLEBAR_HEIGHT as f64
             } else {
                 h
             };

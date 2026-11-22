@@ -13,7 +13,7 @@ use super::drag::{handle_touch_drag, handle_touch_resize};
 use crate::compositor::state::BabydraState;
 use crate::input::common::transform_absolute_position;
 use crate::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
-use crate::rendering::titlebar::Action;
+use common::Action;
 
 #[derive(Debug, Clone)]
 pub(crate) struct OverlayTouchState {
@@ -131,7 +131,7 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
         state.update_active_window(Some(&window));
 
         // Check titlebar action on touch
-        if let Some(action) = crate::rendering::titlebar::hit_test(&window, location, position) {
+        if let Some(action) = crate::model::titlebar::hit_test(&window, location, position) {
             match action {
                 Action::Close => {
                     state.last_titlebar_click = None;
