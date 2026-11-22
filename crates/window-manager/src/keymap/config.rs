@@ -17,7 +17,7 @@ struct ConfigFile {
 }
 
 /// Loads global shortcuts from `~/.babydra/configs/keymap.toml`.
-pub fn load() -> Vec<Shortcut> {
+pub(crate) fn load() -> Vec<Shortcut> {
     let path = services::config::get_keymap_path();
     export_default_if_missing(&path);
     let mut shortcuts = Vec::new();
@@ -71,12 +71,12 @@ fn split_combo(combo: &str) -> Option<(String, String)> {
 }
 
 /// Creates the shared shortcut table used by the matcher and the watcher.
-pub fn load_shared() -> SharedShortcuts {
+pub(crate) fn load_shared() -> SharedShortcuts {
     Arc::new(RwLock::new(load()))
 }
 
 /// Watches the keymap file and replaces the shared table when it changes.
-pub fn spawn_watcher(shared: SharedShortcuts) {
+pub(crate) fn spawn_watcher(shared: SharedShortcuts) {
     if let Err(e) = std::thread::Builder::new()
         .name("babydra-keymap-watch".to_string())
         .spawn(move || {

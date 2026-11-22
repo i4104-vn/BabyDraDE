@@ -1,9 +1,9 @@
 //! Touchpad input subsystem: scroll, swipe, gestures, and device configuration.
 
-pub mod config;
-pub mod gestures;
-pub mod scroll;
-pub mod swipe;
+pub(crate) mod config;
+pub(crate) mod gestures;
+pub(crate) mod scroll;
+pub(crate) mod swipe;
 
 pub(crate) use config::{handle_device_added, handle_device_removed};
 pub(crate) use gestures::{

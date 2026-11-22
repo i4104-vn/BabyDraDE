@@ -7,7 +7,7 @@ use crate::platform::brand;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 /// Initializes tracing to stdout and the per-user log file.
-pub fn init_tracing() {
+pub(crate) fn init_tracing() {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
 
@@ -32,7 +32,7 @@ pub fn init_tracing() {
 }
 
 /// Ensures `XDG_RUNTIME_DIR` exists before any Wayland socket is created.
-pub fn ensure_runtime_dir() {
+pub(crate) fn ensure_runtime_dir() {
     if std::env::var_os("XDG_RUNTIME_DIR").is_none() {
         let uid = std::env::var("UID")
             .or_else(|_| std::env::var("USER"))
@@ -55,7 +55,7 @@ pub fn ensure_runtime_dir() {
 }
 
 /// Exports Wayland and desktop environment variables before GTK starts.
-pub fn export_env(socket_name: &OsStr) {
+pub(crate) fn export_env(socket_name: &OsStr) {
     // SAFETY: called from `app::run` before GTK initialization or threads.
     std::env::set_var("WAYLAND_DISPLAY", socket_name);
     // SAFETY: see above.
@@ -75,7 +75,7 @@ pub fn export_env(socket_name: &OsStr) {
 }
 
 /// Initializes GTK after the environment is fully configured.
-pub fn init_gtk() {
+pub(crate) fn init_gtk() {
     match gtk4::init() {
         Ok(()) => info!("GTK4 initialized."),
         Err(err) => warn!(

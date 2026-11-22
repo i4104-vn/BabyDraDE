@@ -1,3 +1,3 @@
-pub mod window;
+pub(crate) mod window;
 
-pub use window::{render_animated_window, WindowAnimationRenderParams};
+pub(crate) use window::{render_animated_window, WindowAnimationRenderParams};

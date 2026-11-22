@@ -26,13 +26,13 @@ use crate::compositor::{BabydraState, CalloopData};
 
 use super::surface::SurfaceData;
 
-pub struct GpuInitResult {
-    pub drm_device: DrmDevice,
-    pub drm_notifier: smithay::backend::drm::DrmDeviceNotifier,
-    pub surfaces: Vec<SurfaceData>,
-    pub renderer: GlowRenderer,
-    pub gbm_device: GbmDevice<DrmDeviceFd>,
-    pub udev_backend: UdevBackend,
+pub(crate) struct GpuInitResult {
+    pub(crate) drm_device: DrmDevice,
+    pub(crate) drm_notifier: smithay::backend::drm::DrmDeviceNotifier,
+    pub(crate) surfaces: Vec<SurfaceData>,
+    pub(crate) renderer: GlowRenderer,
+    pub(crate) gbm_device: GbmDevice<DrmDeviceFd>,
+    pub(crate) udev_backend: UdevBackend,
 }
 
 type GpuActivation = (
@@ -43,7 +43,7 @@ type GpuActivation = (
     GbmDevice<DrmDeviceFd>,
 );
 
-pub fn scan_and_init_gpu(
+pub(crate) fn scan_and_init_gpu(
     session: &mut smithay::backend::session::libseat::LibSeatSession,
     seat_name: &str,
     data: &mut CalloopData,
@@ -143,6 +143,7 @@ fn try_init_gpu(
     let allocator = GbmAllocator::new(gbm_device.clone(), GbmBufferFlags::RENDERING);
     let exporter = GbmFramebufferExporter::new(gbm_device.clone(), None);
 
+    // SAFETY: Backend surface and renderer stay alive for this call.
     let egl_display = match unsafe { EGLDisplay::new(gbm_device.clone()) } {
         Ok(disp) => disp,
         Err(err) => {
@@ -167,6 +168,7 @@ fn try_init_gpu(
         }
     };
 
+    // SAFETY: Backend surface and renderer stay alive for this call.
     let renderer = match unsafe { GlowRenderer::new(egl_context) } {
         Ok(ren) => ren,
         Err(err) => {

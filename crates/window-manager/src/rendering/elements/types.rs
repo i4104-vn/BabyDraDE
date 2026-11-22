@@ -17,13 +17,13 @@ pub(crate) struct WindowBlurId(pub(crate) Id);
 #[derive(Debug, Clone)]
 pub(crate) struct LayerBlurId(pub(crate) Id);
 
-pub type ConstrainedSurface = CropRenderElement<
+pub(crate) type ConstrainedSurface = CropRenderElement<
     RelocateRenderElement<RescaleRenderElement<WaylandSurfaceRenderElement<GlowRenderer>>>,
 >;
-pub type DockClippedSurface = CropRenderElement<ConstrainedSurface>;
+pub(crate) type DockClippedSurface = CropRenderElement<ConstrainedSurface>;
 
 render_elements! {
-    pub CustomRenderElements<=GlowRenderer>;
+    pub(crate) CustomRenderElements<=GlowRenderer>;
     Surface=WaylandSurfaceRenderElement<GlowRenderer>,
     Memory=MemoryRenderBufferRenderElement<GlowRenderer>,
     Blur=BlurRenderElement,

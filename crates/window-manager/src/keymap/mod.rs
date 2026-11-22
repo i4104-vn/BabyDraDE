@@ -5,23 +5,23 @@
 //! owns the configuration and exposes a matcher that
 //! [`crate::input::keyboard`] calls for every key press.
 
-pub mod config;
-pub mod mapping;
-pub mod matcher;
+pub(crate) mod config;
+pub(crate) mod mapping;
+pub(crate) mod matcher;
 
 use std::sync::{Arc, OnceLock, RwLock};
 
 use mapping::Shortcut;
 
 /// Shortcut list shared with the hot-reload watcher.
-pub type SharedShortcuts = Arc<RwLock<Vec<Shortcut>>>;
+pub(crate) type SharedShortcuts = Arc<RwLock<Vec<Shortcut>>>;
 
 static SHORTCUTS: OnceLock<SharedShortcuts> = OnceLock::new();
 
 /// Returns the process-wide shortcut table.
 ///
 /// The config is loaded and the file watcher is started on first access.
-pub fn shortcuts() -> &'static SharedShortcuts {
+pub(crate) fn shortcuts() -> &'static SharedShortcuts {
     SHORTCUTS.get_or_init(|| {
         let shared = config::load_shared();
         config::spawn_watcher(shared.clone());
@@ -30,7 +30,7 @@ pub fn shortcuts() -> &'static SharedShortcuts {
 }
 
 /// Reloads shortcuts from `~/.babydra/configs/keymap.toml` immediately.
-pub fn reload() {
+pub(crate) fn reload() {
     if let Some(shared) = SHORTCUTS.get() {
         *shared.write().unwrap() = config::load();
     }
@@ -38,7 +38,7 @@ pub fn reload() {
 
 /// Spawns a configured command through `sh -c` in a detached thread so shell
 /// syntax keeps working without blocking the compositor's event loop.
-pub fn spawn_command(command: String) {
+pub(crate) fn spawn_command(command: String) {
     if let Err(e) = std::thread::Builder::new()
         .name("babydra-keymap-command".to_string())
         .spawn(move || {

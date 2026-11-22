@@ -13,13 +13,13 @@ const SHAPES: &[(Tool, &str)] = &[
 ];
 
 /// Returns `true` when the tool belongs to the shared shapes button.
-pub fn is_shape_tool(tool: Tool) -> bool {
+pub(crate) fn is_shape_tool(tool: Tool) -> bool {
     SHAPES.iter().any(|(t, _)| *t == tool)
 }
 
 /// Creates a Popover letting the user pick which shape the shared toolbar
 /// button draws. Picking one also swaps the parent button icon to match.
-pub fn create_shape_popover(
+pub(crate) fn create_shape_popover(
     parent: &gtk4::Button,
     state: Rc<RefCell<EditorState>>,
     tool_buttons: &[gtk4::Button],

@@ -5,25 +5,26 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_void};
 use std::sync::OnceLock;
 
-pub const PAM_PROMPT_ECHO_OFF: c_int = 1;
-pub const PAM_PROMPT_ECHO_ON: c_int = 2;
-pub const PAM_SUCCESS: c_int = 0;
+pub(crate) const PAM_PROMPT_ECHO_OFF: c_int = 1;
+pub(crate) const PAM_PROMPT_ECHO_ON: c_int = 2;
+pub(crate) const PAM_SUCCESS: c_int = 0;
 
 #[repr(C)]
-pub struct pam_message {
-    pub msg_style: c_int,
-    pub msg: *const c_char,
+pub(crate) struct pam_message {
+    pub(crate) msg_style: c_int,
+    pub(crate) msg: *const c_char,
 }
 
 #[repr(C)]
-pub struct pam_response {
-    pub resp: *mut c_char,
-    pub resp_retcode: c_int,
+pub(crate) struct pam_response {
+    pub(crate) resp: *mut c_char,
+    pub(crate) resp_retcode: c_int,
 }
 
 #[repr(C)]
-pub struct pam_conv {
-    pub conv: Option<
+pub(crate) struct pam_conv {
+    pub(crate) conv: Option<
+        // SAFETY: PAM handle and callback pointers stay valid for this call.
         unsafe extern "C" fn(
             num_msg: c_int,
             msg: *mut *mut pam_message,
@@ -31,9 +32,10 @@ pub struct pam_conv {
             appdata_ptr: *mut c_void,
         ) -> c_int,
     >,
-    pub appdata_ptr: *mut c_void,
+    pub(crate) appdata_ptr: *mut c_void,
 }
 
+// SAFETY: PAM handle and callback pointers stay valid for this call.
 type PamStartFn = unsafe extern "C" fn(
     service_name: *const c_char,
     user: *const c_char,
@@ -41,6 +43,7 @@ type PamStartFn = unsafe extern "C" fn(
     pamh: *mut *mut c_void,
 ) -> c_int;
 
+// SAFETY: PAM handle and callback pointers stay valid for this call.
 type PamAuthenticateFn = unsafe extern "C" fn(pamh: *mut c_void, flags: c_int) -> c_int;
 
 type PamEndFn = unsafe extern "C" fn(pamh: *mut c_void, pam_status: c_int) -> c_int;
@@ -51,6 +54,7 @@ struct PamLib {
     pam_end: PamEndFn,
 }
 
+// SAFETY: PAM handle and callback pointers stay valid for this call.
 unsafe impl Send for PamLib {}
 unsafe impl Sync for PamLib {}
 
@@ -58,6 +62,7 @@ static PAM: OnceLock<Option<PamLib>> = OnceLock::new();
 
 fn get_pam() -> Option<&'static PamLib> {
     PAM.get_or_init(|| {
+        // SAFETY: PAM handle and callback pointers stay valid for this call.
         unsafe {
             // Dynamically load libpam to avoid hard build-time link dependency on -lpam
             let lib_names = [c"libpam.so.0".as_ptr(), c"libpam.so".as_ptr()];
@@ -105,7 +110,8 @@ fn get_pam() -> Option<&'static PamLib> {
 ///
 /// # Safety
 /// Caller must ensure pointers conform to PAM specification.
-pub unsafe extern "C" fn pam_conversation_fn(
+// SAFETY: PAM handle and callback pointers stay valid for this call.
+pub(crate) unsafe extern "C" fn pam_conversation_fn(
     num_msg: c_int,
     msg: *mut *mut pam_message,
     resp: *mut *mut pam_response,
@@ -140,7 +146,7 @@ pub unsafe extern "C" fn pam_conversation_fn(
 }
 
 /// Verifies user credentials using the system PAM "login" service.
-pub fn verify_password(username: &str, password: &str) -> bool {
+pub(crate) fn verify_password(username: &str, password: &str) -> bool {
     let Some(pam) = get_pam() else {
         tracing::error!("PAM dynamic library is not available; password verification aborted");
         return false;
@@ -157,6 +163,7 @@ pub fn verify_password(username: &str, password: &str) -> bool {
 
     let mut pamh: *mut c_void = std::ptr::null_mut();
 
+    // SAFETY: PAM handle and callback pointers stay valid for this call.
     unsafe {
         let Ok(service_c) = CString::new("login") else {
             return false;

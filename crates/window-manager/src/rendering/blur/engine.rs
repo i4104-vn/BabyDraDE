@@ -5,7 +5,9 @@ use smithay::{
     desktop::Window,
     utils::{Physical, Rectangle},
 };
-use tracing::{error, info};
+use tracing::error;
+#[cfg(test)]
+use tracing::info;
 
 use super::{config, config::BlurParams, gl::BlurCache, gl::BlurPipeline};
 
@@ -13,8 +15,8 @@ use common::constants::{
     BLUR_CACHE_LIFETIME as CACHE_LIFETIME, MAX_BLUR_CACHE_BYTES as MAX_CACHE_BYTES,
 };
 
-pub struct BlurEngine {
-    pub params: BlurParams,
+pub(crate) struct BlurEngine {
+    pub(crate) params: BlurParams,
     rules_lower: Vec<String>,
     pipeline: Option<BlurPipeline>,
     /// Set when the blur pipeline could not be created (shader compilation,
@@ -47,7 +49,7 @@ impl Default for BlurEngine {
 }
 
 impl BlurEngine {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let params = config::load();
         let rules_lower = params
             .app_rules
@@ -66,7 +68,7 @@ impl BlurEngine {
     }
 
     /// Rebuild lowercase cache of app_rules for fast matching
-    pub fn sync_rules(&mut self) {
+    pub(crate) fn sync_rules(&mut self) {
         self.rules_lower = self
             .params
             .app_rules
@@ -77,13 +79,13 @@ impl BlurEngine {
     }
 
     /// Reload blur configuration from disk and environment variables
-    pub fn reload_config(&mut self) {
+    pub(crate) fn reload_config(&mut self) {
         self.params = config::load();
         self.sync_rules();
     }
 
     /// Check if a window should have background blur applied (strictly matching apps recorded in config)
-    pub fn matches_window(&mut self, window: &Window) -> bool {
+    pub(crate) fn matches_window(&mut self, window: &Window) -> bool {
         if !self.params.enabled {
             return false;
         }
@@ -99,7 +101,7 @@ impl BlurEngine {
     }
 
     /// Check if a LayerShell surface namespace should have background blur applied
-    pub fn matches_layer(&mut self, namespace: &str) -> bool {
+    pub(crate) fn matches_layer(&mut self, namespace: &str) -> bool {
         if !self.params.enabled {
             return false;
         }
@@ -122,7 +124,7 @@ impl BlurEngine {
     }
 
     /// Check if an app_id or window title matches any configured blur rule
-    pub fn matches_app_or_title(&self, app_id: Option<&str>, title: Option<&str>) -> bool {
+    pub(crate) fn matches_app_or_title(&self, app_id: Option<&str>, title: Option<&str>) -> bool {
         if self.params.blur_all {
             return true;
         }
@@ -170,17 +172,18 @@ impl BlurEngine {
     }
 
     /// Get the cached XDG app_id of a window
-    pub fn get_window_app_id(&self, window: &Window) -> Option<String> {
+    pub(crate) fn get_window_app_id(&self, window: &Window) -> Option<String> {
         crate::model::window::get(window).map(|metadata| metadata.app_id)
     }
 
     /// Get the cached XDG title of a window
-    pub fn get_window_title(&self, window: &Window) -> Option<String> {
+    pub(crate) fn get_window_title(&self, window: &Window) -> Option<String> {
         crate::model::window::get(window).map(|metadata| metadata.title)
     }
 
     /// Add an app rule to the blur engine and persist configuration
-    pub fn add_app(&mut self, app_id: &str) {
+    #[cfg(test)]
+    pub(crate) fn add_app(&mut self, app_id: &str) {
         let trimmed = app_id.trim();
         if !trimmed.is_empty()
             && !self
@@ -197,7 +200,8 @@ impl BlurEngine {
     }
 
     /// Remove an app rule from the blur engine and persist configuration
-    pub fn remove_app(&mut self, app_id: &str) {
+    #[cfg(test)]
+    pub(crate) fn remove_app(&mut self, app_id: &str) {
         let trimmed = app_id.trim();
         if let Some(pos) = self
             .params
@@ -213,7 +217,8 @@ impl BlurEngine {
     }
 
     /// Toggle blur on a specific app_id (returns new state: true = blurred, false = unblurred)
-    pub fn toggle_app(&mut self, app_id: &str) -> bool {
+    #[cfg(test)]
+    pub(crate) fn toggle_app(&mut self, app_id: &str) -> bool {
         let trimmed = app_id.trim();
         if self.matches_app_or_title(Some(trimmed), None) {
             self.remove_app(trimmed);
@@ -225,17 +230,19 @@ impl BlurEngine {
     }
 
     /// Toggle blur on all windows globally
-    pub fn set_blur_all(&mut self, blur_all: bool) {
+    #[cfg(test)]
+    pub(crate) fn set_blur_all(&mut self, blur_all: bool) {
         self.params.blur_all = blur_all;
         config::save(&self.params);
         info!("BabyDraDE BlurEngine: blur_all set to {}", blur_all);
     }
 
     /// Initialize the blur pipeline shaders and pass targets on the OpenGL context
-    pub fn init_pipeline(&mut self, gl: &glow::Context) {
+    pub(crate) fn init_pipeline(&mut self, gl: &glow::Context) {
         if self.pipeline.is_some() || self.pipeline_failed {
             return;
         }
+        // SAFETY: GL context is current and object names come from this pipeline.
         unsafe {
             match BlurPipeline::new(gl) {
                 Ok(p) => self.pipeline = Some(p),
@@ -252,7 +259,7 @@ impl BlurEngine {
     /// Captures the framebuffer background, blurs it, and composites the result
     /// on every call. GPU texture objects are cached per element Id so that the
     /// allocation cost is paid only once per blurred window.
-    pub fn render_blur(
+    pub(crate) fn render_blur(
         &mut self,
         gl: &glow::Context,
         id: &Id,
@@ -281,6 +288,7 @@ impl BlurEngine {
         self.frame = self.frame.wrapping_add(1);
 
         if !self.backdrops.contains_key(id) {
+            // SAFETY: GL context is current and object names come from this pipeline.
             let cache = match unsafe { BlurCache::new(gl) } {
                 Ok(cache) => Some(cache),
                 Err(err) => {
@@ -297,6 +305,7 @@ impl BlurEngine {
         };
         cache.last_used = frame;
 
+        // SAFETY: GL context is current and object names come from this pipeline.
         unsafe {
             pipeline.render_blur(gl, dst, corner_radius, projection, &self.params, cache);
         }
@@ -322,6 +331,7 @@ impl BlurEngine {
 
         for id in expired {
             if let Some(Some(mut cache)) = self.backdrops.remove(&id) {
+                // SAFETY: GL context is current and object names come from this pipeline.
                 unsafe { cache.release(gl) };
             }
         }
@@ -354,6 +364,7 @@ impl BlurEngine {
             }
             if let Some(Some(mut cache)) = self.backdrops.remove(&id) {
                 total = total.saturating_sub(cache.bytes);
+                // SAFETY: GL context is current and object names come from this pipeline.
                 unsafe { cache.release(gl) };
             }
         }

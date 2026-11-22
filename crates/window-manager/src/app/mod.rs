@@ -1,7 +1,7 @@
 //! Application composition root: lifecycle, bootstrap and subcommand dispatch.
 
-pub mod bootstrap;
-pub mod commands;
+pub(crate) mod bootstrap;
+pub(crate) mod commands;
 
 use std::error::Error;
 
@@ -13,7 +13,7 @@ use crate::{
     compositor::{BabydraState, CalloopData},
 };
 
-pub fn run() -> Result<(), Box<dyn Error>> {
+pub(crate) fn run() -> Result<(), Box<dyn Error>> {
     bootstrap::ensure_runtime_dir();
 
     // Create the Wayland display before GTK starts so all environment

@@ -8,7 +8,7 @@ use crate::shell::screenshot::editor::model::{Drawing, EditorState, Tool};
 /// Cached static scene (background + overlay + finished drawings).
 /// Rebuilt only when content version, canvas size, or scale factor changes,
 /// so pointer drags only repaint the active shape on top of a cheap blit.
-pub struct LayerCache {
+pub(crate) struct LayerCache {
     version: u64,
     width: i32,
     height: i32,
@@ -17,7 +17,7 @@ pub struct LayerCache {
 }
 
 /// Handle shared between the draw function and gesture controllers.
-pub type SharedCache = Rc<RefCell<Option<LayerCache>>>;
+pub(crate) type SharedCache = Rc<RefCell<Option<LayerCache>>>;
 
 /// Renders a blur annotation, mapping canvas-space bounds into pixbuf-space
 /// sampling coordinates so the mosaic always samples the correct region.
@@ -135,7 +135,7 @@ fn render_cache_surface(
 }
 
 /// Draws the cached static layer plus the in-progress shape being dragged.
-pub fn draw_editor_canvas(
+pub(crate) fn draw_editor_canvas(
     cr: &cairo::Context,
     s: &EditorState,
     width: f64,

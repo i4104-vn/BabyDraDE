@@ -28,7 +28,7 @@ fn toolbar_button(icon: &str, tooltip: &str) -> gtk4::Button {
 
 /// Constructs the screenshot editor window, maps its overlay design,
 /// initializes the canvas, and builds the editing toolbars.
-pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::ApplicationWindow {
+pub(crate) fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::ApplicationWindow {
     let pixbuf = match gdk_pixbuf::Pixbuf::from_file(temp_path) {
         Ok(pb) => pb,
         Err(_) => return gtk4::ApplicationWindow::new(app),

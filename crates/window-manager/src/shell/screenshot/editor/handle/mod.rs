@@ -1,2 +1,2 @@
-pub mod clipboard;
-pub mod drawing;
+pub(crate) mod clipboard;
+pub(crate) mod drawing;

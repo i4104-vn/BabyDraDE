@@ -17,7 +17,7 @@ use smithay::backend::renderer::gles::GlesFrame;
 /// A render element that applies background Dual Kawase frosted glass blur
 /// behind transparent/translucent windows and layer shell surfaces
 #[derive(Debug, Clone)]
-pub struct BlurRenderElement {
+pub(crate) struct BlurRenderElement {
     id: Id,
     area: Rectangle<i32, Logical>,
     corner_radius: f32,
@@ -25,7 +25,7 @@ pub struct BlurRenderElement {
 }
 
 impl BlurRenderElement {
-    pub fn new(
+    pub(crate) fn new(
         id: Id,
         area: Rectangle<i32, Logical>,
         corner_radius: f32,

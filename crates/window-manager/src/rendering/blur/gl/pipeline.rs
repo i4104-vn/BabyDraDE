@@ -10,7 +10,7 @@ use super::{
 };
 use crate::rendering::blur::config::BlurParams;
 
-pub use super::projection::project_rect_to_gl;
+pub(crate) use super::projection::project_rect_to_gl;
 
 use common::constants::MAX_BLUR_PASSES;
 
@@ -21,7 +21,7 @@ use common::constants::MAX_BLUR_PASSES;
 /// captured into `backdrop` and kept up to date with the damaged parts only.
 /// `blurred` holds the result of the dual kawase pass, so that the element can
 /// re-composite it without running the whole blur again.
-pub struct BlurCache {
+pub(crate) struct BlurCache {
     /// The raw background of the blurred region.
     pub(crate) backdrop: glow::Texture,
     /// The blurred result of the region (at half resolution).
@@ -49,7 +49,8 @@ impl BlurCache {
     /// # Safety
     ///
     /// Must be invoked while the OpenGL/EGL context is current.
-    pub unsafe fn new(gl: &glow::Context) -> Result<Self, String> {
+    // SAFETY: GL context is current and object names come from this pipeline.
+    pub(crate) unsafe fn new(gl: &glow::Context) -> Result<Self, String> {
         let backdrop = gl
             .create_texture()
             .map_err(|err| format!("failed to create the blur backdrop texture: {err}"))?;
@@ -88,7 +89,8 @@ impl BlurCache {
     /// # Safety
     ///
     /// Must be invoked while the OpenGL/EGL context is current.
-    pub unsafe fn release(&mut self, gl: &glow::Context) {
+    // SAFETY: GL context is current and object names come from this pipeline.
+    pub(crate) unsafe fn release(&mut self, gl: &glow::Context) {
         gl.delete_texture(self.backdrop);
         gl.delete_texture(self.blurred);
         gl.delete_framebuffer(self.blurred_fbo);
@@ -106,7 +108,8 @@ impl BlurCache {
     /// # Safety
     ///
     /// Must be invoked while the OpenGL/EGL context is current.
-    pub unsafe fn resize(&mut self, gl: &glow::Context, width: i32, height: i32) -> bool {
+    // SAFETY: GL context is current and object names come from this pipeline.
+    pub(crate) unsafe fn resize(&mut self, gl: &glow::Context, width: i32, height: i32) -> bool {
         let width = width.max(1);
         let height = height.max(1);
         if self.size == (width, height) {
@@ -201,7 +204,7 @@ struct BlurPassTarget {
 /// A rectangle in framebuffer coordinates.
 type GlRect = (i32, i32, i32, i32);
 
-pub struct BlurPipeline {
+pub(crate) struct BlurPipeline {
     downsample_prog: DownsampleProgram,
     upsample_prog: UpsampleProgram,
     composite_prog: CompositeProgram,
@@ -219,7 +222,8 @@ impl BlurPipeline {
     /// # Safety
     ///
     /// Must be invoked while the OpenGL/EGL context is current.
-    pub unsafe fn new(gl: &glow::Context) -> Result<Self, String> {
+    // SAFETY: GL context is current and object names come from this pipeline.
+    pub(crate) unsafe fn new(gl: &glow::Context) -> Result<Self, String> {
         let downsample_prog = compile_downsample(gl)?;
         let upsample_prog = compile_upsample(gl)?;
         let composite_prog = compile_composite(gl)?;
@@ -252,6 +256,7 @@ impl BlurPipeline {
         })
     }
 
+    // SAFETY: GL context is current and object names come from this pipeline.
     unsafe fn ensure_texture_sizes(&mut self, gl: &glow::Context, w: i32, h: i32) -> bool {
         if self.allocated_w >= w && self.allocated_h >= h {
             return true;
@@ -316,7 +321,8 @@ impl BlurPipeline {
     ///
     /// Must be invoked while the OpenGL/EGL context is current.
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn render_blur(
+    // SAFETY: GL context is current and object names come from this pipeline.
+    pub(crate) unsafe fn render_blur(
         &mut self,
         gl: &glow::Context,
         dst: Rectangle<i32, Physical>,
@@ -410,6 +416,7 @@ impl BlurPipeline {
     /// # Safety
     ///
     /// Must be invoked while the OpenGL/EGL context is current.
+    // SAFETY: GL context is current and object names come from this pipeline.
     unsafe fn blur_backdrop(
         &mut self,
         gl: &glow::Context,
@@ -550,6 +557,7 @@ impl BlurPipeline {
     ///
     /// Must be invoked while the OpenGL/EGL context is current.
     #[allow(clippy::too_many_arguments)]
+    // SAFETY: GL context is current and object names come from this pipeline.
     unsafe fn composite(
         &mut self,
         gl: &glow::Context,

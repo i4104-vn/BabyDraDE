@@ -18,7 +18,7 @@ fn pick_drawing(s: &mut EditorState, px: f64, py: f64) -> bool {
 }
 
 /// Removes the currently selected drawing, keeping indices consistent.
-pub fn delete_selected(s: &mut EditorState) {
+pub(crate) fn delete_selected(s: &mut EditorState) {
     if let Some(idx) = s.selected_drawing.take() {
         if idx < s.drawings.len() {
             s.drawings.remove(idx);
@@ -29,7 +29,7 @@ pub fn delete_selected(s: &mut EditorState) {
 
 /// Sets up pointer/mouse gestures on the canvas to handle regional selection,
 /// free-hand strokes, shapes, eraser, and right-click drawing editing.
-pub fn setup_editor_gest(
+pub(crate) fn setup_editor_gest(
     drawing_area: &gtk4::DrawingArea,
     state: Rc<RefCell<EditorState>>,
     toolbar_wrapper: &gtk4::Box,

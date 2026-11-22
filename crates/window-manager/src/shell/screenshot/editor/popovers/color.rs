@@ -6,7 +6,7 @@ use crate::shell::screenshot::editor::model::{Drawing, EditorState, STROKE_WIDTH
 
 /// Creates a Popover containing the color palette grid, stroke-width choices,
 /// and a delete action for the currently selected drawing.
-pub fn create_color_popover(
+pub(crate) fn create_color_popover(
     parent: &gtk4::Button,
     state: Rc<RefCell<EditorState>>,
     color_dot: &gtk4::DrawingArea,

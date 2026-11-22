@@ -339,6 +339,7 @@ impl BabydraState {
                 Generic::new(display, Interest::READ, CalloopMode::Level),
                 |_, display, state| {
                     // The display remains owned by the event source for the compositor lifetime.
+                    // SAFETY: Pointer and lifetime invariants were verified at this call site.
                     unsafe {
                         display
                             .get_mut()

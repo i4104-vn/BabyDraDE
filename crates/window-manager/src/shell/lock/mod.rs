@@ -1,7 +1,7 @@
 //! BabyDraDE Lock Screen — Multi-monitor lock screen with PAM authentication.
 
-pub mod auth;
-pub mod render;
+pub(crate) mod auth;
+pub(crate) mod render;
 
 use gtk4::prelude::*;
 use render::{
@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 static LOCK_SCREEN_RUNNING: AtomicBool = AtomicBool::new(false);
 
 /// Starts the lock screen inside the window-manager process.
-pub fn spawn() {
+pub(crate) fn spawn() {
     if LOCK_SCREEN_RUNNING
         .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
         .is_err()

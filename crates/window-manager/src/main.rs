@@ -8,7 +8,7 @@ mod input;
 mod keymap;
 mod model;
 mod platform;
-pub mod rendering;
+pub(crate) mod rendering;
 mod shell;
 
 use std::error::Error;

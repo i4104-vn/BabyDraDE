@@ -3,8 +3,8 @@
 //! This module is a leaf: it depends only on external libraries and never on
 //! other layers of `crates/window-manager`.
 
-pub mod titlebar;
-pub mod window;
+pub(crate) mod titlebar;
+pub(crate) mod window;
 
-pub use titlebar::TitlebarLayout;
-pub use window::WindowVisualState;
+pub(crate) use titlebar::TitlebarLayout;
+pub(crate) use window::WindowVisualState;

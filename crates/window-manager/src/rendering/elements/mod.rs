@@ -1,7 +1,7 @@
-pub mod layer;
-pub mod types;
-pub mod window;
+pub(crate) mod layer;
+pub(crate) mod types;
+pub(crate) mod window;
 
-pub use layer::render_layer_surfaces;
-pub use types::CustomRenderElements;
-pub use window::render_window;
+pub(crate) use layer::render_layer_surfaces;
+pub(crate) use types::CustomRenderElements;
+pub(crate) use window::render_window;

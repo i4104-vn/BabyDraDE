@@ -5,7 +5,7 @@ use crate::shell::screenshot::editor::model::{Drawing, EditorState};
 use gtk4::gdk::prelude::GdkCairoContextExt;
 
 /// Saves the edited crop and notifies the user after a successful write.
-pub fn trigger_save(state: &EditorState) -> bool {
+pub(crate) fn trigger_save(state: &EditorState) -> bool {
     let Some(surface) = save_cropped_surface(state) else {
         return false;
     };
@@ -24,7 +24,7 @@ pub fn trigger_save(state: &EditorState) -> bool {
 }
 
 /// Applies stroke styling shared by every outlined shape.
-pub fn apply_stroke_style(cr: &cairo::Context, color: (f64, f64, f64), width: f64) {
+pub(crate) fn apply_stroke_style(cr: &cairo::Context, color: (f64, f64, f64), width: f64) {
     cr.set_source_rgb(color.0, color.1, color.2);
     cr.set_line_width(width);
     cr.set_line_cap(cairo::LineCap::Round);
@@ -34,7 +34,7 @@ pub fn apply_stroke_style(cr: &cairo::Context, color: (f64, f64, f64), width: f6
 /// Renders a single non-blur drawing with its geometry already mapped into the
 /// current context space. Used by both the live canvas and the final export so
 /// they can never diverge.
-pub fn render_shape(cr: &cairo::Context, drawing: &Drawing) {
+pub(crate) fn render_shape(cr: &cairo::Context, drawing: &Drawing) {
     match drawing {
         Drawing::Stroke {
             points,
@@ -132,7 +132,7 @@ pub fn render_shape(cr: &cairo::Context, drawing: &Drawing) {
 }
 
 /// Draws a pixelated mosaic filter inside the target rectangle bounds.
-pub fn draw_pixelated_rect(
+pub(crate) fn draw_pixelated_rect(
     cr: &cairo::Context,
     bg_pixbuf: &gdk_pixbuf::Pixbuf,
     src: (i32, i32, i32, i32),
@@ -166,7 +166,7 @@ pub fn draw_pixelated_rect(
 }
 
 /// Saves the cropped region of the surface, preserving 100% pixel-perfect native resolution.
-pub fn save_cropped_surface(state: &EditorState) -> Option<cairo::ImageSurface> {
+pub(crate) fn save_cropped_surface(state: &EditorState) -> Option<cairo::ImageSurface> {
     if !state.has_selection || state.crop_w <= 5.0 || state.crop_h <= 5.0 {
         return None;
     }
@@ -234,7 +234,7 @@ pub fn save_cropped_surface(state: &EditorState) -> Option<cairo::ImageSurface> 
 }
 
 /// Produces a copy of the drawing with stroke widths multiplied by `line_scale`.
-pub fn scale_drawing(drawing: &Drawing, line_scale: f64) -> Drawing {
+pub(crate) fn scale_drawing(drawing: &Drawing, line_scale: f64) -> Drawing {
     match drawing {
         Drawing::Stroke {
             points,

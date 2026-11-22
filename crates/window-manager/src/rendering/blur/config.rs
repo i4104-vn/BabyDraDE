@@ -7,7 +7,7 @@
 use services::config as shared_config;
 use services::models::BlurConfig;
 
-pub type BlurParams = BlurConfig;
+pub(crate) type BlurParams = BlurConfig;
 
 pub(crate) fn load() -> BlurParams {
     let mut params = shared_config::load_blur_config();
@@ -44,6 +44,7 @@ pub(crate) fn load() -> BlurParams {
     params
 }
 
+#[cfg(test)]
 pub(crate) fn save(params: &BlurParams) {
     shared_config::save_blur_config(params);
 }

@@ -76,7 +76,7 @@ struct LoadedCursor {
 /// [`MemoryRenderBuffer`]s. The active image follows the last cursor requested
 /// by a Wayland client, with compositor-side overrides while moving or
 /// resizing windows.
-pub struct Cursor {
+pub(crate) struct Cursor {
     theme: String,
     size: u32,
     hotspot_x: u32,
@@ -97,7 +97,7 @@ impl Cursor {
     ///
     /// Individual roles missing from the theme fall back to the built-in
     /// pixel arrow, so partial themes still work.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let config = services::config::load_cursor_config();
         let mut cache = HashMap::new();
         for &icon in PRELOADED_ICONS {
@@ -184,7 +184,7 @@ impl Cursor {
     }
 
     /// Switches the active cursor shape.
-    pub fn set_icon(&mut self, icon: CursorIcon) {
+    pub(crate) fn set_icon(&mut self, icon: CursorIcon) {
         if self.current == icon {
             return;
         }
@@ -192,7 +192,7 @@ impl Cursor {
         self.ensure_loaded(icon);
     }
 
-    pub fn element(
+    pub(crate) fn element(
         &self,
         renderer: &mut GlowRenderer,
         pos: Point<f64, Logical>,

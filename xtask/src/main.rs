@@ -14,6 +14,9 @@ use std::process::ExitCode;
 #[derive(Debug, Deserialize)]
 struct Architecture {
     matrix: std::collections::BTreeMap<String, Vec<String>>,
+    /// Init-time I/O that is explicitly approved and not in a per-event path.
+    #[serde(default)]
+    hot_path_allow: Vec<String>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -116,7 +119,9 @@ fn layer_for(path: &Path, src: &Path) -> Option<String> {
 fn strip_comments(content: &str) -> String {
     content
         .lines()
-        .filter(|line| !line.trim_start().starts_with("//"))
+        .filter(|line| {
+            !line.trim_start().starts_with("//") || line.trim_start().starts_with("// SAFETY")
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -202,7 +207,7 @@ const HOT_PATH_PATTERNS: &[&str] = &[
     "std::process::Command",
 ];
 
-fn hot_path_violations(root: &Path, base: &Baseline) -> Vec<String> {
+fn hot_path_violations(root: &Path, arch: &Architecture, base: &Baseline) -> Vec<String> {
     let src = source_dir(root);
     let mut violations = Vec::new();
     for dir in HOT_PATH_DIRS {
@@ -215,6 +220,9 @@ fn hot_path_violations(root: &Path, base: &Baseline) -> Vec<String> {
             for pattern in HOT_PATH_PATTERNS {
                 if code.contains(pattern) {
                     let key = format!("{path}|{pattern}");
+                    if arch.hot_path_allow.contains(&key) {
+                        continue;
+                    }
                     if !base.hot_path.contains(&key) {
                         violations.push(format!("hot-path: {path} uses {pattern}"));
                     }
@@ -291,7 +299,10 @@ fn collect(root: &Path) -> Result<Baseline, String> {
             if path.contains(&format!("/{dir}/")) {
                 for pattern in HOT_PATH_PATTERNS {
                     if code.contains(pattern) {
-                        baseline.hot_path.insert(format!("{path}|{pattern}"));
+                        let key = format!("{path}|{pattern}");
+                        if !arch.hot_path_allow.contains(&key) {
+                            baseline.hot_path.insert(key);
+                        }
                     }
                 }
             }
@@ -334,7 +345,7 @@ fn check(root: &Path) -> Result<(), String> {
     let mut violations = Vec::new();
     violations.extend(layering_violations(root, &arch, &base));
     violations.extend(visibility_violations(root, &base));
-    violations.extend(hot_path_violations(root, &base));
+    violations.extend(hot_path_violations(root, &arch, &base));
     violations.extend(unsafe_violations(root, &base));
 
     if violations.is_empty() {

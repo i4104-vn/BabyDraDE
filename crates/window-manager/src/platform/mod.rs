@@ -1,4 +1,4 @@
 //! OS/platform integration helpers.
 
-pub mod brand;
-pub mod gtk;
+pub(crate) mod brand;
+pub(crate) mod gtk;

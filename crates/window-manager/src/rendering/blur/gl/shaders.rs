@@ -174,6 +174,7 @@ pub(crate) struct CompositeProgram {
     pub(crate) a_position: u32,
 }
 
+// SAFETY: GL context is current and object names come from this pipeline.
 pub(crate) unsafe fn setup_tex_params(gl: &glow::Context) {
     gl.tex_parameter_i32(
         glow::TEXTURE_2D,
@@ -197,6 +198,7 @@ pub(crate) unsafe fn setup_tex_params(gl: &glow::Context) {
     );
 }
 
+// SAFETY: GL context is current and object names come from this pipeline.
 unsafe fn compile_shader(
     gl: &glow::Context,
     shader_type: u32,
@@ -213,6 +215,7 @@ unsafe fn compile_shader(
     Ok(shader)
 }
 
+// SAFETY: GL context is current and object names come from this pipeline.
 unsafe fn link_program(
     gl: &glow::Context,
     vs_src: &str,
@@ -238,6 +241,7 @@ unsafe fn link_program(
     Ok(prog)
 }
 
+// SAFETY: GL context is current and object names come from this pipeline.
 pub(crate) unsafe fn compile_downsample(gl: &glow::Context) -> Result<DownsampleProgram, String> {
     let prog = link_program(gl, VERTEX_SHADER_SRC, DOWNSAMPLE_SHADER_SRC)?;
     let u_texture = gl
@@ -266,6 +270,7 @@ pub(crate) unsafe fn compile_downsample(gl: &glow::Context) -> Result<Downsample
     })
 }
 
+// SAFETY: GL context is current and object names come from this pipeline.
 pub(crate) unsafe fn compile_upsample(gl: &glow::Context) -> Result<UpsampleProgram, String> {
     let prog = link_program(gl, VERTEX_SHADER_SRC, UPSAMPLE_SHADER_SRC)?;
     let u_texture = gl
@@ -294,6 +299,7 @@ pub(crate) unsafe fn compile_upsample(gl: &glow::Context) -> Result<UpsampleProg
     })
 }
 
+// SAFETY: GL context is current and object names come from this pipeline.
 pub(crate) unsafe fn compile_composite(gl: &glow::Context) -> Result<CompositeProgram, String> {
     let prog = link_program(gl, VERTEX_SHADER_SRC, COMPOSITE_SHADER_SRC)?;
     let u_texture = gl

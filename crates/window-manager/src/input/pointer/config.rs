@@ -4,13 +4,13 @@ use tracing::{info, warn};
 
 /// Pointer / mouse configuration options loaded from `~/.babydra/configs/input.toml`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct MouseConfig {
+pub(crate) struct MouseConfig {
     /// Whether natural (reverse) scrolling direction is enabled for mouse wheels.
-    pub natural_scroll: bool,
+    pub(crate) natural_scroll: bool,
     /// Optional pointer acceleration speed (-1.0 to 1.0).
-    pub speed: Option<f64>,
+    pub(crate) speed: Option<f64>,
     /// Whether middle mouse button emulation (pressing left and right together) is enabled.
-    pub middle_emulation: bool,
+    pub(crate) middle_emulation: bool,
 }
 
 impl Default for MouseConfig {
@@ -55,7 +55,7 @@ impl MouseConfig {
     /// # Returns
     ///
     /// Returns a resolved [`MouseConfig`] mapped from the shared [`services::models::MouseConfig`].
-    pub fn load() -> Self {
+    pub(crate) fn load() -> Self {
         let shared_cfg = services::config::load_mouse_config();
         Self::from(shared_cfg)
     }

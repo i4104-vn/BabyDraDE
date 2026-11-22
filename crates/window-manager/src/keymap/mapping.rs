@@ -9,35 +9,35 @@ fn default_true() -> bool {
 
 /// A global keyboard shortcut loaded from the config file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Shortcut {
-    pub id: usize,
-    pub modifiers: String,
-    pub key: String,
-    pub command: String,
+pub(crate) struct Shortcut {
+    pub(crate) id: usize,
+    pub(crate) modifiers: String,
+    pub(crate) key: String,
+    pub(crate) command: String,
     #[serde(default = "default_true")]
-    pub enabled: bool,
+    pub(crate) enabled: bool,
 }
 
 /// Modifier set required for a shortcut.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-pub struct Mods {
-    pub shift: bool,
-    pub ctrl: bool,
-    pub alt: bool,
-    pub win: bool,
+pub(crate) struct Mods {
+    pub(crate) shift: bool,
+    pub(crate) ctrl: bool,
+    pub(crate) alt: bool,
+    pub(crate) win: bool,
 }
 
 /// A shortcut resolved into a keysym + required modifier set.
 #[derive(Clone, Debug)]
-pub struct ResolvedShortcut {
-    pub mods: Mods,
-    pub keysym: u32,
-    pub command: String,
+pub(crate) struct ResolvedShortcut {
+    pub(crate) mods: Mods,
+    pub(crate) keysym: u32,
+    pub(crate) command: String,
 }
 
 impl ResolvedShortcut {
     /// Converts a shared `Shortcut`; `None` when unparseable.
-    pub fn resolve(shortcut: &Shortcut) -> Option<Self> {
+    pub(crate) fn resolve(shortcut: &Shortcut) -> Option<Self> {
         if !shortcut.enabled {
             return None;
         }
@@ -69,7 +69,7 @@ fn parse_modifiers(spec: &str) -> Option<Mods> {
 
 /// Maps a config key name (e.g. `"Tab"`, `"F12"`, `"s"`) to the XKB keysym
 /// produced by `KeysymHandle::raw_latin_sym_or_raw_current_sym`.
-pub fn key_name_to_keysym(name: &str) -> Option<u32> {
+pub(crate) fn key_name_to_keysym(name: &str) -> Option<u32> {
     let up = name.to_ascii_uppercase();
 
     // Single characters -> lowercase letters / digits.

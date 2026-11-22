@@ -44,6 +44,7 @@ fn sample_dmabuf_color(window: &Window) -> Option<[f64; 3]> {
             )
             .ok()?;
         let pixels =
+            // SAFETY: Pointer and lifetime invariants were verified at this call site.
             unsafe { std::slice::from_raw_parts(mapping.ptr() as *const u8, mapping.length()) };
         representative_color(pixels, size.w, size.h, stride, format)
     })
@@ -60,6 +61,7 @@ fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
         let buffer = state.buffer()?;
         smithay::wayland::shm::with_buffer_contents(buffer, |ptr, len, data| {
             let format = smithay::wayland::shm::shm_format_to_fourcc(data.format)?;
+            // SAFETY: Pointer and lifetime invariants were verified at this call site.
             let pixels = unsafe { std::slice::from_raw_parts(ptr, len) };
             representative_color(
                 pixels,

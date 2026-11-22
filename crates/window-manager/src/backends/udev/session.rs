@@ -11,14 +11,14 @@ use tracing::info;
 
 use crate::compositor::CalloopData;
 
-pub struct UdevSession {
-    pub session: LibSeatSession,
-    pub notifier: smithay::backend::session::libseat::LibSeatSessionNotifier,
-    pub seat_name: String,
+pub(crate) struct UdevSession {
+    pub(crate) session: LibSeatSession,
+    pub(crate) notifier: smithay::backend::session::libseat::LibSeatSessionNotifier,
+    pub(crate) seat_name: String,
 }
 
 impl UdevSession {
-    pub fn new(event_loop: &mut EventLoop<'_, CalloopData>) -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn new(event_loop: &mut EventLoop<'_, CalloopData>) -> Result<Self, Box<dyn Error>> {
         // Claim seat via LibSeat (logind / seatd)
         let (session, notifier) = LibSeatSession::new().map_err(|err| {
             std::io::Error::new(

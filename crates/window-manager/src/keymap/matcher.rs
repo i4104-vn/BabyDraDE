@@ -18,7 +18,7 @@ impl From<&ModifiersState> for Mods {
 
 /// Returns the command of the first shortcut whose key and modifiers exactly
 /// match the current key press, or `None` when no shortcut matched.
-pub fn command_for(
+pub(crate) fn command_for(
     modifiers: &ModifiersState,
     keysym: u32,
     shortcuts: &SharedShortcuts,

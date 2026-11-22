@@ -1,31 +1,23 @@
 # Architecture baseline
 
-`xtask/baseline.toml` records existing architecture debt so `cargo xtask check`
-fails only on **new** violations. Entries must be removed as the code is cleaned
-up; do not add new ones without a linked issue and an expiry date.
+`xtask/baseline.toml` records architecture debt so `cargo xtask check` fails on
+new violations. The file is currently **empty**: every check is clean.
 
-## Current debt (after phases 0–5)
+| Check | Remaining entries |
+| --- | ---: |
+| Layering | 0 |
+| Visibility | 0 |
+| Hot path | 0 |
+| Unsafe | 0 |
 
-| Check | Remaining entries | Notes |
-| --- | ---: | --- |
-| Layering | 12 | Mostly shell overlay rendering in backends/input and rendering types held by compositor state. |
-| Visibility | 67 | Binary crate still exposes `pub` items; phase 5 can convert them to `pub(crate)`. |
-| Hot path | 9 | Config/GTK access at startup paths, not in per-event loops (gesture hot path is fixed). |
-| Unsafe | 39 | `// SAFETY` comments still to be written, mostly in PAM, GL and EGL code. |
+Rules:
 
-Ratchet rule: every refactor PR must remove at least one baseline entry or add
-no new entries. The final target is an empty `xtask/baseline.toml`.
-
-## Deliberately deferred
-
-- Full `babydra-shell` process split: GTK UI still shares the compositor
-  process for launcher/switcher/render elements, behind explicit module
-  boundaries. Lock, screenshot editor and clipboard picker already use threads
-  or subprocesses.
-- Complete `InputState` / `WindowStore` / `RenderState` split: `BabydraState`
-  still owns those fields, but config snapshots and metadata are now separated.
-- Ratcheting `unsafe_op_in_unsafe_fn` from `warn` to `deny`: blocked on wrapping
-  existing `unsafe fn` bodies in explicit `unsafe` blocks.
+- Do not add baseline entries. A PR that introduces a violation fails CI.
+- Init-time I/O that is intentionally allowed is listed explicitly in
+  `xtask/architecture.toml` under `hot_path_allow`, with the rationale that it
+  runs once at startup or device hotplug, never per frame or per motion.
+- The layering matrix in `xtask/architecture.toml` is the source of truth for
+  allowed `crate::` edges.
 
 See [Testing](testing.md) for the enforced checks and [ADRs](adr/) for the
-decisions behind the current structure.
+decisions behind the structure.

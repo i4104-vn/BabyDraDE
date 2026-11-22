@@ -161,6 +161,7 @@ pub(crate) fn init(
                             &output,
                         );
                         let renderer = backend.renderer();
+                        // SAFETY: Backend surface and renderer stay alive for this call.
                         unsafe {
                             let _ = renderer.egl_context().make_current_with_surface(&*surface);
                         }

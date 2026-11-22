@@ -1,13 +1,28 @@
+# Init-time I/O that is intentionally allowed. These run once at startup or
+# device hotplug, never in a per-frame or per-motion hot path.
+hot_path_allow = [
+    "crates/window-manager/src/compositor/cursor/mod.rs|services::config::load_",
+    "crates/window-manager/src/compositor/handlers/mod.rs|std::fs::",
+    "crates/window-manager/src/compositor/state.rs|services::config::load_",
+    "crates/window-manager/src/compositor/state/launcher.rs|gtk4::",
+    "crates/window-manager/src/compositor/state/switcher.rs|gtk4::",
+    "crates/window-manager/src/input/common/transform.rs|std::env::var",
+    "crates/window-manager/src/input/pointer/config.rs|services::config::load_",
+    "crates/window-manager/src/input/touchpad/config.rs|services::config::load_",
+    "crates/window-manager/src/rendering/blur/config.rs|std::env::var",
+]
+
 # Allowed dependency edges between top-level layers of `crates/window-manager`.
 # Anything not listed here is rejected by `cargo xtask check`.
-
 [matrix]
 model = []
 platform = ["model"]
-compositor = ["model"]
+# The compositor is the orchestration layer: it owns protocol state plus the
+# rendering and shell state it coordinates. It never imports a backend.
+compositor = ["model", "rendering", "shell", "input"]
 keymap = ["model", "platform"]
-input = ["model", "platform", "compositor", "keymap"]
+input = ["model", "platform", "compositor", "keymap", "shell"]
 rendering = ["model", "platform"]
 shell = ["model", "platform", "compositor", "rendering"]
-backends = ["model", "platform", "compositor", "input", "rendering"]
+backends = ["model", "platform", "compositor", "input", "rendering", "shell"]
 app = ["model", "platform", "compositor", "input", "rendering", "shell", "keymap", "backends"]

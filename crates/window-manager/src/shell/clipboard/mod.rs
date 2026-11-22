@@ -7,7 +7,7 @@ use gtk4::prelude::*;
 use tracing::warn;
 
 /// Launches the clipboard picker as a separate process.
-pub fn trigger_picker() {
+pub(crate) fn trigger_picker() {
     let exe = match std::env::current_exe() {
         Ok(path) => path,
         Err(err) => {
@@ -51,7 +51,7 @@ fn copy_to_selection(data: &[u8], mime: &str) {
 }
 
 /// Builds and runs the GTK clipboard history window.
-pub fn open_picker() {
+pub(crate) fn open_picker() {
     let app = gtk4::Application::builder()
         .application_id("org.babydra.clipboard")
         .build();

@@ -33,7 +33,7 @@ use crate::rendering::{elements::types::ConstrainedSurface, CustomRenderElements
 type RenderKey = (Instant, usize, Option<usize>, usize, u64, u64, u64, u64);
 
 #[derive(Default)]
-pub struct SwitcherOverlay {
+pub(crate) struct SwitcherOverlay {
     fg_buffer: Option<MemoryRenderBuffer>,
     /// Vùng vật lý mà `fg_buffer` bao phủ: `(x, y, width, height)`.
     /// Chỉ chứa dock thay vì toàn màn hình, nên mỗi frame animation chỉ phải

@@ -4,7 +4,7 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 /// Configures a GTK window as a layer-shell surface.
 #[allow(clippy::too_many_arguments)]
-pub fn init_layer_window(
+pub(crate) fn init_layer_window(
     window: &gtk4::ApplicationWindow,
     layer: Layer,
     kbd_mode: KeyboardMode,

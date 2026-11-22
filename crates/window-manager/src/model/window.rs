@@ -12,15 +12,15 @@ use smithay::{
 
 /// Per-frame animation values consumed by the renderer.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct WindowVisualState {
-    pub active: bool,
-    pub scale_factor: f64,
-    pub alpha_factor: f32,
-    pub target_rect: Option<Rectangle<f64, Logical>>,
+pub(crate) struct WindowVisualState {
+    pub(crate) active: bool,
+    pub(crate) scale_factor: f64,
+    pub(crate) alpha_factor: f32,
+    pub(crate) target_rect: Option<Rectangle<f64, Logical>>,
 }
 
 impl WindowVisualState {
-    pub fn idle() -> Self {
+    pub(crate) fn idle() -> Self {
         Self {
             active: false,
             scale_factor: 1.0,
@@ -32,10 +32,10 @@ impl WindowVisualState {
 
 /// Identity and display data extracted once from a Wayland toplevel.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct WindowMetadata {
-    pub app_id: String,
-    pub title: String,
-    pub app_name: String,
+pub(crate) struct WindowMetadata {
+    pub(crate) app_id: String,
+    pub(crate) title: String,
+    pub(crate) app_name: String,
 }
 
 type MetadataCache = RwLock<HashMap<ObjectId, WindowMetadata>>;
@@ -51,7 +51,7 @@ fn key(window: &Window) -> Option<ObjectId> {
 }
 
 /// Refreshes the cached metadata from the current toplevel state.
-pub fn refresh(window: &Window) {
+pub(crate) fn refresh(window: &Window) {
     let Some(id) = key(window) else {
         return;
     };
@@ -87,7 +87,7 @@ pub fn refresh(window: &Window) {
 }
 
 /// Returns cached metadata, refreshing once when the window is unknown.
-pub fn get(window: &Window) -> Option<WindowMetadata> {
+pub(crate) fn get(window: &Window) -> Option<WindowMetadata> {
     let id = key(window)?;
     if let Some(metadata) = cache().read().ok()?.get(&id) {
         return Some(metadata.clone());
@@ -97,7 +97,7 @@ pub fn get(window: &Window) -> Option<WindowMetadata> {
 }
 
 /// Drops cached metadata when a window is destroyed.
-pub fn remove(window: &Window) {
+pub(crate) fn remove(window: &Window) {
     if let Some(id) = key(window) {
         if let Ok(mut map) = cache().write() {
             map.remove(&id);

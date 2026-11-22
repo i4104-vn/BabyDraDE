@@ -1,7 +1,7 @@
 //! Subcommand dispatch for screenshot editor and clipboard picker processes.
 
 /// Handles helper subcommands. Returns `true` when one was handled.
-pub fn dispatch() -> bool {
+pub(crate) fn dispatch() -> bool {
     let args: Vec<String> = std::env::args().collect();
     if args.len() == 3 && args[1] == "--screenshot-editor" {
         crate::shell::screenshot::open_editor(args[2].clone());

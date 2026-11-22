@@ -9,7 +9,7 @@ use crate::shell::screenshot::editor::model::EditorState;
 
 /// Copies the cropped annotated screenshot to the clipboard using `wl-copy` or
 /// a GTK clipboard fallback. Returns `true` on success.
-pub fn copy_to_clipboard(state: &EditorState, window: &gtk4::ApplicationWindow) -> bool {
+pub(crate) fn copy_to_clipboard(state: &EditorState, window: &gtk4::ApplicationWindow) -> bool {
     if let Some(mut surface) = save_cropped_surface(state) {
         let temp_copy_path = "/tmp/babydra-screenshot-copy.png";
 

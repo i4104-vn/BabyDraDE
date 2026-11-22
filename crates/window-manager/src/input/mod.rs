@@ -3,11 +3,11 @@
 //! Dispatches events from the backend (keyboard, pointer, touchpad, touch)
 //! to the appropriate specialized input sub-modules.
 
-pub mod common;
-pub mod keyboard;
-pub mod pointer;
-pub mod touch;
-pub mod touchpad;
+pub(crate) mod common;
+pub(crate) mod keyboard;
+pub(crate) mod pointer;
+pub(crate) mod touch;
+pub(crate) mod touchpad;
 
 use smithay::backend::input::{InputBackend, InputEvent};
 

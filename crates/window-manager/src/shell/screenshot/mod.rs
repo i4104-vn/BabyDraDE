@@ -1,18 +1,18 @@
 //! BabyDraDE Screenshot — direct compositor capture with an annotation editor.
 
-pub mod capture;
-pub mod editor;
+pub(crate) mod capture;
+pub(crate) mod editor;
 
 use gtk4::prelude::*;
 use gtk4::Application;
 
 /// Requests a full screenshot from the next compositor frame.
-pub fn trigger() {
+pub(crate) fn trigger() {
     capture::trigger();
 }
 
 /// Opens the annotation editor for a captured image.
-pub fn open_editor(image_path: String) {
+pub(crate) fn open_editor(image_path: String) {
     let app = Application::builder()
         .application_id("org.babydra.screenshot")
         .build();

@@ -29,6 +29,7 @@ pub(crate) struct GlStateSnapshot<'a> {
 }
 
 impl GlStateSnapshot<'_> {
+    // SAFETY: GL context is current and object names come from this pipeline.
     pub(crate) unsafe fn capture(gl: &glow::Context, locations: [u32; 3]) -> GlStateSnapshot<'_> {
         let mut viewport = [0; 4];
         gl.get_parameter_i32_slice(glow::VIEWPORT, &mut viewport);
@@ -103,6 +104,7 @@ impl GlStateSnapshot<'_> {
 
 impl Drop for GlStateSnapshot<'_> {
     fn drop(&mut self) {
+        // SAFETY: GL context is current and object names come from this pipeline.
         unsafe {
             let gl = self.gl;
             gl.bind_framebuffer(glow::FRAMEBUFFER, self.framebuffer);

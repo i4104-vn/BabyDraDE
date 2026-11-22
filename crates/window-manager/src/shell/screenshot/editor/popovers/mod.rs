@@ -1,2 +1,2 @@
-pub mod color;
-pub mod shape;
+pub(crate) mod color;
+pub(crate) mod shape;

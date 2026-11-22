@@ -1,7 +1,7 @@
-pub mod gpu;
-pub mod render;
-pub mod session;
-pub mod surface;
+pub(crate) mod gpu;
+pub(crate) mod render;
+pub(crate) mod session;
+pub(crate) mod surface;
 
 use std::{cell::RefCell, error::Error, rc::Rc};
 

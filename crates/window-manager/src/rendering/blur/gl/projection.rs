@@ -2,7 +2,7 @@ use smithay::utils::{Physical, Rectangle};
 
 /// Projects a destination rectangle from Wayland oriented coordinates to OpenGL physical
 /// framebuffer coordinates using Smithay's exact projection matrix for the current frame.
-pub fn project_rect_to_gl(
+pub(crate) fn project_rect_to_gl(
     dst: Rectangle<i32, Physical>,
     projection: &[f32; 9],
     screen_w: i32,

@@ -25,7 +25,7 @@ use smithay::{
 static CAPTURE_REQUESTED: AtomicBool = AtomicBool::new(false);
 
 /// Resolves the default file path to save screenshots in `~/Pictures/Screenshots/`.
-pub fn get_screenshot_path() -> PathBuf {
+pub(crate) fn get_screenshot_path() -> PathBuf {
     let pictures_dir = dirs::picture_dir().unwrap_or_else(|| {
         let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/tmp"));
         home.join("Pictures")
@@ -38,18 +38,18 @@ pub fn get_screenshot_path() -> PathBuf {
 }
 
 /// Requests a screenshot. Safe to call from any thread.
-pub fn trigger() {
+pub(crate) fn trigger() {
     CAPTURE_REQUESTED.store(true, Ordering::SeqCst);
 }
 
 /// Consumes a pending screenshot request. Called once per rendered frame.
-pub fn take_requested() -> bool {
+pub(crate) fn take_requested() -> bool {
     CAPTURE_REQUESTED.swap(false, Ordering::SeqCst)
 }
 
 /// Captures the desktop frame directly through the compositor renderer and
 /// saves it as a lossless PNG. Opens the annotation editor on the saved image.
-pub fn capture_screen<E>(
+pub(crate) fn capture_screen<E>(
     renderer: &mut GlowRenderer,
     elements: &[E],
     output: &Output,
@@ -100,14 +100,17 @@ where
     }
 
     // get_proc_address() is only safe while an EGL context is current.
+    // SAFETY: Backend surface and renderer stay alive for this call.
     if let Err(e) = unsafe { renderer.egl_context().make_current() } {
         tracing::warn!("[screenshot] make_current failed: {:?}", e);
         return None;
     }
+    // SAFETY: Backend surface and renderer stay alive for this call.
     let gl = Gles2::load_with(|symbol| unsafe { get_proc_address(symbol) });
 
     let (width, height) = (raw.w as usize, raw.h as usize);
     let mut rgba = vec![0u8; width * height * 4];
+    // SAFETY: Backend surface and renderer stay alive for this call.
     unsafe {
         gl.ReadBuffer(gl_ffi::COLOR_ATTACHMENT0);
         gl.ReadPixels(
@@ -255,7 +258,7 @@ fn transform_matrix(transform: Transform, w: i32, h: i32) -> (f64, f64, f64, f64
 }
 
 /// Dispatches a desktop notification.
-pub fn send_notification(title: &str, body: &str) {
+pub(crate) fn send_notification(title: &str, body: &str) {
     let _ = std::process::Command::new("notify-send")
         .args(["-a", "BabyDra", title, body])
         .spawn();

@@ -21,8 +21,8 @@ app → backends / shell / input / rendering / compositor / platform / keymap
 
 Rules are encoded in `xtask/architecture.toml` and checked by
 `cargo xtask check`. `model` is a leaf that only depends on external libraries.
-Existing violations are grandfathered in `xtask/baseline.toml` and must be
-removed over time.
+The baseline in `xtask/baseline.toml` is now empty; init-only I/O exceptions are
+listed explicitly in `hot_path_allow` with their rationale.
 
 ## Consequences
 

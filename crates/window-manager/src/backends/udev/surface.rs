@@ -14,23 +14,23 @@ use smithay::{
 
 use crate::compositor::Cursor;
 
-pub type UdevDrmCompositor =
+pub(crate) type UdevDrmCompositor =
     DrmCompositor<GbmAllocator<DrmDeviceFd>, GbmFramebufferExporter<DrmDeviceFd>, (), DrmDeviceFd>;
 
-pub struct SurfaceData {
-    pub compositor: UdevDrmCompositor,
-    pub output: Output,
+pub(crate) struct SurfaceData {
+    pub(crate) compositor: UdevDrmCompositor,
+    pub(crate) output: Output,
 }
 
-pub struct UdevState {
-    pub surfaces: Vec<SurfaceData>,
-    pub renderer: GlowRenderer,
-    pub theme: DesktopTheme,
-    pub cursor: Cursor,
-    pub active: bool,
-    pub _drm_device: DrmDevice,
-    pub _gbm_device: GbmDevice<DrmDeviceFd>,
-    pub _session: LibSeatSession,
+pub(crate) struct UdevState {
+    pub(crate) surfaces: Vec<SurfaceData>,
+    pub(crate) renderer: GlowRenderer,
+    pub(crate) theme: DesktopTheme,
+    pub(crate) cursor: Cursor,
+    pub(crate) active: bool,
+    pub(crate) _drm_device: DrmDevice,
+    pub(crate) _gbm_device: GbmDevice<DrmDeviceFd>,
+    pub(crate) _session: LibSeatSession,
 }
 
 impl Drop for UdevState {

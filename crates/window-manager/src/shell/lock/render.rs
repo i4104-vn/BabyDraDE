@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const BLUR_DIVISORS: [i32; 3] = [8, 16, 28];
 
 #[derive(Clone)]
-pub struct LockTransition {
+pub(crate) struct LockTransition {
     stack: gtk4::Stack,
     window: gtk4::ApplicationWindow,
     cancelled: Rc<Cell<bool>>,
@@ -23,7 +23,7 @@ pub struct LockTransition {
 }
 
 /// Spawns a lock window assigned to a specific monitor.
-pub fn create_lock_window(
+pub(crate) fn create_lock_window(
     app: &gtk4::Application,
     monitor: Option<&gtk4::gdk::Monitor>,
     is_primary: bool,
@@ -136,13 +136,13 @@ pub fn create_lock_window(
     }
 }
 
-pub struct PrimaryCard {
-    pub card_box: gtk4::Box,
-    pub entry: gtk4::PasswordEntry,
-    pub status_label: gtk4::Label,
+pub(crate) struct PrimaryCard {
+    pub(crate) card_box: gtk4::Box,
+    pub(crate) entry: gtk4::PasswordEntry,
+    pub(crate) status_label: gtk4::Label,
 }
 
-pub fn build_wallpaper_img(custom_path: Option<&str>) -> gtk4::Picture {
+pub(crate) fn build_wallpaper_img(custom_path: Option<&str>) -> gtk4::Picture {
     let bg_picture = gtk4::Picture::new();
     bg_picture.set_can_shrink(true);
     bg_picture.set_hexpand(true);
@@ -161,7 +161,7 @@ pub fn build_wallpaper_img(custom_path: Option<&str>) -> gtk4::Picture {
     bg_picture
 }
 
-pub fn build_clock_labels() -> (gtk4::Label, gtk4::Label) {
+pub(crate) fn build_clock_labels() -> (gtk4::Label, gtk4::Label) {
     let clock_label = gtk4::Label::new(None);
     clock_label.add_css_class("lock-clock");
 
@@ -171,7 +171,7 @@ pub fn build_clock_labels() -> (gtk4::Label, gtk4::Label) {
     (clock_label, date_label)
 }
 
-pub fn build_avatar_widget(size: i32) -> gtk4::Widget {
+pub(crate) fn build_avatar_widget(size: i32) -> gtk4::Widget {
     let avatar_path = services::config::get_babydra_dir().join("avatar.png");
     if avatar_path.exists() {
         let pic = gtk4::Picture::for_filename(&avatar_path);
@@ -188,7 +188,10 @@ pub fn build_avatar_widget(size: i32) -> gtk4::Widget {
     avatar_icon.upcast()
 }
 
-pub fn build_primary_card(clock_label: &gtk4::Label, date_label: &gtk4::Label) -> PrimaryCard {
+pub(crate) fn build_primary_card(
+    clock_label: &gtk4::Label,
+    date_label: &gtk4::Label,
+) -> PrimaryCard {
     let card_box = gtk4::Box::new(gtk4::Orientation::Vertical, 10);
     card_box.add_css_class("lock-card");
     card_box.set_valign(gtk4::Align::Center);
@@ -222,7 +225,7 @@ pub fn build_primary_card(clock_label: &gtk4::Label, date_label: &gtk4::Label) -
     }
 }
 
-pub fn reverse_lock_transition(stacks: Vec<LockTransition>, on_complete: Rc<dyn Fn()>) {
+pub(crate) fn reverse_lock_transition(stacks: Vec<LockTransition>, on_complete: Rc<dyn Fn()>) {
     if stacks.is_empty() {
         on_complete();
         return;
@@ -437,7 +440,7 @@ fn setup_focus_management(window: &gtk4::ApplicationWindow, entry: &gtk4::Passwo
     window.add_controller(click_gesture);
 }
 
-pub fn capture_transition_images() -> Vec<Option<PathBuf>> {
+pub(crate) fn capture_transition_images() -> Vec<Option<PathBuf>> {
     let Some(display) = gtk4::gdk::Display::default() else {
         return Vec::new();
     };

@@ -7,7 +7,7 @@
 pub(crate) mod clipboard;
 pub(crate) mod launcher;
 pub(crate) mod lock;
-pub mod screenshot;
-pub mod switcher;
+pub(crate) mod screenshot;
+pub(crate) mod switcher;
 
-pub use switcher::SwitcherOverlay;
+pub(crate) use switcher::SwitcherOverlay;

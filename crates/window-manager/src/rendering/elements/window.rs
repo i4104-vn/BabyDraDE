@@ -38,7 +38,7 @@ fn corner_radius_for_window(window: &Window, floating_radius: f32) -> f32 {
 /// and attaches a Dual Kawase blur backdrop behind windows configured for blur.
 ///
 /// Automatically delegates to [`render_animated_window`] whenever a window transition is active.
-pub fn render_window(
+pub(crate) fn render_window(
     renderer: &mut GlowRenderer,
     window: &Window,
     location: Point<i32, Logical>,

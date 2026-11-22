@@ -50,7 +50,7 @@ impl WlrLayerShellHandler for BabydraState {
 delegate_layer_shell!(BabydraState);
 
 /// Handles surface commits for layer shell surfaces across all outputs.
-pub fn handle_commit(state: &BabydraState, surface: &WlSurface) {
+pub(crate) fn handle_commit(state: &BabydraState, surface: &WlSurface) {
     for output in state.space.outputs() {
         let mut layer_map = layer_map_for_output(output);
         if let Some(layer) = layer_map

@@ -21,11 +21,11 @@ use smithay::{
 use super::elements::types::CustomRenderElements;
 use crate::model::TitlebarLayout;
 
-pub use common::constants::{
+pub(crate) use common::constants::{
     CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS as BUTTON, TITLEBAR_HEIGHT as HEIGHT,
 };
 use common::Action;
-pub fn render(
+pub(crate) fn render(
     renderer: &mut GlowRenderer,
     window: &Window,
     location: Point<i32, Logical>,

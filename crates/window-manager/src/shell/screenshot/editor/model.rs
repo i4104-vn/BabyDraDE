@@ -2,7 +2,7 @@
 
 /// Types of drawing annotations that can be overlayed on the screenshot.
 #[derive(Clone)]
-pub enum Drawing {
+pub(crate) enum Drawing {
     /// Vector path drawing with points, color, and thickness.
     Stroke {
         points: Vec<(f64, f64)>,
@@ -51,7 +51,7 @@ pub enum Drawing {
 
 impl Drawing {
     /// Bounding box of the drawing in canvas coordinates.
-    pub fn bounds(&self) -> (f64, f64, f64, f64) {
+    pub(crate) fn bounds(&self) -> (f64, f64, f64, f64) {
         const STROKE_PAD: f64 = 8.0;
         match self {
             Drawing::Stroke { points, width, .. } => {
@@ -102,7 +102,7 @@ impl Drawing {
     }
 
     /// Returns `true` if the point is close enough to the drawing to select it.
-    pub fn hit_test(&self, px: f64, py: f64) -> bool {
+    pub(crate) fn hit_test(&self, px: f64, py: f64) -> bool {
         match self {
             Drawing::Stroke { points, width, .. } => {
                 let threshold = (width / 2.0 + 6.0).powi(2);
@@ -162,7 +162,7 @@ fn near_rect_outline(px: f64, py: f64, x: f64, y: f64, w: f64, h: f64, t: f64) -
 }
 
 /// Perpendicular distance from point to line segment.
-pub fn distance_to_segment(px: f64, py: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+pub(crate) fn distance_to_segment(px: f64, py: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     let dx = x2 - x1;
     let dy = y2 - y1;
     let len_sq = dx * dx + dy * dy;
@@ -177,7 +177,7 @@ pub fn distance_to_segment(px: f64, py: f64, x1: f64, y1: f64, x2: f64, y2: f64)
 
 /// Tools available in the screenshot editor.
 #[derive(Clone, Copy, PartialEq)]
-pub enum Tool {
+pub(crate) enum Tool {
     Select,
     Pen,
     Rect,
@@ -189,40 +189,40 @@ pub enum Tool {
 }
 
 /// Default stroke widths offered by the style popover.
-pub const STROKE_WIDTHS: [f64; 3] = [3.0, 5.5, 9.0];
+pub(crate) const STROKE_WIDTHS: [f64; 3] = [3.0, 5.5, 9.0];
 
 /// Current active state of the editor.
-pub struct EditorState {
-    pub bg_pixbuf: gdk_pixbuf::Pixbuf,
-    pub crop_x: f64,
-    pub crop_y: f64,
-    pub crop_w: f64,
-    pub crop_h: f64,
-    pub canvas_w: f64,
-    pub canvas_h: f64,
-    pub has_selection: bool,
-    pub drag_start_x: f64,
-    pub drag_start_y: f64,
-    pub is_selecting: bool,
-    pub current_tool: Tool,
+pub(crate) struct EditorState {
+    pub(crate) bg_pixbuf: gdk_pixbuf::Pixbuf,
+    pub(crate) crop_x: f64,
+    pub(crate) crop_y: f64,
+    pub(crate) crop_w: f64,
+    pub(crate) crop_h: f64,
+    pub(crate) canvas_w: f64,
+    pub(crate) canvas_h: f64,
+    pub(crate) has_selection: bool,
+    pub(crate) drag_start_x: f64,
+    pub(crate) drag_start_y: f64,
+    pub(crate) is_selecting: bool,
+    pub(crate) current_tool: Tool,
     /// Last shape picked in the shapes popover; applied on first click of the
     /// shared shapes button so drawing starts immediately.
-    pub current_shape: Tool,
-    pub current_color: (f64, f64, f64),
-    pub current_width: f64,
-    pub drawings: Vec<Drawing>,
-    pub selected_drawing: Option<usize>,
-    pub active_stroke: Option<Vec<(f64, f64)>>,
-    pub active_rect: Option<(f64, f64, f64, f64)>,
-    pub active_line: Option<(f64, f64, f64, f64)>,
+    pub(crate) current_shape: Tool,
+    pub(crate) current_color: (f64, f64, f64),
+    pub(crate) current_width: f64,
+    pub(crate) drawings: Vec<Drawing>,
+    pub(crate) selected_drawing: Option<usize>,
+    pub(crate) active_stroke: Option<Vec<(f64, f64)>>,
+    pub(crate) active_rect: Option<(f64, f64, f64, f64)>,
+    pub(crate) active_line: Option<(f64, f64, f64, f64)>,
     /// Incremented whenever static content (background/crop/drawings) changes so the
     /// canvas render cache can detect invalidation cheaply.
-    pub render_version: u64,
+    pub(crate) render_version: u64,
 }
 
 impl EditorState {
     /// Creates a new editor state with the provided raw background pixbuf.
-    pub fn new(pixbuf: gdk_pixbuf::Pixbuf) -> Self {
+    pub(crate) fn new(pixbuf: gdk_pixbuf::Pixbuf) -> Self {
         Self {
             bg_pixbuf: pixbuf,
             crop_x: 0.0,
@@ -249,7 +249,7 @@ impl EditorState {
     }
 
     /// Marks static content as changed so cached renders are invalidated.
-    pub fn invalidate(&mut self) {
+    pub(crate) fn invalidate(&mut self) {
         self.render_version += 1;
     }
 }

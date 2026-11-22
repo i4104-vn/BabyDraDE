@@ -5,21 +5,21 @@ use tracing::{info, warn};
 
 /// Touchpad configuration options loaded from `~/.babydra/configs/input.toml`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct TouchpadConfig {
+pub(crate) struct TouchpadConfig {
     /// Whether tap-to-click is enabled (1-finger left click, 2-finger right click).
-    pub tap_to_click: bool,
+    pub(crate) tap_to_click: bool,
     /// Whether tap-and-drag is enabled (tap once then slide to drag).
-    pub tap_drag: bool,
+    pub(crate) tap_drag: bool,
     /// Whether tap drag lock is enabled.
-    pub tap_drag_lock: bool,
+    pub(crate) tap_drag_lock: bool,
     /// Mapping of tap finger count to mouse buttons.
-    pub button_map: smithay::reexports::input::TapButtonMap,
+    pub(crate) button_map: smithay::reexports::input::TapButtonMap,
     /// Whether disable-while-typing (DWT) is active.
-    pub dwt: bool,
+    pub(crate) dwt: bool,
     /// Whether natural (reverse) scrolling direction is enabled.
-    pub natural_scroll: bool,
+    pub(crate) natural_scroll: bool,
     /// Optional pointer acceleration speed (-1.0 to 1.0).
-    pub speed: Option<f64>,
+    pub(crate) speed: Option<f64>,
 }
 
 impl Default for TouchpadConfig {
@@ -81,7 +81,7 @@ impl TouchpadConfig {
     /// # Returns
     ///
     /// Returns a resolved [`TouchpadConfig`] mapped from the shared [`services::models::TouchpadConfig`].
-    pub fn load() -> Self {
+    pub(crate) fn load() -> Self {
         let shared_cfg = services::config::load_touchpad_config();
         Self::from(shared_cfg)
     }

@@ -1,7 +1,7 @@
 //! Keyboard input processing, focus handling, and global hotkeys.
 
-pub mod focus;
-pub mod shortcuts;
+pub(crate) mod focus;
+pub(crate) mod shortcuts;
 
 pub(crate) use focus::cycle_window_focus;
 

@@ -17,7 +17,7 @@ use super::types::{CustomRenderElements, LayerBlurId};
 
 /// Renders surfaces belonging to the specified WlrLayer layers (e.g. Top, Overlay, Background)
 /// and optionally attaches a blur backdrop for matching layers.
-pub fn render_layer_surfaces(
+pub(crate) fn render_layer_surfaces(
     renderer: &mut GlowRenderer,
     output: &Output,
     scale: Scale<f64>,

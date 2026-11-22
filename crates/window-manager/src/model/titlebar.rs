@@ -10,7 +10,7 @@ use smithay::{
 };
 
 /// Hit-tests the compositor frame for a window.
-pub fn hit_test(
+pub(crate) fn hit_test(
     window: &Window,
     location: Point<i32, Logical>,
     point: Point<f64, Logical>,
@@ -32,24 +32,24 @@ pub fn hit_test(
 
 /// A circular titlebar button.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct TitlebarButton {
-    pub action: Action,
+pub(crate) struct TitlebarButton {
+    pub(crate) action: Action,
     /// Center in titlebar-local logical coordinates.
-    pub center: Point<f64, Logical>,
+    pub(crate) center: Point<f64, Logical>,
 }
 
 /// Geometry of the compositor-owned titlebar for a given window width.
 #[derive(Debug, Clone, PartialEq)]
-pub struct TitlebarLayout {
-    pub height: i32,
-    pub button_radius: f64,
-    pub corner_radius: f64,
-    pub buttons: [TitlebarButton; 3],
+pub(crate) struct TitlebarLayout {
+    pub(crate) height: i32,
+    pub(crate) button_radius: f64,
+    pub(crate) corner_radius: f64,
+    pub(crate) buttons: [TitlebarButton; 3],
 }
 
 impl TitlebarLayout {
     /// Builds the layout for a window of `width` logical pixels.
-    pub fn new(width: f64, _maximized: bool) -> Self {
+    pub(crate) fn new(width: f64, _maximized: bool) -> Self {
         let cy = TITLEBAR_HEIGHT as f64 / 2.0;
         let close_x = width - 22.0;
         let max_x = close_x - 24.0;
@@ -77,7 +77,7 @@ impl TitlebarLayout {
     }
 
     /// Returns the center of a button, or the origin if the action is unknown.
-    pub fn button(&self, action: Action) -> Point<f64, Logical> {
+    pub(crate) fn button(&self, action: Action) -> Point<f64, Logical> {
         self.buttons
             .iter()
             .find(|button| button.action == action)
@@ -86,7 +86,7 @@ impl TitlebarLayout {
     }
 
     /// Logical Y coordinate of the titlebar top edge.
-    pub fn frame_y(&self, location: Point<i32, Logical>, maximized: bool) -> f64 {
+    pub(crate) fn frame_y(&self, location: Point<i32, Logical>, maximized: bool) -> f64 {
         if maximized {
             location.y as f64
         } else {
@@ -95,7 +95,7 @@ impl TitlebarLayout {
     }
 
     /// Hit-tests a point in global logical coordinates.
-    pub fn hit_test(
+    pub(crate) fn hit_test(
         &self,
         location: Point<i32, Logical>,
         width: f64,

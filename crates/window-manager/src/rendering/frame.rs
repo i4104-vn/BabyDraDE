@@ -21,22 +21,22 @@ use super::{
 };
 
 /// Inputs that are produced by the backend or shell before composition.
-pub struct FrameContext<'a> {
-    pub output: &'a Output,
-    pub scale: Scale<f64>,
-    pub cursor: Option<CustomRenderElements>,
+pub(crate) struct FrameContext<'a> {
+    pub(crate) output: &'a Output,
+    pub(crate) scale: Scale<f64>,
+    pub(crate) cursor: Option<CustomRenderElements>,
     /// Shell elements rendered above layer-shell windows but below client windows.
-    pub below_windows: Vec<CustomRenderElements>,
+    pub(crate) below_windows: Vec<CustomRenderElements>,
     /// Shell elements rendered above client windows (for example the switcher).
-    pub above_windows: Vec<CustomRenderElements>,
-    pub space: &'a Space<Window>,
-    pub blur_engine: Option<&'a Arc<Mutex<BlurEngine>>>,
-    pub pointer: smithay::utils::Point<f64, smithay::utils::Logical>,
-    pub visuals: &'a dyn Fn(&Window) -> WindowVisualState,
+    pub(crate) above_windows: Vec<CustomRenderElements>,
+    pub(crate) space: &'a Space<Window>,
+    pub(crate) blur_engine: Option<&'a Arc<Mutex<BlurEngine>>>,
+    pub(crate) pointer: smithay::utils::Point<f64, smithay::utils::Logical>,
+    pub(crate) visuals: &'a dyn Fn(&Window) -> WindowVisualState,
 }
 
 /// Builds the frame element list in front-to-back order.
-pub fn compose_frame(
+pub(crate) fn compose_frame(
     renderer: &mut GlowRenderer,
     ctx: FrameContext<'_>,
 ) -> Vec<CustomRenderElements> {

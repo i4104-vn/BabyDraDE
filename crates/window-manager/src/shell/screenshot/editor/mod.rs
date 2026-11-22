@@ -1,12 +1,12 @@
 //! Screenshot editor window: assembly, keyboard shortcuts, and UI construction.
 
-pub mod canvas;
-pub mod handle;
-pub mod model;
-pub mod popovers;
+pub(crate) mod canvas;
+pub(crate) mod handle;
+pub(crate) mod model;
+pub(crate) mod popovers;
 mod view;
 
-pub use view::build_editor_ui;
+pub(crate) use view::build_editor_ui;
 
 use self::handle::clipboard::copy_to_clipboard;
 use self::handle::drawing::trigger_save;
@@ -19,7 +19,7 @@ use self::canvas::delete_selected;
 
 /// Sets up keyboard event controllers to handle global shortcuts like Escape (cancel),
 /// Return (copy to clipboard), Ctrl+S (save to file), and Delete (remove selected drawing).
-pub fn setup_editor_keys(
+pub(crate) fn setup_editor_keys(
     window: &gtk4::ApplicationWindow,
     state: Rc<RefCell<EditorState>>,
     canvas: &gtk4::DrawingArea,

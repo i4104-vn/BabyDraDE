@@ -14,8 +14,8 @@ use crate::compositor::state::BabydraState;
 /// transition such as fullscreen or maximize enter/exit.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct GeometryTransition {
-    pub from: Rectangle<f64, Logical>,
-    pub to: Rectangle<f64, Logical>,
+    pub(crate) from: Rectangle<f64, Logical>,
+    pub(crate) to: Rectangle<f64, Logical>,
 }
 
 /// Tracks in-progress window transitions.

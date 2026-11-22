@@ -20,16 +20,16 @@ use crate::rendering::elements::types::{ConstrainedSurface, CustomRenderElements
 
 /// Parameters specifying animation progress and blur properties for a transition frame.
 #[derive(Clone, Copy, Debug)]
-pub struct WindowAnimationRenderParams {
-    pub scale_factor: f64,
-    pub alpha_factor: f32,
+pub(crate) struct WindowAnimationRenderParams {
+    pub(crate) scale_factor: f64,
+    pub(crate) alpha_factor: f32,
     /// Absolute interpolated rectangle for geometry transitions. When set, the
     /// window is rendered into this rect instead of being scaled around its
     /// current center.
-    pub target_rect: Option<Rectangle<f64, Logical>>,
-    pub base_opacity: f32,
-    pub should_blur: bool,
-    pub corner_radius: f32,
+    pub(crate) target_rect: Option<Rectangle<f64, Logical>>,
+    pub(crate) base_opacity: f32,
+    pub(crate) should_blur: bool,
+    pub(crate) corner_radius: f32,
 }
 
 /// Renders a window during any active animation (opening, closing, minimize,
@@ -37,7 +37,7 @@ pub struct WindowAnimationRenderParams {
 ///
 /// Scale-only transitions anchor at the window's geometric center. Geometry
 /// transitions instead render into their interpolated target rectangle.
-pub fn render_animated_window(
+pub(crate) fn render_animated_window(
     renderer: &mut GlowRenderer,
     window: &Window,
     location: Point<i32, Logical>,
