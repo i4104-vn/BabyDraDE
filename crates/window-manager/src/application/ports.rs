@@ -7,7 +7,35 @@ use std::ffi::OsStr;
 
 use crate::domain::shortcuts::Shortcut;
 
+/// Structured failure returned when a config snapshot cannot be loaded.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ConfigError {
+    pub(crate) message: String,
+}
+
+/// Structured failure returned when a configured command cannot be launched.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct LaunchError {
+    pub(crate) message: String,
+}
+
+/// Port that loads the shortcut table (implemented by the config adapter).
+///
+/// Unlike a bare function pointer, this trait returns a structured error so
+/// the application layer can decide how to degrade and tests can fake it.
+pub(crate) trait ShortcutRepository {
+    fn load(&self) -> Result<Vec<Shortcut>, ConfigError>;
+}
+
 /// Port that launches a configured command (implemented by infrastructure).
+///
+/// Failures are returned to the caller instead of being swallowed, which
+/// makes the outcome observable and easy to fake in tests.
+pub(crate) trait CommandLauncher {
+    fn launch(&self, command: &str) -> Result<(), LaunchError>;
+}
+
+/// Legacy port that launches a configured command (implemented by infrastructure).
 pub(crate) type LaunchCommand = fn(String);
 
 /// Port that starts one autostart command on the compositor's Wayland display.
@@ -24,7 +52,7 @@ pub(crate) trait AutostartLauncher {
     fn spawn(&self, command: &str, wayland_display: &OsStr) -> Result<Self::Child, String>;
 }
 
-/// Port that loads the shortcut table (implemented by the config adapter).
+/// Legacy port that loads the shortcut table (implemented by the config adapter).
 pub(crate) type LoadShortcuts = fn() -> Vec<Shortcut>;
 
 /// Port that loads a fresh gesture policy snapshot.

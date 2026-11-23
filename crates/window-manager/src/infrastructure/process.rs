@@ -1,18 +1,28 @@
 //! Process launching driver (Frameworks & Drivers layer).
 //!
-//! Implements the `LaunchCommand` and `AutostartLauncher` ports declared by the
-//! application layer.
+//! Implements the `CommandLauncher` and `AutostartLauncher` ports declared by
+//! the application layer.
 
 use std::ffi::OsStr;
 
 use tracing::{error, warn};
 
-use crate::application::ports::AutostartLauncher;
+use crate::application::ports::{AutostartLauncher, CommandLauncher, LaunchError};
 
 /// Spawns a configured command through `sh -c` in a detached thread so shell
 /// syntax keeps working without blocking the compositor's event loop.
+///
+/// Failures to start the worker are logged here; callers that need to react
+/// to a failure use [`try_spawn_detached`] instead.
 pub(crate) fn spawn_detached(command: String) {
-    if let Err(e) = std::thread::Builder::new()
+    if let Err(message) = try_spawn_detached(command) {
+        error!("failed to spawn keymap command thread: {}", message);
+    }
+}
+
+/// Detached spawn used by the `CommandLauncher` port.
+fn try_spawn_detached(command: String) -> Result<(), String> {
+    std::thread::Builder::new()
         .name("babydra-keymap-command".to_string())
         .spawn(move || {
             match std::process::Command::new("sh")
@@ -25,8 +35,17 @@ pub(crate) fn spawn_detached(command: String) {
                 Err(e) => error!("failed to run keymap command {:?}: {}", command, e),
             }
         })
-    {
-        error!("failed to spawn keymap command thread: {}", e);
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+/// Launches configured shortcut commands through the application port.
+#[derive(Debug, Default)]
+pub(crate) struct ShortcutCommandLauncher;
+
+impl CommandLauncher for ShortcutCommandLauncher {
+    fn launch(&self, command: &str) -> Result<(), LaunchError> {
+        try_spawn_detached(command.to_string()).map_err(|message| LaunchError { message })
     }
 }
 

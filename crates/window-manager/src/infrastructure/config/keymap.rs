@@ -1,5 +1,6 @@
 //! Window-manager-owned keymap configuration.
 
+use crate::application::ports::{ConfigError, ShortcutRepository};
 use crate::domain::shortcuts::Shortcut;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -60,6 +61,19 @@ pub(crate) fn load() -> Vec<Shortcut> {
 
     tracing::info!("loaded {} keymap shortcut(s)", shortcuts.len());
     shortcuts
+}
+
+/// Exposes the keymap loader through the application's `ShortcutRepository`
+/// port. The loader degrades gracefully (it logs and returns an empty table
+/// when the file is missing or malformed), so no failure needs wrapping today;
+/// `ConfigError` keeps the port ready for future fallible loaders.
+#[derive(Debug, Default)]
+pub(crate) struct KeymapRepository;
+
+impl ShortcutRepository for KeymapRepository {
+    fn load(&self) -> Result<Vec<Shortcut>, ConfigError> {
+        Ok(load())
+    }
 }
 
 /// Splits `"W-S-t"` into `("W-S", "t")`. A key without modifiers is not a
