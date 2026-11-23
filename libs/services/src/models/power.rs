@@ -24,7 +24,7 @@ pub struct PowerConfig {
     /// Active system power profile (`"performance"`, `"balanced"`, or `"power-saver"`).
     #[serde(default = "default_power_profile")]
     pub profile: String,
-    /// Whether auto battery saver triggers when battery drops below [`saver_threshold`].
+    /// Whether battery saver activates below [`Self::saver_threshold`].
     #[serde(default = "default_true")]
     pub auto_saver_enabled: bool,
     /// Percentage threshold below which battery saver activates.

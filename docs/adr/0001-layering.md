@@ -1,6 +1,6 @@
 # ADR 0001 — Layered module architecture
 
-- Status: accepted
+- Status: superseded by [0003 — Clean Architecture](0003-clean-architecture.md)
 - Date: 2026-11-22
 
 ## Context
