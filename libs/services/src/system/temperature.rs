@@ -143,11 +143,7 @@ fn category(label: &str) -> Option<&'static str> {
     if label.contains("battery") {
         return Some("Battery");
     }
-    for needle in ["wifi", "iwlwifi", "ath", "wlan"] {
-        if label.contains(needle) {
-            return Some("Wireless");
-        }
-    }
+    // Wi-Fi/peripheral sensor readings are not useful in a desktop tooltip.
     None
 }
 
@@ -166,11 +162,9 @@ pub fn get_all_temperatures() -> Vec<TemperatureReading> {
 }
 
 /// A short, curated list for tooltips: one reading per category (CPU, GPU,
-/// SoC, Storage, System, Battery, Wireless), capped at six rows.
+/// SoC, Storage, System, Battery), capped at six rows.
 pub fn get_important_temperatures() -> Vec<TemperatureReading> {
-    let order = [
-        "CPU", "GPU", "SoC", "Storage", "System", "Battery", "Wireless",
-    ];
+    let order = ["CPU", "GPU", "SoC", "Storage", "System", "Battery"];
     let mut selected: Vec<(&str, TemperatureReading)> = Vec::new();
 
     for reading in get_all_temperatures() {
