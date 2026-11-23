@@ -46,6 +46,11 @@ test. See [report.md](../report.md) for the full plan and progress log.
 | `adapters` pure logic | 60% |
 | Whole workspace | 50% |
 
+These are iterative targets, not yet enforced as a CI gate: enabling a coverage
+tool and a low initial threshold is tracked in
+[report.md](../report.md#132-đang-thực-hiện-hoặc-còn-lại). Keep writing
+characterization tests for the P0 flows so the numbers can be raised gradually.
+
 ## Smoke matrix
 
 | Scenario | Winit | Udev/DRM |
