@@ -2892,6 +2892,7 @@ dependencies = [
  "common",
  "dirs",
  "gdk-pixbuf",
+ "gio",
  "glib",
  "glow",
  "gtk4",

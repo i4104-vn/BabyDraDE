@@ -87,7 +87,8 @@ pub struct DisplayConfig {
     #[serde(default)]
     pub monitors: Vec<DisplayMonitorSetting>,
     /// Follow the device accelerometer and rotate the panel automatically.
-    /// Only affects machines that actually expose an orientation sensor.
+    /// `None` (the default) enables it whenever a sensor is detected; set to
+    /// `false` to opt out on a convertible machine.
     #[serde(default)]
-    pub auto_rotate: bool,
+    pub auto_rotate: Option<bool>,
 }

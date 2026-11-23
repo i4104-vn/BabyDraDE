@@ -1,11 +1,14 @@
-//! Automatic panel rotation from an accelerometer (IIO) sensor.
+//! Automatic panel rotation from a device orientation sensor.
 //!
-//! Convertible/tablet devices expose gravity data under
-//! `/sys/bus/iio/devices/iio:deviceN/in_accel_{x,y}_raw`. A small timer polls
-//! the sensor, debounces the reading and updates every Wayland output's
-//! transform. The transform present at startup is used as the baseline, so the
-//! feature also works when the panel is physically mounted sideways.
+//! Two sensor sources are supported, in order of preference:
+//!   1. raw IIO sysfs accelerometers (`/sys/bus/iio/devices/iio:deviceN`);
+//!   2. `iio-sensor-proxy` on D-Bus (`net.hadess.SensorProxy`).
+//!
+//! Rotation follows the *change* from the orientation seen at startup, so a
+//! panel mounted sideways still rotates correctly. Machines with no sensor are
+//! a no-op.
 
+use gio::glib::Variant;
 use smithay::{
     reexports::calloop::{
         timer::{TimeoutAction, Timer},
@@ -20,12 +23,17 @@ use crate::adapters::compositor::CalloopData;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 const REQUIRED_STABLE_READINGS: u8 = 3;
+const EARTH_GRAVITY: f64 = 9.81;
+
+const PROXY_NAME: &str = "net.hadess.SensorProxy";
+const PROXY_PATH: &str = "/net/hadess/SensorProxy";
+const PROXY_IFACE: &str = "net.hadess.SensorProxy";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Orientation(u8);
 
 impl Orientation {
-    /// Dominant gravity axis: Y up, X right, Y down, X left (clockwise steps).
+    /// Dominant gravity axis: Y down, X right, Y up, X left.
     fn from_gravity(x: f64, y: f64) -> Option<Self> {
         let magnitude = x.hypot(y);
         if magnitude < 0.35 {
@@ -43,9 +51,53 @@ impl Orientation {
     }
 }
 
+enum Sensor {
+    Iio { path: PathBuf, scale: f64 },
+    Proxy(gio::DBusConnection),
+}
+
+impl Sensor {
+    fn read_gravity(&self) -> Option<(f64, f64)> {
+        match self {
+            Self::Iio { path, scale } => {
+                let x = read_number(&path.join("in_accel_x_raw"))? * scale;
+                let y = read_number(&path.join("in_accel_y_raw"))? * scale;
+                Some((x, y))
+            }
+            Self::Proxy(connection) => {
+                let reply = connection
+                    .call_sync(
+                        Some(PROXY_NAME),
+                        PROXY_PATH,
+                        "org.freedesktop.DBus.Properties",
+                        "Get",
+                        Some(&Variant::from((PROXY_IFACE, "Accelerate"))),
+                        None,
+                        gio::DBusCallFlags::NONE,
+                        500,
+                        gio::Cancellable::NONE,
+                    )
+                    .ok()?;
+                let value = reply.child_value(0).get::<Variant>()?;
+                let x = value.child_value(0).get::<f64>()? / EARTH_GRAVITY;
+                let y = value.child_value(1).get::<f64>()? / EARTH_GRAVITY;
+                Some((x, y))
+            }
+        }
+    }
+}
+
+impl std::fmt::Debug for Sensor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Iio { path, .. } => write!(f, "IIO:{path:?}"),
+            Self::Proxy(_) => write!(f, "iio-sensor-proxy"),
+        }
+    }
+}
+
 struct AutoRotate {
-    sensor: PathBuf,
-    scale: f64,
+    sensor: Sensor,
     baseline: Option<Orientation>,
     base_transform: Option<Transform>,
     candidate: Option<Orientation>,
@@ -54,11 +106,9 @@ struct AutoRotate {
 }
 
 impl AutoRotate {
-    fn new(sensor: PathBuf) -> Self {
-        let scale = read_number(&sensor.join("in_accel_scale")).unwrap_or(1.0);
+    fn new(sensor: Sensor) -> Self {
         Self {
             sensor,
-            scale,
             baseline: None,
             base_transform: None,
             candidate: None,
@@ -67,20 +117,18 @@ impl AutoRotate {
         }
     }
 
-    fn read_orientation(&self) -> Option<Orientation> {
-        let x = read_number(&self.sensor.join("in_accel_x_raw"))? * self.scale;
-        let y = read_number(&self.sensor.join("in_accel_y_raw"))? * self.scale;
-        Orientation::from_gravity(x, y)
-    }
-
     fn poll(&mut self, state: &mut CalloopData) {
-        let Some(current) = self.read_orientation() else {
+        let Some((x, y)) = self.sensor.read_gravity() else {
+            return;
+        };
+        if std::env::var("BABYDRADE_AUTO_ROTATE_DEBUG").as_deref() == Ok("1") {
+            tracing::debug!("accelerometer: x={x:.3} y={y:.3}");
+        }
+        let Some(current) = Orientation::from_gravity(x, y) else {
             return;
         };
         let baseline = *self.baseline.get_or_insert(current);
-        let base_transform = *self
-            .base_transform
-            .get_or_insert_with(|| baseline_transform(state));
+        let base_transform = *self.base_transform.get_or_insert_with(|| baseline_transform(state));
 
         if self.candidate == Some(current) {
             self.stable += 1;
@@ -99,7 +147,6 @@ impl AutoRotate {
         for output in state.state.space.outputs() {
             output.change_current_state(None, Some(transform), None, None);
         }
-        // Touch input is transformed separately; keep it in sync with the panel.
         std::env::set_var("BABYDRADE_TOUCH_TRANSFORM", transform_name(transform));
         tracing::info!("auto-rotated panel to {transform:?}");
     }
@@ -153,29 +200,84 @@ fn read_number(path: &Path) -> Option<f64> {
         .ok()
 }
 
-fn find_accelerometer() -> Option<PathBuf> {
-    let root = Path::new("/sys/bus/iio/devices");
-    let entries = std::fs::read_dir(root).ok()?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.join("in_accel_x_raw").is_file() && path.join("in_accel_y_raw").is_file() {
-            return Some(path);
+fn find_iio_accelerometer() -> Option<Sensor> {
+    for root in ["/sys/bus/iio/devices", "/sys/class/iio"] {
+        let Ok(entries) = std::fs::read_dir(root) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.join("in_accel_x_raw").is_file() && path.join("in_accel_y_raw").is_file() {
+                let scale = read_number(&path.join("in_accel_scale")).unwrap_or(1.0);
+                return Some(Sensor::Iio { path, scale });
+            }
         }
     }
     None
 }
 
-/// Starts automatic rotation when enabled in `display.toml` or with
-/// `BABYDRADE_AUTO_ROTATE=1`. Machines without an accelerometer are a no-op.
+fn sensor_proxy() -> Option<Sensor> {
+    let connection =
+        gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
+    // Calling the proxy directly also activates it over D-Bus; `NameHasOwner`
+    // would report "false" for an installed-but-not-yet-started service.
+    if connection
+        .call_sync(
+            Some(PROXY_NAME),
+            PROXY_PATH,
+            PROXY_IFACE,
+            "ClaimAccelerometer",
+            None,
+            None,
+            gio::DBusCallFlags::NONE,
+            1000,
+            gio::Cancellable::NONE,
+        )
+        .is_err()
+    {
+        return None;
+    }
+
+    let available = connection
+        .call_sync(
+            Some(PROXY_NAME),
+            PROXY_PATH,
+            "org.freedesktop.DBus.Properties",
+            "Get",
+            Some(&Variant::from((PROXY_IFACE, "Accelerate"))),
+            None,
+            gio::DBusCallFlags::NONE,
+            1000,
+            gio::Cancellable::NONE,
+        )
+        .is_ok();
+    if available {
+        Some(Sensor::Proxy(connection))
+    } else {
+        None
+    }
+}
+
+fn detect_sensor() -> Option<Sensor> {
+    find_iio_accelerometer().or_else(sensor_proxy)
+}
+
+/// Starts automatic rotation when enabled. A sensor being present is enough to
+/// enable it by default; `auto_rotate = false` in display.toml or
+/// `BABYDRADE_AUTO_ROTATE=0` opts out.
 pub(crate) fn spawn(event_loop: &mut EventLoop<'_, CalloopData>) {
-    let enabled = services::config::load_display_config().auto_rotate
-        || std::env::var("BABYDRADE_AUTO_ROTATE").as_deref() == Ok("1");
+    let enabled = match std::env::var("BABYDRADE_AUTO_ROTATE").as_deref() {
+        Ok("0") | Ok("false") => false,
+        Ok(_) => true,
+        Err(_) => services::config::load_display_config().auto_rotate.unwrap_or(true),
+    };
     if !enabled {
+        tracing::info!("auto-rotate disabled by configuration");
         return;
     }
 
-    let Some(sensor) = find_accelerometer() else {
-        tracing::info!("auto-rotate enabled but no IIO accelerometer was found");
+    let Some(sensor) = detect_sensor() else {
+        tracing::info!("auto-rotate: no accelerometer found (IIO or iio-sensor-proxy)");
         return;
     };
 
@@ -210,5 +312,11 @@ mod tests {
         assert_eq!(rotate(Transform::Normal, 1), Transform::_90);
         assert_eq!(rotate(Transform::Normal, 4), Transform::Normal);
         assert_eq!(rotate(Transform::Flipped90, 1), Transform::Flipped180);
+    }
+
+    #[test]
+    fn orientation_steps_wrap_around() {
+        assert_eq!(Orientation(3).steps_from(Orientation(0)), 3);
+        assert_eq!(Orientation(0).steps_from(Orientation(3)), 1);
     }
 }

@@ -122,17 +122,23 @@ snapshots held by `ConfigSnapshot` and `InputState`; they never read the disk.
 
 ## 7. Automatic screen rotation
 
-Convertible/tablet devices with an IIO accelerometer can rotate the panel
-automatically. Enable it in `~/.babydra/configs/display.toml`:
+Automatic rotation is **on by default whenever an orientation sensor is
+present**. Convertible/tablet devices are detected through either raw IIO sysfs
+accelerometers (`/sys/bus/iio/devices/iio:deviceN`) or `iio-sensor-proxy` on
+D-Bus (`net.hadess.SensorProxy`). The compositor debounces the reading and
+applies the new transform to every output; touch coordinates follow the same
+rotation. The transform seen at startup is the baseline, so a sideways-mounted
+panel still rotates correctly.
+
+To opt out, set in `~/.babydra/configs/display.toml`:
 
 ```toml
 [display]
-auto_rotate = true
+auto_rotate = false
 ```
 
-Alternatively set `BABYDRADE_AUTO_ROTATE=1` in the environment. The compositor
-polls `/sys/bus/iio/devices/iio:device*/in_accel_{x,y}_raw`, debounces the
-reading and applies the new transform to every output; touch coordinates follow
-the same rotation. On machines without an accelerometer this setting is a
-no-op. `monitors[].orientation` still provides a fixed rotation when
-auto-rotation is disabled.
+`BABYDRADE_AUTO_ROTATE=1` forces it on and `BABYDRADE_AUTO_ROTATE=0` forces it
+off. `BABYDRADE_AUTO_ROTATE_DEBUG=1` logs raw accelerometer values.
+
+On machines without a sensor the feature is a no-op. `monitors[].orientation`
+still provides a fixed rotation when auto-rotation is disabled.

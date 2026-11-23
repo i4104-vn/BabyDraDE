@@ -192,50 +192,50 @@ install_packages_for_distro() {
     esac
 }
 
-# greetd and cage are installed independently of the build toolchain so a
+# greetd, cage and iio-sensor-proxy are installed independently of the build toolchain so a
 # missing package never aborts the rest of the setup.
 install_login_manager_packages() {
     local family="$1"
-    step "Installing greetd and cage (login screen session)..."
+    step "Installing greetd, cage and iio-sensor-proxy (login screen session)..."
     case "$family" in
         arch)
-            if run_privileged pacman -S --needed --noconfirm greetd cage; then
-                echo "[✓] greetd and cage installed."
+            if run_privileged pacman -S --needed --noconfirm greetd cage iio-sensor-proxy; then
+                echo "[✓] greetd, cage and iio-sensor-proxy installed."
             else
-                echo "[!] Could not install greetd/cage via pacman." >&2
+                echo "[!] Could not install greetd/cage/iio-sensor-proxy via pacman." >&2
             fi
             ;;
         debian)
-            if run_privileged apt-get install -y --no-install-recommends greetd cage; then
-                echo "[✓] greetd and cage installed."
+            if run_privileged apt-get install -y --no-install-recommends greetd cage iio-sensor-proxy; then
+                echo "[✓] greetd, cage and iio-sensor-proxy installed."
             else
-                echo "[!] greetd/cage are unavailable in this Debian repository." >&2
+                echo "[!] greetd/cage/iio-sensor-proxy are unavailable in this Debian repository." >&2
             fi
             ;;
         fedora)
-            if run_privileged dnf5 install -y greetd cage 2>/dev/null ||
-                run_privileged dnf install -y greetd cage 2>/dev/null; then
-                echo "[✓] greetd and cage installed."
+            if run_privileged dnf5 install -y greetd cage iio-sensor-proxy 2>/dev/null ||
+                run_privileged dnf install -y greetd cage iio-sensor-proxy 2>/dev/null; then
+                echo "[✓] greetd, cage and iio-sensor-proxy installed."
             else
-                echo "[!] Could not install greetd/cage via dnf." >&2
+                echo "[!] Could not install greetd/cage/iio-sensor-proxy via dnf." >&2
             fi
             ;;
         alpine)
-            if run_privileged apk add --no-cache greetd cage; then
-                echo "[✓] greetd and cage installed."
+            if run_privileged apk add --no-cache greetd cage iio-sensor-proxy; then
+                echo "[✓] greetd, cage and iio-sensor-proxy installed."
             else
-                echo "[!] Could not install greetd/cage via apk." >&2
+                echo "[!] Could not install greetd/cage/iio-sensor-proxy via apk." >&2
             fi
             ;;
         void)
-            if run_privileged xbps-install -Sy greetd cage; then
-                echo "[✓] greetd and cage installed."
+            if run_privileged xbps-install -Sy greetd cage iio-sensor-proxy; then
+                echo "[✓] greetd, cage and iio-sensor-proxy installed."
             else
-                echo "[!] Could not install greetd/cage via xbps." >&2
+                echo "[!] Could not install greetd/cage/iio-sensor-proxy via xbps." >&2
             fi
             ;;
         *)
-            echo "[!] No greetd package rule for $OS_NAME; install greetd and cage manually." >&2
+            echo "[!] No greetd package rule for $OS_NAME; install greetd, cage and iio-sensor-proxy manually." >&2
             ;;
     esac
 }
