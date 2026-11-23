@@ -132,3 +132,30 @@ fn application_has_no_global_service_locator() {
         }
     }
 }
+
+/// The inner layers must stay independent of UI toolkits, protocol stacks and
+/// direct I/O. Adapters translate those concerns into pure facts for the core.
+#[test]
+fn domain_and_application_are_framework_free() {
+    let forbidden = [
+        "smithay",
+        "gtk",
+        "wayland_server",
+        "std::fs",
+        "std::process",
+    ];
+    for path in source_files() {
+        if !matches!(top_level_area(&path).as_deref(), Some("domain" | "application")) {
+            continue;
+        }
+        let text = fs::read_to_string(&path).expect("read source file");
+        for pattern in forbidden {
+            assert!(
+                !text.contains(pattern),
+                "{} must not depend on {}",
+                path.display(),
+                pattern
+            );
+        }
+    }
+}
