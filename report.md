@@ -1193,3 +1193,27 @@ Ba ưu tiên nếu chỉ chọn ba việc:
 3. **Đưa quyết định từ adapter vào application** — biến Clean Architecture từ hình thức thành vận hành.
 
 Làm đúng thứ tự này, crate có thể tiến hóa mà không cần viết lại; làm ngược lại, nhiều khả năng sẽ tạo ra một cuộc “đại refactor” thứ hai với cùng kết quả.
+
+---
+
+## 13. Trạng thái triển khai
+
+Mục này được cập nhật trong quá trình thực hiện kế hoạch. Các mục đã xong được commit riêng biệt theo từng phần công việc.
+
+### 13.1. Đã thực hiện
+
+- Hàng rào an toàn: CI chạy fmt, clippy, test, deny và architecture test.
+- Report này được làm mới để phản ánh đúng hiện trạng 123 tệp nguồn.
+- Sửa `on_commit` bị gọi hai lần; chuẩn hóa action cửa sổ thành enum có kiểu; thống nhất cách chọn cửa sổ active.
+- Loại `unwrap` khi khóa mutex trạng thái cửa sổ; bỏ `allow(unused_imports)`; xóa dependency `wayland-sys`.
+- Đổi `adapters/shell` thành `adapters/desktop`; chuyển test từ `src/tests` + `#[path]` về module inline.
+- Đưa cache metadata ra khỏi `domain` sang `adapters/window`; đưa ánh xạ con trỏ ra khỏi `domain`.
+- Chuyển state switcher sang `adapters/desktop`; chuyển cấu hình keymap/pointer/touchpad vào `infrastructure/config`.
+- Cập nhật tài liệu kiến trúc và ADR cho khớp với các thay đổi trên.
+
+### 13.2. Đang thực hiện hoặc còn lại
+
+- Tách input khỏi trạng thái compositor bằng trait context và state types trung lập.
+- Gom các bước dùng chung của hai vòng lặp render vào `infrastructure/backends/render_loop`.
+- Tiếp tục thu hẹp baseline architecture test đến khi hết chu trình.
+- Tách tiếp god state, đưa dịch vụ shortcut ra khỏi global state và làm sạch lõi application/domain.
