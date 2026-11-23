@@ -14,7 +14,7 @@ use crate::{
     application::shortcuts::ShortcutService,
     infrastructure::{
         config::{gesture_policy, keymap as config},
-        process::spawn_detached,
+        process::ShortcutCommandLauncher,
     },
 };
 
@@ -47,7 +47,10 @@ pub(crate) struct Wiring<'a> {
 pub(crate) fn build_state<'a>() -> Result<Wiring<'a>, Box<dyn Error>> {
     // Composition root: inject concrete config and process adapters into the
     // shortcut use case, then start its hot-reload watcher.
-    let shortcuts = Arc::new(ShortcutService::new(config::load, spawn_detached));
+    let shortcuts = Arc::new(ShortcutService::new(
+        Arc::new(config::KeymapRepository),
+        Arc::new(ShortcutCommandLauncher),
+    ));
     config::spawn_watcher(shortcuts.shared().clone());
 
     // Capture the *host* display before exporting our own WAYLAND_DISPLAY,

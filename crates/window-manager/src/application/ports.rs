@@ -35,9 +35,6 @@ pub(crate) trait CommandLauncher {
     fn launch(&self, command: &str) -> Result<(), LaunchError>;
 }
 
-/// Legacy port that launches a configured command (implemented by infrastructure).
-pub(crate) type LaunchCommand = fn(String);
-
 /// Port that starts one autostart command on the compositor's Wayland display.
 ///
 /// The handle returned on success is kept by the caller so it can be
@@ -51,9 +48,6 @@ pub(crate) trait AutostartLauncher {
     /// `wayland_display`.
     fn spawn(&self, command: &str, wayland_display: &OsStr) -> Result<Self::Child, String>;
 }
-
-/// Legacy port that loads the shortcut table (implemented by the config adapter).
-pub(crate) type LoadShortcuts = fn() -> Vec<Shortcut>;
 
 /// Port that loads a fresh gesture policy snapshot.
 pub(crate) type LoadGesturePolicy = fn() -> GesturePolicy;

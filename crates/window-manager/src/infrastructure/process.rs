@@ -12,15 +12,9 @@ use crate::application::ports::{AutostartLauncher, CommandLauncher, LaunchError}
 /// Spawns a configured command through `sh -c` in a detached thread so shell
 /// syntax keeps working without blocking the compositor's event loop.
 ///
-/// Failures to start the worker are logged here; callers that need to react
-/// to a failure use [`try_spawn_detached`] instead.
-pub(crate) fn spawn_detached(command: String) {
-    if let Err(message) = try_spawn_detached(command) {
-        error!("failed to spawn keymap command thread: {}", message);
-    }
-}
-
-/// Detached spawn used by the `CommandLauncher` port.
+/// Failures to start the worker are returned so the `CommandLauncher` port can
+/// surface them as a structured error; failures while running the command are
+/// logged from the worker thread, as before.
 fn try_spawn_detached(command: String) -> Result<(), String> {
     std::thread::Builder::new()
         .name("babydra-keymap-command".to_string())
