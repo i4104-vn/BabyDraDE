@@ -37,13 +37,7 @@ impl WindowRegistry {
             .filter(|w| !is_exiting(w))
             .find(|w| w.alive())
             .cloned()
-            .or_else(|| {
-                space
-                    .elements()
-                    .rev()
-                    .find(|w| !is_exiting(w))
-                    .cloned()
-            })
+            .or_else(|| space.elements().rev().find(|w| !is_exiting(w)).cloned())
     }
 
     /// Raises a window to the top of the internal Z-order list.
