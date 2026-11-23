@@ -245,9 +245,9 @@ impl BabydraState {
             .as_ref()
             .is_some_and(|switcher| switcher.closing && !switcher.presence.is_animating());
         if switcher_done {
-            self.alt_tab_switcher = None;
+            self.overlays.alt_tab_switcher = None;
         }
-        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+        if let Some(switcher) = self.overlays.alt_tab_switcher.as_mut() {
             switcher.tick_key_repeat();
         }
 

@@ -239,59 +239,59 @@ impl InputContext for BabydraState {
     }
 
     fn launcher_is_visible(&self) -> bool {
-        self.launcher.is_visible()
+        self.overlays.launcher.is_visible()
     }
 
     fn launcher_arrow_pressed(&mut self, direction: i32) -> bool {
-        self.launcher.arrow_pressed(direction)
+        self.overlays.launcher.arrow_pressed(direction)
     }
 
     fn launcher_move_selection(&mut self, direction: i32) {
-        self.launcher.move_selection(direction);
+        self.overlays.launcher.move_selection(direction);
     }
 
     fn launcher_arrow_released(&mut self, direction: i32) {
-        self.launcher.arrow_released(direction);
+        self.overlays.launcher.arrow_released(direction);
     }
 
     fn launcher_activate(&mut self) {
-        self.launcher.activate();
+        self.overlays.launcher.activate();
     }
 
     fn launcher_close(&mut self) {
-        self.launcher.close();
+        self.overlays.launcher.close();
     }
 
     fn launcher_toggle(&mut self) {
-        self.launcher.toggle();
+        self.overlays.launcher.toggle();
     }
 
     fn launcher_index_at(&self, position: Point<f64, Logical>) -> Option<usize> {
-        self.launcher.index_at(position)
+        self.overlays.launcher.index_at(position)
     }
 
     fn launcher_launch(&mut self, index: usize) {
-        self.launcher.launch(index);
+        self.overlays.launcher.launch(index);
     }
 
     fn launcher_update_hover(&mut self, position: Point<f64, Logical>) {
-        self.launcher.update_hover(position);
+        self.overlays.launcher.update_hover(position);
     }
 
     fn launcher_drag_by(&mut self, slots: f64) {
-        self.launcher.drag_by(slots);
+        self.overlays.launcher.drag_by(slots);
     }
 
     fn launcher_finish_drag(&mut self) {
-        self.launcher.finish_drag();
+        self.overlays.launcher.finish_drag();
     }
 
     fn launcher_is_over_panel(&self, position: Point<f64, Logical>) -> bool {
-        self.launcher.is_over_panel(position)
+        self.overlays.launcher.is_over_panel(position)
     }
 
     fn launcher_scroll_by(&mut self, slots: f64) {
-        self.launcher.scroll_by(slots);
+        self.overlays.launcher.scroll_by(slots);
     }
 
     fn cycle_alt_tab(&mut self, backwards: bool) {
@@ -311,48 +311,48 @@ impl InputContext for BabydraState {
     }
 
     fn switcher_is_active(&self) -> bool {
-        self.alt_tab_switcher.is_some()
+        self.overlays.alt_tab_switcher.is_some()
     }
 
     fn switcher_tab_pressed(&mut self, direction: i32) -> bool {
-        self.alt_tab_switcher
+        self.overlays.alt_tab_switcher
             .as_mut()
             .map(|switcher| switcher.tab_pressed(direction))
             .unwrap_or(false)
     }
 
     fn switcher_tab_released(&mut self, direction: i32) {
-        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+        if let Some(switcher) = self.overlays.alt_tab_switcher.as_mut() {
             switcher.tab_released(direction);
         }
     }
 
     fn switcher_begin_close(&mut self) {
-        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+        if let Some(switcher) = self.overlays.alt_tab_switcher.as_mut() {
             switcher.begin_close();
         }
     }
 
     fn switcher_set_hover(&mut self, index: Option<usize>) {
-        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+        if let Some(switcher) = self.overlays.alt_tab_switcher.as_mut() {
             switcher.set_hover(index);
         }
     }
 
     fn switcher_drag_by(&mut self, slots: f64) {
-        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+        if let Some(switcher) = self.overlays.alt_tab_switcher.as_mut() {
             switcher.drag_by(slots);
         }
     }
 
     fn switcher_finish_drag(&mut self) {
-        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+        if let Some(switcher) = self.overlays.alt_tab_switcher.as_mut() {
             switcher.finish_drag();
         }
     }
 
     fn switcher_index_at(&self, point: (f64, f64), slide: f64) -> Option<usize> {
-        let switcher = self.alt_tab_switcher.as_ref()?;
+        let switcher = self.overlays.alt_tab_switcher.as_ref()?;
         let output = self.space.outputs().next().cloned();
         let (size, scale) = output
             .as_ref()
@@ -379,21 +379,21 @@ impl InputContext for BabydraState {
     }
 
     fn switcher_slide(&self, panel_width: f64) -> f64 {
-        self.alt_tab_switcher
+        self.overlays.alt_tab_switcher
             .as_ref()
             .map(|switcher| (1.0 - switcher.presence().clamp(0.0, 1.0)) * panel_width)
             .unwrap_or_default()
     }
 
     fn switcher_window_at(&self, index: usize) -> Option<Window> {
-        self.alt_tab_switcher
+        self.overlays.alt_tab_switcher
             .as_ref()
             .and_then(|switcher| switcher.entries.get(index))
             .map(|entry| entry.window.clone())
     }
 
     fn switcher_selected_window(&self) -> Option<Window> {
-        self.alt_tab_switcher.as_ref().and_then(|switcher| {
+        self.overlays.alt_tab_switcher.as_ref().and_then(|switcher| {
             switcher
                 .entries
                 .get(switcher.selected_index)

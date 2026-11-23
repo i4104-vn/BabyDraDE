@@ -1,4 +1,9 @@
-use std::{ffi::OsString, sync::Arc, time::Instant};
+use std::{
+    ffi::OsString,
+    ops::{Deref, DerefMut},
+    sync::Arc,
+    time::Instant,
+};
 
 use smithay::{
     desktop::{PopupManager, Space, Window},
@@ -14,6 +19,7 @@ use smithay::{
     wayland::{compositor::CompositorClientState, socket::ListeningSocketSource},
 };
 
+use crate::adapters::desktop::overlays::OverlayState;
 use crate::adapters::window::cursor::resize_cursor_icon;
 pub(crate) use crate::adapters::window::interaction::{
     MoveState, OverlayTouchState, ResizeState, TouchGestureBuffer, TrackpadSwipeBuffer,
@@ -38,7 +44,6 @@ mod switcher;
 pub(crate) mod titlebar;
 pub(crate) mod window;
 
-use crate::adapters::desktop::switcher::AltTabSwitcher;
 pub(crate) use window::*;
 
 pub(crate) struct CalloopData {
@@ -55,6 +60,8 @@ pub(crate) struct BabydraState {
     pub(crate) config: ConfigSnapshot,
     /// Transient input interaction state.
     pub(crate) input: InputState,
+    /// Launcher and Alt+Tab switcher state.
+    pub(crate) overlays: OverlayState,
     /// Shared rendering resources.
     pub(crate) render: RenderState,
 
@@ -74,9 +81,6 @@ pub(crate) struct BabydraState {
     pub(crate) clipboard_sender:
         Option<smithay::reexports::calloop::channel::Sender<Option<String>>>,
 
-    pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
-    /// Compositor-owned application launcher (shown via its shortcut).
-    pub(crate) launcher: launcher::LauncherState,
     /// Compatibility alias of `render.blur_engine`: the backends (outside this
     /// adapter crate) read this field directly, so both names share one engine.
     pub(crate) blur_engine:
@@ -84,6 +88,23 @@ pub(crate) struct BabydraState {
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) cursor_visible: bool,
     pub(crate) windows: Vec<Window>,
+}
+
+/// Compatibility deref for callers outside this adapter crate that still use
+/// the historical flat `state.launcher` / `state.alt_tab_switcher` paths. New
+/// code should use `state.overlays` explicitly.
+impl Deref for BabydraState {
+    type Target = OverlayState;
+
+    fn deref(&self) -> &Self::Target {
+        &self.overlays
+    }
+}
+
+impl DerefMut for BabydraState {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.overlays
+    }
 }
 
 impl BabydraState {
@@ -116,6 +137,7 @@ impl BabydraState {
             clipboard: ClipboardState::default(),
             config,
             input: InputState::new(),
+            overlays: OverlayState::new(),
             render,
             start_time: Instant::now(),
             socket_name,
@@ -123,8 +145,6 @@ impl BabydraState {
             loop_signal: event_loop.get_signal(),
             popups: PopupManager::default(),
             clipboard_sender: None,
-            alt_tab_switcher: None,
-            launcher: launcher::LauncherState::new(),
             blur_engine,
             pointer_location: Point::from((100.0, 100.0)),
             cursor_visible: true,

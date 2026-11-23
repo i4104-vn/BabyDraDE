@@ -17,7 +17,7 @@ impl BabydraState {
         {
             return;
         }
-        if let Some(mut switcher) = self.alt_tab_switcher.take() {
+        if let Some(mut switcher) = self.overlays.alt_tab_switcher.take() {
             switcher.hovered = None;
             let entries_before = switcher.entries.len();
             let selected_window = switcher
@@ -43,7 +43,7 @@ impl BabydraState {
                 switcher.highlight.snap_to(0.0);
                 switcher.scroll_direction = direction;
                 switcher.restart_stage();
-                self.alt_tab_switcher = Some(switcher);
+                self.overlays.alt_tab_switcher = Some(switcher);
                 return;
             }
 
@@ -93,13 +93,13 @@ impl BabydraState {
             }
             switcher.scroll_direction = direction;
             switcher.restart_stage();
-            self.alt_tab_switcher = Some(switcher);
+            self.overlays.alt_tab_switcher = Some(switcher);
             return;
         }
 
         // The launcher is an overlay too; it must not sit above the switcher.
-        if self.launcher.is_visible() {
-            self.launcher.toggle();
+        if self.overlays.launcher.is_visible() {
+            self.overlays.launcher.toggle();
         }
 
         self.cleanup_windows();
@@ -144,7 +144,7 @@ impl BabydraState {
             (false, false) => 1,
         };
         let selected = selected_index.min(entries.len() - 1);
-        self.alt_tab_switcher = Some(AltTabSwitcher {
+        self.overlays.alt_tab_switcher = Some(AltTabSwitcher {
             entries,
             selected_index: selected,
             hovered: None,
@@ -163,17 +163,17 @@ impl BabydraState {
 
     /// Opens the switcher for a finger drag and returns the index to scrub from.
     pub(crate) fn begin_switcher_scrub(&mut self) -> Option<usize> {
-        if self.alt_tab_switcher.is_none() {
+        if self.overlays.alt_tab_switcher.is_none() {
             self.cycle_alt_tab(false);
         }
-        self.alt_tab_switcher
+        self.overlays.alt_tab_switcher
             .as_ref()
             .map(|switcher| switcher.selected_index)
     }
 
     /// Focuses the current switcher entry and starts the close animation.
     pub(crate) fn commit_switcher_selection(&mut self) {
-        let window = self.alt_tab_switcher.as_ref().and_then(|switcher| {
+        let window = self.overlays.alt_tab_switcher.as_ref().and_then(|switcher| {
             switcher
                 .entries
                 .get(switcher.selected_index)
@@ -187,7 +187,7 @@ impl BabydraState {
                 SERIAL_COUNTER.next_serial(),
             );
         }
-        if let Some(switcher) = self.alt_tab_switcher.as_mut() {
+        if let Some(switcher) = self.overlays.alt_tab_switcher.as_mut() {
             switcher.begin_close();
         }
     }
@@ -195,7 +195,7 @@ impl BabydraState {
     /// Moves the active switcher entry with the finger. `steps` is the number
     /// of icons travelled since the drag started (may be negative).
     pub(crate) fn scrub_switcher(&mut self, start_x: f64, base_index: usize, current_x: f64) {
-        let Some(switcher) = self.alt_tab_switcher.as_mut() else {
+        let Some(switcher) = self.overlays.alt_tab_switcher.as_mut() else {
             return;
         };
         let count = switcher.entries.len();
