@@ -5,5 +5,4 @@ pub(crate) mod drag;
 pub(crate) mod motion;
 
 pub(crate) use button::handle_pointer_button;
-pub(crate) use crate::infrastructure::config::pointer::{configure_mouse, MouseConfig};
 pub(crate) use motion::{handle_pointer_motion, handle_pointer_motion_absolute};

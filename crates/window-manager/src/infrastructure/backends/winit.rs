@@ -1,4 +1,4 @@
-use std::{error::Error, time::Duration};
+use std::error::Error;
 
 use services::theme::DesktopTheme;
 use smithay::{
@@ -16,8 +16,6 @@ use crate::adapters::{
     rendering::{compose_frame, CustomRenderElements, FrameContext},
     desktop::SwitcherOverlay,
 };
-use crate::application::window_action::WindowAction;
-
 const OUTPUT_REFRESH_MHZ: i32 = animation::TARGET_FPS as i32 * 1000;
 
 pub(crate) fn init(

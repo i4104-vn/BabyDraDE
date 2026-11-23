@@ -11,11 +11,6 @@ pub(crate) mod matcher;
 
 use super::InputContext;
 
-/// Reloads shortcuts from `~/.babydra/configs/keymap.toml` immediately.
-pub(crate) fn reload(state: &impl InputContext) {
-    state.reload_shortcuts();
-}
-
 /// Hands a matched command to the injected launcher port.
 pub(crate) fn spawn_command(state: &impl InputContext, command: String) {
     state.launch_command(command);

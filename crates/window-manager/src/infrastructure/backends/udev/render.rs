@@ -1,4 +1,4 @@
-use std::{cell::RefCell, error::Error, rc::Rc, time::Duration};
+use std::{cell::RefCell, error::Error, rc::Rc};
 
 use animation::FRAME_INTERVAL;
 use smithay::{
@@ -20,8 +20,6 @@ use crate::adapters::{
     rendering::{compose_frame, CustomRenderElements, FrameContext},
     desktop::SwitcherOverlay,
 };
-use crate::application::window_action::WindowAction;
-
 use super::surface::UdevState;
 
 pub(crate) fn setup_render_loop(
@@ -103,7 +101,7 @@ pub(crate) fn setup_render_loop(
             let mut s = state_render.borrow_mut();
             if s.active {
                 let state = &mut data.state;
-                super::render_loop::begin_frame(state);
+                crate::infrastructure::backends::render_loop::begin_frame(state);
                 let display_handle = &mut data.display_handle;
                 let scale = Scale::from(1.0);
 
@@ -189,11 +187,11 @@ pub(crate) fn setup_render_loop(
                         screenshot_requested = false;
                     }
 
-                    super::render_loop::send_frames(state, output);
+                    crate::infrastructure::backends::render_loop::send_frames(state, output);
                 }
-            }
 
-            super::render_loop::end_frame(state, display_handle);
+                crate::infrastructure::backends::render_loop::end_frame(state, display_handle);
+            }
 
             // Schedule from the previous deadline, not from render completion,
             // so a slow frame cannot permanently drift the 120 fps cadence.
