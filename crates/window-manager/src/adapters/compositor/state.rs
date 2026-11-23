@@ -27,7 +27,7 @@ use smithay::{
     },
 };
 
-use crate::domain::cursor::resize_cursor_icon;
+use crate::adapters::window::cursor::resize_cursor_icon;
 
 mod active_window;
 mod blur;

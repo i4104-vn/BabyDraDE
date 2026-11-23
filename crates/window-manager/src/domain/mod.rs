@@ -4,7 +4,6 @@
 //! protocol or touches GTK. `smithay::utils` geometry primitives are used as
 //! value objects only.
 
-pub(crate) mod cursor;
 pub(crate) mod keysyms;
 pub(crate) mod shortcuts;
 pub(crate) mod titlebar;
