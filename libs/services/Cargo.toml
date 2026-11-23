@@ -9,6 +9,8 @@ description = "BabyDraDE background services, system monitoring, configuration, 
 [dependencies]
 libc = "0.2"
 gio = { version = "0.22", default-features = false }
+glib = "0.22"
+tracing.workspace = true
 cairo-rs = { version = "0.22", features = ["png", "use_glib"] }
 cursor-icon = "1.2"
 serde = { version = "1.0", features = ["derive"] }

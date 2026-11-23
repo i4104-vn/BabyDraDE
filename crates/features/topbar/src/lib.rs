@@ -9,6 +9,10 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use left::LeftPill;
 use right::create_right_section;
 
+/// Panel offsets from the monitor edges, shared with SNI menu placement.
+pub(crate) const PANEL_MARGIN_X: i32 = 1;
+pub(crate) const PANEL_MARGIN_Y: i32 = 8;
+
 /// Launches the BabyDraDE TopBar GTK4 Layer-Shell widget
 pub fn run() {
     // Ensure GDK connects via Wayland backend for Layer Shell support
@@ -24,6 +28,7 @@ pub fn run() {
     app.connect_startup(|_| {
         services::config::ensure_babydra_dirs();
         ui_kit::init_theme();
+        services::tray::start_tray_host();
     });
 
     app.connect_activate(|app| {
@@ -52,9 +57,9 @@ pub fn run() {
         window.set_anchor(Edge::Top, true);
         window.set_anchor(Edge::Left, true);
         window.set_anchor(Edge::Right, true);
-        window.set_margin(Edge::Top, 8);
-        window.set_margin(Edge::Left, 1);
-        window.set_margin(Edge::Right, 1);
+        window.set_margin(Edge::Top, PANEL_MARGIN_Y);
+        window.set_margin(Edge::Left, PANEL_MARGIN_X);
+        window.set_margin(Edge::Right, PANEL_MARGIN_X);
         window.set_exclusive_zone(38);
         window.set_keyboard_mode(KeyboardMode::None);
 

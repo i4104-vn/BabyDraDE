@@ -1,3 +1,4 @@
+mod menu;
 mod render;
 
 use gtk4::glib;
@@ -5,6 +6,7 @@ use gtk4::prelude::*;
 use services::tray::{activate_item, get_tray_items, TrayItem};
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::Duration;
 
 pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
     let tray_container = render::build_tray_container();
@@ -14,7 +16,7 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
     let last_snapshot_clone = last_snapshot.clone();
     let window_clone = window.clone();
 
-    glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
+    glib::timeout_add_local(Duration::from_millis(500), move || {
         let current_items = get_tray_items();
 
         let needs_rebuild = {
@@ -32,8 +34,8 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
             } else {
                 tray_container_clone.set_visible(true);
                 for item in &current_items {
-                    let btn = render::build_tray_button(&item.icon_name, &item.title);
-                    attach_tray_click_gesture(&btn, &item.service, &item.path, &window_clone);
+                    let btn = render::build_tray_button(item);
+                    attach_tray_click_gesture(&btn, item, &window_clone);
                     tray_container_clone.append(&btn);
                 }
             }
@@ -49,12 +51,10 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
 
 fn attach_tray_click_gesture(
     btn: &gtk4::Button,
-    service_name: &str,
-    path_name: &str,
+    item: &TrayItem,
     window: &gtk4::ApplicationWindow,
 ) {
-    let service_name = service_name.to_string();
-    let path_name = path_name.to_string();
+    let item = item.clone();
     let btn_c = btn.clone();
     let win_c = window.clone();
 
@@ -63,15 +63,21 @@ fn attach_tray_click_gesture(
 
     gesture.connect_pressed(move |g, _, click_x, click_y| {
         let button_num = g.current_button();
-        let is_right_click = button_num == 3;
+        if button_num == 0 {
+            return;
+        }
 
-        let (root_x, root_y) = btn_c
-            .translate_coordinates(&win_c, 0.0, 0.0)
-            .unwrap_or((0.0, 0.0));
-        let abs_x = (root_x + click_x) as i32;
-        let abs_y = (root_y + click_y) as i32;
+        let (window_x, window_y) = btn_c
+            .translate_coordinates(&win_c, click_x, click_y)
+            .unwrap_or((click_x, click_y));
+        let x = window_x as i32 + crate::PANEL_MARGIN_X;
+        let y = window_y as i32 + crate::PANEL_MARGIN_Y;
 
-        activate_item(&service_name, &path_name, abs_x, abs_y, is_right_click);
+        if !item.menu_path.is_empty() && button_num != 2 {
+            menu::show_menu(&item, &btn_c, x, y, button_num);
+        } else {
+            activate_item(&item, x, y, button_num);
+        }
     });
 
     btn.add_controller(gesture);

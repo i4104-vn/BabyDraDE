@@ -2105,12 +2105,14 @@ dependencies = [
  "cursor-icon",
  "dirs",
  "gio",
+ "glib",
  "libc",
  "notify",
  "serde",
  "serde_json",
  "tempfile",
  "toml",
+ "tracing",
 ]
 
 [[package]]
