@@ -49,6 +49,31 @@ fn draw_blur_on_canvas(cr: &cairo::Context, s: &EditorState, x: f64, y: f64, w: 
     draw_pixelated_rect(cr, &s.bg_pixbuf, (src_x, src_y, src_w, src_h), (x, y, w, h));
 }
 
+/// Dimming and border of the crop rectangle. Shared by the cached scene and
+/// the live drag preview so both look identical.
+fn draw_crop_overlay(cr: &cairo::Context, s: &EditorState, width: f64, height: f64) {
+    if !s.has_selection {
+        return;
+    }
+
+    if s.crop_w > 5.0 && s.crop_h > 5.0 {
+        cr.save().unwrap();
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.45);
+        cr.rectangle(0.0, 0.0, width, height);
+        cr.rectangle(s.crop_x, s.crop_y + s.crop_h, s.crop_w, -s.crop_h);
+        cr.set_fill_rule(cairo::FillRule::EvenOdd);
+        cr.fill().unwrap();
+        cr.restore().unwrap();
+    }
+
+    cr.save().unwrap();
+    cr.set_source_rgba(0.23, 0.51, 0.96, 0.85);
+    cr.set_line_width(2.0);
+    cr.rectangle(s.crop_x, s.crop_y, s.crop_w, s.crop_h);
+    cr.stroke().unwrap();
+    cr.restore().unwrap();
+}
+
 /// Draws everything that only changes when editor content changes: background
 /// screenshot, dark overlay with crop hole, crop border, finished drawings, and
 /// the selection highlight.
@@ -68,24 +93,15 @@ fn render_scene(cr: &cairo::Context, s: &EditorState, width: f64, height: f64) {
     cr.paint().unwrap();
     cr.restore().unwrap();
 
-    // 2. Dark overlay
-    let has_clip = s.has_selection && s.crop_w > 5.0 && s.crop_h > 5.0;
-    cr.set_source_rgba(0.0, 0.0, 0.0, 0.45);
-    if has_clip {
-        // Clip out the selection area so it remains bright
-        cr.save().unwrap();
-        cr.rectangle(0.0, 0.0, width, height);
-        cr.rectangle(s.crop_x, s.crop_y + s.crop_h, s.crop_w, -s.crop_h);
-        cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        cr.fill().unwrap();
-        cr.restore().unwrap();
-
-        // Selection border
-        cr.set_source_rgba(0.23, 0.51, 0.96, 0.85);
-        cr.set_line_width(2.0);
-        cr.rectangle(s.crop_x, s.crop_y, s.crop_w, s.crop_h);
-        cr.stroke().unwrap();
+    // 2. Dark overlay. During an active crop drag the rectangle is drawn as a
+    // cheap live preview instead, so the cache is not rebuilt on every move.
+    let has_clip = s.has_selection && !s.is_selecting && s.crop_w > 5.0 && s.crop_h > 5.0;
+    if s.is_selecting {
+        // Live preview draws the dimming around the crop rectangle.
+    } else if has_clip {
+        draw_crop_overlay(cr, s, width, height);
     } else {
+        cr.set_source_rgba(0.0, 0.0, 0.0, 0.45);
         cr.paint().unwrap();
     }
 
@@ -180,9 +196,14 @@ pub(crate) fn draw_editor_canvas(
         cr.restore().unwrap();
     }
 
+    // Live crop rectangle: drawn directly on each frame, no cache rebuild.
+    if s.is_selecting {
+        draw_crop_overlay(cr, s, width, height);
+    }
+
     // Live preview of the shape currently being drawn
-    cr.set_antialias(cairo::Antialias::Best);
-    let has_clip = s.has_selection && s.crop_w > 5.0 && s.crop_h > 5.0;
+    cr.set_antialias(cairo::Antialias::None);
+    let has_clip = s.has_selection && !s.is_selecting && s.crop_w > 5.0 && s.crop_h > 5.0;
     if has_clip {
         cr.save().unwrap();
         cr.rectangle(s.crop_x, s.crop_y, s.crop_w, s.crop_h);

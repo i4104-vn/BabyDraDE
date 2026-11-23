@@ -176,8 +176,7 @@ where
                 let Ok(cr) = Context::new(&surface) else {
                     return;
                 };
-                let (a, b, c, d, tx, ty) =
-                    transform_matrix(rotation_only(transform), width as i32, height as i32);
+                let (a, b, c, d, tx, ty) = transform_matrix(transform, width as i32, height as i32);
                 cr.set_matrix(Matrix::new(a, b, c, d, tx, ty));
                 if cr.set_source_surface(&raw_surface, 0.0, 0.0).is_err() {
                     return;
@@ -228,17 +227,6 @@ where
     }
 
     Some(save_path)
-}
-
-/// Keeps only the rotational part of an output transform.
-fn rotation_only(transform: Transform) -> Transform {
-    match transform {
-        Transform::Flipped => Transform::Normal,
-        Transform::Flipped90 => Transform::_90,
-        Transform::Flipped180 => Transform::_180,
-        Transform::Flipped270 => Transform::_270,
-        other => other,
-    }
 }
 
 /// Affine matrix mapping the raw frame buffer into the output's logical

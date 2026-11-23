@@ -112,8 +112,6 @@ pub(crate) fn setup_editor_gest(
                     s.crop_y = ry;
                     s.crop_w = rw;
                     s.crop_h = rh;
-                    // The overlay hole must follow the drag, so refresh the cache
-                    s.invalidate();
                 }
             }
             Tool::Pen => {
@@ -122,7 +120,7 @@ pub(crate) fn setup_editor_gest(
                 if let Some(points) = &mut s.active_stroke {
                     let last = points.last().copied().unwrap_or((0.0, 0.0));
                     let next = (start_x + offset_x, start_y + offset_y);
-                    if (last.0 - next.0).powi(2) + (last.1 - next.1).powi(2) > 4.0 {
+                    if (last.0 - next.0).powi(2) + (last.1 - next.1).powi(2) > 9.0 {
                         points.push(next);
                     }
                 }
