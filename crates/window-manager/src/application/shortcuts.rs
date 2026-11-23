@@ -14,8 +14,8 @@ use crate::domain::shortcuts::{self, Mods, Shortcut};
 /// Injected shortcut service shared by the input pipeline and reload watcher.
 pub(crate) struct ShortcutService {
     shortcuts: Arc<RwLock<Vec<Shortcut>>>,
-    repository: Arc<dyn ShortcutRepository>,
-    launcher: Arc<dyn CommandLauncher>,
+    repository: Arc<dyn ShortcutRepository + Send + Sync>,
+    launcher: Arc<dyn CommandLauncher + Send + Sync>,
 }
 
 impl ShortcutService {
@@ -31,8 +31,8 @@ impl ShortcutService {
     ///
     /// The initialised service. An initial load error yields an empty table.
     pub(crate) fn new(
-        repository: Arc<dyn ShortcutRepository>,
-        launcher: Arc<dyn CommandLauncher>,
+        repository: Arc<dyn ShortcutRepository + Send + Sync>,
+        launcher: Arc<dyn CommandLauncher + Send + Sync>,
     ) -> Self {
         let initial = match repository.load() {
             Ok(shortcuts) => shortcuts,
