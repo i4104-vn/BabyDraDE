@@ -26,11 +26,13 @@ rules can be covered by fast unit tests.
 
 ## Architecture gate
 
-`crates/window-manager/tests/architecture.rs` currently pins the known import
-graph as a baseline (three adapter cycles) instead of claiming it is clean. The
-baseline is expected to shrink during the refactor as each cycle is broken; new
-outward imports or new edges between adapter areas fail the test. See
-[report.md](../report.md) for the full plan.
+`crates/window-manager/tests/architecture.rs` pins the remaining cross-area
+adapter imports as a **shrinking baseline** (currently six one-way edges, no
+cycles). It also enforces that `domain` and `application` stay free of Smithay,
+GTK, direct filesystem/process access and global service locators; that dead
+imports are not hidden with `#[allow(unused_imports)]`; and that a toplevel
+commit has exactly one owner. New outward imports or new adapter edges fail the
+test. See [report.md](../report.md) for the full plan and progress log.
 
 ## Coverage
 

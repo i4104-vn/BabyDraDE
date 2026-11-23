@@ -17,10 +17,11 @@ can silently grow again while the refactor is in progress.
 Restore a minimal CI workflow running formatting checks, Clippy with warnings
 denied, workspace tests, dependency policy checks and an architecture fitness
 test. The fitness test in `crates/window-manager/tests/architecture.rs` forbids
-`domain` and `application` from importing outer layers and pins the currently
+`domain` and `application` from importing outer layers or framework crates,
+bans global service locators and hidden dead imports, and pins the currently
 observed cross-area adapter imports as a temporary baseline. The baseline is not
-a seal of approval: it must shrink as the refactor breaks the three cycles, and
-no new import edge may be added.
+a seal of approval: it shrank from seven edges with cycles to six acyclic edges
+and must keep shrinking; no new import edge may be added.
 
 ## Consequences
 
