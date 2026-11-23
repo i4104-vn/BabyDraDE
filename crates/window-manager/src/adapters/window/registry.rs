@@ -8,8 +8,6 @@ use smithay::{
     wayland::shell::xdg::ToplevelSurface,
 };
 
-use crate::adapters::compositor::state::window::is_window_exiting;
-
 /// Tracks the windows managed by the compositor, in bottom-to-top Z order.
 ///
 /// Derefs to the underlying `Vec<Window>` so existing iteration and mutation
@@ -28,18 +26,22 @@ impl WindowRegistry {
     /// Returns the topmost (most recently raised / focused) window, if any.
     ///
     /// Excludes windows that are currently playing their closing animation.
-    pub(crate) fn active_window(&self, space: &Space<Window>) -> Option<Window> {
+    pub(crate) fn active_window(
+        &self,
+        space: &Space<Window>,
+        is_exiting: impl Fn(&Window) -> bool,
+    ) -> Option<Window> {
         self.entries
             .iter()
             .rev()
-            .filter(|w| !is_window_exiting(w))
+            .filter(|w| !is_exiting(w))
             .find(|w| w.alive())
             .cloned()
             .or_else(|| {
                 space
                     .elements()
                     .rev()
-                    .find(|w| !is_window_exiting(w))
+                    .find(|w| !is_exiting(w))
                     .cloned()
             })
     }

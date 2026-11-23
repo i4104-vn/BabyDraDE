@@ -8,7 +8,6 @@ pub(crate) mod clipboard;
 pub(crate) mod gtk;
 pub(crate) mod launcher;
 pub(crate) mod lock;
-pub(crate) mod overlays;
 pub(crate) mod screenshot;
 pub(crate) mod switcher;
 

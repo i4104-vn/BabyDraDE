@@ -22,7 +22,6 @@ use smithay::{
     },
 };
 
-use crate::adapters::desktop::overlays::OverlayState;
 use crate::adapters::window::cursor::resize_cursor_icon;
 pub(crate) use crate::adapters::window::interaction::{
     MoveState, OverlayTouchState, ResizeState, TouchGestureBuffer, TrackpadSwipeBuffer,
@@ -35,12 +34,14 @@ mod config;
 mod hit_test;
 mod input;
 mod input_context;
+mod overlays;
 mod render;
 mod wayland;
 
 pub(crate) use clipboard::ClipboardState;
 pub(crate) use config::ConfigSnapshot;
 pub(crate) use input::InputState;
+pub(crate) use overlays::OverlayState;
 pub(crate) use render::RenderState;
 pub(crate) use wayland::WaylandRuntime;
 pub(crate) mod launcher;
@@ -199,7 +200,8 @@ impl BabydraState {
 
     /// Returns the topmost live window, excluding closing animations.
     pub(crate) fn active_window(&self) -> Option<Window> {
-        self.windows.active_window(&self.space)
+        self.windows
+            .active_window(&self.space, is_window_exiting)
     }
 
     /// Raises a window to the top of the internal Z-order list.
