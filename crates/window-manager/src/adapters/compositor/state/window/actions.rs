@@ -16,7 +16,7 @@ impl BabydraState {
             .cloned()
             .collect::<Vec<_>>()
         {
-            crate::adapters::compositor::state::metadata::remove(&window);
+            crate::adapters::window::metadata::remove(&window);
         }
         self.windows.retain(|w| w.alive());
 

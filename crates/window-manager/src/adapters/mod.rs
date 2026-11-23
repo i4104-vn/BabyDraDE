@@ -9,3 +9,4 @@ pub(crate) mod compositor;
 pub(crate) mod desktop;
 pub(crate) mod input;
 pub(crate) mod rendering;
+pub(crate) mod window;

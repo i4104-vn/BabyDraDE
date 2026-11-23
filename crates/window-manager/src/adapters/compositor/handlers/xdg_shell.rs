@@ -21,7 +21,7 @@ impl XdgShellHandler for BabydraState {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let window = Window::new_wayland_window(surface.clone());
-        crate::adapters::compositor::state::metadata::refresh(&window);
+        crate::adapters::window::metadata::refresh(&window);
         let count = self.space.elements().count() as i32;
         let offset = (count * 36) % 288;
         let loc = (48 + offset, 48 + offset);
@@ -46,7 +46,7 @@ impl XdgShellHandler for BabydraState {
     }
 
     fn title_changed(&mut self, surface: ToplevelSurface) {
-        crate::adapters::compositor::state::metadata::refresh(&Window::new_wayland_window(
+        crate::adapters::window::metadata::refresh(&Window::new_wayland_window(
             surface.clone(),
         ));
         if let Some(active) = self.space.elements().next_back() {
@@ -57,7 +57,7 @@ impl XdgShellHandler for BabydraState {
     }
 
     fn app_id_changed(&mut self, surface: ToplevelSurface) {
-        crate::adapters::compositor::state::metadata::refresh(&Window::new_wayland_window(
+        crate::adapters::window::metadata::refresh(&Window::new_wayland_window(
             surface.clone(),
         ));
         if let Some(active) = self.space.elements().next_back() {

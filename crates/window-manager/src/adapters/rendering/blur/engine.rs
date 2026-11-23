@@ -171,12 +171,12 @@ impl BlurEngine {
 
     /// Get the cached XDG app_id of a window
     pub(crate) fn get_window_app_id(&self, window: &Window) -> Option<String> {
-        crate::adapters::compositor::state::metadata::get(window).map(|metadata| metadata.app_id)
+        crate::adapters::window::metadata::get(window).map(|metadata| metadata.app_id)
     }
 
     /// Get the cached XDG title of a window
     pub(crate) fn get_window_title(&self, window: &Window) -> Option<String> {
-        crate::adapters::compositor::state::metadata::get(window).map(|metadata| metadata.title)
+        crate::adapters::window::metadata::get(window).map(|metadata| metadata.title)
     }
 
     /// Add an app rule to the blur engine and persist configuration

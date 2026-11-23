@@ -34,7 +34,6 @@ mod blur;
 mod clipboard;
 mod hit_test;
 pub(crate) mod launcher;
-pub(crate) mod metadata;
 mod switcher;
 pub(crate) mod titlebar;
 pub(crate) mod window;

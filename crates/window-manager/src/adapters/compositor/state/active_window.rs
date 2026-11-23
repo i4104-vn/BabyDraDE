@@ -7,7 +7,7 @@ impl BabydraState {
         let info = if let Some(window) = window {
             if let Some(toplevel) = window.toplevel() {
                 let metadata =
-                    crate::adapters::compositor::state::metadata::get(window).unwrap_or_default();
+                    crate::adapters::window::metadata::get(window).unwrap_or_default();
                 let process_id = self
                     .display_handle
                     .get_client(toplevel.wl_surface().id())

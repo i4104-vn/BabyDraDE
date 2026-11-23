@@ -294,7 +294,7 @@ impl BabydraState {
             .rev()
             .filter(|w| !super::is_window_exiting(w))
             .filter_map(|window| {
-                let metadata = crate::adapters::compositor::state::metadata::get(window)?;
+                let metadata = crate::adapters::window::metadata::get(window)?;
                 let app_id = metadata.app_id;
                 let app_name = if metadata.app_name.is_empty() {
                     "Application".to_string()

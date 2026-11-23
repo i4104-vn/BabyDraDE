@@ -44,16 +44,18 @@ fn top_level_area(path: &Path) -> Option<String> {
         .map(str::to_owned)
 }
 
-const ADAPTER_AREAS: [&str; 4] = ["compositor", "input", "rendering", "desktop"];
+const ADAPTER_AREAS: [&str; 5] = ["compositor", "input", "rendering", "desktop", "window"];
 
-// Renamed from the old `shell` area; the edge set is otherwise unchanged.
-const BASELINE_EDGES: [(&str, &str); 8] = [
+// `window` is the neutral adapter that holds shared window metadata. The old
+// `rendering -> compositor` metadata edge is now `rendering -> window`.
+const BASELINE_EDGES: [(&str, &str); 9] = [
     ("compositor", "input"),
     ("compositor", "rendering"),
     ("compositor", "desktop"),
+    ("compositor", "window"),
     ("input", "compositor"),
     ("input", "desktop"),
-    ("rendering", "compositor"),
+    ("rendering", "window"),
     ("desktop", "compositor"),
     ("desktop", "rendering"),
 ];

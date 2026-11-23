@@ -1,5 +1,13 @@
-//! Extracts window identity from Wayland protocol state and caches it in the
-//! domain. Protocol access lives here so `domain::window` stays pure.
+//! Extracts and caches window identity from Wayland protocol state.
+//!
+//! This cache lives in the adapter layer, not in `domain`: it is process state
+//! with a lifecycle, not a pure rule. Keeping it here lets both the compositor
+//! and the renderer query metadata without importing each other.
+
+use std::{
+    collections::HashMap,
+    sync::{OnceLock, RwLock},
+};
 
 use smithay::{
     desktop::Window,
@@ -9,15 +17,20 @@ use smithay::{
 
 use crate::domain::window::WindowMetadata;
 
+#[derive(Default)]
+struct MetadataCache(HashMap<String, WindowMetadata>);
+
+static CACHE: OnceLock<RwLock<MetadataCache>> = OnceLock::new();
+
+fn cache() -> &'static RwLock<MetadataCache> {
+    CACHE.get_or_init(|| RwLock::new(MetadataCache::default()))
+}
+
 fn key(window: &Window) -> Option<String> {
     Some(format!("{:?}", window.toplevel()?.wl_surface().id()))
 }
 
 /// Extracts and caches a window's current identity from protocol state.
-///
-/// # Arguments
-///
-/// * `window` - Window whose toplevel provides the app id and title.
 pub(crate) fn refresh(window: &Window) {
     let (Some(key), Some(toplevel)) = (key(window), window.toplevel()) else {
         return;
@@ -37,41 +50,33 @@ pub(crate) fn refresh(window: &Window) {
     .unwrap_or_default();
 
     let app_name = services::system::window::get_app_display_name(&app_id, &title);
-    crate::domain::window::store(
-        &key,
-        WindowMetadata {
-            app_id,
-            title,
-            app_name,
-        },
-    );
+    if let Ok(mut cache) = cache().write() {
+        cache.0.insert(
+            key,
+            WindowMetadata {
+                app_id,
+                title,
+                app_name,
+            },
+        );
+    }
 }
 
 /// Returns cached metadata for a window, extracting it on first use.
-///
-/// # Arguments
-///
-/// * `window` - Window to look up.
-///
-/// # Returns
-///
-/// The metadata, or `None` when the window has no toplevel surface.
 pub(crate) fn get(window: &Window) -> Option<WindowMetadata> {
     let key = key(window)?;
-    if let Some(metadata) = crate::domain::window::cached(&key) {
+    if let Some(metadata) = cache().read().ok()?.0.get(&key).cloned() {
         return Some(metadata);
     }
     refresh(window);
-    crate::domain::window::cached(&key)
+    cache().read().ok()?.0.get(&key).cloned()
 }
 
 /// Drops cached metadata for a destroyed window.
-///
-/// # Arguments
-///
-/// * `window` - Window whose entry should be removed.
 pub(crate) fn remove(window: &Window) {
     if let Some(key) = key(window) {
-        crate::domain::window::forget(&key);
+        if let Ok(mut cache) = cache().write() {
+            cache.0.remove(&key);
+        }
     }
 }
