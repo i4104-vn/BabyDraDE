@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# BabyDraDE session entry point.
+# BabyDraDE installer.
 #
-# Option parsing stays here; the actual work is split into numbered scripts in
-# scripts/ and executed in order. Each step script sources scripts/common.sh.
+# Installs packages, builds the workspace, installs the binaries into system
+# directories and enables the required services. It does NOT launch the desktop
+# session: greetd owns the login screen and starts the compositor after login.
 set -eu
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -14,7 +15,6 @@ SKIP_DEPS=0
 BABYDRADE_ORIENTATION="landscape"
 BABYDRADE_TRANSFORM="90"
 BABYDRADE_TOUCH_TRANSFORM=""
-APP_ARGS=()
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -53,7 +53,7 @@ while [ $# -gt 0 ]; do
             fi
             ;;
         *)
-            APP_ARGS+=("$1")
+            echo "[!] Ignoring unknown option: $1" >&2
             shift
             ;;
     esac
@@ -61,15 +61,6 @@ done
 
 export FORCE_INSTALL_DEPS SKIP_DEPS
 export BABYDRADE_ORIENTATION BABYDRADE_TRANSFORM BABYDRADE_TOUCH_TRANSFORM
-
-# Bash cannot export arrays, so forward arbitrary compositor arguments as
-# numbered environment variables (preserves spaces inside an argument).
-export BABYDRADE_APP_ARGS_COUNT="${#APP_ARGS[@]}"
-arg_index=0
-for arg in "${APP_ARGS[@]+"${APP_ARGS[@]}"}"; do
-    export "BABYDRADE_APP_ARG_$arg_index=$arg"
-    arg_index=$((arg_index + 1))
-done
 
 SCRIPTS=(
     "01-environment.sh"
@@ -79,7 +70,6 @@ SCRIPTS=(
     "05-session.sh"
     "06-build-install.sh"
     "07-services.sh"
-    "08-launch.sh"
 )
 
 for script in "${SCRIPTS[@]}"; do
@@ -93,3 +83,5 @@ for script in "${SCRIPTS[@]}"; do
         exit "$step_exit"
     fi
 done
+
+echo "[✓] BabyDraDE installed. The session is started by greetd on tty1 after login."
