@@ -1,0 +1,115 @@
+//! Mouse and pointer device configuration, natural scrolling, and acceleration.
+
+use tracing::{info, warn};
+
+/// Pointer / mouse configuration options loaded from `~/.babydra/configs/input.toml`.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct MouseConfig {
+    /// Whether natural (reverse) scrolling direction is enabled for mouse wheels.
+    pub(crate) natural_scroll: bool,
+    /// Optional pointer acceleration speed (-1.0 to 1.0).
+    pub(crate) speed: Option<f64>,
+    /// Whether middle mouse button emulation (pressing left and right together) is enabled.
+    pub(crate) middle_emulation: bool,
+}
+
+impl Default for MouseConfig {
+    /// Creates default mouse configuration.
+    ///
+    /// By default:
+    /// - `natural_scroll` is `false`.
+    /// - `speed` is `None` (uses hardware default).
+    /// - `middle_emulation` is `false`.
+    fn default() -> Self {
+        Self {
+            natural_scroll: false,
+            speed: None,
+            middle_emulation: false,
+        }
+    }
+}
+
+impl From<services::models::MouseConfig> for MouseConfig {
+    /// Converts a persistent [`services::models::MouseConfig`] from `configs/input.toml`
+    /// into compositor runtime [`MouseConfig`].
+    ///
+    /// # Arguments
+    ///
+    /// * `cfg` - The deserialized mouse configuration from `configs/input.toml`.
+    ///
+    /// # Returns
+    ///
+    /// Returns the converted [`MouseConfig`].
+    fn from(cfg: services::models::MouseConfig) -> Self {
+        Self {
+            natural_scroll: cfg.natural_scroll,
+            speed: cfg.speed.map(|s| s.clamp(-1.0, 1.0)),
+            middle_emulation: cfg.middle_emulation,
+        }
+    }
+}
+
+impl MouseConfig {
+    /// Loads the mouse configuration directly from `~/.babydra/configs/input.toml` under `[mouse]`.
+    ///
+    /// # Returns
+    ///
+    /// Returns a resolved [`MouseConfig`] mapped from the shared [`services::models::MouseConfig`].
+    pub(crate) fn load() -> Self {
+        let shared_cfg = services::config::load_mouse_config();
+        Self::from(shared_cfg)
+    }
+}
+
+/// Applies hardware configuration settings to a physical mouse or external pointer device.
+///
+/// Configures:
+/// - Natural scrolling (reverse scroll wheel direction)
+/// - Pointer acceleration speed
+/// - Middle click emulation
+///
+/// # Arguments
+///
+/// * `device` - Mutable reference to the [`libinput::Device`](smithay::reexports::input::Device).
+/// * `config` - The resolved [`MouseConfig`] containing user preferences.
+pub(crate) fn configure_mouse(
+    device: &mut smithay::reexports::input::Device,
+    config: &MouseConfig,
+) {
+    let name = device.name().to_string();
+
+    // 1. Natural scrolling
+    if device.config_scroll_has_natural_scroll() {
+        match device.config_scroll_set_natural_scroll_enabled(config.natural_scroll) {
+            Ok(()) => info!(
+                "Mouse '{}': natural scroll set to {}",
+                name, config.natural_scroll
+            ),
+            Err(err) => warn!(
+                "Failed to set natural scroll on mouse '{}': {:?}",
+                name, err
+            ),
+        }
+    }
+
+    // 2. Pointer acceleration / speed
+    if device.config_accel_is_available() {
+        if let Some(speed) = config.speed {
+            if let Err(err) = device.config_accel_set_speed(speed) {
+                warn!(
+                    "Failed to set speed {} on mouse '{}': {:?}",
+                    speed, name, err
+                );
+            }
+        }
+    }
+
+    // 3. Middle click emulation
+    if device.config_middle_emulation_is_available() {
+        let _ = device.config_middle_emulation_set_enabled(config.middle_emulation);
+    }
+}
+
+#[cfg(test)]
+#[path = "../../../tests/adapters/input/pointer/config.rs"]
+mod tests;

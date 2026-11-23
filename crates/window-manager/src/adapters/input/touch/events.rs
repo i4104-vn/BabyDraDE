@@ -1,0 +1,477 @@
+//! Multi-touch input event handlers: touch down, motion, up, cancel, and frame.
+
+use smithay::{
+    backend::input::{
+        InputBackend, TouchCancelEvent, TouchDownEvent, TouchFrameEvent, TouchMotionEvent,
+        TouchUpEvent,
+    },
+    input::touch::{DownEvent, MotionEvent, UpEvent},
+    utils::SERIAL_COUNTER,
+};
+
+use super::drag::{handle_touch_drag, handle_touch_resize};
+use crate::adapters::compositor::state::BabydraState;
+use crate::adapters::input::common::transform_absolute_position;
+use crate::adapters::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
+use common::Action;
+
+#[derive(Debug, Clone)]
+pub(crate) struct OverlayTouchState {
+    pub(crate) slot: smithay::backend::input::TouchSlot,
+    pub(crate) start_pos: smithay::utils::Point<f64, smithay::utils::Logical>,
+    pub(crate) last_pos: smithay::utils::Point<f64, smithay::utils::Logical>,
+    pub(crate) has_dragged: bool,
+    pub(crate) is_switcher: bool,
+}
+
+/// Checks whether a touch-down occurs on an active overlay (launcher or switcher)
+/// and registers tracking state instead of immediately launching/activating.
+fn handle_overlay_touch_down(
+    state: &mut BabydraState,
+    slot: smithay::backend::input::TouchSlot,
+    position: smithay::utils::Point<f64, smithay::utils::Logical>,
+) -> bool {
+    if state.alt_tab_switcher.is_none() && state.launcher.is_visible() {
+        state.overlay_touch = Some(OverlayTouchState {
+            slot,
+            start_pos: position,
+            last_pos: position,
+            has_dragged: false,
+            is_switcher: false,
+        });
+        return true;
+    }
+
+    if state.alt_tab_switcher.is_some() {
+        state.overlay_touch = Some(OverlayTouchState {
+            slot,
+            start_pos: position,
+            last_pos: position,
+            has_dragged: false,
+            is_switcher: true,
+        });
+        return true;
+    }
+
+    false
+}
+
+/// Handles a touchscreen contact press (touch down).
+///
+/// Hides the software cursor during direct finger manipulation, raises and focuses
+/// the touched window, tracks the touch slot, and sends `wl_touch.down` to clients.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The touch down event providing coordinates, slot index, and timestamp.
+pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
+    state: &mut BabydraState,
+    event: T,
+) {
+    let Some(position) = transform_absolute_position(state, &event, true) else {
+        return;
+    };
+
+    state.pointer_location = position;
+    state.cursor_visible = false;
+    state.touch_slots.insert(event.slot());
+
+    if handle_overlay_touch_down(state, event.slot(), position) {
+        return;
+    }
+
+    // Begin tracking this finger for multi-touch gesture detection.
+    on_touch_down(state, event.slot(), position, event.time_msec() as u64);
+
+    let serial = SERIAL_COUNTER.next_serial();
+    let keyboard = state.seat.get_keyboard().unwrap();
+
+    // 1. Check window border for touch resizing
+    if let Some((window, loc, edge)) = state.window_border_under(position) {
+        state.space.raise_element(&window, true);
+        state.raise_window(&window);
+        if let Some(toplevel) = window.toplevel() {
+            keyboard.set_focus(state, Some(toplevel.wl_surface().clone()), serial);
+            state.space.elements().for_each(|w| {
+                let active = w == &window;
+                w.set_activated(active);
+                if let Some(top) = w.toplevel() {
+                    top.send_pending_configure();
+                }
+            });
+        }
+        state.update_active_window(Some(&window));
+        let size = window.geometry().size;
+        state.resize_state = Some(crate::adapters::compositor::state::ResizeState {
+            window,
+            initial_window_location: loc,
+            initial_window_size: size,
+            initial_pointer_location: position,
+            edges: edge,
+            button: 0,
+        });
+        return;
+    }
+
+    // 2. Check window and titlebar
+    if let Some((window, location)) = state.window_under(position) {
+        state.space.raise_element(&window, true);
+        state.raise_window(&window);
+        if let Some(toplevel) = window.toplevel() {
+            keyboard.set_focus(state, Some(toplevel.wl_surface().clone()), serial);
+            state.space.elements().for_each(|w| {
+                let active = w == &window;
+                w.set_activated(active);
+                if let Some(top) = w.toplevel() {
+                    top.send_pending_configure();
+                }
+            });
+        }
+        state.update_active_window(Some(&window));
+
+        // Check titlebar action on touch
+        if let Some(action) =
+            crate::adapters::compositor::state::titlebar::hit_test(&window, location, position)
+        {
+            match action {
+                Action::Close => {
+                    state.last_titlebar_click = None;
+                    state.close_window(&window);
+                }
+                Action::Minimize => {
+                    state.last_titlebar_click = None;
+                    state.minimize_window(&window);
+                }
+                Action::Maximize => {
+                    state.last_titlebar_click = None;
+                    state.toggle_maximize(&window);
+                }
+                Action::Move => {
+                    let now = std::time::Instant::now();
+                    let is_double_tap = if let Some((last_time, last_pos, ref last_win)) =
+                        state.last_titlebar_click.take()
+                    {
+                        let elapsed = now.duration_since(last_time).as_millis();
+                        let dx = position.x - last_pos.x;
+                        let dy = position.y - last_pos.y;
+                        last_win == &window
+                            && elapsed <= common::DOUBLE_CLICK_TIMEOUT_MS
+                            && (dx * dx + dy * dy) <= common::DOUBLE_CLICK_DISTANCE_SQ
+                    } else {
+                        false
+                    };
+
+                    if is_double_tap {
+                        state.toggle_maximize(&window);
+                    } else {
+                        state.last_titlebar_click = Some((now, position, window.clone()));
+                        state.move_state = Some(crate::adapters::compositor::state::MoveState {
+                            window: window.clone(),
+                            initial_window_location: location,
+                            initial_pointer_location: position,
+                            has_dragged: false,
+                            button: 0,
+                        });
+                    }
+                }
+            }
+            return;
+        }
+
+        state.last_titlebar_click = None;
+    }
+
+    let under = state.surface_under(position);
+    if let Some(touch) = state.seat.get_touch() {
+        touch.down(
+            state,
+            under,
+            &DownEvent {
+                slot: event.slot(),
+                location: position,
+                serial,
+                time: event.time_msec(),
+            },
+        );
+        touch.frame(state);
+    }
+}
+
+/// Handles finger movement across the touchscreen surface.
+///
+/// Drives touch-based window dragging if active, or delivers motion frames to the client.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The touch motion event providing updated coordinates and slot index.
+pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
+    state: &mut BabydraState,
+    event: T,
+) {
+    let Some(position) = transform_absolute_position(state, &event, true) else {
+        return;
+    };
+
+    state.pointer_location = position;
+    state.cursor_visible = false;
+
+    // Update gesture tracking position for this slot.
+    on_touch_motion(state, event.slot(), position);
+
+    if let Some(mut touch) = state.overlay_touch.take() {
+        if touch.slot == event.slot() {
+            let dy = position.y - touch.last_pos.y;
+            let total_dy = (position.y - touch.start_pos.y).abs();
+            touch.last_pos = position;
+
+            if total_dy > 8.0 || touch.has_dragged {
+                touch.has_dragged = true;
+                let slots = -dy / common::constants::launcher::SLOT;
+                if touch.is_switcher {
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.drag_by(slots);
+                    }
+                } else if state.launcher.is_visible() {
+                    state.launcher.drag_by(slots);
+                }
+            } else if !touch.is_switcher && state.launcher.is_visible() {
+                state.launcher.update_hover(position);
+            }
+
+            state.overlay_touch = Some(touch);
+            return;
+        } else {
+            state.overlay_touch = Some(touch);
+        }
+    }
+
+    if handle_touch_resize(state, position) {
+        return;
+    }
+
+    if handle_touch_drag(state, position) {
+        return;
+    }
+
+    let under = state.surface_under(position);
+    if let Some(touch) = state.seat.get_touch() {
+        touch.motion(
+            state,
+            under,
+            &MotionEvent {
+                slot: event.slot(),
+                location: position,
+                time: event.time_msec(),
+            },
+        );
+        touch.frame(state);
+    }
+}
+
+/// Handles lifting of a finger from the touchscreen surface (touch up).
+///
+/// Cleans up tracked touch slots and move state, and sends `wl_touch.up` to the client.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The touch up event providing slot index and timestamp.
+pub(crate) fn handle_touch_up<B: InputBackend, T: TouchUpEvent<B>>(
+    state: &mut BabydraState,
+    event: T,
+) {
+    // Evaluate multi-touch gesture before removing the slot.
+    on_touch_up(state, event.slot(), event.time_msec() as u64);
+
+    state.touch_slots.remove(&event.slot());
+
+    if let Some(touch) = state.overlay_touch.take() {
+        if touch.slot == event.slot() {
+            if touch.has_dragged {
+                // Drag completed: snap to nearest slot
+                if touch.is_switcher {
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.finish_drag();
+                    }
+                } else if state.launcher.is_visible() {
+                    state.launcher.finish_drag();
+                }
+            } else {
+                // Tap gesture: launch app or select window
+                if touch.is_switcher {
+                    let serial = SERIAL_COUNTER.next_serial();
+                    let output = state.space.outputs().next().cloned();
+                    let (size, scale) = output
+                        .as_ref()
+                        .and_then(|output| {
+                            let mode = output.current_mode()?;
+                            let size = output.current_transform().transform_size(mode.size);
+                            Some((
+                                size,
+                                smithay::utils::Scale::from(
+                                    output.current_scale().fractional_scale(),
+                                ),
+                            ))
+                        })
+                        .unwrap_or(((1920, 1080).into(), smithay::utils::Scale::from(1.0)));
+                    let logical_w = (size.w as f64 / scale.x).max(1.0);
+                    let logical_h = (size.h as f64 / scale.y).max(1.0);
+
+                    let tapped = state
+                        .alt_tab_switcher
+                        .as_ref()
+                        .and_then(|switcher| {
+                            let layout = crate::adapters::shell::switcher::view::compute_layout(
+                                switcher, logical_w, logical_h,
+                            )?;
+                            let slide = (1.0 - switcher.presence().clamp(0.0, 1.0))
+                                * common::constants::launcher::PANEL_WIDTH;
+                            layout.panel.index_at(
+                                (touch.start_pos.x, touch.start_pos.y),
+                                slide,
+                                switcher.entries.len(),
+                                switcher.visual_selection(),
+                            )
+                        })
+                        .and_then(|index| {
+                            state
+                                .alt_tab_switcher
+                                .as_ref()
+                                .and_then(|switcher| switcher.entries.get(index))
+                                .map(|entry| entry.window.clone())
+                        });
+
+                    if let Some(window) = tapped {
+                        state.unminimize_window(&window);
+                        crate::adapters::input::keyboard::focus::focus_window(
+                            state, window, serial,
+                        );
+                    }
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.begin_close();
+                    }
+                } else if state.launcher.is_visible() {
+                    if let Some(index) = state.launcher.index_at(touch.start_pos) {
+                        state.launcher.launch(index);
+                    } else {
+                        state.launcher.close();
+                    }
+                }
+            }
+            return;
+        } else {
+            state.overlay_touch = Some(touch);
+        }
+    }
+
+    if state.touch_slots.is_empty() {
+        if let Some(move_state) = state.move_state.take() {
+            if move_state.has_dragged {
+                if let Some(toplevel) = move_state.window.toplevel() {
+                    toplevel.send_configure();
+                }
+            }
+        }
+        if let Some(resize_state) = state.resize_state.take() {
+            if let Some(toplevel) = resize_state.window.toplevel() {
+                toplevel.with_pending_state(|state| {
+                    state.states.unset(
+                        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Resizing,
+                    );
+                });
+                toplevel.send_configure();
+            }
+        }
+    }
+
+    let serial = SERIAL_COUNTER.next_serial();
+    if let Some(touch) = state.seat.get_touch() {
+        touch.up(
+            state,
+            &UpEvent {
+                slot: event.slot(),
+                serial,
+                time: event.time_msec(),
+            },
+        );
+        touch.frame(state);
+    }
+}
+
+/// Handles touchscreen contact cancellation (e.g. palm detection or gesture takeover).
+///
+/// Cancels active touch points and resets tracking state.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `event` - The touch cancel event providing slot index.
+pub(crate) fn handle_touch_cancel<B: InputBackend, T: TouchCancelEvent<B>>(
+    state: &mut BabydraState,
+    event: T,
+) {
+    state.touch_slots.remove(&event.slot());
+
+    if let Some(touch) = state.overlay_touch.take() {
+        if touch.slot == event.slot() {
+            if touch.has_dragged {
+                if touch.is_switcher {
+                    if let Some(switcher) = state.alt_tab_switcher.as_mut() {
+                        switcher.finish_drag();
+                    }
+                } else if state.launcher.is_visible() {
+                    state.launcher.finish_drag();
+                }
+            }
+            return;
+        } else {
+            state.overlay_touch = Some(touch);
+        }
+    }
+
+    if state.touch_slots.is_empty() {
+        if let Some(move_state) = state.move_state.take() {
+            if move_state.has_dragged {
+                if let Some(toplevel) = move_state.window.toplevel() {
+                    toplevel.send_configure();
+                }
+            }
+        }
+        if let Some(resize_state) = state.resize_state.take() {
+            if let Some(toplevel) = resize_state.window.toplevel() {
+                toplevel.with_pending_state(|state| {
+                    state.states.unset(
+                        smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::State::Resizing,
+                    );
+                });
+                toplevel.send_configure();
+            }
+        }
+    }
+
+    if let Some(touch) = state.seat.get_touch() {
+        touch.cancel(state);
+        touch.frame(state);
+    }
+}
+
+/// Flushes and completes a group of simultaneous multi-touch events.
+///
+/// # Arguments
+///
+/// * `state` - Mutable reference to [`BabydraState`].
+/// * `_event` - The touch frame event marking end of current contact batch.
+pub(crate) fn handle_touch_frame<B: InputBackend, T: TouchFrameEvent<B>>(
+    state: &mut BabydraState,
+    _event: T,
+) {
+    if let Some(touch) = state.seat.get_touch() {
+        touch.frame(state);
+    }
+}
+
+#[cfg(test)]
+#[path = "../../../tests/adapters/input/touch/events.rs"]
+mod tests;

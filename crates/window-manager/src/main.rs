@@ -1,21 +1,17 @@
-// TODO(phase5): wrap unsafe fn bodies in explicit unsafe blocks, then remove.
+// calloop's level event source requires an unsafe callback signature.
 #![allow(unsafe_op_in_unsafe_fn)]
-
-mod app;
-mod backends;
-mod compositor;
-mod input;
-mod model;
-mod platform;
-pub(crate) mod rendering;
-mod shell;
+mod adapters;
+mod application;
+mod composition;
+mod domain;
+mod infrastructure;
 
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    app::bootstrap::init_tracing();
-    if app::commands::dispatch() {
+    composition::bootstrap::init_tracing();
+    if composition::commands::dispatch() {
         return Ok(());
     }
-    app::run()
+    composition::run()
 }
