@@ -9,3 +9,4 @@ pub(crate) mod backends;
 pub(crate) mod config;
 pub(crate) mod platform;
 pub(crate) mod process;
+pub(crate) mod sensor;

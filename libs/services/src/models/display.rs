@@ -86,4 +86,8 @@ pub struct DisplayConfig {
     /// List of configured display monitor outputs.
     #[serde(default)]
     pub monitors: Vec<DisplayMonitorSetting>,
+    /// Follow the device accelerometer and rotate the panel automatically.
+    /// Only affects machines that actually expose an orientation sensor.
+    #[serde(default)]
+    pub auto_rotate: bool,
 }

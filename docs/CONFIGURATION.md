@@ -119,3 +119,20 @@ Use `services::config` instead of reading files directly:
 Reads and writes go through `config::store`, which caches by modification time
 and writes atomically with a temporary file plus rename. Input hot paths consume
 snapshots held by `ConfigSnapshot` and `InputState`; they never read the disk.
+
+## 7. Automatic screen rotation
+
+Convertible/tablet devices with an IIO accelerometer can rotate the panel
+automatically. Enable it in `~/.babydra/configs/display.toml`:
+
+```toml
+[display]
+auto_rotate = true
+```
+
+Alternatively set `BABYDRADE_AUTO_ROTATE=1` in the environment. The compositor
+polls `/sys/bus/iio/devices/iio:device*/in_accel_{x,y}_raw`, debounces the
+reading and applies the new transform to every output; touch coordinates follow
+the same rotation. On machines without an accelerometer this setting is a
+no-op. `monitors[].orientation` still provides a fixed rotation when
+auto-rotation is disabled.
