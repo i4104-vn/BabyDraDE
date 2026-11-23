@@ -41,10 +41,12 @@ the display manager); after a successful login the greeter starts
 Override the session with `BABYDRADE_GREETER_SESSION` if needed.
 
 `start.sh` parses the command line and then runs the numbered steps in
-`scripts/` in order: locale, GTK theme sync, orientation, dependency check,
-session setup, release build + system install, and finally launch. The
-compositor is always launched from the installed binary on `PATH`, never from
-`target/` in the source tree. Use `--skip-deps` to bypass the dependency step.
+`scripts/` in order: locale, GTK theme sync, orientation, dependency check
+(including greetd + cage), session setup, release build + system install,
+greetd service setup (display-manager alias, `graphical.target`, tty1 takeover),
+and finally launch. The compositor is always launched from the installed binary
+on `PATH`, never from `target/` in the source tree. Use `--skip-deps` to bypass
+the dependency step.
 
 The compositor creates an automatic Wayland socket in XDG_RUNTIME_DIR and
 sets WAYLAND_DISPLAY for launched applications. It currently focuses the

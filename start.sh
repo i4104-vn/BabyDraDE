@@ -78,7 +78,8 @@ SCRIPTS=(
     "04-dependencies.sh"
     "05-session.sh"
     "06-build-install.sh"
-    "07-launch.sh"
+    "07-services.sh"
+    "08-launch.sh"
 )
 
 for script in "${SCRIPTS[@]}"; do

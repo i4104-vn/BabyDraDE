@@ -2,6 +2,7 @@
 Description=BabyDra Login
 Documentation=https://github.com/i4104-vn/BabyDraDE
 After=systemd-user-sessions.service
+Conflicts=getty@tty1.service
 
 [Service]
 Type=simple
