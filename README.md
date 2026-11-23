@@ -32,11 +32,13 @@ documented in [docs/configuration.md](docs/configuration.md).
 
 `Ctrl+C`, `Ctrl+X` and `Ctrl+V` are always delivered to the focused application,
 so normal copy/paste works as on any desktop. The compositor caches every
-selection, so copied text survives the source app closing. `Super+V` opens the
-clipboard history picker; choose an entry to copy it back to the selection.
+selection, so copied text survives the source app closing.
 
-start.sh runs the same nested development compositor without installing system
-packages or changing user permissions.
+`start.sh` parses the command line and then runs the numbered steps in
+`scripts/` in order: locale, GTK theme sync, orientation, dependency check,
+session setup, release build + system install, and finally launch. The
+compositor is always launched from the installed binary on `PATH`, never from
+`target/` in the source tree. Use `--skip-deps` to bypass the dependency step.
 
 The compositor creates an automatic Wayland socket in XDG_RUNTIME_DIR and
 sets WAYLAND_DISPLAY for launched applications. It currently focuses the
