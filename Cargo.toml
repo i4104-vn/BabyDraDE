@@ -5,6 +5,7 @@ members = [
     "crates/features/desktop",
     "crates/features/topbar",
     "libs/animation",
+    "libs/animation-gtk",
     "libs/common",
     "libs/services",
     "libs/ui-kit",
@@ -14,6 +15,7 @@ default-members = [
     "crates/features/desktop",
     "crates/features/topbar",
     "libs/animation",
+    "libs/animation-gtk",
     "libs/common",
 ]
 

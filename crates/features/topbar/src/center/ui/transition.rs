@@ -8,7 +8,7 @@ use std::time::Duration;
 use gtk4::prelude::*;
 
 use crate::center::engine::IslandEngine;
-use animation::{current_anim_gen, island_animate_size, island_zoom_in, island_zoom_out};
+use animation_gtk::{current_anim_gen, island_animate_size, island_zoom_in, island_zoom_out};
 
 const EXPAND_MS: u64 = 350;
 const COLLAPSE_MS: u64 = 500;

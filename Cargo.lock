@@ -61,7 +61,12 @@ dependencies = [
 [[package]]
 name = "animation"
 version = "0.1.0"
+
+[[package]]
+name = "animation-gtk"
+version = "0.1.0"
 dependencies = [
+ "animation",
  "glib",
  "gtk4",
 ]
@@ -131,6 +136,7 @@ name = "babydra-topbar"
 version = "0.1.0"
 dependencies = [
  "animation",
+ "animation-gtk",
  "cairo-rs",
  "chrono",
  "dirs",

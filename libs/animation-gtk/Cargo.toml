@@ -1,0 +1,15 @@
+[package]
+name = "animation-gtk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "GTK4 frame-clock animation helpers shared by BabyDraDE desktop features"
+
+[dependencies]
+animation = { path = "../animation" }
+gtk4 = { version = "0.11" }
+glib = "0.22"
+
+[lints]
+workspace = true

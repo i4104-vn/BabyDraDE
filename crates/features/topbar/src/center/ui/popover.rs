@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use gtk4::prelude::*;
 
-use animation::{slide_in, slide_out_cb_cancelable, SlideDirection};
+use animation_gtk::{slide_in, slide_out_cb_cancelable, SlideDirection};
 
 thread_local! {
     static OPEN_POPOVERS: RefCell<Vec<gtk4::Popover>> = const { RefCell::new(Vec::new()) };
