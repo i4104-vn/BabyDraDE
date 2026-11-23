@@ -20,7 +20,7 @@ use super::{layer_shell, xdg_shell};
 
 impl CompositorHandler for BabydraState {
     fn compositor_state(&mut self) -> &mut CompositorState {
-        &mut self.compositor_state
+        &mut self.wayland.compositor_state
     }
 
     fn client_compositor_state<'a>(&self, client: &'a Client) -> &'a CompositorClientState {
@@ -62,7 +62,7 @@ impl BufferHandler for BabydraState {
 
 impl ShmHandler for BabydraState {
     fn shm_state(&self) -> &ShmState {
-        &self.shm_state
+        &self.wayland.shm_state
     }
 }
 

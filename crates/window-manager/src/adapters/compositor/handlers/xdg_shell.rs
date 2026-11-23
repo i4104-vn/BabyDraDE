@@ -16,7 +16,7 @@ use super::super::state::BabydraState;
 
 impl XdgShellHandler for BabydraState {
     fn xdg_shell_state(&mut self) -> &mut XdgShellState {
-        &mut self.xdg_shell_state
+        &mut self.wayland.xdg_shell_state
     }
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
@@ -28,7 +28,7 @@ impl XdgShellHandler for BabydraState {
         self.space.map_element(window.clone(), loc, true);
         self.cleanup_windows();
         self.windows.push(window.clone());
-        if let Some(keyboard) = self.seat.get_keyboard() {
+        if let Some(keyboard) = self.wayland.seat.get_keyboard() {
             keyboard.set_focus(
                 self,
                 Some(surface.wl_surface().clone()),

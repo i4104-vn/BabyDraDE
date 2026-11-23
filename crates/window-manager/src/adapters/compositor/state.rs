@@ -2,7 +2,7 @@ use std::{ffi::OsString, sync::Arc, time::Instant};
 
 use smithay::{
     desktop::{PopupManager, Space, Window},
-    input::{pointer::CursorIcon, Seat, SeatState},
+    input::pointer::CursorIcon,
     reexports::{
         calloop::{generic::Generic, EventLoop, Interest, LoopSignal, PostAction},
         wayland_server::{
@@ -11,19 +11,7 @@ use smithay::{
         },
     },
     utils::{Logical, Point},
-    wayland::{
-        compositor::{CompositorClientState, CompositorState},
-        cursor_shape::CursorShapeManagerState,
-        output::OutputManagerState,
-        pointer_gestures::PointerGesturesState,
-        selection::data_device::DataDeviceState,
-        shell::{
-            wlr_layer::WlrLayerShellState,
-            xdg::{decoration::XdgDecorationState, XdgShellState},
-        },
-        shm::ShmState,
-        socket::ListeningSocketSource,
-    },
+    wayland::{compositor::CompositorClientState, socket::ListeningSocketSource},
 };
 
 use crate::adapters::window::cursor::resize_cursor_icon;
@@ -38,11 +26,13 @@ mod hit_test;
 mod input;
 mod input_context;
 mod render;
+mod wayland;
 
 pub(crate) use clipboard::ClipboardState;
 pub(crate) use config::ConfigSnapshot;
 pub(crate) use input::InputState;
 pub(crate) use render::RenderState;
+pub(crate) use wayland::WaylandRuntime;
 pub(crate) mod launcher;
 mod switcher;
 pub(crate) mod titlebar;
@@ -57,6 +47,8 @@ pub(crate) struct CalloopData {
 }
 
 pub(crate) struct BabydraState {
+    /// Wayland protocol globals and the compositor seat.
+    pub(crate) wayland: WaylandRuntime,
     /// Clipboard capture pipeline (MIME queues owned by the component).
     pub(crate) clipboard: ClipboardState,
     /// Cached configuration snapshot owned by the input pipeline.
@@ -66,25 +58,14 @@ pub(crate) struct BabydraState {
     /// Shared rendering resources.
     pub(crate) render: RenderState,
 
+    // Flat compatibility fields below are read directly by the composition
+    // root and backends, which live outside this adapter crate and cannot be
+    // changed as part of this refactor.
     pub(crate) start_time: Instant,
     pub(crate) socket_name: OsString,
-    pub(crate) display_handle: DisplayHandle,
     pub(crate) space: Space<Window>,
     pub(crate) loop_signal: LoopSignal,
-
-    pub(crate) compositor_state: CompositorState,
-    pub(crate) xdg_shell_state: XdgShellState,
-    pub(crate) _xdg_decoration_state: XdgDecorationState,
-    pub(crate) wlr_layer_shell_state: WlrLayerShellState,
-    pub(crate) _pointer_gestures_state: PointerGesturesState,
-    /// Lets clients request named cursor shapes (text, wait, resize, ...).
-    pub(crate) _cursor_shape_state: CursorShapeManagerState,
-    pub(crate) shm_state: ShmState,
-    pub(crate) _output_manager_state: OutputManagerState,
-    pub(crate) seat_state: SeatState<BabydraState>,
-    pub(crate) data_device_state: DataDeviceState,
     pub(crate) popups: PopupManager,
-    pub(crate) seat: Seat<BabydraState>,
 
     /// Channel used by the capture thread to hand ownership back to us.
     ///
@@ -123,23 +104,7 @@ impl BabydraState {
         shortcuts: Arc<crate::application::shortcuts::ShortcutService>,
     ) -> Self {
         let display_handle = display.handle();
-        let compositor_state = CompositorState::new::<Self>(&display_handle);
-        let xdg_shell_state = XdgShellState::new::<Self>(&display_handle);
-        let xdg_decoration_state = XdgDecorationState::new::<Self>(&display_handle);
-        let wlr_layer_shell_state = WlrLayerShellState::new::<Self>(&display_handle);
-        let pointer_gestures_state = PointerGesturesState::new::<Self>(&display_handle);
-        let cursor_shape_state = CursorShapeManagerState::new::<Self>(&display_handle);
-        let shm_state = ShmState::new::<Self>(&display_handle, vec![]);
-        let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&display_handle);
-        let data_device_state = DataDeviceState::new::<Self>(&display_handle);
-        let mut seat_state = SeatState::new();
-        let mut seat = seat_state.new_wl_seat(&display_handle, "babydrade");
-
-        // The nested Winit window provides a keyboard and pointer for this first version.
-        seat.add_keyboard(Default::default(), 200, 25)
-            .expect("failed to initialize keyboard");
-        seat.add_pointer();
-        seat.add_touch();
+        let wayland = WaylandRuntime::new(&display_handle);
 
         let socket_name = Self::init_wayland_listener(display, event_loop);
         let render = RenderState::new();
@@ -147,27 +112,16 @@ impl BabydraState {
         let config = ConfigSnapshot::new(load_gesture_policy, shortcuts);
 
         Self {
+            wayland,
             clipboard: ClipboardState::default(),
             config,
             input: InputState::new(),
             render,
             start_time: Instant::now(),
             socket_name,
-            display_handle,
             space: Space::default(),
             loop_signal: event_loop.get_signal(),
-            compositor_state,
-            xdg_shell_state,
-            _xdg_decoration_state: xdg_decoration_state,
-            wlr_layer_shell_state,
-            _pointer_gestures_state: pointer_gestures_state,
-            _cursor_shape_state: cursor_shape_state,
-            shm_state,
-            _output_manager_state: output_manager_state,
-            seat_state,
-            data_device_state,
             popups: PopupManager::default(),
-            seat,
             clipboard_sender: None,
             alt_tab_switcher: None,
             launcher: launcher::LauncherState::new(),
@@ -186,15 +140,15 @@ impl BabydraState {
     /// Requests the pending client selection and caches it on a background thread.
     pub(crate) fn update_clipboard(&mut self) {
         self.clipboard
-            .update_clipboard(&self.seat, self.clipboard_sender.clone());
+            .update_clipboard(&self.wayland.seat, self.clipboard_sender.clone());
     }
 
     /// Takes ownership of an already cached clipboard selection.
     pub(crate) fn complete_clipboard_capture(&mut self, cached_mime: Option<String>) {
         self.clipboard.complete_clipboard_capture(
             cached_mime,
-            &self.seat,
-            &self.display_handle,
+            &self.wayland.seat,
+            &self.wayland.display_handle,
         );
     }
 
@@ -258,6 +212,8 @@ impl BabydraState {
         loop_handle
             .insert_source(listening_socket, move |client_stream, _, state| {
                 state
+                    .state
+                    .wayland
                     .display_handle
                     .insert_client(client_stream, Arc::new(ClientState::default()))
                     .expect("failed to register Wayland client");

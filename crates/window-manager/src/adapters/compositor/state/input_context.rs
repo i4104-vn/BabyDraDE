@@ -402,11 +402,11 @@ impl InputContext for BabydraState {
     }
 
     fn has_keyboard(&self) -> bool {
-        self.seat.get_keyboard().is_some()
+        self.wayland.seat.get_keyboard().is_some()
     }
 
     fn keyboard_modifiers(&self) -> ModifiersState {
-        self.seat.get_keyboard().unwrap().modifier_state()
+        self.wayland.seat.get_keyboard().unwrap().modifier_state()
     }
 
     fn keyboard_input<T, F>(
@@ -420,24 +420,24 @@ impl InputContext for BabydraState {
     where
         F: FnOnce(&mut Self, &ModifiersState, KeysymHandle<'_>) -> FilterResult<T>,
     {
-        self.seat
+        self.wayland.seat
             .get_keyboard()
             .unwrap()
             .input::<T, F>(self, keycode, state, serial, time, filter)
     }
 
     fn set_keyboard_focus(&mut self, focus: Option<WlSurface>, serial: Serial) {
-        if let Some(keyboard) = self.seat.get_keyboard() {
+        if let Some(keyboard) = self.wayland.seat.get_keyboard() {
             keyboard.set_focus(self, focus, serial);
         }
     }
 
     fn has_pointer(&self) -> bool {
-        self.seat.get_pointer().is_some()
+        self.wayland.seat.get_pointer().is_some()
     }
 
     fn pointer_is_grabbed(&self) -> bool {
-        self.seat.get_pointer().unwrap().is_grabbed()
+        self.wayland.seat.get_pointer().unwrap().is_grabbed()
     }
 
     fn pointer_motion(
@@ -445,19 +445,19 @@ impl InputContext for BabydraState {
         focus: Option<(WlSurface, Point<f64, Logical>)>,
         event: &PointerMotionEvent,
     ) {
-        self.seat.get_pointer().unwrap().motion(self, focus, event);
+        self.wayland.seat.get_pointer().unwrap().motion(self, focus, event);
     }
 
     fn pointer_button(&mut self, event: &ButtonEvent) {
-        self.seat.get_pointer().unwrap().button(self, event);
+        self.wayland.seat.get_pointer().unwrap().button(self, event);
     }
 
     fn pointer_axis(&mut self, frame: AxisFrame) {
-        self.seat.get_pointer().unwrap().axis(self, frame);
+        self.wayland.seat.get_pointer().unwrap().axis(self, frame);
     }
 
     fn pointer_frame(&mut self) {
-        self.seat.get_pointer().unwrap().frame(self);
+        self.wayland.seat.get_pointer().unwrap().frame(self);
     }
 
     fn touch_down(
@@ -465,7 +465,7 @@ impl InputContext for BabydraState {
         focus: Option<(WlSurface, Point<f64, Logical>)>,
         event: &TouchDownEvent,
     ) {
-        if let Some(touch) = self.seat.get_touch() {
+        if let Some(touch) = self.wayland.seat.get_touch() {
             touch.down(self, focus, event);
         }
     }
@@ -475,73 +475,73 @@ impl InputContext for BabydraState {
         focus: Option<(WlSurface, Point<f64, Logical>)>,
         event: &TouchMotionEvent,
     ) {
-        if let Some(touch) = self.seat.get_touch() {
+        if let Some(touch) = self.wayland.seat.get_touch() {
             touch.motion(self, focus, event);
         }
     }
 
     fn touch_up(&mut self, event: &TouchUpEvent) {
-        if let Some(touch) = self.seat.get_touch() {
+        if let Some(touch) = self.wayland.seat.get_touch() {
             touch.up(self, event);
         }
     }
 
     fn touch_cancel(&mut self) {
-        if let Some(touch) = self.seat.get_touch() {
+        if let Some(touch) = self.wayland.seat.get_touch() {
             touch.cancel(self);
         }
     }
 
     fn touch_frame(&mut self) {
-        if let Some(touch) = self.seat.get_touch() {
+        if let Some(touch) = self.wayland.seat.get_touch() {
             touch.frame(self);
         }
     }
 
     fn gesture_swipe_begin(&mut self, event: &GestureSwipeBeginEvent) {
-        if let Some(pointer) = self.seat.get_pointer() {
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
             pointer.gesture_swipe_begin(self, event);
         }
     }
 
     fn gesture_swipe_update(&mut self, event: &GestureSwipeUpdateEvent) {
-        if let Some(pointer) = self.seat.get_pointer() {
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
             pointer.gesture_swipe_update(self, event);
         }
     }
 
     fn gesture_swipe_end(&mut self, event: &GestureSwipeEndEvent) {
-        if let Some(pointer) = self.seat.get_pointer() {
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
             pointer.gesture_swipe_end(self, event);
         }
     }
 
     fn gesture_pinch_begin(&mut self, event: &GesturePinchBeginEvent) {
-        if let Some(pointer) = self.seat.get_pointer() {
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
             pointer.gesture_pinch_begin(self, event);
         }
     }
 
     fn gesture_pinch_update(&mut self, event: &GesturePinchUpdateEvent) {
-        if let Some(pointer) = self.seat.get_pointer() {
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
             pointer.gesture_pinch_update(self, event);
         }
     }
 
     fn gesture_pinch_end(&mut self, event: &GesturePinchEndEvent) {
-        if let Some(pointer) = self.seat.get_pointer() {
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
             pointer.gesture_pinch_end(self, event);
         }
     }
 
     fn gesture_hold_begin(&mut self, event: &GestureHoldBeginEvent) {
-        if let Some(pointer) = self.seat.get_pointer() {
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
             pointer.gesture_hold_begin(self, event);
         }
     }
 
     fn gesture_hold_end(&mut self, event: &GestureHoldEndEvent) {
-        if let Some(pointer) = self.seat.get_pointer() {
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
             pointer.gesture_hold_end(self, event);
         }
     }

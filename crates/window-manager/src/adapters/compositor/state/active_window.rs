@@ -9,10 +9,11 @@ impl BabydraState {
                 let metadata =
                     crate::adapters::window::metadata::get(window).unwrap_or_default();
                 let process_id = self
+                    .wayland
                     .display_handle
                     .get_client(toplevel.wl_surface().id())
                     .ok()
-                    .and_then(|client| client.get_credentials(&self.display_handle).ok())
+                    .and_then(|client| client.get_credentials(&self.wayland.display_handle).ok())
                     .and_then(|credentials| u32::try_from(credentials.pid).ok());
                 services::system::window::ActiveWindowInfo {
                     app_id: metadata.app_id,

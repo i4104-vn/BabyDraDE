@@ -11,7 +11,7 @@ use crate::adapters::compositor::state::BabydraState;
 
 impl WlrLayerShellHandler for BabydraState {
     fn shell_state(&mut self) -> &mut WlrLayerShellState {
-        &mut self.wlr_layer_shell_state
+        &mut self.wayland.wlr_layer_shell_state
     }
 
     fn new_layer_surface(
