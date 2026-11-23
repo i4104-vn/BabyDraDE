@@ -9,7 +9,7 @@ input, and launches one Wayland app for a smoke run.
 - Linux with a running graphical session (Wayland or X11)
 - Rust stable
 - Smithay's Linux build dependencies, including Wayland, XKB common, EGL, and GLES
-- `wl-clipboard` (`wl-copy` / `wl-paste`) — installed automatically by `start.sh`
+- `wl-clipboard` (`wl-copy` / `wl-paste`) — installed automatically by `install.sh`
 - A Wayland app to launch via a configurable shortcut
 
 ## Run

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared setup for every start.sh step script. Source it, don't execute it.
+# Shared setup for every install.sh step script. Source it, don't execute it.
 
 BABYDRADE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export BABYDRADE_ROOT

@@ -47,7 +47,7 @@ if [ -f "$config_src" ]; then
 
         temp_config="$(mktemp)"
         {
-            echo "# Managed by BabyDraDE start.sh"
+            echo "# Managed by BabyDraDE install.sh"
             echo
             echo "[terminal]"
             echo "vt = 1"
