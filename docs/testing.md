@@ -2,14 +2,20 @@
 
 ## Local checks
 
-There is no CI workflow in this repository. Run the checks locally before
-merging:
+CI runs on every push and pull request with `fmt`, Clippy (with `-D warnings`),
+workspace tests, `cargo deny` and the architecture test. Reproduce the same
+gates locally before merging:
 
 ```text
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
+cargo deny check
 ```
+
+`cargo test --workspace` also runs
+`crates/window-manager/tests/architecture.rs`, so the architecture gate is
+checked locally as well as in CI.
 
 The `window-manager` crate follows [Clean Architecture](architecture.md).
 Dependencies point inward (`composition → infrastructure → adapters →
@@ -17,6 +23,14 @@ application → domain`); keep new imports aligned with that rule. The decision
 is recorded in [ADR 0003](adr/0003-clean-architecture.md). `domain` and
 `application` are kept free of filesystem/process/toolkit effects so their
 rules can be covered by fast unit tests.
+
+## Architecture gate
+
+`crates/window-manager/tests/architecture.rs` currently pins the known import
+graph as a baseline (three adapter cycles) instead of claiming it is clean. The
+baseline is expected to shrink during the refactor as each cycle is broken; new
+outward imports or new edges between adapter areas fail the test. See
+[report.md](../report.md) for the full plan.
 
 ## Coverage
 
