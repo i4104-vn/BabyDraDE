@@ -11,12 +11,13 @@ use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
 use tracing::{info, warn};
 
 use crate::{
-    adapters::{
-        compositor::{BabydraState, CalloopData},
-        input::keymap::config,
-    },
+    adapters::compositor::{BabydraState, CalloopData},
     application::shortcuts::ShortcutService,
-    infrastructure::{backends, config::gesture_policy, process::spawn_detached},
+    infrastructure::{
+        backends,
+        config::{gesture_policy, keymap as config},
+        process::spawn_detached,
+    },
 };
 
 pub(crate) fn run() -> Result<(), Box<dyn Error>> {

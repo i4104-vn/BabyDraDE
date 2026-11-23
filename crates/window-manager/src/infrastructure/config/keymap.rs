@@ -1,10 +1,13 @@
 //! Window-manager-owned keymap configuration.
 
-use crate::adapters::input::keymap::SharedShortcuts;
 use crate::domain::shortcuts::Shortcut;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
+
+/// Shortcut table shared with the hot-reload watcher.
+pub(crate) type SharedShortcuts = Arc<RwLock<Vec<Shortcut>>>;
 
 const DEFAULT_KEYMAP: &str = include_str!("../../../resources/keymap.toml");
 const WATCH_INTERVAL: Duration = Duration::from_secs(2);

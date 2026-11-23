@@ -9,16 +9,7 @@
 
 pub(crate) mod matcher;
 
-pub(crate) use crate::infrastructure::config::keymap as config;
-
-use std::sync::{Arc, RwLock};
-
-use crate::domain::shortcuts::Shortcut;
-
 use super::InputContext;
-
-/// Shortcut list shared with the hot-reload watcher.
-pub(crate) type SharedShortcuts = Arc<RwLock<Vec<Shortcut>>>;
 
 /// Reloads shortcuts from `~/.babydra/configs/keymap.toml` immediately.
 pub(crate) fn reload(state: &impl InputContext) {
