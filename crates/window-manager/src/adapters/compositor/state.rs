@@ -144,7 +144,7 @@ impl BabydraState {
             config,
             input: InputState::new(),
             overlays: OverlayState::new(),
-            windows: WindowRegistry::new(),
+            windows: WindowRegistry::new(is_window_exiting),
             render,
             start_time: Instant::now(),
             socket_name,
@@ -200,7 +200,7 @@ impl BabydraState {
 
     /// Returns the topmost live window, excluding closing animations.
     pub(crate) fn active_window(&self) -> Option<Window> {
-        self.windows.active_window(&self.space, is_window_exiting)
+        self.windows.active_window(&self.space)
     }
 
     /// Raises a window to the top of the internal Z-order list.

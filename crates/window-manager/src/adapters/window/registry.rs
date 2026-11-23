@@ -14,23 +14,27 @@ use smithay::{
 /// call sites keep working without exposing the vector's ownership.
 pub(crate) struct WindowRegistry {
     pub(crate) entries: Vec<Window>,
+    /// Policy supplied by the compositor to skip windows leaving the screen
+    /// (closing or minimizing) when resolving the active window.
+    is_exiting: fn(&Window) -> bool,
 }
 
 impl WindowRegistry {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(is_exiting: fn(&Window) -> bool) -> Self {
         Self {
             entries: Vec::new(),
+            is_exiting,
         }
     }
 
-    /// Returns the topmost (most recently raised / focused) window, if any.
+    /// Returns the topmost live window, falling back to the topmost mapped
+    /// window in the space.
     ///
-    /// Excludes windows that are currently playing their closing animation.
-    pub(crate) fn active_window(
-        &self,
-        space: &Space<Window>,
-        is_exiting: impl Fn(&Window) -> bool,
-    ) -> Option<Window> {
+    /// This is the single resolver for "which window is active"; callers must
+    /// not pick a target by iterating the space themselves. Windows leaving
+    /// the screen are excluded in both the registry and the space.
+    pub(crate) fn active_window(&self, space: &Space<Window>) -> Option<Window> {
+        let is_exiting = self.is_exiting;
         self.entries
             .iter()
             .rev()
@@ -78,5 +82,17 @@ impl Deref for WindowRegistry {
 impl DerefMut for WindowRegistry {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.entries
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn active_window_is_none_for_an_empty_registry_and_space() {
+        let registry = WindowRegistry::new(|_| false);
+        let space: Space<Window> = Space::default();
+        assert!(registry.active_window(&space).is_none());
     }
 }
