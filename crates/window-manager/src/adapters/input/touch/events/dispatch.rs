@@ -5,6 +5,7 @@ use smithay::{
         InputBackend, TouchCancelEvent, TouchDownEvent, TouchFrameEvent, TouchMotionEvent,
         TouchUpEvent,
     },
+    desktop::{layer_map_for_output, PopupManager},
     input::touch::{DownEvent, MotionEvent, UpEvent},
     utils::SERIAL_COUNTER,
 };
@@ -66,6 +67,16 @@ pub(crate) fn handle_touch_down<B: InputBackend, T: TouchDownEvent<B>>(
 
     // 2. Check window and titlebar
     if let Some((window, location)) = state.window_under(position) {
+        for output in state.space().outputs() {
+            let layer_map = layer_map_for_output(output);
+            for layer in layer_map.layers() {
+                let surface = layer.wl_surface();
+                for (popup, _) in PopupManager::popups_for_surface(surface) {
+                    let _ = PopupManager::dismiss_popup(surface, &popup);
+                }
+            }
+        }
+
         state.space_mut().raise_element(&window, true);
         state.raise_window(&window);
         if let Some(toplevel) = window.toplevel() {

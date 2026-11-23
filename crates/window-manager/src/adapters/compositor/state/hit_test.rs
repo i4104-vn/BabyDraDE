@@ -42,6 +42,20 @@ impl BabydraState {
         &self,
         point: Point<f64, Logical>,
     ) -> Option<(Window, Point<i32, Logical>)> {
+        if let Some(layer) = self.layer_under(point) {
+            if matches!(layer, Layer::Overlay | Layer::Top) {
+                return None;
+            }
+        }
+
+        // If an overlay or top layer surface (bars, popovers, menus) occludes this point,
+        // no normal window can be under it.
+        if let Some(layer) = self.layer_under(point) {
+            if matches!(layer, Layer::Overlay | Layer::Top) {
+                return None;
+            }
+        }
+
         // The compositor-owned frame sits just above the client surface.
         for window in self.space.elements().rev() {
             if super::is_window_exiting(window) {
@@ -132,7 +146,9 @@ impl BabydraState {
             for layer in layer_map.layers().rev() {
                 if layers.contains(&layer.layer()) {
                     if let Some(geo) = layer_map.layer_geometry(layer) {
-                        if geo.to_f64().contains(position) {
+                        let mut bbox = layer.bbox_with_popups();
+                        bbox.loc += geo.loc;
+                        if bbox.to_f64().contains(position) {
                             if let Some((surface, surface_location)) = layer
                                 .surface_under(position - geo.loc.to_f64(), WindowSurfaceType::ALL)
                             {
@@ -152,7 +168,9 @@ impl BabydraState {
             let layer_map = layer_map_for_output(output);
             for layer in layer_map.layers().rev() {
                 if let Some(geo) = layer_map.layer_geometry(layer) {
-                    if geo.to_f64().contains(position)
+                    let mut bbox = layer.bbox_with_popups();
+                    bbox.loc += geo.loc;
+                    if bbox.to_f64().contains(position)
                         && layer
                             .surface_under(position - geo.loc.to_f64(), WindowSurfaceType::ALL)
                             .is_some()
@@ -169,6 +187,13 @@ impl BabydraState {
         &self,
         point: Point<f64, Logical>,
     ) -> Option<(Window, Point<i32, Logical>, ResizeEdge)> {
+        // If an overlay or top layer surface occludes this point, no border resize should occur.
+        if let Some(layer) = self.layer_under(point) {
+            if matches!(layer, Layer::Overlay | Layer::Top) {
+                return None;
+            }
+        }
+
         for window in self.space.elements().rev() {
             if super::is_window_exiting(window) {
                 continue;

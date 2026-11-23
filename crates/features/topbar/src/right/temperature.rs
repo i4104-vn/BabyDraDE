@@ -3,12 +3,12 @@
 
 use gtk4::glib;
 use gtk4::prelude::*;
-use services::system::{get_all_temperatures, get_cpu_temperature};
+use services::system::{get_cpu_temperature, get_important_temperatures};
 use std::rc::Rc;
 use ui_kit::overlay::popover::{TooltipPopover, TooltipRow};
 
 fn temperature_rows() -> Vec<TooltipRow> {
-    let readings = get_all_temperatures();
+    let readings = get_important_temperatures();
     if readings.is_empty() {
         return vec![TooltipRow::new("No temperature sensors", "", None)];
     }
@@ -20,6 +20,7 @@ fn temperature_rows() -> Vec<TooltipRow> {
 
 pub fn create_temperature_widget() -> gtk4::Box {
     let container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    container.add_css_class("sys-monitor-box");
     container.set_valign(gtk4::Align::Center);
 
     let label = gtk4::Label::new(Some("--°C"));

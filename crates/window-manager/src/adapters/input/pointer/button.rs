@@ -2,6 +2,7 @@
 
 use smithay::{
     backend::input::{ButtonState, InputBackend, PointerButtonEvent},
+    desktop::{layer_map_for_output, PopupManager},
     input::pointer::{ButtonEvent, MotionEvent},
     utils::SERIAL_COUNTER,
 };
@@ -90,6 +91,17 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 }
 
                 if let Some((window, location)) = state.window_under(state.pointer_location()) {
+                    // Clicking an application window dismisses any open layer popups (e.g. context menus)
+                    for output in state.space().outputs() {
+                        let layer_map = layer_map_for_output(output);
+                        for layer in layer_map.layers() {
+                            let surface = layer.wl_surface();
+                            for (popup, _) in PopupManager::popups_for_surface(surface) {
+                                let _ = PopupManager::dismiss_popup(surface, &popup);
+                            }
+                        }
+                    }
+
                     state.space_mut().raise_element(&window, true);
                     state.raise_window(&window);
                     state.set_keyboard_focus(
@@ -203,8 +215,30 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                             | Some(smithay::wayland::shell::wlr_layer::Layer::Overlay)
                     );
 
+                    // Ensure pointer focus is updated to the clicked surface
+                    let under = state.surface_under(state.pointer_location());
+                    state.pointer_motion(
+                        under,
+                        &MotionEvent {
+                            location: state.pointer_location(),
+                            serial,
+                            time: event.time_msec(),
+                        },
+                    );
+                    state.pointer_frame();
+
                     // When interacting with panels, topbar, or overlays, do NOT lose active app focus
                     if !is_top_or_overlay {
+                        for output in state.space().outputs() {
+                            let layer_map = layer_map_for_output(output);
+                            for layer in layer_map.layers() {
+                                let surface = layer.wl_surface();
+                                for (popup, _) in PopupManager::popups_for_surface(surface) {
+                                    let _ = PopupManager::dismiss_popup(surface, &popup);
+                                }
+                            }
+                        }
+
                         state.space().elements().for_each(|window| {
                             window.set_activated(false);
                             window.toplevel().unwrap().send_pending_configure();
