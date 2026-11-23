@@ -1215,14 +1215,20 @@ Mục này được cập nhật trong quá trình thực hiện kế hoạch. C
 - Đưa autostart thành use case trong `application/autostart.rs` với port `AutostartLauncher` và fake test; tách `composition` thành coordinator + `wiring.rs` + `runtime.rs`; lỗi đăng ký clipboard channel giờ trả `Result` có ngữ cảnh thay vì `expect`.
 - Tách helper animation phụ thuộc GTK sang crate `animation-gtk`; `animation` và `window-manager` không còn kéo GTK qua dependency này.
 - Gộp fallback cấu hình vào `infrastructure/config`, bỏ re-export adapter→infrastructure, xóa `#[allow(unused_imports)]`, thống nhất comment mã nguồn sang tiếng Anh.
-- Mở rộng architecture gate: cấm framework/service locator trong lõi, cấm `allow(unused_imports)`, đảm bảo `on_commit` chỉ có một chủ sở hữu. Hiện có 6 test kiến trúc, 61 unit test.
+- Mở rộng architecture gate: cấm framework/service locator trong lõi, cấm `allow(unused_imports)`, đảm bảo `on_commit` chỉ có một chủ sở hữu. Hiện có 6 test kiến trúc.
+- Phân rã `BabydraState`: 6 thành phần (`WaylandRuntime`, `WindowRegistry`, `InputState`, `OverlayState`, `ClipboardState`, `RenderState` + `ConfigSnapshot`) + facade. Số trường giảm **39 → 16** (7 thành phần + 9 trường tương thích); số khối `impl BabydraState` giảm **10 → 5**. Không còn cạnh import ngược giữa các adapter.
+- Chuyển `LaunchCommand`/`LoadShortcuts` thành trait `CommandLauncher`/`ShortcutRepository` có lỗi có cấu trúc (`LaunchError`, `ConfigError`), inject qua `Arc<dyn … + Send + Sync>`, kèm 6 test với fake port. Cùng với `AutostartLauncher`, application đã có 3 port dạng trait.
+- Xóa panic trong luồng sự kiện: không còn `unwrap()` trong input/compositor runtime; mutex poison được phục hồi, seat capability và client dispatch được xử lý bằng `if let` + log thay vì panic; chỉ còn 4 `expect` ở khởi tạo có ngữ cảnh và 1 `expect` do giới hạn API của Smithay.
+- Một nguồn xác định cửa sổ active: `WindowRegistry::active_window(&Space)` được dùng thay cho `space.elements().next_back()` trong handler/state; có unit test cho registry rỗng.
+- Tách các tệp lớn: `touch/events.rs` → dispatch/gesture_state/overlay; `switcher/element.rs` → backdrop/foreground/preview; `lock/render.rs` → auth_ui/transition/wallpaper/widgets; `blur/gl/pipeline.rs` → setup/downsample/blur/upsample/composite/cache.
 - Cập nhật `docs/architecture.md`, `docs/testing.md` và ADR 0003/0004 cho khớp hiện trạng.
 
-### 13.2. Đang thực hiện hoặc còn lại
+**Kiểm chứng cuối:** `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace` đều xanh; riêng `window-manager` có **68 unit test + 6 architecture test**, workspace còn 24 + 3 + 2 test từ các crate khác.
 
-- Phân rã tiếp `BabydraState` (39 trường) thành facade ~7 thành phần: `ClipboardState` đã tách; đang tách `RenderState`/`ConfigSnapshot`, sau đó đến `InputState`, `OverlayState`, `WaylandRuntime`, `WindowRegistry`.
-- Chuyển các port còn lại (`LaunchCommand`, `LoadShortcuts`, `LoadGesturePolicy`) từ alias hàm sang trait có `Result` và fake test.
-- Giảm `unwrap`/`expect` trong luồng sự kiện runtime (đặc biệt khóa mutex và truy cập seat/toplevel); đưa screenshot request thành port để backend không gọi trực tiếp UI.
-- Thêm characterization test cho sizing, focus, input dispatch, switcher và config reload; thiết lập coverage gate theo tầng trong CI.
-- Tách các tệp lớn còn lại (`touch/events.rs`, `lock/render.rs`, `switcher/element.rs`, `blur/gl/pipeline.rs`) theo trách nhiệm.
-- Tách `common` thành nhóm type/enum và design token; cân nhắc tách crate cuối cùng sau khi hết nợ kiến trúc.
+### 13.2. Còn lại (nợ đã được thu hẹp, không chặn vận hành)
+
+- Chín trường tương thích vẫn nằm thẳng trên facade (`start_time`, `socket_name`, `space`, `loop_signal`, `popups`, `clipboard_sender`, `blur_engine`, `pointer_location`, `cursor_visible`) vì `composition/` và backend đọc trực tiếp; chỉ đạt mục tiêu “≤7 thành phần”, chưa đạt “≤7 trường tổng”.
+- Bốn khối `impl BabydraState` còn lại (hit-test, switcher, sizing, animation) là thao tác liên thành phần; chuyển tiếp cần đổi chữ ký nhiều call site.
+- `LoadGesturePolicy` vẫn là alias hàm vì nằm ở ranh giới adapter; screenshot request vẫn do backend gọi trực tiếp UI thay vì qua port; hệ thống shortcut hardcode và keymap vẫn tồn tại song song.
+- `common` vẫn là grab bag (enum nghiệp vụ + design token); coverage theo tầng chưa có gate CI; smoke matrix Winit/Udev cần chạy tay trên máy có GPU/seat.
+- Tách crate cuối cùng (`babydra-wm-core`, `…-wayland`, `…-render`, `babydra-desktop`) chỉ nên làm sau khi các mục trên xong, để tránh biến nợ kiến trúc thành nợ build.
