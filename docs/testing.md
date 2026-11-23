@@ -1,39 +1,33 @@
-# Testing and enforcement
+# Testing
 
-## Automated checks
+## Local checks
 
-Every PR runs the CI workflow in `.github/workflows/ci.yml`:
+There is no CI workflow in this repository. Run the checks locally before
+merging:
 
 ```text
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-cargo xtask check
 ```
 
-`cargo xtask check` enforces four architecture fitness functions:
-
-| Check | Rule |
-| --- | --- |
-| `check-layering` | No `use crate::<layer>` edge outside `xtask/architecture.toml`. |
-| `check-visibility` | Binary crate exposes no `pub` items. |
-| `check-hot-path` | `compositor`, `input`, `rendering` contain no file/env/config-I/O. |
-| `check-unsafe` | Every `unsafe` block has a `// SAFETY` comment. |
-
-Existing debt is recorded in `xtask/baseline.toml`. Regenerate it with
-`cargo xtask baseline` only when intentionally accepting new debt; each PR
-should remove at least one entry.
+The `window-manager` crate follows [Clean Architecture](architecture.md).
+Dependencies point inward (`composition → infrastructure → adapters →
+application → domain`); keep new imports aligned with that rule. The decision
+is recorded in [ADR 0003](adr/0003-clean-architecture.md). `domain` and
+`application` are kept free of filesystem/process/toolkit effects so their
+rules can be covered by fast unit tests.
 
 ## Coverage
 
 `nextest.toml` configures deterministic `cargo nextest` runs (no retries).
-Once `cargo-llvm-cov` is available in CI, the target thresholds are:
 
 | Area | Target |
 | --- | --- |
-| `model` | 80% |
+| `domain` (pure rules) | 80% |
 | `services::config` | 80% |
-| `input` / `rendering` pure logic | 60% |
+| `application` use cases | 80% |
+| `adapters` pure logic | 60% |
 | Whole workspace | 50% |
 
 ## Smoke matrix
@@ -52,5 +46,4 @@ Once `cargo-llvm-cov` is available in CI, the target thresholds are:
 | Touch / touchpad gestures | partial | yes |
 | VT switch, output hotplug | no | yes |
 
-Manual runs are still required for DRM/GTK paths until a runner with a GPU and
-a seat is available in CI.
+DRM/GTK paths require manual runs on a machine with a GPU and a seat.

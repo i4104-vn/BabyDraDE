@@ -1,7 +1,0 @@
-layering = []
-visibility = []
-hot_path = [
-    "crates/window-manager/src/input/keymap/config.rs|std::fs::",
-    "crates/window-manager/src/input/keymap/mod.rs|std::process::Command",
-]
-unsafe_blocks = []
