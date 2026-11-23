@@ -1209,11 +1209,20 @@ Mục này được cập nhật trong quá trình thực hiện kế hoạch. C
 - Đổi `adapters/shell` thành `adapters/desktop`; chuyển test từ `src/tests` + `#[path]` về module inline.
 - Đưa cache metadata ra khỏi `domain` sang `adapters/window`; đưa ánh xạ con trỏ ra khỏi `domain`.
 - Chuyển state switcher sang `adapters/desktop`; chuyển cấu hình keymap/pointer/touchpad vào `infrastructure/config`.
-- Cập nhật tài liệu kiến trúc và ADR cho khớp với các thay đổi trên.
+- Tách input khỏi trạng thái compositor bằng trait `InputContext` và các state type trung lập; gom các bước dùng chung của hai vòng lặp render vào `infrastructure/backends/render_loop` (kèm sửa lỗi path/scope trong backend Udev).
+- Đưa dịch vụ shortcut ra khỏi `OnceLock` toàn cục: `ShortcutService` được inject qua composition; mọi action desktop từ input đi qua `InputContext`, xóa cạnh `input → desktop` và thu baseline kiến trúc từ 7 xuống 6 cạnh (không còn chu trình).
+- Làm sạch lõi: `domain/geometry.rs` cung cấp `Point`/`Size`/`Rectangle` thuần; `domain` và `application` không còn import Smithay/GTK (`cargo` + architecture test xác nhận).
+- Đưa autostart thành use case trong `application/autostart.rs` với port `AutostartLauncher` và fake test; tách `composition` thành coordinator + `wiring.rs` + `runtime.rs`; lỗi đăng ký clipboard channel giờ trả `Result` có ngữ cảnh thay vì `expect`.
+- Tách helper animation phụ thuộc GTK sang crate `animation-gtk`; `animation` và `window-manager` không còn kéo GTK qua dependency này.
+- Gộp fallback cấu hình vào `infrastructure/config`, bỏ re-export adapter→infrastructure, xóa `#[allow(unused_imports)]`, thống nhất comment mã nguồn sang tiếng Anh.
+- Mở rộng architecture gate: cấm framework/service locator trong lõi, cấm `allow(unused_imports)`, đảm bảo `on_commit` chỉ có một chủ sở hữu. Hiện có 6 test kiến trúc, 61 unit test.
+- Cập nhật `docs/architecture.md`, `docs/testing.md` và ADR 0003/0004 cho khớp hiện trạng.
 
 ### 13.2. Đang thực hiện hoặc còn lại
 
-- Tách input khỏi trạng thái compositor bằng trait context và state types trung lập.
-- Gom các bước dùng chung của hai vòng lặp render vào `infrastructure/backends/render_loop`.
-- Tiếp tục thu hẹp baseline architecture test đến khi hết chu trình.
-- Tách tiếp god state, đưa dịch vụ shortcut ra khỏi global state và làm sạch lõi application/domain.
+- Phân rã tiếp `BabydraState` (39 trường) thành facade ~7 thành phần: `ClipboardState` đã tách; đang tách `RenderState`/`ConfigSnapshot`, sau đó đến `InputState`, `OverlayState`, `WaylandRuntime`, `WindowRegistry`.
+- Chuyển các port còn lại (`LaunchCommand`, `LoadShortcuts`, `LoadGesturePolicy`) từ alias hàm sang trait có `Result` và fake test.
+- Giảm `unwrap`/`expect` trong luồng sự kiện runtime (đặc biệt khóa mutex và truy cập seat/toplevel); đưa screenshot request thành port để backend không gọi trực tiếp UI.
+- Thêm characterization test cho sizing, focus, input dispatch, switcher và config reload; thiết lập coverage gate theo tầng trong CI.
+- Tách các tệp lớn còn lại (`touch/events.rs`, `lock/render.rs`, `switcher/element.rs`, `blur/gl/pipeline.rs`) theo trách nhiệm.
+- Tách `common` thành nhóm type/enum và design token; cân nhắc tách crate cuối cùng sau khi hết nợ kiến trúc.
