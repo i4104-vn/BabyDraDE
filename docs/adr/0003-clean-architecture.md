@@ -52,3 +52,19 @@ visibility and code review now maintain the boundaries.
   new code must follow the inward dependency rule.
 - There is no automated architecture gate; contributors are responsible for
   keeping imports pointing inward.
+
+## Current status (updated 2026-11-23)
+
+The folder reorganisation in this ADR was completed, but the intended
+boundaries were not fully achieved. Follow-up inspection found three remaining
+adapter cycles and a `BabydraState` god object; the metadata cache was still
+inside `domain`, and `application` still depended on Smithay geometry. Those
+statements in the decision and consequence sections therefore describe the
+goal, not the state of the tree.
+
+Work is now underway to close the gap: the metadata cache moved to
+`adapters/window`, cursor mapping moved out of `domain`, switcher state moved to
+`adapters/desktop`, input configuration moved to `infrastructure/config`, and
+the hardcoded shortcut strings are parsed into a typed action. [ADR 0004](0004-architecture-gate.md)
+restores CI and an architecture fitness function that pins the current import
+graph as a shrinking baseline until the remaining cycles are gone.
