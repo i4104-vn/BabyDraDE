@@ -1,17 +1,27 @@
 mod menu;
 mod render;
 
-/// Dismisses open tray menus when the panel is clicked elsewhere.
-pub(crate) fn dismiss_menus() {
-    menu::dismiss_all();
-}
-
 use gtk4::glib;
 use gtk4::prelude::*;
 use services::tray::{activate_item, get_tray_items, TrayItem};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
+
+thread_local! {
+    static LAST_ACTIVE_WINDOW: RefCell<Option<(String, String)>> = const { RefCell::new(None) };
+}
+
+/// Clicking another application window cannot leave a context menu open.
+fn active_window_changed() -> bool {
+    let current = services::system::get_active_window().map(|info| (info.app_id, info.title));
+    LAST_ACTIVE_WINDOW.with(|last| {
+        let mut last = last.borrow_mut();
+        let changed = last.as_ref() != current.as_ref();
+        *last = current;
+        changed
+    })
+}
 
 pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
     let tray_container = render::build_tray_container();
@@ -22,6 +32,12 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
     let window_clone = window.clone();
 
     glib::timeout_add_local(Duration::from_millis(500), move || {
+        // Clicking another application window changes the compositor's active
+        // window; a menu cannot stay open over a different app.
+        if active_window_changed() {
+            ui_kit::overlay::context_menu::dismiss_all();
+        }
+
         let current_items = get_tray_items();
 
         let needs_rebuild = {

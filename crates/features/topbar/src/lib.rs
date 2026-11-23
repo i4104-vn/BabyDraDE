@@ -8,6 +8,11 @@ use gtk4::{Application, ApplicationWindow, CenterBox};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use left::LeftPill;
 use right::create_right_section;
+use std::cell::RefCell;
+
+thread_local! {
+    static DISMISS_LAYER: RefCell<Option<ApplicationWindow>> = const { RefCell::new(None) };
+}
 
 /// Panel offsets from the monitor edges, shared with SNI menu placement.
 pub(crate) const PANEL_MARGIN_X: i32 = 1;
@@ -47,7 +52,7 @@ pub fn run() {
         let outside_click = gtk4::GestureClick::new();
         outside_click.connect_pressed(move |_, _, x, y| {
             center::ui::popover::dismiss_outside(dismiss_window.upcast_ref(), x, y);
-            right::tray::dismiss_menus();
+            ui_kit::overlay::context_menu::dismiss_all();
         });
         window.add_controller(outside_click);
 
@@ -79,7 +84,46 @@ pub fn run() {
 
         window.set_child(Some(&center_box));
         window.present();
+        DISMISS_LAYER.with(|slot| *slot.borrow_mut() = Some(create_dismiss_layer(app)));
+        ui_kit::overlay::context_menu::set_visibility_hook(|open| {
+            DISMISS_LAYER.with(|slot| {
+                if let Some(window) = slot.borrow().as_ref() {
+                    window.set_visible(open);
+                }
+            });
+        });
     });
 
     app.run_with_args::<&str>(&[]);
+}
+
+fn create_dismiss_layer(app: &Application) -> ApplicationWindow {
+    let window = ApplicationWindow::builder()
+        .application(app)
+        .title("BabyDraDE Dismiss Layer")
+        .decorated(false)
+        .build();
+    window.add_css_class("dismiss-layer");
+
+    window.init_layer_shell();
+    // Bottom keeps it above the desktop but below normal application windows.
+    window.set_layer(Layer::Bottom);
+    window.set_namespace(Some("babydra-dismiss"));
+    for edge in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
+        window.set_anchor(edge, true);
+        window.set_margin(edge, 0);
+    }
+    window.set_exclusive_zone(0);
+    window.set_keyboard_mode(KeyboardMode::None);
+
+    let gesture = gtk4::GestureClick::new();
+    let catcher = window.clone();
+    gesture.connect_pressed(move |_, _, _, _| {
+        catcher.set_visible(false);
+        ui_kit::overlay::context_menu::dismiss_all();
+        center::ui::popover::dismiss_all_popovers();
+    });
+    window.add_controller(gesture);
+    window.set_visible(false);
+    window
 }

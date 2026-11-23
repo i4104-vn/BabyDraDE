@@ -2,43 +2,18 @@
 //!
 //! Apps that provide a `Menu` property expect the host to draw the menu itself;
 //! only when no menu is exported do we fall back to the item's `ContextMenu`
-//! D-Bus method.
+//! D-Bus method. Styling, hover and dismissal are owned by ui-kit's shared
+//! `ContextMenu`, so every context menu in the system behaves identically.
 
 use gtk4::glib;
-use gtk4::prelude::*;
 use gtk4::PositionType;
 use services::system::{
     activate_dbus_menu_item, fetch_dbus_menu_with_prepared_submenus, DbusMenuItem,
 };
 use services::tray::{activate_item, TrayItem};
-use std::cell::{Cell, RefCell};
-use std::rc::Rc;
 use std::sync::mpsc;
 use std::time::Duration;
 use ui_kit::overlay::context_menu::ContextMenu;
-
-thread_local! {
-    /// Popovers are owned by their parent button only through a weak reference,
-    /// so keep the builder (and thus the popover) alive until it is closed.
-    static OPEN_MENUS: RefCell<Vec<(u64, Rc<ContextMenu>)>> = const { RefCell::new(Vec::new()) };
-    static NEXT_MENU_ID: Cell<u64> = const { Cell::new(1) };
-}
-
-/// Closes every open tray menu. Called by the panel's outside-click handler.
-pub(super) fn dismiss_all() {
-    let popovers: Vec<gtk4::Popover> = OPEN_MENUS.with(|menus| {
-        menus
-            .borrow()
-            .iter()
-            .map(|(_, menu)| menu.widget().clone())
-            .collect()
-    });
-    for popover in popovers {
-        if popover.is_visible() {
-            popover.popdown();
-        }
-    }
-}
 
 pub(super) fn show_menu(item: &TrayItem, button: &gtk4::Button, x: i32, y: i32, button_num: u32) {
     let service = item.service.clone();
@@ -58,11 +33,7 @@ pub(super) fn show_menu(item: &TrayItem, button: &gtk4::Button, x: i32, y: i32, 
 
     glib::timeout_add_local(Duration::from_millis(20), move || match rx.try_recv() {
         Ok(Some(items)) if !items.is_empty() => {
-            let menu = ContextMenu::new(&button)
-                .with_css_class("tray-context-menu")
-                .with_position(PositionType::Bottom);
-            menu.container().add_css_class("tray-menu-box");
-            menu.widget().set_offset(0, 8);
+            let menu = ContextMenu::new(&button).with_position(PositionType::Bottom);
             present(populate(menu, &items, &service, &path));
             glib::ControlFlow::Break
         }
@@ -79,31 +50,6 @@ pub(super) fn show_menu(item: &TrayItem, button: &gtk4::Button, x: i32, y: i32, 
 }
 
 fn present(menu: ContextMenu) {
-    let id = NEXT_MENU_ID.with(|next| {
-        let id = next.get();
-        next.set(id.wrapping_add(1));
-        id
-    });
-
-    menu.widget().connect_closed(move |_| {
-        OPEN_MENUS.with(|menus| {
-            menus.borrow_mut().retain(|(menu_id, _)| *menu_id != id);
-        });
-    });
-
-    let escape = gtk4::EventControllerKey::new();
-    let escape_popover = menu.widget().clone();
-    escape.connect_key_pressed(move |_, key, _, _| {
-        if key == gtk4::gdk::Key::Escape && escape_popover.is_visible() {
-            escape_popover.popdown();
-            return gtk4::glib::Propagation::Stop;
-        }
-        gtk4::glib::Propagation::Proceed
-    });
-    menu.widget().add_controller(escape);
-
-    let menu = Rc::new(menu);
-    OPEN_MENUS.with(|menus| menus.borrow_mut().push((id, menu.clone())));
     menu.popup();
 }
 

@@ -3443,28 +3443,44 @@ popover.desktop-context-menu>arrow {
 }
 
 .context-menu-box {
-    background-color: rgb(14, 14, 18);
+    background-color: rgba(28, 28, 31, 0.98);
+    background-image: none;
     opacity: 1.0;
-    color: #e8e8e8;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e8e8ea;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 18px;
+    padding: 6px 0;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.50);
 }
 
 button.context-menu-item {
-    color: #e8e8e8;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 8px;
+    box-shadow: none;
+    margin: 0 6px;
+    padding: 3px 8px;
+    min-height: 26px;
+    color: #e8e8ea;
+    font-size: 14px;
 }
 
 button.context-menu-item:focus,
-button.context-menu-item:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+button.context-menu-item:hover,
+button.context-menu-item.context-menu-row-hover {
+    background-color: rgba(255, 255, 255, 0.10);
     color: #ffffff;
 }
 
 button.context-menu-item label {
-    color: #e8e8e8;
+    color: inherit;
+    font-size: 14px;
 }
 
 button.context-menu-item:focus label,
-button.context-menu-item:hover label {
+button.context-menu-item:hover label,
+button.context-menu-item.context-menu-row-hover label {
     color: #ffffff;
 }
 
@@ -3473,8 +3489,11 @@ button.context-menu-item:hover label {
     color: #60a5fa;
 }
 
-.context-menu-separator {
+.context-menu-separator,
+.menu-sep {
     background-color: rgba(255, 255, 255, 0.10);
+    min-height: 1px;
+    margin: 6px 10px;
 }
 
 .context-menu-footer {
@@ -4249,7 +4268,6 @@ window.recorder-window>box {
 .clipboard-popover-box,
 .power-popover-box,
 .recording-popover-box,
-.context-menu-box,
 .panel-notification-card,
 .switcher-deck-container,
 .switcher-meta-bar {
@@ -4289,57 +4307,4 @@ popover.control-popover>contents,
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 18px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.50);
-}
-
-/* === Tray context menu (panel popover) === */
-popover.tray-context-menu>contents {
-    background: transparent;
-    background-color: transparent;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    margin: 0;
-}
-
-popover.tray-context-menu .context-menu-box.tray-menu-box {
-    background-color: rgba(28, 28, 31, 0.98);
-    background-image: none;
-    color: #e8e8ea;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 18px;
-    padding: 8px 0;
-    margin: 0;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.50);
-    opacity: 1.0;
-}
-
-popover.tray-context-menu button.context-menu-item {
-    background-color: transparent;
-    background-image: none;
-    border: none;
-    border-radius: 8px;
-    box-shadow: none;
-    margin: 0 8px;
-    padding: 7px 10px;
-    min-height: 32px;
-    color: #e8e8ea;
-    font-size: 14px;
-}
-
-popover.tray-context-menu button.context-menu-item:hover,
-popover.tray-context-menu button.context-menu-item:focus {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-}
-
-popover.tray-context-menu button.context-menu-item label {
-    color: inherit;
-    font-size: 14px;
-}
-
-popover.tray-context-menu .context-menu-separator,
-popover.tray-context-menu .menu-sep {
-    background-color: rgba(255, 255, 255, 0.10);
-    min-height: 1px;
-    margin: 8px 12px;
 }
