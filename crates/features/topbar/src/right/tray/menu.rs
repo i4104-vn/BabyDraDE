@@ -24,6 +24,22 @@ thread_local! {
     static NEXT_MENU_ID: Cell<u64> = const { Cell::new(1) };
 }
 
+/// Closes every open tray menu. Called by the panel's outside-click handler.
+pub(super) fn dismiss_all() {
+    let popovers: Vec<gtk4::Popover> = OPEN_MENUS.with(|menus| {
+        menus
+            .borrow()
+            .iter()
+            .map(|(_, menu)| menu.widget().clone())
+            .collect()
+    });
+    for popover in popovers {
+        if popover.is_visible() {
+            popover.popdown();
+        }
+    }
+}
+
 pub(super) fn show_menu(item: &TrayItem, button: &gtk4::Button, x: i32, y: i32, button_num: u32) {
     let service = item.service.clone();
     let path = item.menu_path.clone();
@@ -45,6 +61,8 @@ pub(super) fn show_menu(item: &TrayItem, button: &gtk4::Button, x: i32, y: i32, 
             let menu = ContextMenu::new(&button)
                 .with_css_class("tray-context-menu")
                 .with_position(PositionType::Bottom);
+            menu.container().add_css_class("tray-menu-box");
+            menu.widget().set_offset(0, 8);
             present(populate(menu, &items, &service, &path));
             glib::ControlFlow::Break
         }
@@ -72,6 +90,17 @@ fn present(menu: ContextMenu) {
             menus.borrow_mut().retain(|(menu_id, _)| *menu_id != id);
         });
     });
+
+    let escape = gtk4::EventControllerKey::new();
+    let escape_popover = menu.widget().clone();
+    escape.connect_key_pressed(move |_, key, _, _| {
+        if key == gtk4::gdk::Key::Escape && escape_popover.is_visible() {
+            escape_popover.popdown();
+            return gtk4::glib::Propagation::Stop;
+        }
+        gtk4::glib::Propagation::Proceed
+    });
+    menu.widget().add_controller(escape);
 
     let menu = Rc::new(menu);
     OPEN_MENUS.with(|menus| menus.borrow_mut().push((id, menu.clone())));

@@ -451,11 +451,6 @@ fn read_item(connection: &gio::DBusConnection, service: &str, path: &str) -> Opt
         service: service.to_string(),
         path: path.to_string(),
         icon_name,
-        icon_theme_path: properties
-            .lookup("IconThemePath")
-            .ok()
-            .flatten()
-            .unwrap_or_default(),
         title: properties
             .lookup("Title")
             .ok()

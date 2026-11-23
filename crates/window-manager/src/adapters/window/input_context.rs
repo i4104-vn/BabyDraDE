@@ -102,7 +102,6 @@ pub(crate) trait InputContext {
     fn reload_shortcuts(&self);
     fn launch_command(&self, command: String);
     fn lock_screen(&self);
-    fn open_clipboard_picker(&self);
     fn trigger_screenshot(&self);
 
     // -- launcher overlay --

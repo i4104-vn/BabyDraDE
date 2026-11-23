@@ -1,6 +1,11 @@
 mod menu;
 mod render;
 
+/// Dismisses open tray menus when the panel is clicked elsewhere.
+pub(crate) fn dismiss_menus() {
+    menu::dismiss_all();
+}
+
 use gtk4::glib;
 use gtk4::prelude::*;
 use services::tray::{activate_item, get_tray_items, TrayItem};

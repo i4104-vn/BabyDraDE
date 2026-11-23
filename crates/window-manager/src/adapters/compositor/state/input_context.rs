@@ -226,10 +226,6 @@ impl InputContext for BabydraState {
         crate::adapters::desktop::lock::spawn();
     }
 
-    fn open_clipboard_picker(&self) {
-        crate::adapters::desktop::clipboard::trigger_picker();
-    }
-
     fn trigger_screenshot(&self) {
         crate::adapters::desktop::screenshot::trigger();
     }

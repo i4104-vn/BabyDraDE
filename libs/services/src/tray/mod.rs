@@ -20,8 +20,6 @@ pub struct TrayItem {
     pub path: String,
     /// Icon name (or absolute file path) advertised by the item.
     pub icon_name: String,
-    /// Optional custom icon theme directory advertised by the item.
-    pub icon_theme_path: String,
     /// Human readable tooltip / title.
     pub title: String,
     /// `Active`, `Attention` or `Passive`. Passive items are hidden.

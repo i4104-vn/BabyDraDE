@@ -4,7 +4,6 @@
 //! and are kept separate from `rendering`, which only handles system/window
 //! rendering and blur.
 
-pub(crate) mod clipboard;
 pub(crate) mod gtk;
 pub(crate) mod launcher;
 pub(crate) mod lock;

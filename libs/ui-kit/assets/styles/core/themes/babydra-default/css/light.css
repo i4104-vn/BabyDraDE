@@ -4488,3 +4488,56 @@ popover.control-popover>contents,
     border-radius: 18px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
 }
+
+/* === Tray context menu (panel popover) === */
+popover.tray-context-menu>contents {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+}
+
+popover.tray-context-menu .context-menu-box.tray-menu-box {
+    background-color: rgba(255, 255, 255, 0.98);
+    background-image: none;
+    color: #1a1a1a;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    border-radius: 18px;
+    padding: 8px 0;
+    margin: 0;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+    opacity: 1.0;
+}
+
+popover.tray-context-menu button.context-menu-item {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 8px;
+    box-shadow: none;
+    margin: 0 8px;
+    padding: 7px 10px;
+    min-height: 32px;
+    color: #1a1a1a;
+    font-size: 14px;
+}
+
+popover.tray-context-menu button.context-menu-item:hover,
+popover.tray-context-menu button.context-menu-item:focus {
+    background-color: rgba(0, 0, 0, 0.06);
+    color: #000000;
+}
+
+popover.tray-context-menu button.context-menu-item label {
+    color: inherit;
+    font-size: 14px;
+}
+
+popover.tray-context-menu .context-menu-separator,
+popover.tray-context-menu .menu-sep {
+    background-color: rgba(0, 0, 0, 0.08);
+    min-height: 1px;
+    margin: 8px 12px;
+}

@@ -47,6 +47,7 @@ pub fn run() {
         let outside_click = gtk4::GestureClick::new();
         outside_click.connect_pressed(move |_, _, x, y| {
             center::ui::popover::dismiss_outside(dismiss_window.upcast_ref(), x, y);
+            right::tray::dismiss_menus();
         });
         window.add_controller(outside_click);
 
