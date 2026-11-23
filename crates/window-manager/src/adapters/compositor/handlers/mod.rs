@@ -3,7 +3,7 @@ mod layer_shell;
 mod xdg_decoration;
 mod xdg_shell;
 
-use std::{io::Write, os::unix::io::OwnedFd, time::Duration};
+use std::{io::Write, os::unix::io::OwnedFd};
 
 use smithay::{
     delegate_cursor_shape, delegate_data_device, delegate_output, delegate_pointer_gestures,
@@ -92,18 +92,22 @@ impl SelectionHandler for BabydraState {
             return;
         }
         tracing::info!("Serving clipboard paste request for MIME '{mime_type}'");
-        match services::system::clipboard::wait_and_read_current(
-            &mime_type,
-            Duration::from_millis(500),
-        ) {
-            Some(data) => {
-                tracing::info!("Writing {} clipboard bytes to paste request", data.len());
+        let Some(data) = services::system::clipboard::read_current_for(&mime_type) else {
+            tracing::warn!("No cached clipboard data for MIME '{mime_type}'");
+            return;
+        };
+
+        tracing::info!("Writing {} clipboard bytes to paste request", data.len());
+        if let Err(err) = std::thread::Builder::new()
+            .name("babydrade-clipboard-paste".to_string())
+            .spawn(move || {
                 let mut file = std::fs::File::from(fd);
                 if let Err(err) = file.write_all(&data) {
                     tracing::warn!("Failed to serve clipboard selection: {err}");
                 }
-            }
-            None => tracing::warn!("No cached clipboard data for MIME '{mime_type}'"),
+            })
+        {
+            tracing::warn!("Cannot spawn clipboard paste writer: {err}");
         }
     }
 }

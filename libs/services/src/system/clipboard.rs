@@ -7,8 +7,7 @@
 use std::{
     fs,
     path::PathBuf,
-    thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use serde::{Deserialize, Serialize};
@@ -121,28 +120,20 @@ pub fn read_current() -> Option<(String, Vec<u8>)> {
     Some((meta.mime, data))
 }
 
-/// Waits briefly for the asynchronous selection capture to finish and then
-/// reads the cached bytes for `mime_type`.
-pub fn wait_and_read_current(mime_type: &str, timeout: Duration) -> Option<Vec<u8>> {
-    let deadline = std::time::Instant::now() + timeout;
-    loop {
-        if let Some((mime, data)) = read_current() {
-            let cached_text =
-                mime.starts_with("text/") || matches!(mime.as_str(), "UTF8_STRING" | "STRING");
-            let request_text =
-                mime_type.starts_with("text/") || matches!(mime_type, "UTF8_STRING" | "STRING");
-            // Text MIME names differ between GTK/Qt/XWayland. Any text request
-            // can be satisfied by our single cached text representation.
-            if mime == mime_type || (cached_text && request_text) {
-                return Some(data);
-            }
-        }
-        if std::time::Instant::now() >= deadline {
-            // Last resort: if we cached something, serve it rather than
-            // leaving the pasting app with an empty selection.
-            return read_current().map(|(_, data)| data);
-        }
-        thread::sleep(Duration::from_millis(5));
+/// Reads the cached bytes for `mime_type` without blocking. Text MIME names
+/// differ between GTK/Qt/XWayland, so any text request is satisfied by our
+/// single cached text representation. Binary types (e.g. `image/png`) must
+/// match exactly.
+pub fn read_current_for(mime_type: &str) -> Option<Vec<u8>> {
+    let (mime, data) = read_current()?;
+    let cached_text =
+        mime.starts_with("text/") || matches!(mime.as_str(), "UTF8_STRING" | "STRING");
+    let request_text =
+        mime_type.starts_with("text/") || matches!(mime_type, "UTF8_STRING" | "STRING");
+    if mime == mime_type || (cached_text && request_text) {
+        Some(data)
+    } else {
+        None
     }
 }
 

@@ -22,15 +22,25 @@ pub(crate) fn copy_to_clipboard(state: &EditorState, window: &gtk4::ApplicationW
                 .stdin(std::process::Stdio::piped())
                 .spawn();
 
-            if let Ok(mut c) = child {
-                if let Some(mut stdin) = c.stdin.take() {
-                    let _ = stdin.write_all(&png_bytes);
-                }
-                if let Ok(s) = c.wait() {
-                    if s.success() {
-                        notify_copied();
-                        return true;
+            match child {
+                Ok(mut c) => {
+                    if let Some(mut stdin) = c.stdin.take() {
+                        if let Err(err) = stdin.write_all(&png_bytes) {
+                            tracing::warn!("[screenshot] cannot feed wl-copy: {err}");
+                        }
                     }
+                    match c.wait() {
+                        Ok(status) if status.success() => {
+                            notify_copied();
+                            return true;
+                        }
+                        Ok(status) => tracing::warn!("[screenshot] wl-copy exited: {status}"),
+                        Err(err) => tracing::warn!("[screenshot] wl-copy wait failed: {err}"),
+                    }
+                }
+                Err(err) => {
+                    // wl-clipboard may be missing; fall back to GTK's clipboard.
+                    tracing::warn!("[screenshot] cannot start wl-copy: {err}");
                 }
             }
         }
