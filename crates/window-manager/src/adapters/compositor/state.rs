@@ -35,6 +35,8 @@ mod active_window;
 mod blur;
 mod clipboard;
 mod hit_test;
+
+pub(crate) use clipboard::ClipboardState;
 mod input_context;
 pub(crate) mod launcher;
 mod switcher;
@@ -50,6 +52,9 @@ pub(crate) struct CalloopData {
 }
 
 pub(crate) struct BabydraState {
+    /// Clipboard capture pipeline (MIME queues owned by the component).
+    pub(crate) clipboard: ClipboardState,
+
     pub(crate) start_time: Instant,
     pub(crate) socket_name: OsString,
     pub(crate) display_handle: DisplayHandle,
@@ -70,11 +75,10 @@ pub(crate) struct BabydraState {
     pub(crate) popups: PopupManager,
     pub(crate) seat: Seat<BabydraState>,
 
-    /// MIME types of a client selection that still needs to be cached.
-    pub(crate) clipboard_pending: Option<Vec<String>>,
-    /// MIME types of a capture currently running in a background thread.
-    pub(crate) clipboard_capture: Option<Vec<String>>,
     /// Channel used by the capture thread to hand ownership back to us.
+    ///
+    /// Compatibility field: the composition root installs this directly, so it
+    /// stays on the facade and is forwarded to `ClipboardState` when needed.
     pub(crate) clipboard_sender:
         Option<smithay::reexports::calloop::channel::Sender<Option<String>>>,
 
@@ -140,6 +144,7 @@ impl BabydraState {
         let socket_name = Self::init_wayland_listener(display, event_loop);
 
         Self {
+            clipboard: ClipboardState::default(),
             start_time: Instant::now(),
             socket_name,
             display_handle,
@@ -157,8 +162,6 @@ impl BabydraState {
             data_device_state,
             popups: PopupManager::default(),
             seat,
-            clipboard_pending: None,
-            clipboard_capture: None,
             clipboard_sender: None,
             move_state: None,
             resize_state: None,
@@ -183,6 +186,26 @@ impl BabydraState {
             load_gesture_policy,
             shortcuts,
         }
+    }
+
+    /// Records that a client installed a new selection.
+    pub(crate) fn note_client_selection(&mut self, mimes: Vec<String>) {
+        self.clipboard.note_client_selection(mimes);
+    }
+
+    /// Requests the pending client selection and caches it on a background thread.
+    pub(crate) fn update_clipboard(&mut self) {
+        self.clipboard
+            .update_clipboard(&self.seat, self.clipboard_sender.clone());
+    }
+
+    /// Takes ownership of an already cached clipboard selection.
+    pub(crate) fn complete_clipboard_capture(&mut self, cached_mime: Option<String>) {
+        self.clipboard.complete_clipboard_capture(
+            cached_mime,
+            &self.seat,
+            &self.display_handle,
+        );
     }
 
     /// Reloads input device configuration from `~/.babydra/configs/input.toml`.

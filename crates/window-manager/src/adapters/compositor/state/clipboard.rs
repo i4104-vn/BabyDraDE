@@ -12,35 +12,55 @@ use std::{
 };
 
 use smithay::{
-    reexports::calloop::channel::Sender,
+    input::Seat,
+    reexports::{
+        calloop::channel::Sender,
+        wayland_server::DisplayHandle,
+    },
     wayland::selection::data_device::{
         request_data_device_client_selection, set_data_device_selection,
     },
 };
 use tracing::{info, warn};
 
-use super::BabydraState;
-
+use crate::adapters::compositor::BabydraState;
 use crate::application::clipboard::preferred_mime;
 
-impl BabydraState {
+/// State owned by the clipboard capture pipeline.
+///
+/// The capture completion sender remains a facade field because the composition
+/// root (outside this adapter crate) installs it directly; it is passed in as a
+/// narrow argument when a capture starts.
+#[derive(Default)]
+pub(crate) struct ClipboardState {
+    /// MIME types of a client selection that still needs to be cached.
+    pending: Option<Vec<String>>,
+    /// MIME types of a capture currently running in a background thread.
+    capture: Option<Vec<String>>,
+}
+
+impl ClipboardState {
     /// Records that a client installed a new selection. The actual capture is
     /// deferred because Smithay stores the client source *after* calling
     /// `SelectionHandler::new_selection`.
     pub(crate) fn note_client_selection(&mut self, mimes: Vec<String>) {
         if !mimes.is_empty() {
-            self.clipboard_pending = Some(mimes);
+            self.pending = Some(mimes);
         }
     }
 
     /// Requests the pending client selection and caches it on a background
     /// thread. Called once per frame from both backends.
-    pub(crate) fn update_clipboard(&mut self) {
+    pub(crate) fn update_clipboard(
+        &mut self,
+        seat: &Seat<BabydraState>,
+        sender: Option<Sender<Option<String>>>,
+    ) {
         // Wait for the previous capture to finish before touching the source.
-        if self.clipboard_capture.is_some() {
+        if self.capture.is_some() {
             return;
         }
-        let Some(mimes) = self.clipboard_pending.take() else {
+        let Some(mimes) = self.pending.take() else {
             return;
         };
         let Some(mime) = preferred_mime(&mimes) else {
@@ -56,12 +76,11 @@ impl BabydraState {
         };
         let fd: OwnedFd = writer.into();
 
-        if let Err(err) = request_data_device_client_selection(&self.seat, mime.clone(), fd) {
+        if let Err(err) = request_data_device_client_selection(seat, mime.clone(), fd) {
             warn!("Failed to request clipboard data for '{mime}': {err:?}");
             return;
         }
 
-        let sender: Option<Sender<Option<String>>> = self.clipboard_sender.clone();
         let capture_mime = mime.clone();
         let capture_mimes = mimes.clone();
         std::thread::Builder::new()
@@ -103,14 +122,19 @@ impl BabydraState {
             })
             .ok();
 
-        self.clipboard_capture = Some(mimes);
+        self.capture = Some(mimes);
     }
 
     /// Called from the calloop channel once the data has been cached. Now it
     /// is safe to replace the client source: `cancelled` cannot destroy data
     /// we already have.
-    pub(crate) fn complete_clipboard_capture(&mut self, cached_mime: Option<String>) {
-        if self.clipboard_capture.take().is_none() {
+    pub(crate) fn complete_clipboard_capture(
+        &mut self,
+        cached_mime: Option<String>,
+        seat: &Seat<BabydraState>,
+        display_handle: &DisplayHandle,
+    ) {
+        if self.capture.take().is_none() {
             return;
         }
         let Some(cached_mime) = cached_mime else {
@@ -137,6 +161,6 @@ impl BabydraState {
         }
 
         info!("Owning clipboard selection with MIMEs: {:?}", offered);
-        set_data_device_selection(&self.display_handle, &self.seat, offered, ());
+        set_data_device_selection(display_handle, seat, offered, ());
     }
 }
