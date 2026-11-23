@@ -3,89 +3,15 @@
 pub(crate) mod bootstrap;
 pub(crate) mod commands;
 pub(crate) mod input_method;
+pub(crate) mod runtime;
+pub(crate) mod wiring;
 
 use std::error::Error;
-use std::sync::Arc;
-
-use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
-use tracing::info;
-
-use crate::{
-    adapters::compositor::{BabydraState, CalloopData},
-    application::{autostart, shortcuts::ShortcutService},
-    infrastructure::{
-        backends,
-        config::{gesture_policy, keymap as config},
-        process::{spawn_detached, ProcessLauncher},
-    },
-};
 
 pub(crate) fn run() -> Result<(), Box<dyn Error>> {
+    // Bootstrap first: the runtime dir must exist before any socket is made,
+    // and wiring must detect a host display before we export our own socket.
     bootstrap::ensure_runtime_dir();
-
-    // Composition root: inject concrete config and process adapters into the
-    // shortcut use case, then start its hot-reload watcher.
-    let shortcuts = Arc::new(ShortcutService::new(config::load, spawn_detached));
-    config::spawn_watcher(shortcuts.shared().clone());
-
-    // Capture the *host* display before exporting our own WAYLAND_DISPLAY,
-    // otherwise the backend would always think it is nested.
-    let host_has_display = std::env::var_os("WAYLAND_DISPLAY").is_some()
-        || std::env::var_os("WAYLAND_SOCKET").is_some()
-        || std::env::var_os("DISPLAY").is_some();
-
-    let mut event_loop: EventLoop<'_, CalloopData> = EventLoop::try_new()?;
-    let display: Display<BabydraState> = Display::new()?;
-    let display_handle = display.handle();
-    let state = BabydraState::new(&mut event_loop, display, gesture_policy, shortcuts.clone());
-
-    // Toolkit hints must be visible to GTK, but WAYLAND_DISPLAY must still
-    // point at the host session here (if any) until the backend is chosen.
-    bootstrap::export_toolkit_env();
-    bootstrap::init_gtk();
-    services::config::ensure_babydra_dirs();
-
-    let mut data = CalloopData {
-        state,
-        display_handle,
-    };
-
-    let (clipboard_tx, clipboard_rx) =
-        smithay::reexports::calloop::channel::channel::<Option<String>>();
-    data.state.clipboard_sender = Some(clipboard_tx);
-    event_loop
-        .handle()
-        .insert_source(clipboard_rx, |event, _, data| {
-            if let smithay::reexports::calloop::channel::Event::Msg(mime) = event {
-                data.state.complete_clipboard_capture(mime);
-            }
-        })
-        .expect("failed to register clipboard completion channel");
-
-    backends::init(&mut event_loop, &mut data, host_has_display)?;
-
-    // Only now publish our own socket; GTK and the backend already started.
-    bootstrap::export_wayland_display(&data.state.socket_name);
-
-    info!(
-        "BabyDraDE is running. Wayland socket: {}",
-        data.state.socket_name.to_string_lossy()
-    );
-
-    let autostart_children = autostart::start(
-        &services::config::load_autostart_config().commands,
-        &ProcessLauncher,
-        data.state.socket_name.as_os_str(),
-    );
-
-    let run_res = event_loop.run(None, &mut data, |_| {});
-
-    info!("BabyDraDE compositor stopping, terminating autostart processes...");
-    for mut child in autostart_children {
-        let _ = child.kill();
-        let _ = child.wait();
-    }
-
-    run_res?;
-    Ok(())
+    let state = wiring::build_state()?;
+    runtime::run_loop(state)
 }
