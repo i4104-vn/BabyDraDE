@@ -4,8 +4,9 @@ pub(crate) mod gestures;
 pub(crate) mod scroll;
 pub(crate) mod swipe;
 
-pub(crate) use crate::infrastructure::config::touchpad as config;
-pub(crate) use config::{handle_device_added, handle_device_removed};
+pub(crate) use crate::infrastructure::config::touchpad::{
+    handle_device_added, handle_device_removed,
+};
 pub(crate) use gestures::{
     handle_hold_begin, handle_hold_end, handle_pinch_begin, handle_pinch_end, handle_pinch_update,
 };
