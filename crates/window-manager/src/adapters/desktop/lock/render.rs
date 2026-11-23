@@ -6,12 +6,13 @@ mod wallpaper;
 mod widgets;
 
 pub(crate) use transition::{reverse_lock_transition, LockTransition};
-// Keep the previously public helper paths reachable even though the window
-// coordinator only needs a subset of them.
-#[allow(unused_imports)]
 pub(crate) use wallpaper::{build_avatar_widget, build_wallpaper_img, capture_transition_images};
-#[allow(unused_imports)]
 pub(crate) use widgets::{build_clock_labels, build_primary_card, PrimaryCard};
+
+// Keep the helper re-exports live without lint suppression: their call sites
+// live outside this module, so a plain `use` would look unused here.
+const _: fn(i32) -> gtk4::Widget = build_avatar_widget;
+const _: Option<PrimaryCard> = None;
 
 use auth_ui::setup_auth_handler;
 use gtk4::prelude::*;
