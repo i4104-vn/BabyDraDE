@@ -23,7 +23,8 @@ impl Rect {
     }
 }
 
-/// Vẽ badge app bo góc, gắn sát góc dưới-trái của preview, không có padding thừa.
+/// Draws a rounded app badge snugly in the bottom-left corner of the preview,
+/// without extra padding.
 pub(crate) fn draw_app_badge(
     context: &Context,
     entry: &AltTabEntry,
@@ -55,7 +56,7 @@ pub(crate) fn draw_app_badge(
         }
     }
 
-    // Fallback: chữ cái đơn sắc bo góc
+    // Fallback: a rounded, single-colour initial letter.
     let corner = size * 0.25;
     let color = app_color(&entry.app_name);
 

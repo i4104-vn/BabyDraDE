@@ -59,13 +59,13 @@ impl BabydraState {
             switcher.selected_index = next.rem_euclid(switcher.entries.len() as i64) as usize;
 
             if entries_changed {
-                // Danh sách entry đã đổi (có cửa sổ đóng/mở): căn lại để
-                // tránh cuộn tới một item không còn tồn tại.
+                // The entry list changed (a window opened or closed): snap the
+                // scroll position so it cannot land on an item that is gone.
                 switcher.scroll.snap_to(switcher.selected_index as f64);
                 switcher.highlight.snap_to(switcher.selected_index as f64);
             } else {
-                // Cộng dồn vào đích thay vì vị trí hiện tại, nhờ vậy bấm Tab
-                // liên tiếp không bị nhảy lùi về đầu bước trước.
+                // Accumulate onto the target instead of the current position,
+                // so repeated Tab presses do not jump back to the previous step.
                 let (target, wrapped) =
                     step_target(switcher.scroll.target(), direction, switcher.entries.len());
                 // While Tab is held the backend sends repeated presses. Use a

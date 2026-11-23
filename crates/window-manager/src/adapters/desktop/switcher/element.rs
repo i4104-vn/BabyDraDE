@@ -35,9 +35,9 @@ type RenderKey = (Instant, usize, Option<usize>, usize, u64, u64, u64, u64);
 #[derive(Default)]
 pub(crate) struct SwitcherOverlay {
     fg_buffer: Option<MemoryRenderBuffer>,
-    /// Vùng vật lý mà `fg_buffer` bao phủ: `(x, y, width, height)`.
-    /// Chỉ chứa dock thay vì toàn màn hình, nên mỗi frame animation chỉ phải
-    /// cấp phát và copy vài trăm KB thay vì toàn bộ framebuffer.
+    /// Physical region covered by `fg_buffer`: `(x, y, width, height)`.
+    /// It only holds the dock rather than the whole screen, so each animation
+    /// frame allocates and copies a few hundred KB instead of the full framebuffer.
     fg_region: Option<(i32, i32, i32, i32)>,
     last_rendered: Option<RenderKey>,
     backdrop_buffer: Option<MemoryRenderBuffer>,
