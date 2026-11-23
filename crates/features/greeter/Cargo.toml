@@ -1,0 +1,25 @@
+[package]
+name = "babydra-greeter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "BabyDraDE greetd login screen"
+
+[[bin]]
+name = "babydra-greeter"
+path = "src/main.rs"
+
+[dependencies]
+gtk4 = { version = "0.11" }
+gtk4-layer-shell = "0.8"
+glib = "0.22"
+chrono = "0.4"
+greetd_ipc = { version = "0.10", features = ["codec"] }
+serde_json = "1.0"
+services = { path = "../../../libs/services" }
+ui-kit = { path = "../../../libs/ui-kit" }
+tracing.workspace = true
+
+[lints]
+workspace = true

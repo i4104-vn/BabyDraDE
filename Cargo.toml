@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/window-manager",
     "crates/features/desktop",
+    "crates/features/greeter",
     "crates/features/topbar",
     "libs/animation",
     "libs/animation-gtk",
@@ -13,6 +14,7 @@ members = [
 default-members = [
     "crates/window-manager",
     "crates/features/desktop",
+    "crates/features/greeter",
     "crates/features/topbar",
     "libs/animation",
     "libs/animation-gtk",

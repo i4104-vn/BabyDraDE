@@ -34,6 +34,12 @@ documented in [docs/configuration.md](docs/configuration.md).
 so normal copy/paste works as on any desktop. The compositor caches every
 selection, so copied text survives the source app closing.
 
+The greetd login screen lives in `crates/features/greeter` and is built as
+`babydra-greeter`. `packaging/systemd/greetd.service` runs greetd at boot (as
+the display manager); after a successful login the greeter starts
+`babydra-window-manager`, so the compositor comes up immediately after login.
+Override the session with `BABYDRADE_GREETER_SESSION` if needed.
+
 `start.sh` parses the command line and then runs the numbered steps in
 `scripts/` in order: locale, GTK theme sync, orientation, dependency check,
 session setup, release build + system install, and finally launch. The

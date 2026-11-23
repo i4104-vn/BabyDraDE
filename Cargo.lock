@@ -132,6 +132,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "babydra-greeter"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "glib",
+ "greetd_ipc",
+ "gtk4",
+ "gtk4-layer-shell",
+ "serde_json",
+ "services",
+ "tracing",
+ "ui-kit",
+]
+
+[[package]]
 name = "babydra-topbar"
 version = "0.1.0"
 dependencies = [
@@ -956,6 +971,17 @@ dependencies = [
  "glib-sys",
  "libc",
  "system-deps 9.0.1",
+]
+
+[[package]]
+name = "greetd_ipc"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "700d2e5bfc91a042d1d531b46de245085c6a179debedf149aa97c7ca71492078"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

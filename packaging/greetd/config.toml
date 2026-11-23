@@ -1,0 +1,11 @@
+# greetd configuration used by the BabyDraDE greeter service.
+# After successful authentication the greeter calls StartSession with
+# `babydra-window-manager`, so the compositor starts immediately after login.
+# BABYDRADE_GREETER_SESSION can override that command if needed.
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "cage -s -- /usr/local/bin/babydra-greeter"
+user = "greeter"
