@@ -3,10 +3,26 @@
 //! Adapters and infrastructure implement these; the application layer itself
 //! only ever sees the plain data and function types declared here.
 
+use std::ffi::OsStr;
+
 use crate::domain::shortcuts::Shortcut;
 
 /// Port that launches a configured command (implemented by infrastructure).
 pub(crate) type LaunchCommand = fn(String);
+
+/// Port that starts one autostart command on the compositor's Wayland display.
+///
+/// The handle returned on success is kept by the caller so it can be
+/// terminated when the compositor exits. The application layer does not need
+/// to know what kind of handle the infrastructure uses.
+pub(crate) trait AutostartLauncher {
+    /// Handle to a successfully started process.
+    type Child;
+
+    /// Run `command` through the infrastructure with `WAYLAND_DISPLAY` set to
+    /// `wayland_display`.
+    fn spawn(&self, command: &str, wayland_display: &OsStr) -> Result<Self::Child, String>;
+}
 
 /// Port that loads the shortcut table (implemented by the config adapter).
 pub(crate) type LoadShortcuts = fn() -> Vec<Shortcut>;

@@ -8,15 +8,15 @@ use std::error::Error;
 use std::sync::Arc;
 
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::{
     adapters::compositor::{BabydraState, CalloopData},
-    application::shortcuts::ShortcutService,
+    application::{autostart, shortcuts::ShortcutService},
     infrastructure::{
         backends,
         config::{gesture_policy, keymap as config},
-        process::spawn_detached,
+        process::{spawn_detached, ProcessLauncher},
     },
 };
 
@@ -72,23 +72,11 @@ pub(crate) fn run() -> Result<(), Box<dyn Error>> {
         data.state.socket_name.to_string_lossy()
     );
 
-    let mut autostart_children = Vec::new();
-    for cmd_str in &services::config::load_autostart_config().commands {
-        let trimmed = cmd_str.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
-        }
-        info!("Spawning autostart command: {trimmed}");
-        match std::process::Command::new("sh")
-            .arg("-c")
-            .arg(trimmed)
-            .env("WAYLAND_DISPLAY", &data.state.socket_name)
-            .spawn()
-        {
-            Ok(child) => autostart_children.push(child),
-            Err(err) => warn!("Failed to spawn autostart command '{trimmed}': {err}"),
-        }
-    }
+    let autostart_children = autostart::start(
+        &services::config::load_autostart_config().commands,
+        &ProcessLauncher,
+        data.state.socket_name.as_os_str(),
+    );
 
     let run_res = event_loop.run(None, &mut data, |_| {});
 

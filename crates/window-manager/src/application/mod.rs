@@ -5,6 +5,7 @@
 //! `domain` and on the ports declared in [`ports`]; all framework effects are
 //! injected by the composition root.
 
+pub(crate) mod autostart;
 pub(crate) mod clipboard;
 pub(crate) mod gestures;
 pub(crate) mod ports;
