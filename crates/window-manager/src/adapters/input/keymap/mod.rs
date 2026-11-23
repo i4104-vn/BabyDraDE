@@ -6,8 +6,9 @@
 //! can never see key presses; [`crate::adapters::input::keyboard`] calls the
 //! matcher from this module for every key press.
 
-pub(crate) mod config;
 pub(crate) mod matcher;
+
+pub(crate) use crate::infrastructure::config::keymap as config;
 
 use std::sync::{Arc, RwLock};
 

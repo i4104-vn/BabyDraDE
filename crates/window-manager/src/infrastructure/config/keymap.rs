@@ -1,12 +1,12 @@
 //! Window-manager-owned keymap configuration.
 
-use super::SharedShortcuts;
+use crate::adapters::input::keymap::SharedShortcuts;
 use crate::domain::shortcuts::Shortcut;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
 
-const DEFAULT_KEYMAP: &str = include_str!("keymap.toml");
+const DEFAULT_KEYMAP: &str = include_str!("../../../resources/keymap.toml");
 const WATCH_INTERVAL: Duration = Duration::from_secs(2);
 
 #[derive(Deserialize, Default)]
