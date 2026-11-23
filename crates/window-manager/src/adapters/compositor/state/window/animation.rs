@@ -36,6 +36,7 @@ pub(crate) enum WindowAnimation {
     },
 }
 
+use crate::domain::geometry::{Point as PurePoint, Rectangle as PureRectangle, Size as PureSize};
 use crate::domain::WindowVisualState;
 
 /// Checks if a window is leaving the screen (closing or minimizing) and should
@@ -133,6 +134,15 @@ fn lerp_rect(
     )
 }
 
+/// Converts a Smithay render rectangle to the pure domain representation at
+/// the adapter boundary.
+fn to_pure_rect(rect: Rectangle<f64, Logical>) -> PureRectangle<f64> {
+    PureRectangle::new(
+        PurePoint::from((rect.loc.x, rect.loc.y)),
+        PureSize::from((rect.size.w, rect.size.h)),
+    )
+}
+
 /// Computes the current render parameters for a window transition.
 pub(crate) fn window_animation_frame(window: &Window) -> WindowVisualState {
     let guard = lock_window_state(window);
@@ -183,7 +193,7 @@ pub(crate) fn window_animation_frame(window: &Window) -> WindowVisualState {
                 active: true,
                 scale_factor: 1.0,
                 alpha_factor: 1.0,
-                target_rect: Some(lerp_rect(geometry.from, geometry.to, p)),
+                target_rect: Some(to_pure_rect(lerp_rect(geometry.from, geometry.to, p))),
             }
         }
         None => WindowVisualState::idle(),

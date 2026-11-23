@@ -1,19 +1,20 @@
 //! Titlebar geometry and hit testing (pure rules).
 //!
-//! Geometry primitives from `smithay::utils` are used as value objects; no
-//! window handle, protocol state or I/O is involved. The adapter extracts the
-//! frame facts into [`FrameInput`] before calling [`hit_test`], so renderer and
-//! input path can never drift apart.
+//! Geometry is expressed with the framework-free value types in
+//! [`crate::domain::geometry`]; no window handle, protocol state or I/O is
+//! involved. The adapter extracts the frame facts into [`FrameInput`] before
+//! calling [`hit_test`], so renderer and input path can never drift apart.
 
 use common::{Action, CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS, TITLEBAR_HEIGHT};
-use smithay::utils::{Logical, Point};
+
+use crate::domain::geometry::Point;
 
 /// Protocol-independent facts about a window frame.
 ///
 /// The adapter extracts these from a window so hit testing can stay a pure rule.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct FrameInput {
-    pub(crate) location: Point<i32, Logical>,
+    pub(crate) location: Point<i32>,
     pub(crate) width: f64,
     pub(crate) maximized: bool,
     pub(crate) server_side_decoration: bool,
@@ -31,7 +32,7 @@ pub(crate) struct FrameInput {
 ///
 /// The action under the pointer, or `None` when the point is outside a frame
 /// that can be hit tested.
-pub(crate) fn hit_test(frame: FrameInput, point: Point<f64, Logical>) -> Option<Action> {
+pub(crate) fn hit_test(frame: FrameInput, point: Point<f64>) -> Option<Action> {
     if !frame.server_side_decoration || frame.fullscreen {
         return None;
     }
@@ -48,7 +49,7 @@ pub(crate) fn hit_test(frame: FrameInput, point: Point<f64, Logical>) -> Option<
 pub(crate) struct TitlebarButton {
     pub(crate) action: Action,
     /// Center in titlebar-local logical coordinates.
-    pub(crate) center: Point<f64, Logical>,
+    pub(crate) center: Point<f64>,
 }
 
 /// Geometry of the compositor-owned titlebar for a given window width.
@@ -107,7 +108,7 @@ impl TitlebarLayout {
     /// # Returns
     ///
     /// The button centre, or the origin when the action has no button.
-    pub(crate) fn button(&self, action: Action) -> Point<f64, Logical> {
+    pub(crate) fn button(&self, action: Action) -> Point<f64> {
         self.buttons
             .iter()
             .find(|button| button.action == action)
@@ -125,7 +126,7 @@ impl TitlebarLayout {
     /// # Returns
     ///
     /// The Y coordinate of the frame's top edge.
-    pub(crate) fn frame_y(&self, location: Point<i32, Logical>, maximized: bool) -> f64 {
+    pub(crate) fn frame_y(&self, location: Point<i32>, maximized: bool) -> f64 {
         if maximized {
             location.y as f64
         } else {
@@ -148,10 +149,10 @@ impl TitlebarLayout {
     /// or `None` outside the frame.
     pub(crate) fn hit_test(
         &self,
-        location: Point<i32, Logical>,
+        location: Point<i32>,
         width: f64,
         maximized: bool,
-        point: Point<f64, Logical>,
+        point: Point<f64>,
     ) -> Option<Action> {
         let (y_min, y_max) = if maximized {
             (location.y as f64, location.y as f64 + self.height as f64)
@@ -179,10 +180,10 @@ impl TitlebarLayout {
 
     fn outside_rounded_corner(
         &self,
-        location: Point<i32, Logical>,
+        location: Point<i32>,
         width: f64,
         y_min: f64,
-        point: Point<f64, Logical>,
+        point: Point<f64>,
     ) -> bool {
         let center_x = if point.x < location.x as f64 + self.corner_radius {
             location.x as f64 + self.corner_radius

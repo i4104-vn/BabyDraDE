@@ -8,6 +8,7 @@ use smithay::{
     utils::{Logical, Point},
 };
 
+use crate::domain::geometry::Point as PurePoint;
 use crate::domain::titlebar::{self, FrameInput};
 
 /// Builds frame facts from a window's current protocol state.
@@ -23,7 +24,7 @@ use crate::domain::titlebar::{self, FrameInput};
 pub(crate) fn frame_input(window: &Window, location: Point<i32, Logical>) -> Option<FrameInput> {
     let state = window.toplevel()?.current_state();
     Some(FrameInput {
-        location,
+        location: PurePoint::from((location.x, location.y)),
         width: window.geometry().size.w as f64,
         maximized: state.states.contains(State::Maximized),
         server_side_decoration: state.decoration_mode == Some(Mode::ServerSide),
@@ -47,5 +48,8 @@ pub(crate) fn hit_test(
     location: Point<i32, Logical>,
     point: Point<f64, Logical>,
 ) -> Option<Action> {
-    titlebar::hit_test(frame_input(window, location)?, point)
+    titlebar::hit_test(
+        frame_input(window, location)?,
+        PurePoint::from((point.x, point.y)),
+    )
 }

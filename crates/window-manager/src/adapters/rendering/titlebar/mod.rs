@@ -19,10 +19,16 @@ use smithay::{
 };
 
 use super::elements::types::CustomRenderElements;
+use crate::domain::geometry::Point as PurePoint;
 use crate::domain::TitlebarLayout;
 
 pub(crate) use common::constants::{CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS, TITLEBAR_HEIGHT};
 use common::Action;
+
+/// Converts a Smithay location to the pure point expected by the layout rule.
+fn to_pure_location(location: Point<i32, Logical>) -> PurePoint<i32> {
+    PurePoint::from((location.x, location.y))
+}
 pub(crate) fn render(
     renderer: &mut GlowRenderer,
     window: &Window,
@@ -117,7 +123,7 @@ pub(crate) fn render(
         let max_x = layout.button(Action::Maximize).x;
         let min_x = layout.button(Action::Minimize).x;
 
-        let frame_y = layout.frame_y(location, maximized);
+        let frame_y = layout.frame_y(to_pure_location(location), maximized);
         let local_pointer =
             Point::<f64, Logical>::from((pointer.x - location.x as f64, pointer.y - frame_y));
 
@@ -232,7 +238,8 @@ pub(crate) fn render(
         })
         .ok()?;
     let titlebar_y =
-        TitlebarLayout::new(width as f64 / scale.x, maximized).frame_y(location, maximized) as i32;
+        TitlebarLayout::new(width as f64 / scale.x, maximized)
+            .frame_y(to_pure_location(location), maximized) as i32;
     let titlebar_loc = Point::<i32, Logical>::from((location.x, titlebar_y));
     let titlebar_phys: Point<i32, smithay::utils::Physical> =
         titlebar_loc.to_physical_precise_round(scale);

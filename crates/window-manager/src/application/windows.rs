@@ -1,12 +1,13 @@
 //! Use case: pure window layout policies.
 //!
-//! Smithay geometry values are used as plain data. All protocol side effects
-//! (mapping, configuring, focusing) stay in the compositor adapter.
+//! Geometry is pure domain data expressed with [`crate::domain::geometry`]
+//! value types. All protocol side effects (mapping, configuring, focusing)
+//! stay in the compositor adapter.
 
-use smithay::utils::{Logical, Point, Rectangle, Size};
+use crate::domain::geometry::{Point, Rectangle, Size};
 
 /// Returns the fallback position for a window with no saved geometry.
-pub(crate) fn default_position() -> Point<i32, Logical> {
+pub(crate) fn default_position() -> Point<i32> {
     Point::from((48, 48))
 }
 
@@ -21,9 +22,9 @@ pub(crate) fn default_position() -> Point<i32, Logical> {
 ///
 /// The rectangle the window should occupy.
 pub(crate) fn maximize_target(
-    output: Rectangle<i32, Logical>,
-    non_exclusive: Rectangle<i32, Logical>,
-) -> Rectangle<i32, Logical> {
+    output: Rectangle<i32>,
+    non_exclusive: Rectangle<i32>,
+) -> Rectangle<i32> {
     Rectangle::new(output.loc + non_exclusive.loc, non_exclusive.size)
 }
 
@@ -38,9 +39,9 @@ pub(crate) fn maximize_target(
 ///
 /// The location and size to restore.
 pub(crate) fn restore_target(
-    saved: Option<(Point<i32, Logical>, Size<i32, Logical>)>,
-    current_size: Size<i32, Logical>,
-) -> (Point<i32, Logical>, Size<i32, Logical>) {
+    saved: Option<(Point<i32>, Size<i32>)>,
+    current_size: Size<i32>,
+) -> (Point<i32>, Size<i32>) {
     saved.unwrap_or((default_position(), current_size))
 }
 

@@ -13,10 +13,19 @@ use smithay::{
 use crate::adapters::rendering::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::adapters::rendering::blur::{BlurEngine, BlurRenderElement};
 use crate::adapters::rendering::titlebar;
+use crate::domain::geometry::Rectangle as PureRectangle;
 use crate::domain::WindowVisualState;
 use common::TITLEBAR_HEIGHT;
 
 use super::types::{CustomRenderElements, WindowBlurId};
+
+/// Converts a pure domain rectangle to Smithay geometry at the render boundary.
+fn to_smithay_rect(rect: PureRectangle<f64>) -> Rectangle<f64, Logical> {
+    Rectangle::new(
+        Point::from((rect.loc.x, rect.loc.y)),
+        smithay::utils::Size::from((rect.size.w, rect.size.h)),
+    )
+}
 
 /// Full-bleed windows must retain the application's own edge treatment.
 fn corner_radius_for_window(window: &Window, floating_radius: f32) -> f32 {
@@ -80,7 +89,7 @@ pub(crate) fn render_window(
             WindowAnimationRenderParams {
                 scale_factor: frame.scale_factor,
                 alpha_factor: frame.alpha_factor,
-                target_rect: frame.target_rect,
+                target_rect: frame.target_rect.map(to_smithay_rect),
                 base_opacity: opacity,
                 should_blur,
                 corner_radius,
