@@ -53,27 +53,11 @@ impl SwitcherOverlay {
 
         let region = foreground::overlay_region(&layout, scale, width, height);
 
-        let animation_tick = if switcher.scroll.is_animating() {
-            switcher.scroll.frame_tick()
-        } else {
-            u64::MAX
-        };
-        let stage_tick = if switcher.stage.is_animating() {
-            switcher.stage.frame_tick()
-        } else {
-            u64::MAX
-        };
-        let highlight_tick = if switcher.highlight.is_animating() {
-            switcher.highlight.frame_tick()
-        } else {
-            u64::MAX
-        };
+        let animation_tick = switcher.scroll.cache_tick();
+        let stage_tick = switcher.stage.cache_tick();
+        let highlight_tick = switcher.highlight.cache_tick();
         let presence = switcher.presence();
-        let presence_tick = if switcher.presence.is_animating() {
-            switcher.presence.frame_tick()
-        } else {
-            u64::MAX
-        };
+        let presence_tick = switcher.presence.cache_tick();
         // Slide out to the right when closed, dock at the screen edge when open.
         let slide_x = (1.0 - presence) * common::constants::launcher::PANEL_WIDTH;
         let render_key = (

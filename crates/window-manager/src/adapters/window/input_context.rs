@@ -31,6 +31,7 @@ use smithay::{
 
 use common::Action;
 
+use crate::adapters::desktop::launcher::search::SearchText;
 use crate::application::ports::GesturePolicy;
 use crate::domain::shortcuts::Mods;
 
@@ -122,8 +123,8 @@ pub(crate) trait InputContext {
 
     // -- launcher search overlay --
     fn launcher_search_is_active(&self) -> bool;
-    fn launcher_search_input(&mut self, character: char);
-    fn launcher_search_backspace(&mut self);
+    /// Mutable query model; callers use it for caret/selection edits.
+    fn launcher_search_text_mut(&mut self) -> &mut SearchText;
     fn launcher_search_move(&mut self, delta: i32);
     /// Returns true when Escape was consumed by the search overlay.
     fn launcher_search_escape(&mut self) -> bool;

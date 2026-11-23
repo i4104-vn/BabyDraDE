@@ -1,7 +1,8 @@
 //! Dock selection, presence and hold-to-repeat state.
 
 use animation::{
-    Easing, Tween, FADE_IN_DURATION, FADE_OUT_DURATION, HOVER_DURATION, SCROLL_DURATION,
+    animation_tick, Easing, Tween, FADE_IN_DURATION, FADE_OUT_DURATION, HOVER_DURATION,
+    SCROLL_DURATION,
 };
 use common::constants::{launcher::PANEL_WIDTH, KEY_REPEAT_DELAY_MS, KEY_REPEAT_INTERVAL_MS};
 use std::time::{Duration, Instant};
@@ -272,17 +273,6 @@ impl DockState {
 
     /// Cache tick for animation frames; `u64::MAX` when all tweens rest.
     pub fn animation_tick(&self) -> u64 {
-        let ticks = [
-            self.presence
-                .is_animating()
-                .then(|| self.presence.frame_tick()),
-            self.position
-                .is_animating()
-                .then(|| self.position.frame_tick()),
-            self.highlight
-                .is_animating()
-                .then(|| self.highlight.frame_tick()),
-        ];
-        ticks.into_iter().flatten().max().unwrap_or(u64::MAX)
+        animation_tick([&self.presence, &self.position, &self.highlight])
     }
 }

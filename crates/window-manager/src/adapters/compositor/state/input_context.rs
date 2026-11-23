@@ -27,6 +27,7 @@ use smithay::{
     },
 };
 
+use crate::adapters::desktop::launcher::search::SearchText;
 use crate::adapters::window::InputContext;
 use crate::application::ports::GesturePolicy;
 use crate::domain::shortcuts::Mods;
@@ -290,12 +291,8 @@ impl InputContext for BabydraState {
         self.overlays.launcher.search_is_active()
     }
 
-    fn launcher_search_input(&mut self, character: char) {
-        self.overlays.launcher.search_input(character);
-    }
-
-    fn launcher_search_backspace(&mut self) {
-        self.overlays.launcher.search_backspace();
+    fn launcher_search_text_mut(&mut self) -> &mut SearchText {
+        self.overlays.launcher.search_text_mut()
     }
 
     fn launcher_search_move(&mut self, delta: i32) {

@@ -3,7 +3,7 @@
 //! surface per result row.
 
 use cairo::{Context, Format, ImageSurface};
-use common::constants::launcher::SEARCH_PANEL_SHADOW;
+use common::constants::launcher::SEARCH_BUFFER_PAD;
 use smithay::utils::{Buffer, Rectangle, Scale};
 
 use super::layout::SearchLayout;
@@ -16,7 +16,7 @@ pub(crate) fn panel_region(
     screen_w: i32,
     screen_h: i32,
 ) -> SearchRegion {
-    let pad = SEARCH_PANEL_SHADOW;
+    let pad = SEARCH_BUFFER_PAD;
     let x0 = ((layout.x - pad) * scale.x)
         .floor()
         .clamp(0.0, screen_w as f64) as i32;
@@ -77,8 +77,9 @@ mod tests {
             rows_w: 0.0,
         };
         let (x, y, w, h) = panel_region(&layout, Scale::from(1.0), 1920, 1080);
-        assert_eq!(x, 72);
-        assert_eq!(y, 172);
+        let pad = SEARCH_BUFFER_PAD as i32;
+        assert_eq!(x, 100 - pad);
+        assert_eq!(y, 200 - pad);
         assert!(w >= 640 && h >= 500);
         assert!(x + w <= 1920 && y + h <= 1080);
     }

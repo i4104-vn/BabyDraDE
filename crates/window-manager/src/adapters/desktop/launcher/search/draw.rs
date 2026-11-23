@@ -1,11 +1,16 @@
-//! Cairo drawing for the centered search panel. Every colour is multiplied by
-//! the overlay presence so the fly-in and the return to the dock share one
-//! continuous, jank-free fade.
+//! Cairo drawing for the flat, card-less search column.
+//!
+//! There is no panel surface: the content sits directly on the full-screen
+//! dimmer. The query input and every result element each own a slice of one
+//! master timeline, so they fade and fly in one after another from top to
+//! bottom instead of appearing as a single block.
 
+use animation::Easing;
 use cairo::{Context, FontSlant, FontWeight};
 use common::constants::launcher::{
-    HAIRLINE, PANEL_SURFACE, SEARCH_CARET_WIDTH, SEARCH_FONT_SIZE, SEARCH_HEADER_FONT_SIZE,
-    SEARCH_HEADER_HEIGHT, SEARCH_ICON_SIZE, SEARCH_PAD_X, SEARCH_ROW_HEIGHT,
+    HAIRLINE, SEARCH_CARET_SCROLL_PAD, SEARCH_CARET_WIDTH, SEARCH_ELEMENT_FLY_DISTANCE,
+    SEARCH_FONT_SIZE, SEARCH_HEADER_FONT_SIZE, SEARCH_HEADER_HEIGHT, SEARCH_ICON_SIZE,
+    SEARCH_ROW_HEIGHT, SEARCH_SELECTION_BAR,
 };
 use gtk4::gdk::prelude::GdkCairoContextExt;
 use ui_kit::drawing::{draw_text, fit_text, paint_rounded, rounded_rect, set_bold_font};
@@ -16,8 +21,8 @@ use super::{SearchCategory, SearchItem};
 
 type Color = (f64, f64, f64, f64);
 
-fn fade(color: Color, presence: f64) -> Color {
-    (color.0, color.1, color.2, color.3 * presence)
+fn fade(color: Color, alpha: f64) -> Color {
+    (color.0, color.1, color.2, color.3 * alpha)
 }
 
 fn set_regular_font(context: &Context, size: f64) {
@@ -31,13 +36,26 @@ fn centered_baseline(context: &Context, top: f64, height: f64) -> Result<f64, ca
     Ok(top + (height - (font.ascent() + font.descent())) / 2.0 + font.ascent())
 }
 
+fn element_alpha(presence: f64, progress: f64) -> f64 {
+    presence * Easing::EaseOutCubic.apply(progress)
+}
+
+fn element_dy(progress: f64) -> f64 {
+    (1.0 - Easing::EaseOutBack.apply(progress)) * SEARCH_ELEMENT_FLY_DISTANCE
+}
+
+/// GTK `TextIter` offsets count characters, not UTF-8 bytes.
+fn prefix(text: &str, characters: usize) -> String {
+    text.chars().take(characters).collect()
+}
+
 /// Draws an application icon or a small shape-based badge for files and web.
 fn draw_badge(
     context: &Context,
     item: &SearchItem,
     center_x: f64,
     center_y: f64,
-    presence: f64,
+    alpha: f64,
 ) -> Result<(), cairo::Error> {
     let size = SEARCH_ICON_SIZE;
     let x = center_x - size / 2.0;
@@ -53,7 +71,7 @@ fn draw_badge(
             context.translate(x + (size - pw * scale) / 2.0, y + (size - ph * scale) / 2.0);
             context.scale(scale, scale);
             context.set_source_pixbuf(pixbuf, 0.0, 0.0);
-            context.paint_with_alpha(presence)?;
+            context.paint_with_alpha(alpha)?;
             context.restore()?;
             return Ok(());
         }
@@ -68,8 +86,8 @@ fn draw_badge(
                 size,
                 size,
                 size * 0.24,
-                fade((0.36, 0.52, 0.92, 0.95), presence),
-                Some(fade(HAIRLINE, presence)),
+                fade((0.36, 0.52, 0.92, 0.95), alpha),
+                Some(fade(HAIRLINE, alpha)),
             )?;
             let initial = item
                 .label
@@ -85,12 +103,11 @@ fn draw_badge(
                 &initial,
                 center_x - extents.x_advance() / 2.0 - extents.x_bearing(),
                 centered_baseline(context, y, size)?,
-                fade((1.0, 1.0, 1.0, 0.95), presence),
+                fade((1.0, 1.0, 1.0, 0.95), alpha),
             )
         }
         SearchCategory::Files => {
             if item.is_dir {
-                // Folder: a tab plus a wider body.
                 paint_rounded(
                     context,
                     x + 1.0,
@@ -98,7 +115,7 @@ fn draw_badge(
                     size * 0.48,
                     size * 0.26,
                     3.0,
-                    fade((0.93, 0.70, 0.28, 0.95), presence),
+                    fade((0.93, 0.70, 0.28, 0.95), alpha),
                     None,
                 )?;
                 paint_rounded(
@@ -108,11 +125,10 @@ fn draw_badge(
                     size,
                     size * 0.62,
                     4.0,
-                    fade((0.98, 0.78, 0.36, 0.95), presence),
-                    Some(fade(HAIRLINE, presence)),
+                    fade((0.98, 0.78, 0.36, 0.95), alpha),
+                    Some(fade(HAIRLINE, alpha)),
                 )
             } else {
-                // File: a page with a folded corner.
                 paint_rounded(
                     context,
                     x + 3.0,
@@ -120,14 +136,14 @@ fn draw_badge(
                     size - 7.0,
                     size,
                     4.0,
-                    fade((0.62, 0.70, 0.82, 0.95), presence),
-                    Some(fade(HAIRLINE, presence)),
+                    fade((0.62, 0.70, 0.82, 0.95), alpha),
+                    Some(fade(HAIRLINE, alpha)),
                 )?;
                 context.move_to(x + size - 9.0, y + 1.0);
                 context.line_to(x + size - 3.0, y + 7.0);
                 context.line_to(x + size - 9.0, y + 7.0);
                 context.close_path();
-                context.set_source_rgba(1.0, 1.0, 1.0, 0.45 * presence);
+                context.set_source_rgba(1.0, 1.0, 1.0, 0.45 * alpha);
                 context.fill()
             }
         }
@@ -139,11 +155,11 @@ fn draw_badge(
                 size,
                 size,
                 size / 2.0,
-                fade((0.20, 0.60, 0.52, 0.95), presence),
-                Some(fade(HAIRLINE, presence)),
+                fade((0.20, 0.60, 0.52, 0.95), alpha),
+                Some(fade(HAIRLINE, alpha)),
             )?;
             let mid = center_y;
-            context.set_source_rgba(1.0, 1.0, 1.0, 0.75 * presence);
+            context.set_source_rgba(1.0, 1.0, 1.0, 0.75 * alpha);
             context.set_line_width(1.2);
             context.new_path();
             context.arc(center_x, mid, size * 0.34, 0.0, std::f64::consts::TAU);
@@ -162,7 +178,7 @@ fn draw_badge(
     }
 }
 
-/// Draws the whole search panel into the translated, scaled Cairo context.
+/// Draws the flat search column directly onto the dimmer.
 pub(crate) fn draw_panel(
     context: &Context,
     state: &SearchState,
@@ -172,94 +188,112 @@ pub(crate) fn draw_panel(
     if presence <= 0.001 {
         return Ok(());
     }
-
-    // Soft, layered shadow.
-    for (grow, alpha) in [(18.0, 0.05), (10.0, 0.08), (4.0, 0.12)] {
-        paint_rounded(
-            context,
-            layout.x - grow,
-            layout.y - grow + 4.0,
-            layout.width + grow * 2.0,
-            layout.height + grow * 2.0,
-            common::constants::launcher::SEARCH_PANEL_RADIUS + grow,
-            (0.0, 0.0, 0.0, alpha * presence),
-            None,
-        )?;
-    }
-
-    paint_rounded(
-        context,
-        layout.x,
-        layout.y,
-        layout.width,
-        layout.height,
-        common::constants::launcher::SEARCH_PANEL_RADIUS,
-        fade(PANEL_SURFACE, presence),
-        Some(fade(HAIRLINE, presence)),
-    )?;
-
     draw_input(context, state, layout, presence)?;
     draw_results(context, state, layout, presence)
 }
 
+/// The query row reveals first, then settles; a thin divider separates it from
+/// the results below (no filled field, no card).
 fn draw_input(
     context: &Context,
     state: &SearchState,
     layout: &SearchLayout,
     presence: f64,
 ) -> Result<(), cairo::Error> {
-    let radius = layout.input_h / 2.0;
-    paint_rounded(
-        context,
-        layout.input_x,
-        layout.input_y,
-        layout.input_w,
-        layout.input_h,
-        radius,
-        fade((1.0, 1.0, 1.0, 0.07), presence),
-        Some(fade(HAIRLINE, presence)),
-    )?;
+    let progress = state.input_progress();
+    if progress <= 0.0 {
+        return Ok(());
+    }
+    let alpha = element_alpha(presence, progress);
+    context.save()?;
+    context.translate(0.0, element_dy(progress));
 
     set_bold_font(context, SEARCH_FONT_SIZE);
     let baseline = centered_baseline(context, layout.input_y, layout.input_h)?;
-    let text_x = layout.input_x + SEARCH_PAD_X;
-    let max_width = layout.input_w - SEARCH_PAD_X * 2.0 - SEARCH_CARET_WIDTH - 4.0;
+    let text_x = layout.input_x;
 
-    if state.query().is_empty() {
+    if state.text().is_empty() {
         let hint = fit_text(
             context,
             &services::i18n::trans("launcher.search_placeholder"),
-            max_width,
+            layout.input_w,
         )?;
         draw_text(
             context,
             &hint,
             text_x,
             baseline,
-            fade((1.0, 1.0, 1.0, 0.42), presence),
+            fade((1.0, 1.0, 1.0, 0.45), alpha),
         )?;
     } else {
-        let text = fit_text(context, state.query(), max_width)?;
+        let text = state.text();
+        let caret = state.caret();
+        let cursor_advance = context.text_extents(&prefix(text, caret))?.x_advance();
+        let total_advance = context.text_extents(text)?.x_advance();
+        // Scroll only as far as needed to keep the caret on screen.
+        let scroll = (cursor_advance + SEARCH_CARET_SCROLL_PAD - layout.input_w)
+            .max(0.0)
+            .min((total_advance + SEARCH_CARET_SCROLL_PAD - layout.input_w).max(0.0));
+
+        let character_count = text.chars().count();
+        let mut offsets = Vec::with_capacity(character_count + 1);
+        for boundary in 0..=character_count {
+            let advance = context.text_extents(&prefix(text, boundary))?.x_advance();
+            offsets.push((text_x + advance - scroll, boundary));
+        }
+        state.record_caret_offsets(offsets);
+
+        context.save()?;
+        context.translate(-scroll, 0.0);
+
+        if let Some((start, end)) = state.selection() {
+            let from = text_x + context.text_extents(&prefix(text, start))?.x_advance();
+            let to = text_x + context.text_extents(&prefix(text, end))?.x_advance();
+            paint_rounded(
+                context,
+                from - 2.0,
+                layout.input_y + layout.input_h * 0.16,
+                to - from + 4.0,
+                layout.input_h * 0.68,
+                4.0,
+                (1.0, 1.0, 1.0, 0.24 * alpha),
+                None,
+            )?;
+        }
+
         draw_text(
             context,
-            &text,
+            text,
             text_x,
             baseline,
-            fade((1.0, 1.0, 1.0, 0.96), presence),
+            fade((1.0, 1.0, 1.0, 0.98), alpha),
         )?;
-        let advance = context.text_extents(&text)?.x_advance();
-        context.set_source_rgba(1.0, 1.0, 1.0, 0.85 * presence);
-        context.rectangle(
-            text_x + advance + 3.0,
-            layout.input_y + layout.input_h * 0.28,
-            SEARCH_CARET_WIDTH,
-            layout.input_h * 0.44,
-        );
-        context.fill()?;
+
+        if state.caret_visible() {
+            context.set_source_rgba(1.0, 1.0, 1.0, 0.95 * alpha);
+            context.rectangle(
+                text_x + cursor_advance,
+                layout.input_y + layout.input_h * 0.26,
+                SEARCH_CARET_WIDTH,
+                layout.input_h * 0.48,
+            );
+            context.fill()?;
+        }
+        context.restore()?;
     }
-    Ok(())
+
+    let divider_y = layout.input_y + layout.input_h + 4.0;
+    context.set_source_rgba(1.0, 1.0, 1.0, 0.16 * alpha);
+    context.set_line_width(1.0);
+    context.move_to(layout.input_x, divider_y);
+    context.line_to(layout.input_x + layout.input_w, divider_y);
+    context.stroke()?;
+
+    context.restore()
 }
 
+/// Headings and result rows share one queue: each takes its own delayed slice
+/// of the master timeline and flies up independently.
 fn draw_results(
     context: &Context,
     state: &SearchState,
@@ -268,67 +302,84 @@ fn draw_results(
 ) -> Result<(), cairo::Error> {
     let mut top = layout.rows_y;
     let mut previous: Option<SearchCategory> = None;
+    let mut element = 0usize;
 
     for (index, item) in state.items().iter().enumerate() {
         if previous != Some(item.category) {
-            set_bold_font(context, SEARCH_HEADER_FONT_SIZE);
-            draw_text(
-                context,
-                &item.category.title(),
-                layout.rows_x + 2.0,
-                top + SEARCH_HEADER_HEIGHT * 0.72,
-                fade((1.0, 1.0, 1.0, 0.45), presence),
-            )?;
+            let progress = state.row_progress(element);
+            if progress > 0.0 {
+                let alpha = element_alpha(presence, progress);
+                context.save()?;
+                context.translate(0.0, element_dy(progress));
+                set_bold_font(context, SEARCH_HEADER_FONT_SIZE);
+                draw_text(
+                    context,
+                    &item.category.title(),
+                    layout.rows_x + 2.0,
+                    top + SEARCH_HEADER_HEIGHT * 0.72,
+                    fade((1.0, 1.0, 1.0, 0.5), alpha),
+                )?;
+                context.restore()?;
+            }
+            element += 1;
             top += SEARCH_HEADER_HEIGHT;
             previous = Some(item.category);
         }
 
-        if index == state.selected() {
-            paint_rounded(
+        let progress = state.row_progress(element);
+        if progress > 0.0 {
+            let alpha = element_alpha(presence, progress);
+            context.save()?;
+            context.translate(0.0, element_dy(progress));
+
+            // Flat selection: just a short accent bar on the left edge.
+            if index == state.selected() {
+                context.set_source_rgba(1.0, 1.0, 1.0, 0.9 * alpha);
+                context.rectangle(
+                    layout.rows_x - 14.0,
+                    top + 8.0,
+                    SEARCH_SELECTION_BAR,
+                    SEARCH_ROW_HEIGHT - 16.0,
+                );
+                context.fill()?;
+            }
+
+            draw_badge(
                 context,
-                layout.rows_x - 6.0,
-                top + 2.0,
-                layout.rows_w + 12.0,
-                SEARCH_ROW_HEIGHT - 4.0,
-                10.0,
-                fade((1.0, 1.0, 1.0, 0.11), presence),
-                Some(fade(HAIRLINE, presence)),
+                item,
+                layout.rows_x + SEARCH_ICON_SIZE / 2.0,
+                top + SEARCH_ROW_HEIGHT / 2.0,
+                alpha,
             )?;
-        }
 
-        draw_badge(
-            context,
-            item,
-            layout.rows_x + SEARCH_ICON_SIZE / 2.0 + 6.0,
-            top + SEARCH_ROW_HEIGHT / 2.0,
-            presence,
-        )?;
+            let text_x = layout.rows_x + SEARCH_ICON_SIZE + 20.0;
+            let max_width = layout.rows_w - SEARCH_ICON_SIZE - 28.0;
 
-        let text_x = layout.rows_x + SEARCH_ICON_SIZE + 20.0;
-        let max_width = layout.rows_w - SEARCH_ICON_SIZE - 28.0;
-
-        set_bold_font(context, SEARCH_FONT_SIZE);
-        let label = fit_text(context, &item.label, max_width)?;
-        draw_text(
-            context,
-            &label,
-            text_x,
-            top + SEARCH_ROW_HEIGHT * 0.40,
-            fade((1.0, 1.0, 1.0, 0.94), presence),
-        )?;
-
-        if !item.detail.is_empty() {
-            set_regular_font(context, 10.5);
-            let detail = fit_text(context, &item.detail, max_width)?;
+            set_bold_font(context, SEARCH_FONT_SIZE);
+            let label = fit_text(context, &item.label, max_width)?;
             draw_text(
                 context,
-                &detail,
+                &label,
                 text_x,
-                top + SEARCH_ROW_HEIGHT * 0.74,
-                fade((1.0, 1.0, 1.0, 0.44), presence),
+                top + SEARCH_ROW_HEIGHT * 0.41,
+                fade((1.0, 1.0, 1.0, 0.96), alpha),
             )?;
-        }
 
+            if !item.detail.is_empty() {
+                set_regular_font(context, 10.5);
+                let detail = fit_text(context, &item.detail, max_width)?;
+                draw_text(
+                    context,
+                    &detail,
+                    text_x,
+                    top + SEARCH_ROW_HEIGHT * 0.75,
+                    fade((1.0, 1.0, 1.0, 0.5), alpha),
+                )?;
+            }
+
+            context.restore()?;
+        }
+        element += 1;
         top += SEARCH_ROW_HEIGHT;
     }
 
@@ -341,7 +392,7 @@ fn draw_results(
             &message,
             layout.rows_x + (layout.rows_w - extents.x_advance()) / 2.0,
             layout.rows_y + SEARCH_HEADER_HEIGHT,
-            fade((1.0, 1.0, 1.0, 0.55), presence),
+            fade((1.0, 1.0, 1.0, 0.55), presence * state.input_progress()),
         )?;
     }
 
@@ -354,12 +405,13 @@ mod tests {
     use cairo::ImageSurface;
 
     #[test]
-    fn draws_a_panel_without_error() {
+    fn draws_a_flat_panel_without_error() {
         let surface = ImageSurface::create(cairo::Format::ARgb32, 800, 600).expect("surface");
         let context = Context::new(&surface).expect("context");
         let mut state = SearchState::new();
-        state.push_char('a', &[]);
-        let layout = SearchLayout::compute(800.0, 600.0, state.content_height(), 0.0);
+        state.text_mut().insert("a");
+        state.sync(&[]);
+        let layout = SearchLayout::compute(800.0, 600.0, state.content_height());
         assert!(draw_panel(&context, &state, &layout, 1.0).is_ok());
     }
 }

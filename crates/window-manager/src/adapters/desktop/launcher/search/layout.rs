@@ -28,13 +28,9 @@ pub(crate) struct SearchLayout {
 }
 
 impl SearchLayout {
-    /// Centers the panel on the output and applies the fly-in offset.
-    pub(crate) fn compute(
-        logical_w: f64,
-        logical_h: f64,
-        content_height: f64,
-        fly_offset: f64,
-    ) -> Self {
+    /// Centers the flat search column on the output. Individual elements fly
+    /// in on their own, so the column itself never moves.
+    pub(crate) fn compute(logical_w: f64, logical_h: f64, content_height: f64) -> Self {
         let margin = SEARCH_SCREEN_MARGIN;
         let width = SEARCH_PANEL_WIDTH.min(logical_w - margin * 2.0).max(160.0);
         let height = content_height
@@ -42,7 +38,7 @@ impl SearchLayout {
             .min(logical_h - margin * 2.0)
             .max(SEARCH_INPUT_HEIGHT + SEARCH_PAD_Y * 2.0);
         let x = (logical_w - width) / 2.0;
-        let y = (logical_h - height) / 2.0 + fly_offset;
+        let y = (logical_h - height) / 2.0;
 
         let input_x = x + SEARCH_PAD_X;
         let input_w = width - SEARCH_PAD_X * 2.0;

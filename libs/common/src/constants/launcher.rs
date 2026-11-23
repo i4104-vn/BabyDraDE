@@ -59,29 +59,27 @@ pub const HAIRLINE: (f64, f64, f64, f64) = (1.0, 1.0, 1.0, 0.12);
 // Search overlay (the launcher expands into this as soon as text is typed).
 // ---------------------------------------------------------------------------
 
-/// Preferred width of the centered search panel in logical pixels.
+/// Preferred width of the centered search column in logical pixels.
 pub const SEARCH_PANEL_WIDTH: f64 = 640.0;
-/// Hard ceiling for the panel height; it is also clamped to the output height.
+/// Hard ceiling for the column height; also clamped to the output height.
 pub const SEARCH_PANEL_MAX_HEIGHT: f64 = 560.0;
-/// Outer corner radius of the search panel.
-pub const SEARCH_PANEL_RADIUS: f64 = 22.0;
-/// Extra room around the panel so its soft shadow is not clipped.
-pub const SEARCH_PANEL_SHADOW: f64 = 28.0;
-/// Minimum gap kept between the panel and the screen edges.
+/// Extra room around the column so fly-in offsets and text are not clipped.
+pub const SEARCH_BUFFER_PAD: f64 = 36.0;
+/// Minimum gap kept between the column and the screen edges.
 pub const SEARCH_SCREEN_MARGIN: f64 = 32.0;
 
-/// Horizontal padding inside the search panel.
+/// Horizontal padding inside the search column.
 pub const SEARCH_PAD_X: f64 = 20.0;
-/// Vertical padding inside the search panel.
+/// Vertical padding inside the search column.
 pub const SEARCH_PAD_Y: f64 = 18.0;
-/// Height of the query input field.
-pub const SEARCH_INPUT_HEIGHT: f64 = 52.0;
+/// Height of the query input row.
+pub const SEARCH_INPUT_HEIGHT: f64 = 62.0;
 /// Glyph size of the query and result text.
-pub const SEARCH_FONT_SIZE: f64 = 14.0;
+pub const SEARCH_FONT_SIZE: f64 = 16.0;
 /// Glyph size of the category headings.
 pub const SEARCH_HEADER_FONT_SIZE: f64 = 11.5;
-/// Gap between the input field and the first category heading.
-pub const SEARCH_SECTION_GAP: f64 = 12.0;
+/// Gap between the input divider and the first category heading.
+pub const SEARCH_SECTION_GAP: f64 = 18.0;
 /// Height of a category heading row.
 pub const SEARCH_HEADER_HEIGHT: f64 = 28.0;
 /// Height of a single result row.
@@ -90,10 +88,30 @@ pub const SEARCH_ROW_HEIGHT: f64 = 46.0;
 pub const SEARCH_ROWS_PER_CATEGORY: usize = 3;
 /// Size of the square icon badge drawn on each result row.
 pub const SEARCH_ICON_SIZE: f64 = 28.0;
-/// Width of the static input caret.
-pub const SEARCH_CARET_WIDTH: f64 = 1.5;
+/// Width of the input caret.
+pub const SEARCH_CARET_WIDTH: f64 = 2.0;
+/// Milliseconds per blink phase of the caret.
+pub const SEARCH_CARET_BLINK_MS: u64 = 530;
+/// Horizontal breathing room when the query scrolls under a long caret move.
+pub const SEARCH_CARET_SCROLL_PAD: f64 = 28.0;
+/// Width of the thin accent bar marking the selected result row.
+pub const SEARCH_SELECTION_BAR: f64 = 3.0;
 
-/// Opacity of the full-screen dimmer at full presence.
-pub const SEARCH_BACKDROP_ALPHA: f64 = 0.62;
-/// Distance the panel travels upwards while flying in (logical pixels).
-pub const SEARCH_FLY_DISTANCE: f64 = 90.0;
+/// Opacity of the full-screen dimmer at full presence. Deliberately dark: the
+/// search column is drawn flat (no card) and needs the contrast.
+pub const SEARCH_BACKDROP_ALPHA: f64 = 0.84;
+
+// --- Staggered reveal -----------------------------------------------------
+// These are fractions of one master timeline, so the input always settles
+// first and every result element follows it from top to bottom.
+
+/// Fraction of the timeline used to reveal the query input.
+pub const SEARCH_INPUT_SPAN: f64 = 0.18;
+/// Fraction at which the first result element (heading) starts.
+pub const SEARCH_ROW_START: f64 = 0.18;
+/// Fraction of the timeline each result element takes to fly in.
+pub const SEARCH_ROW_SPAN: f64 = 0.20;
+/// Fraction added to the start of each successive result element.
+pub const SEARCH_ROW_STEP: f64 = 0.06;
+/// Distance each element flies upwards from its resting position.
+pub const SEARCH_ELEMENT_FLY_DISTANCE: f64 = 26.0;

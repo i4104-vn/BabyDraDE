@@ -95,8 +95,9 @@ mod tests {
     /// can be painted onto a Cairo surface without panicking.
     #[test]
     fn test_icon_pixbuf_paints_to_cairo() {
+        // Headless sessions cannot initialize GTK; icon lookup degrades to a
+        // soft pass instead of aborting the whole test binary.
         let _ = gtk4::init();
-
         let pb = ui_kit::icons::get_app_icon_pixbuf("chromium", 24)
             .or_else(|| ui_kit::icons::get_app_icon_pixbuf("kitty", 24));
 

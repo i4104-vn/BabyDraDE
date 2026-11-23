@@ -6,6 +6,8 @@
 //! # Primitives
 //! - [`Tween`]: Time-budgeted interpolation using rich [`Easing`] curves.
 //! - [`Spring`]: Physics-driven damped harmonic oscillator with momentum preservation.
+//! - [`Stagger`]: One master clock mapped onto sequential per-element progress.
+//! - [`animation_tick`]: Cache-key tick aggregation for animating surfaces.
 //!
 //! ```
 //! use animation::{Easing, Tween, DEFAULT_DURATION};
@@ -24,6 +26,8 @@
 
 pub mod curves;
 pub mod spring;
+pub mod stagger;
+pub mod tick;
 pub mod time;
 pub mod tween;
 
@@ -32,12 +36,14 @@ pub mod tween;
 // crate stays usable without a UI toolkit.
 pub use curves::Easing;
 pub use spring::{Spring, SpringConfig};
+pub use stagger::Stagger;
+pub use tick::{animation_tick, SETTLED_TICK};
 pub use time::{
     bounded_delta, frame_index_since, tick_between, tick_since, DEFAULT_DURATION,
     DOCK_TARGET_ANIM_DURATION, FADE_IN_DURATION, FADE_OUT_DURATION, FRAME_INTERVAL, HOVER_DURATION,
-    NAVIGATION_DURATION, REVEAL_DURATION, SCROLL_DURATION, SEARCH_FLY_DURATION,
-    SEARCH_OPEN_DURATION, STAGE_ANIM_DURATION, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION,
-    TARGET_FPS, WINDOW_CLOSE_DURATION, WINDOW_GEOMETRY_DURATION, WINDOW_MINIMIZE_DURATION,
+    NAVIGATION_DURATION, REVEAL_DURATION, SCROLL_DURATION, SEARCH_REVEAL_DURATION,
+    STAGE_ANIM_DURATION, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION, TARGET_FPS,
+    WINDOW_CLOSE_DURATION, WINDOW_GEOMETRY_DURATION, WINDOW_MINIMIZE_DURATION,
     WINDOW_OPEN_DURATION, WINDOW_RESTORE_DURATION,
 };
 pub use tween::Tween;

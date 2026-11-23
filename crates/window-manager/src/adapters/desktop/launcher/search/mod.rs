@@ -6,26 +6,38 @@
 //! panel layout never depends on which category happened to match first.
 //!
 //! The split mirrors the rest of the desktop adapters: [`state`] owns mutable
-//! input/animation state, [`index`] builds the result set, [`layout`] computes
-//! geometry shared by drawing and hit-testing, [`draw`] owns Cairo drawing and
-//! [`buffer`] owns the off-screen pixel work.
+//! input/animation state (the query itself lives in [`text`]), [`index`]
+//! builds the result set, [`layout`] computes geometry shared by drawing and
+//! hit-testing, [`draw`] owns Cairo drawing and [`buffer`] owns the off-screen
+//! pixel work.
 
 pub(crate) mod buffer;
 pub(crate) mod draw;
 pub(crate) mod index;
 pub(crate) mod layout;
 pub(crate) mod state;
+pub(crate) mod text;
 
 use std::path::PathBuf;
 
 use gtk4::gdk_pixbuf::Pixbuf;
 
 pub(crate) use state::SearchState;
+pub(crate) use text::SearchText;
 
 /// A physical region covered by an off-screen buffer: `(x, y, width, height)`.
 pub(crate) type SearchRegion = (i32, i32, i32, i32);
-/// Panel cache key: result revision, animation tick and physical region.
-pub(crate) type SearchPanelKey = (u64, u64, SearchRegion);
+/// Panel cache key: query, caret, selection, selected row, animation tick,
+/// blink phase and physical region — everything the panel drawing reads.
+pub(crate) type SearchPanelKey = (
+    String,
+    usize,
+    Option<(usize, usize)>,
+    usize,
+    u64,
+    u64,
+    SearchRegion,
+);
 /// Full-screen dimmer cache key: physical size, animation tick and presence bits.
 pub(crate) type SearchBackdropKey = ((i32, i32), u64, u64);
 

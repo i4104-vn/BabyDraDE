@@ -30,7 +30,7 @@ use crate::adapters::desktop::launcher::search::draw::draw_panel;
 use crate::adapters::desktop::launcher::search::index::url_encode;
 use crate::adapters::desktop::launcher::search::layout::SearchLayout;
 use crate::adapters::desktop::launcher::search::{
-    SearchAction, SearchBackdropKey, SearchPanelKey, SearchRegion, SearchState,
+    SearchAction, SearchBackdropKey, SearchPanelKey, SearchRegion, SearchState, SearchText,
 };
 use crate::adapters::desktop::launcher::{
     BackdropKey, BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO,
@@ -257,20 +257,9 @@ impl LauncherState {
         self.visible && self.search.is_active()
     }
 
-    /// A printable key becomes the first character of the query, which reveals
-    /// the centered search surface and fills all three result categories.
-    pub(crate) fn search_input(&mut self, character: char) {
-        if !self.visible || self.dock.is_closing() {
-            return;
-        }
-        self.search.push_char(character, &self.apps);
-    }
-
-    pub(crate) fn search_backspace(&mut self) {
-        if !self.visible {
-            return;
-        }
-        self.search.backspace(&self.apps);
+    /// Mutable query model backing the search input.
+    pub(crate) fn search_text_mut(&mut self) -> &mut SearchText {
+        self.search.text_mut()
     }
 
     pub(crate) fn search_move(&mut self, delta: i32) {
@@ -313,6 +302,14 @@ impl LauncherState {
         if !self.search_is_active() {
             return false;
         }
+        if let Some((x, y, width, height)) = self.search.input_rect() {
+            if point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height {
+                if let Some(offset) = self.search.caret_at_x(point.x) {
+                    self.search.set_caret_index(offset);
+                }
+                return true;
+            }
+        }
         if let Some(index) = self.search.item_at(point) {
             self.search.select(index);
             self.search_activate();
@@ -344,6 +341,11 @@ impl LauncherState {
             self.finish_close();
             return Vec::new();
         }
+
+        // GTK may have edited the buffer since the last frame. Reconcile once
+        // here so results/animations stay in step with what the user typed.
+        let apps = &self.apps;
+        self.search.sync(apps);
 
         let (screen_w, screen_h) = (output_size.0.max(1), output_size.1.max(1));
         let logical_w = (screen_w as f64 / scale.x).max(1.0);
@@ -421,11 +423,7 @@ impl LauncherState {
             .min(logical_w);
         let backdrop_w = ((gradient_w * scale.x).ceil() as i32).clamp(1, screen_w);
         let backdrop_size = (backdrop_w, screen_h);
-        let presence_tick = if self.dock.presence.is_animating() {
-            self.dock.presence.frame_tick()
-        } else {
-            u64::MAX
-        };
+        let presence_tick = self.dock.presence.cache_tick();
         let backdrop_key = (
             backdrop_size,
             presence_tick,
@@ -463,12 +461,7 @@ impl LauncherState {
         }
 
         // -- search surface -------------------------------------------------
-        let layout = SearchLayout::compute(
-            logical_w,
-            logical_h,
-            self.search.content_height(),
-            self.search.fly_offset(),
-        );
+        let layout = SearchLayout::compute(logical_w, logical_h, self.search.content_height());
         self.search.set_layout(layout);
         let search_region = panel_region(&layout, scale, screen_w, screen_h);
         let panel_key = self.search.panel_key(search_region);
@@ -485,7 +478,7 @@ impl LauncherState {
             self.search_panel_key = None;
         }
 
-        if search_presence > 0.001 && self.search_panel_key != Some(panel_key) {
+        if search_presence > 0.001 && self.search_panel_key.as_ref() != Some(&panel_key) {
             let search = &self.search;
             if let Some(pixels) = render_pixels(
                 search_region.2,

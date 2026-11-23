@@ -77,19 +77,66 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                             return FilterResult::Intercept(());
                         }
                         keysyms::KEY_BackSpace => {
-                            state.launcher_search_backspace();
+                            let search = state.launcher_search_text_mut();
+                            if modifiers.ctrl {
+                                search.delete_word();
+                            } else {
+                                search.backspace();
+                            }
+                            return FilterResult::Intercept(());
+                        }
+                        keysyms::KEY_Delete | keysyms::KEY_KP_Delete if search_active => {
+                            state.launcher_search_text_mut().delete();
+                            return FilterResult::Intercept(());
+                        }
+                        keysyms::KEY_Home | keysyms::KEY_KP_Home if search_active => {
+                            state.launcher_search_text_mut().home(modifiers.shift);
+                            return FilterResult::Intercept(());
+                        }
+                        keysyms::KEY_End | keysyms::KEY_KP_End if search_active => {
+                            state.launcher_search_text_mut().end(modifiers.shift);
+                            return FilterResult::Intercept(());
+                        }
+                        keysyms::KEY_a | keysyms::KEY_A
+                            if search_active
+                                && modifiers.ctrl
+                                && !modifiers.logo
+                                && !modifiers.alt =>
+                        {
+                            state.launcher_search_text_mut().select_all();
                             return FilterResult::Intercept(());
                         }
                         _ => {}
                     }
 
-                    // A bare printable key jumps straight into the search box.
-                    // Modifier combinations are left to the shortcut pipeline.
+                    // Caret movement. Ctrl jumps by word, Shift extends the
+                    // selection. The search box owns horizontal arrows; the
+                    // result list keeps Up/Down.
+                    if search_active && !modifiers.logo && !modifiers.alt {
+                        let caret_move = match sym {
+                            keysyms::KEY_Left | keysyms::KEY_KP_Left => Some((-1, modifiers.ctrl)),
+                            keysyms::KEY_Right | keysyms::KEY_KP_Right => Some((1, modifiers.ctrl)),
+                            _ => None,
+                        };
+                        if let Some((direction, word)) = caret_move {
+                            state.launcher_search_text_mut().move_caret(
+                                direction,
+                                word,
+                                modifiers.shift,
+                            );
+                            return FilterResult::Intercept(());
+                        }
+                    }
+
+                    // A bare printable key inserts at the caret. Modifier
+                    // combinations are left to the shortcut pipeline.
                     if !modifiers.logo && !modifiers.ctrl && !modifiers.alt {
                         let text = xkb::keysym_to_utf8(handle.modified_sym());
                         if let Some(character) = text.chars().next() {
                             if !character.is_control() {
-                                state.launcher_search_input(character);
+                                state
+                                    .launcher_search_text_mut()
+                                    .insert(&character.to_string());
                                 return FilterResult::Intercept(());
                             }
                         }
