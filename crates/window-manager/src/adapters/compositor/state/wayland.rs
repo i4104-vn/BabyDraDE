@@ -53,8 +53,10 @@ impl WaylandRuntime {
         let mut seat = seat_state.new_wl_seat(display_handle, "babydrade");
 
         // The nested Winit window provides a keyboard and pointer for this first version.
+        // Startup fail-fast: without a keyboard capability the seat cannot
+        // deliver key events, so surface the cause instead of running degraded.
         seat.add_keyboard(Default::default(), 200, 25)
-            .expect("failed to initialize keyboard");
+            .expect("failed to initialize the babydrade seat keyboard capability");
         seat.add_pointer();
         seat.add_touch();
 

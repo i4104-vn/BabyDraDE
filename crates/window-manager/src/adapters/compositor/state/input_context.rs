@@ -32,7 +32,7 @@ use crate::application::ports::GesturePolicy;
 use crate::domain::shortcuts::Mods;
 
 use super::{
-    window::state_data::window_state, BabydraState, MoveState, OverlayTouchState, ResizeState,
+    window::state_data::lock_window_state, BabydraState, MoveState, OverlayTouchState, ResizeState,
     TouchGestureBuffer, TrackpadSwipeBuffer,
 };
 
@@ -125,7 +125,9 @@ impl InputContext for BabydraState {
     }
 
     fn saved_window_size(&self, window: &Window) -> Option<Size<i32, Logical>> {
-        window_state(window).lock().unwrap().saved_size
+        // Recovering a poisoned lock keeps the last known geometry, which is
+        // safer than crashing the compositor on a stale animation state.
+        lock_window_state(window).saved_size
     }
 
     fn move_state_mut(&mut self) -> &mut Option<MoveState> {
@@ -406,7 +408,13 @@ impl InputContext for BabydraState {
     }
 
     fn keyboard_modifiers(&self) -> ModifiersState {
-        self.wayland.seat.get_keyboard().unwrap().modifier_state()
+        match self.wayland.seat.get_keyboard() {
+            Some(keyboard) => keyboard.modifier_state(),
+            None => {
+                tracing::warn!("keyboard input event received but the seat has no keyboard");
+                ModifiersState::default()
+            }
+        }
     }
 
     fn keyboard_input<T, F>(
@@ -420,11 +428,12 @@ impl InputContext for BabydraState {
     where
         F: FnOnce(&mut Self, &ModifiersState, KeysymHandle<'_>) -> FilterResult<T>,
     {
-        self.wayland
-            .seat
-            .get_keyboard()
-            .unwrap()
-            .input::<T, F>(self, keycode, state, serial, time, filter)
+        if let Some(keyboard) = self.wayland.seat.get_keyboard() {
+            keyboard.input::<T, F>(self, keycode, state, serial, time, filter)
+        } else {
+            tracing::warn!("keyboard input event received but the seat has no keyboard");
+            None
+        }
     }
 
     fn set_keyboard_focus(&mut self, focus: Option<WlSurface>, serial: Serial) {
@@ -438,7 +447,13 @@ impl InputContext for BabydraState {
     }
 
     fn pointer_is_grabbed(&self) -> bool {
-        self.wayland.seat.get_pointer().unwrap().is_grabbed()
+        match self.wayland.seat.get_pointer() {
+            Some(pointer) => pointer.is_grabbed(),
+            None => {
+                tracing::warn!("pointer state queried but the seat has no pointer");
+                false
+            }
+        }
     }
 
     fn pointer_motion(
@@ -446,23 +461,35 @@ impl InputContext for BabydraState {
         focus: Option<(WlSurface, Point<f64, Logical>)>,
         event: &PointerMotionEvent,
     ) {
-        self.wayland
-            .seat
-            .get_pointer()
-            .unwrap()
-            .motion(self, focus, event);
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
+            pointer.motion(self, focus, event);
+        } else {
+            tracing::warn!("pointer motion event received but the seat has no pointer");
+        }
     }
 
     fn pointer_button(&mut self, event: &ButtonEvent) {
-        self.wayland.seat.get_pointer().unwrap().button(self, event);
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
+            pointer.button(self, event);
+        } else {
+            tracing::warn!("pointer button event received but the seat has no pointer");
+        }
     }
 
     fn pointer_axis(&mut self, frame: AxisFrame) {
-        self.wayland.seat.get_pointer().unwrap().axis(self, frame);
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
+            pointer.axis(self, frame);
+        } else {
+            tracing::warn!("pointer axis event received but the seat has no pointer");
+        }
     }
 
     fn pointer_frame(&mut self) {
-        self.wayland.seat.get_pointer().unwrap().frame(self);
+        if let Some(pointer) = self.wayland.seat.get_pointer() {
+            pointer.frame(self);
+        } else {
+            tracing::warn!("pointer frame event received but the seat has no pointer");
+        }
     }
 
     fn touch_down(
