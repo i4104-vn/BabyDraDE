@@ -38,7 +38,7 @@ impl SeatHandler for BabydraState {
         match image {
             CursorImageStatus::Hidden => self.cursor_visible = false,
             CursorImageStatus::Named(icon) => {
-                self.cursor_icon = icon;
+                self.input.cursor_icon = icon;
                 self.cursor_visible = true;
             }
             // Client-supplied cursor surfaces are not part of a theme; keep the

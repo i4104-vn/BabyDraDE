@@ -3,7 +3,7 @@
 use std::{collections::HashSet, time::Instant};
 
 use smithay::{
-    backend::input::{InputBackend, InputEvent, KeyState, TouchSlot},
+    backend::input::{KeyState, TouchSlot},
     desktop::Window,
     input::{
         keyboard::{FilterResult, Keycode, KeysymHandle, ModifiersState},
@@ -133,53 +133,53 @@ impl InputContext for BabydraState {
     }
 
     fn move_state_mut(&mut self) -> &mut Option<MoveState> {
-        &mut self.move_state
+        &mut self.input.move_state
     }
 
     fn resize_state_mut(&mut self) -> &mut Option<ResizeState> {
-        &mut self.resize_state
+        &mut self.input.resize_state
     }
 
     fn last_titlebar_click_mut(
         &mut self,
     ) -> &mut Option<(Instant, Point<f64, Logical>, Window)> {
-        &mut self.last_titlebar_click
+        &mut self.input.last_titlebar_click
     }
 
     fn trackpad_swipe(&self) -> Option<&TrackpadSwipeBuffer> {
-        self.trackpad_swipe.as_ref()
+        self.input.trackpad_swipe.as_ref()
     }
 
     fn trackpad_swipe_mut(&mut self) -> &mut Option<TrackpadSwipeBuffer> {
-        &mut self.trackpad_swipe
+        &mut self.input.trackpad_swipe
     }
 
     fn touch_gesture(&self) -> &TouchGestureBuffer {
-        &self.touch_gesture
+        &self.input.touch_gesture
     }
 
     fn touch_gesture_mut(&mut self) -> &mut TouchGestureBuffer {
-        &mut self.touch_gesture
+        &mut self.input.touch_gesture
     }
 
     fn overlay_touch_mut(&mut self) -> &mut Option<OverlayTouchState> {
-        &mut self.overlay_touch
+        &mut self.input.overlay_touch
     }
 
     fn touch_slots(&self) -> &HashSet<TouchSlot> {
-        &self.touch_slots
+        &self.input.touch_slots
     }
 
     fn touch_slots_mut(&mut self) -> &mut HashSet<TouchSlot> {
-        &mut self.touch_slots
+        &mut self.input.touch_slots
     }
 
     fn pointer_pressed_buttons(&self) -> &HashSet<u32> {
-        &self.pointer_pressed_buttons
+        &self.input.pointer_pressed_buttons
     }
 
     fn pointer_pressed_buttons_mut(&mut self) -> &mut HashSet<u32> {
-        &mut self.pointer_pressed_buttons
+        &mut self.input.pointer_pressed_buttons
     }
 
     fn pointer_location(&self) -> Point<f64, Logical> {
@@ -544,15 +544,5 @@ impl InputContext for BabydraState {
         if let Some(pointer) = self.seat.get_pointer() {
             pointer.gesture_hold_end(self, event);
         }
-    }
-}
-
-impl BabydraState {
-    /// Central dispatch function for all hardware and synthetic input events.
-    pub(crate) fn process_input_event<I: InputBackend>(&mut self, event: InputEvent<I>)
-    where
-        I::Device: 'static,
-    {
-        crate::adapters::input::process_input_event(self, event);
     }
 }

@@ -35,11 +35,13 @@ mod active_window;
 mod clipboard;
 mod config;
 mod hit_test;
+mod input;
 mod input_context;
 mod render;
 
 pub(crate) use clipboard::ClipboardState;
 pub(crate) use config::ConfigSnapshot;
+pub(crate) use input::InputState;
 pub(crate) use render::RenderState;
 pub(crate) mod launcher;
 mod switcher;
@@ -59,6 +61,8 @@ pub(crate) struct BabydraState {
     pub(crate) clipboard: ClipboardState,
     /// Cached configuration snapshot owned by the input pipeline.
     pub(crate) config: ConfigSnapshot,
+    /// Transient input interaction state.
+    pub(crate) input: InputState,
     /// Shared rendering resources.
     pub(crate) render: RenderState,
 
@@ -89,10 +93,6 @@ pub(crate) struct BabydraState {
     pub(crate) clipboard_sender:
         Option<smithay::reexports::calloop::channel::Sender<Option<String>>>,
 
-    pub(crate) move_state: Option<MoveState>,
-    pub(crate) resize_state: Option<ResizeState>,
-    pub(crate) last_titlebar_click: Option<(std::time::Instant, Point<f64, Logical>, Window)>,
-    pub(crate) trackpad_swipe: Option<TrackpadSwipeBuffer>,
     pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
     /// Compositor-owned application launcher (shown via its shortcut).
     pub(crate) launcher: launcher::LauncherState,
@@ -102,19 +102,20 @@ pub(crate) struct BabydraState {
         std::sync::Arc<std::sync::Mutex<crate::adapters::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
     pub(crate) cursor_visible: bool,
-    /// Last cursor shape requested by the focused Wayland client.
-    pub(crate) cursor_icon: CursorIcon,
-    pub(crate) pointer_pressed_buttons: std::collections::HashSet<u32>,
-    pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
     pub(crate) windows: Vec<Window>,
-    /// Active single-finger touch interaction with compositor overlays (launcher or switcher).
-    pub(crate) overlay_touch: Option<OverlayTouchState>,
-    /// Accumulated per-slot data for multi-touch gesture detection on touchscreens.
-    pub(crate) touch_gesture: TouchGestureBuffer,
-
 }
 
 impl BabydraState {
+    /// Central dispatch function for all hardware and synthetic input events.
+    pub(crate) fn process_input_event<I: smithay::backend::input::InputBackend>(
+        &mut self,
+        event: smithay::backend::input::InputEvent<I>,
+    ) where
+        I::Device: 'static,
+    {
+        crate::adapters::input::process_input_event(self, event);
+    }
+
     pub(crate) fn new(
         event_loop: &mut EventLoop<'_, CalloopData>,
         display: Display<Self>,
@@ -148,6 +149,7 @@ impl BabydraState {
         Self {
             clipboard: ClipboardState::default(),
             config,
+            input: InputState::new(),
             render,
             start_time: Instant::now(),
             socket_name,
@@ -167,21 +169,12 @@ impl BabydraState {
             popups: PopupManager::default(),
             seat,
             clipboard_sender: None,
-            move_state: None,
-            resize_state: None,
-            last_titlebar_click: None,
-            trackpad_swipe: None,
             alt_tab_switcher: None,
             launcher: launcher::LauncherState::new(),
             blur_engine,
             pointer_location: Point::from((100.0, 100.0)),
             cursor_visible: true,
-            cursor_icon: CursorIcon::Default,
-            pointer_pressed_buttons: std::collections::HashSet::new(),
-            touch_slots: std::collections::HashSet::new(),
             windows: Vec::new(),
-            overlay_touch: None,
-            touch_gesture: TouchGestureBuffer::default(),
         }
     }
 
@@ -225,10 +218,10 @@ impl BabydraState {
     /// on hover and while dragging), the draggable titlebar shows a grab cursor,
     /// and active moves show a grabbing cursor.
     pub(crate) fn effective_cursor_icon(&self) -> CursorIcon {
-        if let Some(ref resize) = self.resize_state {
+        if let Some(ref resize) = self.input.resize_state {
             return resize_cursor_icon(resize.edges);
         }
-        if self.move_state.is_some() {
+        if self.input.move_state.is_some() {
             return CursorIcon::Grabbing;
         }
 
@@ -250,7 +243,7 @@ impl BabydraState {
             }
         }
 
-        self.cursor_icon
+        self.input.cursor_icon
     }
 
     fn init_wayland_listener(

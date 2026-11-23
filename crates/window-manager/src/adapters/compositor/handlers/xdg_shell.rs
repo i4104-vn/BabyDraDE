@@ -74,7 +74,7 @@ impl XdgShellHandler for BabydraState {
     fn grab(&mut self, _surface: PopupSurface, _seat: wl_seat::WlSeat, _serial: Serial) {}
 
     fn move_request(&mut self, surface: ToplevelSurface, _seat: wl_seat::WlSeat, _serial: Serial) {
-        if self.pointer_pressed_buttons.is_empty() && self.touch_slots.is_empty() {
+        if self.input.pointer_pressed_buttons.is_empty() && self.input.touch_slots.is_empty() {
             tracing::debug!("Ignoring xdg_toplevel.move_request: neither pointer button nor touch contact is held down");
             return;
         }
@@ -93,12 +93,13 @@ impl XdgShellHandler for BabydraState {
             if let Some(loc) = self.space.element_location(&window) {
                 self.space.raise_element(&window, true);
                 let drag_button = self
+                    .input
                     .pointer_pressed_buttons
                     .iter()
                     .copied()
                     .next()
                     .unwrap_or(272);
-                self.move_state = Some(crate::adapters::compositor::state::MoveState {
+                self.input.move_state = Some(crate::adapters::compositor::state::MoveState {
                     window,
                     initial_window_location: loc,
                     initial_pointer_location: self.pointer_location,
@@ -116,7 +117,7 @@ impl XdgShellHandler for BabydraState {
         _serial: Serial,
         edges: smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
     ) {
-        if self.pointer_pressed_buttons.is_empty() && self.touch_slots.is_empty() {
+        if self.input.pointer_pressed_buttons.is_empty() && self.input.touch_slots.is_empty() {
             return;
         }
 
@@ -133,13 +134,14 @@ impl XdgShellHandler for BabydraState {
             if let Some(loc) = self.space.element_location(&window) {
                 self.space.raise_element(&window, true);
                 let drag_button = self
+                    .input
                     .pointer_pressed_buttons
                     .iter()
                     .copied()
                     .next()
                     .unwrap_or(272);
                 let size = window.geometry().size;
-                self.resize_state = Some(crate::adapters::compositor::state::ResizeState {
+                self.input.resize_state = Some(crate::adapters::compositor::state::ResizeState {
                     window,
                     initial_window_location: loc,
                     initial_window_size: size,

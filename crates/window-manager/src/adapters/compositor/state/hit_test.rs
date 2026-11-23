@@ -96,7 +96,7 @@ impl BabydraState {
         &self,
         position: Point<f64, Logical>,
     ) -> Option<(WlSurface, Point<f64, Logical>)> {
-        if let Some(ref move_state) = self.move_state {
+        if let Some(ref move_state) = self.input.move_state {
             if move_state.has_dragged {
                 return None;
             }
