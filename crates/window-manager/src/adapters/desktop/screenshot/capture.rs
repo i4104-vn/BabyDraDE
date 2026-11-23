@@ -37,6 +37,29 @@ pub(crate) fn get_screenshot_path() -> PathBuf {
     screenshots_dir.join(format!("Screenshot_{}.png", datetime))
 }
 
+/// Converts smithay's `ReadPixels` output into cairo's `ARgb32` buffer.
+///
+/// Smithay's GLES projection includes a `flip180` factor, so rows arrive
+/// top-down already; do **not** reverse them or the saved PNG ends up mirrored
+/// (and rotated incorrectly on transformed outputs). Only RGBA -> BGRA needs
+/// swapping on little-endian hosts.
+fn rgba_to_argb32(rgba: &[u8], width: usize, height: usize) -> Vec<u8> {
+    let mut bgra = vec![0u8; rgba.len()];
+    let row = width * 4;
+    for y in 0..height {
+        let src = &rgba[y * row..(y + 1) * row];
+        let dst = &mut bgra[y * row..(y + 1) * row];
+        for x in 0..width {
+            let (s, d) = (&src[x * 4..x * 4 + 4], &mut dst[x * 4..x * 4 + 4]);
+            d[0] = s[2];
+            d[1] = s[1];
+            d[2] = s[0];
+            d[3] = s[3];
+        }
+    }
+    bgra
+}
+
 /// Requests a screenshot. Safe to call from any thread.
 pub(crate) fn trigger() {
     CAPTURE_REQUESTED.store(true, Ordering::SeqCst);
@@ -133,27 +156,14 @@ where
         .name("babydra-screenshot-save".to_string())
         .spawn(move || {
             let save_path = worker_path;
-            // GL rows are bottom-up and RGBA; cairo wants top-down ARGB32.
-            let mut bgra = vec![0u8; rgba.len()];
-            let row = width * 4;
-            for y in 0..height {
-                let src = &rgba[(height - 1 - y) * row..(height - y) * row];
-                let dst = &mut bgra[y * row..(y + 1) * row];
-                for x in 0..width {
-                    let (s, d) = (&src[x * 4..x * 4 + 4], &mut dst[x * 4..x * 4 + 4]);
-                    d[0] = s[2];
-                    d[1] = s[1];
-                    d[2] = s[0];
-                    d[3] = s[3];
-                }
-            }
+            let bgra = rgba_to_argb32(&rgba, width, height);
 
             let raw_surface = match ImageSurface::create_for_data(
                 bgra,
                 Format::ARgb32,
                 width as i32,
                 height as i32,
-                row as i32,
+                (width * 4) as i32,
             ) {
                 Ok(surface) => surface,
                 Err(e) => {
@@ -256,6 +266,25 @@ pub(crate) fn send_notification(title: &str, body: &str) {
 mod tests {
     use super::*;
     use smithay::utils::{Physical, Point};
+
+    #[test]
+    fn rgba_conversion_keeps_rows_top_down() {
+        // Row 0 of ReadPixels is the top row of the image. A vertical flip here
+        // used to mirror the saved screenshot (and break rotated outputs).
+        let width = 2;
+        let height = 2;
+        let rgba = vec![
+            255, 0, 0, 255, 0, 255, 0, 255, // top row: red, green
+            0, 0, 255, 255, 255, 255, 255, 255, // bottom row: blue, white
+        ];
+        let bgra = rgba_to_argb32(&rgba, width, height);
+
+        // Top row stays first, channels are swapped to BGRA.
+        assert_eq!(&bgra[0..4], &[0, 0, 255, 255]);
+        assert_eq!(&bgra[4..8], &[0, 255, 0, 255]);
+        assert_eq!(&bgra[8..12], &[255, 0, 0, 255]);
+        assert_eq!(&bgra[12..16], &[255, 255, 255, 255]);
+    }
 
     #[test]
     fn transform_matrix_matches_smithay_point_mapping() {

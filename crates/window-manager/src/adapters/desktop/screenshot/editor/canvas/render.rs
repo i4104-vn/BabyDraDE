@@ -7,11 +7,11 @@ use crate::adapters::desktop::screenshot::editor::handle::drawing::{
 };
 use crate::adapters::desktop::screenshot::editor::model::{Drawing, EditorState, Tool};
 
-/// Cached static scene (background + overlay + finished drawings).
-/// Rebuilt only when content version, canvas size, or scale factor changes,
-/// so pointer drags only repaint the active shape on top of a cheap blit.
+/// Cached static background. Only the screenshot itself is cached: the crop
+/// rectangle, dimming and annotations are drawn live so moving the crop never
+/// triggers an expensive full-surface rebuild (which showed up as a ~1s stall
+/// before the drag preview appeared).
 pub(crate) struct LayerCache {
-    version: u64,
     width: i32,
     height: i32,
     scale: i32,
@@ -49,23 +49,26 @@ fn draw_blur_on_canvas(cr: &cairo::Context, s: &EditorState, x: f64, y: f64, w: 
     draw_pixelated_rect(cr, &s.bg_pixbuf, (src_x, src_y, src_w, src_h), (x, y, w, h));
 }
 
-/// Dimming and border of the crop rectangle. Shared by the cached scene and
-/// the live drag preview so both look identical.
-fn draw_crop_overlay(cr: &cairo::Context, s: &EditorState, width: f64, height: f64) {
+/// Dimming layer. With a crop selection the hole is cut out with the EvenOdd
+/// fill rule, otherwise the whole screenshot is dimmed. Drawn every frame so
+/// it tracks the pointer without touching the cache.
+fn draw_dimming(cr: &cairo::Context, s: &EditorState, width: f64, height: f64, has_clip: bool) {
+    cr.save().unwrap();
+    cr.set_source_rgba(0.0, 0.0, 0.0, 0.45);
+    cr.rectangle(0.0, 0.0, width, height);
+    if has_clip {
+        cr.rectangle(s.crop_x, s.crop_y + s.crop_h, s.crop_w, -s.crop_h);
+        cr.set_fill_rule(cairo::FillRule::EvenOdd);
+    }
+    cr.fill().unwrap();
+    cr.restore().unwrap();
+}
+
+/// Blue outline of the crop rectangle.
+fn draw_crop_border(cr: &cairo::Context, s: &EditorState) {
     if !s.has_selection {
         return;
     }
-
-    if s.crop_w > 5.0 && s.crop_h > 5.0 {
-        cr.save().unwrap();
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.45);
-        cr.rectangle(0.0, 0.0, width, height);
-        cr.rectangle(s.crop_x, s.crop_y + s.crop_h, s.crop_w, -s.crop_h);
-        cr.set_fill_rule(cairo::FillRule::EvenOdd);
-        cr.fill().unwrap();
-        cr.restore().unwrap();
-    }
-
     cr.save().unwrap();
     cr.set_source_rgba(0.23, 0.51, 0.96, 0.85);
     cr.set_line_width(2.0);
@@ -74,45 +77,9 @@ fn draw_crop_overlay(cr: &cairo::Context, s: &EditorState, width: f64, height: f
     cr.restore().unwrap();
 }
 
-/// Draws everything that only changes when editor content changes: background
-/// screenshot, dark overlay with crop hole, crop border, finished drawings, and
-/// the selection highlight.
-fn render_scene(cr: &cairo::Context, s: &EditorState, width: f64, height: f64) {
-    let bg_w = s.bg_pixbuf.width() as f64;
-    let bg_h = s.bg_pixbuf.height() as f64;
-
-    cr.set_antialias(cairo::Antialias::Best);
-
-    // 1. Background screenshot accurately scaled to canvas viewport
-    cr.save().unwrap();
-    if width > 0.0 && height > 0.0 && (bg_w != width || bg_h != height) {
-        cr.scale(width / bg_w, height / bg_h);
-    }
-    cr.set_source_pixbuf(&s.bg_pixbuf, 0.0, 0.0);
-    cr.source().set_filter(cairo::Filter::Best);
-    cr.paint().unwrap();
-    cr.restore().unwrap();
-
-    // 2. Dark overlay. During an active crop drag the rectangle is drawn as a
-    // cheap live preview instead, so the cache is not rebuilt on every move.
-    let has_clip = s.has_selection && !s.is_selecting && s.crop_w > 5.0 && s.crop_h > 5.0;
-    if s.is_selecting {
-        // Live preview draws the dimming around the crop rectangle.
-    } else if has_clip {
-        draw_crop_overlay(cr, s, width, height);
-    } else {
-        cr.set_source_rgba(0.0, 0.0, 0.0, 0.45);
-        cr.paint().unwrap();
-    }
-
-    // Clip drawings to the crop selection so they never cover the dark overlay
-    if has_clip {
-        cr.save().unwrap();
-        cr.rectangle(s.crop_x, s.crop_y, s.crop_w, s.crop_h);
-        cr.clip();
-    }
-
-    // 3. Finished annotations
+/// Draws the finished annotations and the right-click highlight. Caller has
+/// already clipped to the crop rectangle when one is active.
+fn render_annotations(cr: &cairo::Context, s: &EditorState) {
     for drawing in &s.drawings {
         match drawing {
             Drawing::Blur { x, y, w, h } => draw_blur_on_canvas(cr, s, *x, *y, *w, *h),
@@ -120,7 +87,6 @@ fn render_scene(cr: &cairo::Context, s: &EditorState, width: f64, height: f64) {
         }
     }
 
-    // 4. Highlight for the drawing selected via right-click
     if let Some(idx) = s.selected_drawing {
         if let Some(d) = s.drawings.get(idx) {
             let (bx, by, bw, bh) = d.bounds();
@@ -132,12 +98,10 @@ fn render_scene(cr: &cairo::Context, s: &EditorState, width: f64, height: f64) {
             cr.set_dash(&[], 0.0);
         }
     }
-
-    if has_clip {
-        cr.restore().unwrap();
-    }
 }
 
+/// Renders only the background screenshot into the cache surface. Rebuilt on
+/// canvas resize or scale-factor change, never while logic state changes.
 fn render_cache_surface(
     s: &EditorState,
     width: i32,
@@ -148,11 +112,23 @@ fn render_cache_surface(
         cairo::ImageSurface::create(cairo::Format::ARgb32, width * scale, height * scale).ok()?;
     let cr = cairo::Context::new(&surface).ok()?;
     cr.scale(scale as f64, scale as f64);
-    render_scene(&cr, s, width as f64, height as f64);
+
+    let bg_w = s.bg_pixbuf.width() as f64;
+    let bg_h = s.bg_pixbuf.height() as f64;
+    cr.set_antialias(cairo::Antialias::Best);
+    cr.save().unwrap();
+    if width > 0 && height > 0 && (bg_w != width as f64 || bg_h != height as f64) {
+        cr.scale(width as f64 / bg_w, height as f64 / bg_h);
+    }
+    cr.set_source_pixbuf(&s.bg_pixbuf, 0.0, 0.0);
+    cr.source().set_filter(cairo::Filter::Best);
+    cr.paint().unwrap();
+    cr.restore().unwrap();
+
     Some(surface)
 }
 
-/// Draws the cached static layer plus the in-progress shape being dragged.
+/// Draws the cached background plus everything that changes while editing.
 pub(crate) fn draw_editor_canvas(
     cr: &cairo::Context,
     s: &EditorState,
@@ -166,18 +142,12 @@ pub(crate) fn draw_editor_canvas(
 
     let mut cache_ref = cache.borrow_mut();
     let stale = match cache_ref.as_ref() {
-        Some(c) => {
-            c.version != s.render_version
-                || c.width != wi
-                || c.height != hi
-                || c.scale != scale_factor
-        }
+        Some(c) => c.width != wi || c.height != hi || c.scale != scale_factor,
         None => true,
     };
     if stale {
         if let Some(surface) = render_cache_surface(s, wi, hi, scale_factor) {
             *cache_ref = Some(LayerCache {
-                version: s.render_version,
                 width: wi,
                 height: hi,
                 scale: scale_factor,
@@ -186,7 +156,7 @@ pub(crate) fn draw_editor_canvas(
         }
     }
 
-    // Blit the cached layer 1:1 in device pixels for maximum sharpness
+    // Blit the cached background 1:1 in device pixels for maximum sharpness.
     if let Some(c) = cache_ref.as_ref() {
         cr.save().unwrap();
         cr.scale(1.0 / c.scale as f64, 1.0 / c.scale as f64);
@@ -195,15 +165,28 @@ pub(crate) fn draw_editor_canvas(
         cr.paint().unwrap();
         cr.restore().unwrap();
     }
+    drop(cache_ref);
 
-    // Live crop rectangle: drawn directly on each frame, no cache rebuild.
-    if s.is_selecting {
-        draw_crop_overlay(cr, s, width, height);
+    let has_clip = s.has_selection && s.crop_w > 5.0 && s.crop_h > 5.0;
+
+    // Live dimming (with the crop hole) and outline — no cache rebuild.
+    draw_dimming(cr, s, width, height, has_clip);
+    draw_crop_border(cr, s);
+
+    // Finished annotations, clipped to the crop selection when present.
+    cr.set_antialias(cairo::Antialias::Best);
+    if has_clip {
+        cr.save().unwrap();
+        cr.rectangle(s.crop_x, s.crop_y, s.crop_w, s.crop_h);
+        cr.clip();
+    }
+    render_annotations(cr, s);
+    if has_clip {
+        cr.restore().unwrap();
     }
 
-    // Live preview of the shape currently being drawn
+    // Live preview of the shape currently being dragged.
     cr.set_antialias(cairo::Antialias::None);
-    let has_clip = s.has_selection && !s.is_selecting && s.crop_w > 5.0 && s.crop_h > 5.0;
     if has_clip {
         cr.save().unwrap();
         cr.rectangle(s.crop_x, s.crop_y, s.crop_w, s.crop_h);
@@ -226,32 +209,28 @@ pub(crate) fn draw_editor_canvas(
 
     if let Some((x, y, w, h)) = s.active_rect {
         match s.current_tool {
-            Tool::Rect => {
-                render_shape(
-                    cr,
-                    &Drawing::Rect {
-                        x,
-                        y,
-                        w,
-                        h,
-                        color: s.current_color,
-                        width: s.current_width,
-                    },
-                );
-            }
-            Tool::Ellipse => {
-                render_shape(
-                    cr,
-                    &Drawing::Ellipse {
-                        x,
-                        y,
-                        w,
-                        h,
-                        color: s.current_color,
-                        width: s.current_width,
-                    },
-                );
-            }
+            Tool::Rect => render_shape(
+                cr,
+                &Drawing::Rect {
+                    x,
+                    y,
+                    w,
+                    h,
+                    color: s.current_color,
+                    width: s.current_width,
+                },
+            ),
+            Tool::Ellipse => render_shape(
+                cr,
+                &Drawing::Ellipse {
+                    x,
+                    y,
+                    w,
+                    h,
+                    color: s.current_color,
+                    width: s.current_width,
+                },
+            ),
             Tool::Blur => draw_blur_on_canvas(cr, s, x, y, w, h),
             _ => {}
         }

@@ -4,8 +4,6 @@ use std::rc::Rc;
 
 use crate::adapters::desktop::screenshot::editor::model::{Drawing, EditorState, Tool};
 
-use super::render::SharedCache;
-
 /// Selects the topmost drawing under (`px`, `py`), returning `true` when one was hit.
 fn pick_drawing(s: &mut EditorState, px: f64, py: f64) -> bool {
     let found = s.drawings.iter().rposition(|d| d.hit_test(px, py));
@@ -36,8 +34,6 @@ pub(crate) fn setup_editor_gest(
     btn_pen: &gtk4::Button,
     style_popover: &gtk4::Popover,
 ) {
-    let cache: SharedCache = Rc::new(RefCell::new(None));
-
     let drag_gesture = gtk4::GestureDrag::new();
     let state_mouse = state.clone();
     let canvas_mouse = drawing_area.clone();
@@ -145,7 +141,6 @@ pub(crate) fn setup_editor_gest(
 
     let state_mouse_end = state.clone();
     let toolbar_wrapper_end = toolbar_wrapper.clone();
-    let cache_end = cache.clone();
     let canvas_mouse_end = drawing_area.clone();
     let btn_pen_end = btn_pen.clone();
     drag_gesture.connect_drag_end(move |_, _, _| {
@@ -253,8 +248,6 @@ pub(crate) fn setup_editor_gest(
 
         toolbar_wrapper_end.set_visible(s.has_selection);
         drop(s_mut);
-        // Content changed: force the next frame to rebuild the cached layer
-        cache_end.borrow_mut().take();
         canvas_mouse_end.queue_draw();
     });
 
@@ -264,7 +257,6 @@ pub(crate) fn setup_editor_gest(
     let click_gesture = gtk4::GestureClick::new();
     click_gesture.set_button(3);
     let state_click = state;
-    let cache_click = cache;
     let canvas_click = drawing_area.clone();
     let popover_click = style_popover.clone();
     click_gesture.connect_pressed(move |_, _, x, y| {
@@ -277,7 +269,6 @@ pub(crate) fn setup_editor_gest(
             && pick_drawing(&mut s, x, y)
         {
             drop(s);
-            cache_click.borrow_mut().take();
             canvas_click.queue_draw();
             popover_click.popup();
         }
