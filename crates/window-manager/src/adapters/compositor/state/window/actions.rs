@@ -2,6 +2,7 @@ use smithay::{desktop::Window, utils::IsAlive, wayland::shell::xdg::ToplevelSurf
 
 use super::animation::is_window_exiting;
 use crate::adapters::compositor::state::BabydraState;
+use crate::application::window_action::WindowAction;
 
 impl BabydraState {
     /// Removes dead windows from the tracking list and keeps the shared
@@ -67,17 +68,16 @@ impl BabydraState {
     }
 
     /// Handles system-wide window commands (e.g. from topbar, dock, gestures).
-    pub(crate) fn handle_window_action(&mut self, action: &str) {
+    pub(crate) fn handle_window_action(&mut self, action: WindowAction) {
         let active = self.active_window();
         let Some(window) = active else {
             return;
         };
         match action {
-            "minimize" => self.minimize_window(&window),
-            "maximize" => self.toggle_maximize(&window),
-            "fullscreen" => self.toggle_fullscreen(&window),
-            "close" => self.close_window(&window),
-            _ => {}
+            WindowAction::Minimize => self.minimize_window(&window),
+            WindowAction::Maximize => self.toggle_maximize(&window),
+            WindowAction::Fullscreen => self.toggle_fullscreen(&window),
+            WindowAction::Close => self.close_window(&window),
         }
     }
 }

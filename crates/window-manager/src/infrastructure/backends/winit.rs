@@ -14,8 +14,9 @@ use smithay::{
 use crate::adapters::{
     compositor::{BabydraState, CalloopData, Cursor},
     rendering::{compose_frame, CustomRenderElements, FrameContext},
-    shell::SwitcherOverlay,
+    desktop::SwitcherOverlay,
 };
+use crate::application::window_action::WindowAction;
 
 const OUTPUT_REFRESH_MHZ: i32 = animation::TARGET_FPS as i32 * 1000;
 
@@ -89,8 +90,12 @@ pub(crate) fn init(
                     backend.window().request_redraw();
                 }
                 WinitEvent::Redraw => {
-                    if let Some(action) = services::system::window::read_and_clear_window_action() {
-                        state.handle_window_action(&action);
+                    if let Some(raw_action) =
+                        services::system::window::read_and_clear_window_action()
+                    {
+                        if let Some(action) = WindowAction::parse(&raw_action) {
+                            state.handle_window_action(action);
+                        }
                     }
                     state.update_window_animations();
                     state.update_clipboard();
@@ -149,13 +154,13 @@ pub(crate) fn init(
                         render_result.damage.cloned()
                     };
 
-                    if crate::adapters::shell::screenshot::capture::take_requested() {
+                    if crate::adapters::desktop::screenshot::capture::take_requested() {
                         // Offscreen capture binds an FBO, which leaves the EGL
                         // context current *without* the window surface. Restore
                         // it or the following swap_buffers() fails with BadAlloc
                         // and takes down the compositor.
                         let surface = backend.egl_surface() as *const _;
-                        let _ = crate::adapters::shell::screenshot::capture::capture_screen(
+                        let _ = crate::adapters::desktop::screenshot::capture::capture_screen(
                             backend.renderer(),
                             &render_elements,
                             &output,

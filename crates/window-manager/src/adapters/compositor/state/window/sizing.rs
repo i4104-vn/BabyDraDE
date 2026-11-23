@@ -8,7 +8,7 @@ use smithay::{
     utils::{Rectangle, SERIAL_COUNTER},
 };
 
-use super::state_data::window_state;
+use super::state_data::lock_window_state;
 use crate::adapters::compositor::state::{
     cancel_minimizing_animation, is_window_exiting, start_window_minimizing,
     start_window_restoring, start_window_transition, BabydraState,
@@ -29,7 +29,7 @@ impl BabydraState {
         let current_size = window.geometry().size;
 
         {
-            let mut state_guard = window_state(window).lock().unwrap();
+            let mut state_guard = lock_window_state(window);
             if state_guard.saved_location.is_none() {
                 state_guard.saved_location = Some(current_loc);
                 state_guard.saved_size = Some(current_size);
@@ -86,7 +86,7 @@ impl BabydraState {
         let current_size = window.geometry().size;
 
         let (saved_loc, saved_size) = {
-            let mut state_guard = window_state(window).lock().unwrap();
+            let mut state_guard = lock_window_state(window);
             (
                 state_guard.saved_location.take(),
                 state_guard.saved_size.take(),
@@ -127,7 +127,7 @@ impl BabydraState {
     pub(crate) fn minimize_window(&mut self, window: &Window) {
         let current_loc = self.space.element_location(window);
         {
-            let mut state_guard = window_state(window).lock().unwrap();
+            let mut state_guard = lock_window_state(window);
             state_guard.is_minimized = true;
             if let Some(loc) = current_loc {
                 state_guard.saved_location = Some(loc);
@@ -182,7 +182,7 @@ impl BabydraState {
 
     pub(crate) fn unminimize_window(&mut self, window: &Window) {
         let was_minimized = {
-            let mut state_guard = window_state(window).lock().unwrap();
+            let mut state_guard = lock_window_state(window);
             let was = state_guard.is_minimized;
             state_guard.is_minimized = false;
             was
@@ -190,7 +190,7 @@ impl BabydraState {
 
         if was_minimized || !self.space.elements().any(|w| w == window) {
             let loc = {
-                let state_guard = window_state(window).lock().unwrap();
+                let state_guard = lock_window_state(window);
                 state_guard.saved_location.unwrap_or_else(default_position)
             };
             // If the shrink animation is still running, abort it so it cannot
@@ -242,7 +242,7 @@ impl BabydraState {
         let current_size = window.geometry().size;
 
         {
-            let mut state_guard = window_state(window).lock().unwrap();
+            let mut state_guard = lock_window_state(window);
             if state_guard.saved_location.is_none() {
                 state_guard.saved_location = Some(current_loc);
                 state_guard.saved_size = Some(current_size);
@@ -292,7 +292,7 @@ impl BabydraState {
         let current_size = window.geometry().size;
 
         let (saved_loc, saved_size) = {
-            let mut state_guard = window_state(window).lock().unwrap();
+            let mut state_guard = lock_window_state(window);
             (
                 state_guard.saved_location.take(),
                 state_guard.saved_size.take(),

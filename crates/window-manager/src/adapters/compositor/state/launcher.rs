@@ -18,11 +18,11 @@ use crate::adapters::rendering::buffer::render_pixels;
 use crate::adapters::rendering::CustomRenderElements;
 use ui_kit::components::dock::DockSide;
 
-use crate::adapters::shell::launcher::buffer::{
+use crate::adapters::desktop::launcher::buffer::{
     buffer_damage, physical_region, render_backdrop_pixels,
 };
-use crate::adapters::shell::launcher::draw::draw_scene;
-use crate::adapters::shell::launcher::{
+use crate::adapters::desktop::launcher::draw::draw_scene;
+use crate::adapters::desktop::launcher::{
     BackdropKey, BufferRegion, CacheKey, LauncherApp, BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO,
 };
 

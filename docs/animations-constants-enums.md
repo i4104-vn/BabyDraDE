@@ -13,8 +13,8 @@ docks (launcher and switcher) reuse the same implementation.
 | `libs/common/src/enums/` | Shared enumerations (`Action`, `SwipeDirection`, `KeyboardAction`, `DockSide`) |
 | `libs/ui-kit/src/drawing/cairo.rs` | Shared Cairo primitives (rounded paths, text, app colours, docked-capsule path/fill) |
 | `libs/ui-kit/src/components/dock/` | Shared screen-edge dock: layout, state machine, rendering |
-| `crates/window-manager/src/adapters/shell/launcher/` | Left dock: app list, title capsule, backdrop |
-| `crates/window-manager/src/adapters/shell/switcher/` | Right dock: live preview + title strip, backdrop |
+| `crates/window-manager/src/adapters/desktop/launcher/` | Left dock: app list, title capsule, backdrop |
+| `crates/window-manager/src/adapters/desktop/switcher/` | Right dock: live preview + title strip, backdrop |
 | `crates/window-manager/src/infrastructure/backends/` | Render loops (udev timer, winit redraw) and frame scheduling |
 
 Rule of thumb: **durations belong to `animation`, geometry/thresholds belong to

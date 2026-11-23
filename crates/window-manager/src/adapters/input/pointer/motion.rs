@@ -33,7 +33,7 @@ fn update_overlay_hover(state: &mut BabydraState, position: Point<f64, Logical>)
 
     let index = state.alt_tab_switcher.as_ref().and_then(|switcher| {
         let layout =
-            crate::adapters::shell::switcher::view::compute_layout(switcher, logical_w, logical_h)?;
+            crate::adapters::desktop::switcher::view::compute_layout(switcher, logical_w, logical_h)?;
         let slide =
             (1.0 - switcher.presence().clamp(0.0, 1.0)) * common::constants::launcher::PANEL_WIDTH;
         layout.panel.index_at(

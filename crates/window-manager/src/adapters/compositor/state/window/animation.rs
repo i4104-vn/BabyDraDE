@@ -7,7 +7,7 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Size, SERIAL_COUNTER},
 };
 
-use super::state_data::window_state;
+use super::state_data::lock_window_state;
 use crate::adapters::compositor::state::BabydraState;
 
 /// Start and end rectangles (in space/logical coordinates) of a geometry
@@ -41,7 +41,7 @@ use crate::domain::WindowVisualState;
 /// Checks if a window is leaving the screen (closing or minimizing) and should
 /// therefore be excluded from hit-testing, focus and window switching.
 pub(crate) fn is_window_exiting(window: &Window) -> bool {
-    let guard = window_state(window).lock().unwrap();
+    let guard = lock_window_state(window);
     matches!(
         guard.animation,
         Some(WindowAnimation::Closing(_)) | Some(WindowAnimation::Minimizing(_))
@@ -50,7 +50,7 @@ pub(crate) fn is_window_exiting(window: &Window) -> bool {
 
 /// Initiates an opening transition when the window's first buffer is committed.
 pub(crate) fn start_window_opening(window: &Window) {
-    let mut state_guard = window_state(window).lock().unwrap();
+    let mut state_guard = lock_window_state(window);
     if !state_guard.has_opened && window.bbox().size.w > 0 && window.bbox().size.h > 0 {
         state_guard.has_opened = true;
         state_guard.animation = Some(WindowAnimation::Opening(Tween::new(
@@ -64,7 +64,7 @@ pub(crate) fn start_window_opening(window: &Window) {
 
 /// Starts the shrink animation played before a minimized window is unmapped.
 pub(crate) fn start_window_minimizing(window: &Window) {
-    let mut state_guard = window_state(window).lock().unwrap();
+    let mut state_guard = lock_window_state(window);
     state_guard.animation = Some(WindowAnimation::Minimizing(Tween::new(
         0.0,
         1.0,
@@ -75,7 +75,7 @@ pub(crate) fn start_window_minimizing(window: &Window) {
 
 /// Cancels a pending minimize animation when the window is restored quickly.
 pub(crate) fn cancel_minimizing_animation(window: &Window) {
-    let mut state_guard = window_state(window).lock().unwrap();
+    let mut state_guard = lock_window_state(window);
     if matches!(state_guard.animation, Some(WindowAnimation::Minimizing(_))) {
         state_guard.animation = None;
     }
@@ -83,7 +83,7 @@ pub(crate) fn cancel_minimizing_animation(window: &Window) {
 
 /// Starts the grow animation used when a minimized window is restored.
 pub(crate) fn start_window_restoring(window: &Window) {
-    let mut state_guard = window_state(window).lock().unwrap();
+    let mut state_guard = lock_window_state(window);
     state_guard.animation = Some(WindowAnimation::Restoring(Tween::new(
         0.0,
         1.0,
@@ -99,7 +99,7 @@ pub(crate) fn start_window_transition(
     from: Rectangle<i32, Logical>,
     to: Rectangle<i32, Logical>,
 ) {
-    let mut state_guard = window_state(window).lock().unwrap();
+    let mut state_guard = lock_window_state(window);
     // Never interrupt an animation that is taking the window off screen.
     if matches!(
         state_guard.animation,
@@ -135,7 +135,7 @@ fn lerp_rect(
 
 /// Computes the current render parameters for a window transition.
 pub(crate) fn window_animation_frame(window: &Window) -> WindowVisualState {
-    let guard = window_state(window).lock().unwrap();
+    let guard = lock_window_state(window);
     match &guard.animation {
         Some(WindowAnimation::Opening(tween)) => {
             let p = tween.value().clamp(0.0, 1.0);
@@ -194,7 +194,7 @@ impl BabydraState {
     /// Starts the closing animation for a window, immediately delegating focus to the next window.
     pub(crate) fn close_window(&mut self, window: &Window) {
         {
-            let mut state_guard = window_state(window).lock().unwrap();
+            let mut state_guard = lock_window_state(window);
             if let Some(WindowAnimation::Closing(_)) = state_guard.animation {
                 return;
             }
@@ -247,7 +247,7 @@ impl BabydraState {
         let mut finished = Vec::new();
 
         for window in self.space.elements() {
-            let state_guard = window_state(window).lock().unwrap();
+            let state_guard = lock_window_state(window);
             if let Some(ref anim) = state_guard.animation {
                 match anim {
                     WindowAnimation::Opening(tween) => {
@@ -280,18 +280,18 @@ impl BabydraState {
         }
 
         for window in finished_opening {
-            let mut state_guard = window_state(&window).lock().unwrap();
+            let mut state_guard = lock_window_state(&window);
             state_guard.animation = None;
         }
 
         for window in finished {
-            let mut state_guard = window_state(&window).lock().unwrap();
+            let mut state_guard = lock_window_state(&window);
             state_guard.animation = None;
         }
 
         for window in finished_minimizing {
             {
-                let mut state_guard = window_state(&window).lock().unwrap();
+                let mut state_guard = lock_window_state(&window);
                 state_guard.animation = None;
             }
             self.space.unmap_elem(&window);
@@ -300,7 +300,7 @@ impl BabydraState {
 
         for window in to_close {
             {
-                let mut state_guard = window_state(&window).lock().unwrap();
+                let mut state_guard = lock_window_state(&window);
                 state_guard.animation = None;
             }
             if let Some(toplevel) = window.toplevel() {
@@ -316,5 +316,54 @@ impl BabydraState {
 }
 
 #[cfg(test)]
-#[path = "../../../../tests/adapters/compositor/state/window/animation.rs"]
-mod tests;
+mod tests {
+    use super::super::state_data::WindowStateData;
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn test_window_animation_factors_and_states() {
+        let mut state = WindowStateData::default();
+        assert!(state.animation.is_none());
+        assert!(!state.has_opened);
+
+        let open_tween = Tween::new(0.0, 1.0, Duration::ZERO, Easing::Linear);
+        state.animation = Some(WindowAnimation::Opening(open_tween));
+        assert!(matches!(state.animation, Some(WindowAnimation::Opening(_))));
+
+        let close_tween = Tween::new(0.0, 1.0, Duration::ZERO, Easing::Linear);
+        state.animation = Some(WindowAnimation::Closing(close_tween));
+        assert!(matches!(state.animation, Some(WindowAnimation::Closing(_))));
+
+        let minimize_tween = Tween::new(0.0, 1.0, Duration::ZERO, Easing::Linear);
+        state.animation = Some(WindowAnimation::Minimizing(minimize_tween));
+        assert!(matches!(
+            state.animation,
+            Some(WindowAnimation::Minimizing(_))
+        ));
+
+        let restore_tween = Tween::new(0.0, 1.0, Duration::ZERO, Easing::Linear);
+        state.animation = Some(WindowAnimation::Restoring(restore_tween));
+        assert!(matches!(
+            state.animation,
+            Some(WindowAnimation::Restoring(_))
+        ));
+
+        let geometry = GeometryTransition {
+            from: Rectangle::new(Point::from((0.0, 0.0)), Size::from((1920.0, 1080.0))),
+            to: Rectangle::new(Point::from((100.0, 100.0)), Size::from((800.0, 600.0))),
+        };
+        state.animation = Some(WindowAnimation::Transition {
+            tween: Tween::new(0.0, 1.0, Duration::ZERO, Easing::Linear),
+            geometry,
+        });
+        assert!(matches!(
+            state.animation,
+            Some(WindowAnimation::Transition { .. })
+        ));
+
+        let mid = lerp_rect(geometry.from, geometry.to, 0.5);
+        assert_eq!(mid.loc, Point::from((50.0, 50.0)));
+        assert_eq!(mid.size, Size::from((1360.0, 840.0)));
+    }
+}

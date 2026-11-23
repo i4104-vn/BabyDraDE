@@ -39,6 +39,8 @@ impl CompositorHandler for BabydraState {
                 root = parent;
             }
 
+            // Single owner of toplevel `on_commit`: this root-surface lookup also
+            // covers subsurface commits, which `xdg_shell::handle_commit` cannot see.
             if let Some(window) = self.space.elements().find(|window| {
                 window
                     .toplevel()

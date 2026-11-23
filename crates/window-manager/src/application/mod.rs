@@ -10,4 +10,5 @@ pub(crate) mod gestures;
 pub(crate) mod ports;
 pub(crate) mod shortcuts;
 pub(crate) mod switcher;
+pub(crate) mod window_action;
 pub(crate) mod windows;

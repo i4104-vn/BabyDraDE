@@ -2871,7 +2871,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "ui-kit",
- "wayland-sys",
 ]
 
 [[package]]

@@ -52,7 +52,7 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 let logical_w = (size.w as f64 / scale.x).max(1.0);
                 let logical_h = (size.h as f64 / scale.y).max(1.0);
 
-                if let Some(layout) = crate::adapters::shell::switcher::view::compute_layout(
+                if let Some(layout) = crate::adapters::desktop::switcher::view::compute_layout(
                     switcher, logical_w, logical_h,
                 ) {
                     let px = state.pointer_location.x;

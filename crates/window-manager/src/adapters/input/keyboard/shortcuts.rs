@@ -6,7 +6,7 @@ use tracing::info;
 
 use super::focus::{cycle_window_focus, focus_window};
 use crate::adapters::compositor::state::BabydraState;
-use crate::adapters::shell::lock;
+use crate::adapters::desktop::lock;
 
 pub(crate) use common::KeyboardAction;
 
@@ -141,7 +141,7 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
         }
         KeyboardAction::ClipboardPicker => {
             info!("Super+V pressed: opening clipboard history");
-            crate::adapters::shell::clipboard::trigger_picker();
+            crate::adapters::desktop::clipboard::trigger_picker();
         }
         KeyboardAction::ToggleLauncher => {
             info!("Super+Space pressed: toggling app launcher");
@@ -149,24 +149,24 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
         }
         KeyboardAction::Screenshot => {
             info!("Super+Shift+S pressed: taking screenshot");
-            crate::adapters::shell::screenshot::trigger();
+            crate::adapters::desktop::screenshot::trigger();
         }
         KeyboardAction::ToggleMaximize => {
-            let active = state.space.elements().next_back().cloned();
+            let active = state.active_window();
             if let Some(active_window) = active {
                 info!("Super+M pressed: Toggling maximize on active window");
                 state.toggle_maximize(&active_window);
             }
         }
         KeyboardAction::Minimize => {
-            let active = state.space.elements().next_back().cloned();
+            let active = state.active_window();
             if let Some(active_window) = active {
                 info!("Super+H pressed: Minimizing active window");
                 state.minimize_window(&active_window);
             }
         }
         KeyboardAction::ToggleFullscreen => {
-            let active = state.space.elements().next_back().cloned();
+            let active = state.active_window();
             if let Some(active_window) = active {
                 info!("Super+Enter pressed: Toggling fullscreen on active window");
                 state.toggle_fullscreen(&active_window);

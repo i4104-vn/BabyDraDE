@@ -44,17 +44,18 @@ fn top_level_area(path: &Path) -> Option<String> {
         .map(str::to_owned)
 }
 
-const ADAPTER_AREAS: [&str; 4] = ["compositor", "input", "rendering", "shell"];
+const ADAPTER_AREAS: [&str; 4] = ["compositor", "input", "rendering", "desktop"];
 
+// Renamed from the old `shell` area; the edge set is otherwise unchanged.
 const BASELINE_EDGES: [(&str, &str); 8] = [
     ("compositor", "input"),
     ("compositor", "rendering"),
-    ("compositor", "shell"),
+    ("compositor", "desktop"),
     ("input", "compositor"),
-    ("input", "shell"),
+    ("input", "desktop"),
     ("rendering", "compositor"),
-    ("shell", "compositor"),
-    ("shell", "rendering"),
+    ("desktop", "compositor"),
+    ("desktop", "rendering"),
 ];
 
 #[test]

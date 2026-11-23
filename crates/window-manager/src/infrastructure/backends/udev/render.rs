@@ -18,8 +18,9 @@ use tracing::{error, info, warn};
 use crate::adapters::{
     compositor::CalloopData,
     rendering::{compose_frame, CustomRenderElements, FrameContext},
-    shell::SwitcherOverlay,
+    desktop::SwitcherOverlay,
 };
+use crate::application::window_action::WindowAction;
 
 use super::surface::UdevState;
 
@@ -102,8 +103,11 @@ pub(crate) fn setup_render_loop(
             let mut s = state_render.borrow_mut();
             if s.active {
                 let state = &mut data.state;
-                if let Some(action) = services::system::window::read_and_clear_window_action() {
-                    state.handle_window_action(&action);
+                if let Some(raw_action) = services::system::window::read_and_clear_window_action()
+                {
+                    if let Some(action) = WindowAction::parse(&raw_action) {
+                        state.handle_window_action(action);
+                    }
                 }
                 state.update_window_animations();
                 state.update_clipboard();
@@ -119,7 +123,7 @@ pub(crate) fn setup_render_loop(
                 } = *s;
 
                 let mut screenshot_requested =
-                    crate::adapters::shell::screenshot::capture::take_requested();
+                    crate::adapters::desktop::screenshot::capture::take_requested();
 
                 for surface_data in surfaces.iter_mut() {
                     let output = &surface_data.output;
@@ -184,7 +188,7 @@ pub(crate) fn setup_render_loop(
                     }
 
                     if screenshot_requested {
-                        let _ = crate::adapters::shell::screenshot::capture::capture_screen(
+                        let _ = crate::adapters::desktop::screenshot::capture::capture_screen(
                             renderer,
                             &render_elements,
                             output,
