@@ -27,10 +27,8 @@ use smithay::{
 };
 
 use crate::adapters::window::cursor::resize_cursor_icon;
-#[allow(unused_imports)]
 pub(crate) use crate::adapters::window::interaction::{
-    MoveState, OverlayTouchState, ResizeState, TouchGestureBuffer, TouchSlotData,
-    TrackpadSwipeBuffer,
+    MoveState, OverlayTouchState, ResizeState, TouchGestureBuffer, TrackpadSwipeBuffer,
 };
 
 mod active_window;
