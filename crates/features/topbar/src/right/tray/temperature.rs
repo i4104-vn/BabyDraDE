@@ -1,5 +1,5 @@
-//! Tray indicator that always shows the CPU temperature and lists every
-//! temperature sensor the system exposes in a shared ui-kit tooltip popover.
+//! CPU temperature as a regular tray item on the right, with the shared
+//! ui-kit tooltip listing the remaining important temperatures.
 
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -18,17 +18,17 @@ fn temperature_rows() -> Vec<TooltipRow> {
         .collect()
 }
 
-pub fn create_temperature_widget() -> gtk4::Box {
-    let container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-    container.add_css_class("sys-monitor-box");
-    container.set_valign(gtk4::Align::Center);
+pub(crate) fn create_temperature_widget() -> gtk4::Button {
+    let button = gtk4::Button::new();
+    button.add_css_class("panel-tray-item-btn");
+    button.set_cursor_from_name(Some("default"));
 
-    let label = gtk4::Label::new(Some("--°C"));
+    let label = gtk4::Label::new(Some("--"));
     label.add_css_class("status-text");
-    container.append(&label);
+    button.set_child(Some(&label));
 
     let tooltip = Rc::new(TooltipPopover::attach_rows(
-        &container,
+        &button,
         "Temperatures",
         &temperature_rows(),
     ));
@@ -39,8 +39,8 @@ pub fn create_temperature_widget() -> gtk4::Box {
         move || {
             label.set_text(
                 &get_cpu_temperature()
-                    .map(|temp| format!("{temp:.0}°C"))
-                    .unwrap_or_else(|| "--°C".to_string()),
+                    .map(|temp| format!("{temp:.0}"))
+                    .unwrap_or_else(|| "--".to_string()),
             );
 
             if tooltip.popover.is_visible() {
@@ -55,5 +55,5 @@ pub fn create_temperature_widget() -> gtk4::Box {
         glib::ControlFlow::Continue
     });
 
-    container
+    button
 }

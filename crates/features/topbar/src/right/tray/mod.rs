@@ -1,5 +1,6 @@
 mod menu;
 mod render;
+mod temperature;
 
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -25,9 +26,13 @@ fn active_window_changed() -> bool {
 
 pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
     let tray_container = render::build_tray_container();
+    // The temperature item is always present, so the tray itself is always visible.
+    tray_container.set_visible(true);
+    let temperature_button = temperature::create_temperature_widget();
     let last_snapshot: Rc<RefCell<Vec<TrayItem>>> = Rc::new(RefCell::new(Vec::new()));
 
     let tray_container_clone = tray_container.clone();
+    let temperature_clone = temperature_button.clone();
     let last_snapshot_clone = last_snapshot.clone();
     let window_clone = window.clone();
 
@@ -50,16 +55,13 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
                 tray_container_clone.remove(&child);
             }
 
-            if current_items.is_empty() {
-                tray_container_clone.set_visible(false);
-            } else {
-                tray_container_clone.set_visible(true);
-                for item in &current_items {
-                    let btn = render::build_tray_button(item);
-                    attach_tray_click_gesture(&btn, item, &window_clone);
-                    tray_container_clone.append(&btn);
-                }
+            for item in &current_items {
+                let btn = render::build_tray_button(item);
+                attach_tray_click_gesture(&btn, item, &window_clone);
+                tray_container_clone.append(&btn);
             }
+            // Always last: the temperature item sits at the right of the tray.
+            tray_container_clone.append(&temperature_clone);
 
             *last_snapshot_clone.borrow_mut() = current_items;
         }
