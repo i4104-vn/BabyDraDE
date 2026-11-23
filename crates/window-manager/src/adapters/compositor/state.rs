@@ -32,12 +32,15 @@ pub(crate) use crate::adapters::window::interaction::{
 };
 
 mod active_window;
-mod blur;
 mod clipboard;
+mod config;
 mod hit_test;
+mod input_context;
+mod render;
 
 pub(crate) use clipboard::ClipboardState;
-mod input_context;
+pub(crate) use config::ConfigSnapshot;
+pub(crate) use render::RenderState;
 pub(crate) mod launcher;
 mod switcher;
 pub(crate) mod titlebar;
@@ -54,6 +57,10 @@ pub(crate) struct CalloopData {
 pub(crate) struct BabydraState {
     /// Clipboard capture pipeline (MIME queues owned by the component).
     pub(crate) clipboard: ClipboardState,
+    /// Cached configuration snapshot owned by the input pipeline.
+    pub(crate) config: ConfigSnapshot,
+    /// Shared rendering resources.
+    pub(crate) render: RenderState,
 
     pub(crate) start_time: Instant,
     pub(crate) socket_name: OsString,
@@ -89,6 +96,8 @@ pub(crate) struct BabydraState {
     pub(crate) alt_tab_switcher: Option<AltTabSwitcher>,
     /// Compositor-owned application launcher (shown via its shortcut).
     pub(crate) launcher: launcher::LauncherState,
+    /// Compatibility alias of `render.blur_engine`: the backends (outside this
+    /// adapter crate) read this field directly, so both names share one engine.
     pub(crate) blur_engine:
         std::sync::Arc<std::sync::Mutex<crate::adapters::rendering::blur::BlurEngine>>,
     pub(crate) pointer_location: Point<f64, Logical>,
@@ -103,16 +112,6 @@ pub(crate) struct BabydraState {
     /// Accumulated per-slot data for multi-touch gesture detection on touchscreens.
     pub(crate) touch_gesture: TouchGestureBuffer,
 
-    /// Cached touchpad configuration loaded from `~/.babydra/configs/input.toml`.
-    /// Updated when a device is added/configured; avoids per-event disk reads.
-    pub(crate) touchpad_natural_scroll: bool,
-    /// Cached mouse/pointer configuration natural scroll setting.
-    pub(crate) mouse_natural_scroll: bool,
-    /// Framework-free gesture policy snapshot, refreshed only on config reload.
-    pub(crate) gesture_config: crate::application::ports::GesturePolicy,
-    load_gesture_policy: crate::application::ports::LoadGesturePolicy,
-    /// Injected shortcut service shared with the reload watcher and input pipeline.
-    shortcuts: Arc<crate::application::shortcuts::ShortcutService>,
 }
 
 impl BabydraState {
@@ -142,9 +141,14 @@ impl BabydraState {
         seat.add_touch();
 
         let socket_name = Self::init_wayland_listener(display, event_loop);
+        let render = RenderState::new();
+        let blur_engine = render.blur_engine.clone();
+        let config = ConfigSnapshot::new(load_gesture_policy, shortcuts);
 
         Self {
             clipboard: ClipboardState::default(),
+            config,
+            render,
             start_time: Instant::now(),
             socket_name,
             display_handle,
@@ -169,9 +173,7 @@ impl BabydraState {
             trackpad_swipe: None,
             alt_tab_switcher: None,
             launcher: launcher::LauncherState::new(),
-            blur_engine: std::sync::Arc::new(std::sync::Mutex::new(
-                crate::adapters::rendering::blur::BlurEngine::new(),
-            )),
+            blur_engine,
             pointer_location: Point::from((100.0, 100.0)),
             cursor_visible: true,
             cursor_icon: CursorIcon::Default,
@@ -180,11 +182,6 @@ impl BabydraState {
             windows: Vec::new(),
             overlay_touch: None,
             touch_gesture: TouchGestureBuffer::default(),
-            touchpad_natural_scroll: services::config::load_touchpad_config().natural_scroll,
-            mouse_natural_scroll: services::config::load_mouse_config().natural_scroll,
-            gesture_config: load_gesture_policy(),
-            load_gesture_policy,
-            shortcuts,
         }
     }
 
@@ -213,10 +210,12 @@ impl BabydraState {
     /// Flushes the shared configuration cache and refreshes cached touchpad
     /// and mouse settings including natural scroll toggles.
     pub(crate) fn reload_input_config(&mut self) {
-        services::config::invalidate_cache();
-        self.touchpad_natural_scroll = services::config::load_touchpad_config().natural_scroll;
-        self.mouse_natural_scroll = services::config::load_mouse_config().natural_scroll;
-        self.gesture_config = (self.load_gesture_policy)();
+        self.config.reload();
+    }
+
+    /// Hot reloads blur and compositor configurations from disk.
+    pub(crate) fn reload_config(&mut self) {
+        self.render.reload_config();
     }
 
     /// Cursor shape the renderer should show this frame.

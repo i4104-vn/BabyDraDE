@@ -195,15 +195,15 @@ impl InputContext for BabydraState {
     }
 
     fn gesture_config(&self) -> &GesturePolicy {
-        &self.gesture_config
+        self.config.gesture_config()
     }
 
     fn touchpad_natural_scroll(&self) -> bool {
-        self.touchpad_natural_scroll
+        self.config.touchpad_natural_scroll()
     }
 
     fn mouse_natural_scroll(&self) -> bool {
-        self.mouse_natural_scroll
+        self.config.mouse_natural_scroll()
     }
 
     fn reload_input_config(&mut self) {
@@ -215,15 +215,15 @@ impl InputContext for BabydraState {
     }
 
     fn shortcut_command(&self, mods: Mods, keysym: u32) -> Option<String> {
-        self.shortcuts.command_for(mods, keysym)
+        self.config.shortcut_command(mods, keysym)
     }
 
     fn reload_shortcuts(&self) {
-        self.shortcuts.reload();
+        self.config.reload_shortcuts();
     }
 
     fn launch_command(&self, command: String) {
-        self.shortcuts.launch(command);
+        self.config.launch_command(command);
     }
 
     fn lock_screen(&self) {
