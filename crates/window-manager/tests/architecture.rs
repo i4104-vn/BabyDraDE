@@ -159,3 +159,42 @@ fn domain_and_application_are_framework_free() {
         }
     }
 }
+
+/// Dead imports must be removed, not hidden behind an allow attribute.
+#[test]
+fn no_unused_import_allowances() {
+    for path in source_files() {
+        let text = fs::read_to_string(&path).expect("read source file");
+        assert!(
+            !text.contains("#[allow(unused_imports)]"),
+            "{} hides dead imports",
+            path.display()
+        );
+    }
+}
+
+/// A toplevel commit must advance its state exactly once. Two owners would
+/// reprocess buffer state and send duplicate configures.
+#[test]
+fn toplevel_commit_has_a_single_owner() {
+    let handlers = src_root()
+        .join("adapters")
+        .join("compositor")
+        .join("handlers");
+    let mut owners = Vec::new();
+    for path in source_files() {
+        if !path.starts_with(&handlers) {
+            continue;
+        }
+        let text = fs::read_to_string(&path).expect("read source file");
+        if text.contains("window.on_commit()") {
+            owners.push(relative_to_src(&path));
+        }
+    }
+    assert_eq!(
+        owners.len(),
+        1,
+        "expected one toplevel on_commit owner, found {:?}",
+        owners
+    );
+}
