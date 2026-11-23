@@ -18,9 +18,7 @@ use smithay::{
 use crate::application::gestures::WindowIntent;
 
 pub(crate) use super::window::{
-    interaction::{
-        MoveState, OverlayTouchState, ResizeState, TouchSlotData, TrackpadSwipeBuffer,
-    },
+    interaction::{MoveState, OverlayTouchState, ResizeState, TouchSlotData, TrackpadSwipeBuffer},
     InputContext,
 };
 
@@ -29,10 +27,7 @@ pub(crate) use super::window::{
 /// Returns whether the event was consumed (i.e. must not be replayed to
 /// clients). `MiddleClick` is performed by the touch adapter, which owns the
 /// pointer event synthesis.
-pub(crate) fn execute_window_intent<C: InputContext>(
-    state: &mut C,
-    intent: WindowIntent,
-) -> bool {
+pub(crate) fn execute_window_intent<C: InputContext>(state: &mut C, intent: WindowIntent) -> bool {
     match intent {
         WindowIntent::Consumed => true,
         WindowIntent::CycleFocus { forward } => {

@@ -13,8 +13,8 @@ use smithay::{
 
 use crate::adapters::{
     compositor::{BabydraState, CalloopData, Cursor},
-    rendering::{compose_frame, CustomRenderElements, FrameContext},
     desktop::SwitcherOverlay,
+    rendering::{compose_frame, CustomRenderElements, FrameContext},
 };
 const OUTPUT_REFRESH_MHZ: i32 = animation::TARGET_FPS as i32 * 1000;
 

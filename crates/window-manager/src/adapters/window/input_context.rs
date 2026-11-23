@@ -7,6 +7,7 @@ use std::{collections::HashSet, time::Instant};
 
 use smithay::{
     backend::input::{KeyState, TouchSlot},
+    desktop::Space,
     desktop::Window,
     input::{
         keyboard::{FilterResult, Keycode, KeysymHandle, ModifiersState},
@@ -17,8 +18,7 @@ use smithay::{
             MotionEvent as PointerMotionEvent,
         },
         touch::{
-            DownEvent as TouchDownEvent, MotionEvent as TouchMotionEvent,
-            UpEvent as TouchUpEvent,
+            DownEvent as TouchDownEvent, MotionEvent as TouchMotionEvent, UpEvent as TouchUpEvent,
         },
     },
     reexports::{
@@ -27,7 +27,6 @@ use smithay::{
     },
     utils::{Logical, Point, Serial, Size},
     wayland::shell::wlr_layer::Layer,
-    desktop::Space,
 };
 
 use common::Action;
@@ -77,9 +76,7 @@ pub(crate) trait InputContext {
     // -- in-progress interactions --
     fn move_state_mut(&mut self) -> &mut Option<MoveState>;
     fn resize_state_mut(&mut self) -> &mut Option<ResizeState>;
-    fn last_titlebar_click_mut(
-        &mut self,
-    ) -> &mut Option<(Instant, Point<f64, Logical>, Window)>;
+    fn last_titlebar_click_mut(&mut self) -> &mut Option<(Instant, Point<f64, Logical>, Window)>;
     fn trackpad_swipe(&self) -> Option<&TrackpadSwipeBuffer>;
     fn trackpad_swipe_mut(&mut self) -> &mut Option<TrackpadSwipeBuffer>;
     fn touch_gesture(&self) -> &TouchGestureBuffer;

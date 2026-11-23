@@ -2,8 +2,12 @@
 
 use std::{collections::HashSet, time::Instant};
 
+use common::Action;
+use smithay::utils::{Logical, Point, Serial, Size};
+use smithay::wayland::shell::wlr_layer::Layer;
 use smithay::{
     backend::input::{KeyState, TouchSlot},
+    desktop::Space,
     desktop::Window,
     input::{
         keyboard::{FilterResult, Keycode, KeysymHandle, ModifiersState},
@@ -14,26 +18,21 @@ use smithay::{
             MotionEvent as PointerMotionEvent,
         },
         touch::{
-            DownEvent as TouchDownEvent, MotionEvent as TouchMotionEvent,
-            UpEvent as TouchUpEvent,
+            DownEvent as TouchDownEvent, MotionEvent as TouchMotionEvent, UpEvent as TouchUpEvent,
         },
     },
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
         wayland_server::protocol::wl_surface::WlSurface,
     },
-    desktop::Space,
 };
-use common::Action;
-use smithay::utils::{Logical, Point, Serial, Size};
-use smithay::wayland::shell::wlr_layer::Layer;
 
 use crate::adapters::window::InputContext;
 use crate::application::ports::GesturePolicy;
 use crate::domain::shortcuts::Mods;
 
 use super::{
-    window::state_data::window_state, MoveState, OverlayTouchState, ResizeState, BabydraState,
+    window::state_data::window_state, BabydraState, MoveState, OverlayTouchState, ResizeState,
     TouchGestureBuffer, TrackpadSwipeBuffer,
 };
 
@@ -94,10 +93,7 @@ impl InputContext for BabydraState {
         BabydraState::toggle_fullscreen(self, window);
     }
 
-    fn window_under(
-        &self,
-        point: Point<f64, Logical>,
-    ) -> Option<(Window, Point<i32, Logical>)> {
+    fn window_under(&self, point: Point<f64, Logical>) -> Option<(Window, Point<i32, Logical>)> {
         BabydraState::window_under(self, point)
     }
 
@@ -140,9 +136,7 @@ impl InputContext for BabydraState {
         &mut self.input.resize_state
     }
 
-    fn last_titlebar_click_mut(
-        &mut self,
-    ) -> &mut Option<(Instant, Point<f64, Logical>, Window)> {
+    fn last_titlebar_click_mut(&mut self) -> &mut Option<(Instant, Point<f64, Logical>, Window)> {
         &mut self.input.last_titlebar_click
     }
 
@@ -315,7 +309,8 @@ impl InputContext for BabydraState {
     }
 
     fn switcher_tab_pressed(&mut self, direction: i32) -> bool {
-        self.overlays.alt_tab_switcher
+        self.overlays
+            .alt_tab_switcher
             .as_mut()
             .map(|switcher| switcher.tab_pressed(direction))
             .unwrap_or(false)
@@ -379,26 +374,31 @@ impl InputContext for BabydraState {
     }
 
     fn switcher_slide(&self, panel_width: f64) -> f64 {
-        self.overlays.alt_tab_switcher
+        self.overlays
+            .alt_tab_switcher
             .as_ref()
             .map(|switcher| (1.0 - switcher.presence().clamp(0.0, 1.0)) * panel_width)
             .unwrap_or_default()
     }
 
     fn switcher_window_at(&self, index: usize) -> Option<Window> {
-        self.overlays.alt_tab_switcher
+        self.overlays
+            .alt_tab_switcher
             .as_ref()
             .and_then(|switcher| switcher.entries.get(index))
             .map(|entry| entry.window.clone())
     }
 
     fn switcher_selected_window(&self) -> Option<Window> {
-        self.overlays.alt_tab_switcher.as_ref().and_then(|switcher| {
-            switcher
-                .entries
-                .get(switcher.selected_index)
-                .map(|entry| entry.window.clone())
-        })
+        self.overlays
+            .alt_tab_switcher
+            .as_ref()
+            .and_then(|switcher| {
+                switcher
+                    .entries
+                    .get(switcher.selected_index)
+                    .map(|entry| entry.window.clone())
+            })
     }
 
     fn has_keyboard(&self) -> bool {
@@ -420,7 +420,8 @@ impl InputContext for BabydraState {
     where
         F: FnOnce(&mut Self, &ModifiersState, KeysymHandle<'_>) -> FilterResult<T>,
     {
-        self.wayland.seat
+        self.wayland
+            .seat
             .get_keyboard()
             .unwrap()
             .input::<T, F>(self, keycode, state, serial, time, filter)
@@ -445,7 +446,11 @@ impl InputContext for BabydraState {
         focus: Option<(WlSurface, Point<f64, Logical>)>,
         event: &PointerMotionEvent,
     ) {
-        self.wayland.seat.get_pointer().unwrap().motion(self, focus, event);
+        self.wayland
+            .seat
+            .get_pointer()
+            .unwrap()
+            .motion(self, focus, event);
     }
 
     fn pointer_button(&mut self, event: &ButtonEvent) {

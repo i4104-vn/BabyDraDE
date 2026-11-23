@@ -2,14 +2,9 @@
 
 use std::time::Duration;
 
-use smithay::{
-    output::Output,
-    reexports::wayland_server::DisplayHandle,
-};
+use smithay::{output::Output, reexports::wayland_server::DisplayHandle};
 
-use crate::{
-    adapters::compositor::BabydraState, application::window_action::WindowAction,
-};
+use crate::{adapters::compositor::BabydraState, application::window_action::WindowAction};
 
 /// Runs the state updates that must happen before a frame is composed.
 pub(crate) fn begin_frame(state: &mut BabydraState) {

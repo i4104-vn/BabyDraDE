@@ -13,10 +13,7 @@ use std::{
 
 use smithay::{
     input::Seat,
-    reexports::{
-        calloop::channel::Sender,
-        wayland_server::DisplayHandle,
-    },
+    reexports::{calloop::channel::Sender, wayland_server::DisplayHandle},
     wayland::selection::data_device::{
         request_data_device_client_selection, set_data_device_selection,
     },

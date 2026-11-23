@@ -48,7 +48,8 @@ impl SeatHandler for BabydraState {
     }
 
     fn focus_changed(&mut self, seat: &Seat<Self>, focused: Option<&WlSurface>) {
-        let client = focused.and_then(|surface| self.wayland.display_handle.get_client(surface.id()).ok());
+        let client =
+            focused.and_then(|surface| self.wayland.display_handle.get_client(surface.id()).ok());
         set_data_device_focus(&self.wayland.display_handle, seat, client);
     }
 }

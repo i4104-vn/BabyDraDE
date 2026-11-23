@@ -24,11 +24,11 @@ use smithay::{
 
 use crate::adapters::desktop::overlays::OverlayState;
 use crate::adapters::window::cursor::resize_cursor_icon;
-use crate::adapters::window::WindowRegistry;
-use crate::application::window_action::WindowAction;
 pub(crate) use crate::adapters::window::interaction::{
     MoveState, OverlayTouchState, ResizeState, TouchGestureBuffer, TrackpadSwipeBuffer,
 };
+use crate::adapters::window::WindowRegistry;
+use crate::application::window_action::WindowAction;
 
 mod clipboard;
 mod config;

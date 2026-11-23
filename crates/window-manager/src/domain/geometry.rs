@@ -70,7 +70,10 @@ mod tests {
 
     #[test]
     fn points_add_component_wise() {
-        assert_eq!(Point::from((1, 2)) + Point::from((3, 4)), Point::from((4, 6)));
+        assert_eq!(
+            Point::from((1, 2)) + Point::from((3, 4)),
+            Point::from((4, 6))
+        );
     }
 
     #[test]

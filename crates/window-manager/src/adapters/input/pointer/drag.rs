@@ -14,9 +14,7 @@ pub(crate) fn handle_window_drag<C: InputContext>(
     time: u32,
 ) -> bool {
     if let Some(mut move_state) = state.move_state_mut().take() {
-        if !state
-            .pointer_pressed_buttons()
-            .contains(&move_state.button)
+        if !state.pointer_pressed_buttons().contains(&move_state.button)
             && state.pointer_pressed_buttons().is_empty()
         {
             let under = state.surface_under(position);

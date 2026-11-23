@@ -238,7 +238,9 @@ impl BabydraState {
         if was_minimized || !self.space.elements().any(|w| w == window) {
             let loc = {
                 let state_guard = lock_window_state(window);
-                state_guard.saved_location.unwrap_or_else(default_smithay_position)
+                state_guard
+                    .saved_location
+                    .unwrap_or_else(default_smithay_position)
             };
             // If the shrink animation is still running, abort it so it cannot
             // unmap the window we are bringing back.

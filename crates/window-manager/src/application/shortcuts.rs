@@ -74,10 +74,7 @@ impl ShortcutService {
     pub(crate) fn reload(&self) {
         match self.repository.load() {
             Ok(shortcuts) => {
-                *self
-                    .shortcuts
-                    .write()
-                    .unwrap_or_else(|e| e.into_inner()) = shortcuts;
+                *self.shortcuts.write().unwrap_or_else(|e| e.into_inner()) = shortcuts;
             }
             Err(e) => tracing::warn!(
                 "kept previous shortcut table after load error: {}",
@@ -93,7 +90,11 @@ impl ShortcutService {
     /// * `command` - Command string from the matched shortcut.
     pub(crate) fn launch(&self, command: String) {
         if let Err(e) = self.launcher.launch(&command) {
-            tracing::warn!("failed to launch shortcut command {:?}: {}", command, e.message);
+            tracing::warn!(
+                "failed to launch shortcut command {:?}: {}",
+                command,
+                e.message
+            );
         }
     }
 }
@@ -211,10 +212,7 @@ mod tests {
         let service = service_with(repository.clone(), Arc::new(FakeLauncher::default()));
 
         assert_eq!(repository.load_count(), 1);
-        assert_eq!(
-            service.command_for(mods(), KEY_e).as_deref(),
-            Some("kitty")
-        );
+        assert_eq!(service.command_for(mods(), KEY_e).as_deref(), Some("kitty"));
     }
 
     #[test]
@@ -252,10 +250,7 @@ mod tests {
         service.reload();
 
         assert_eq!(repository.load_count(), 2);
-        assert_eq!(
-            service.command_for(mods(), KEY_e).as_deref(),
-            Some("kitty")
-        );
+        assert_eq!(service.command_for(mods(), KEY_e).as_deref(), Some("kitty"));
     }
 
     #[test]
@@ -265,10 +260,7 @@ mod tests {
             Arc::new(FakeLauncher::default()),
         );
 
-        assert_eq!(
-            service.command_for(mods(), KEY_e).as_deref(),
-            Some("kitty")
-        );
+        assert_eq!(service.command_for(mods(), KEY_e).as_deref(), Some("kitty"));
         assert_eq!(service.command_for(Mods::default(), KEY_e), None);
     }
 

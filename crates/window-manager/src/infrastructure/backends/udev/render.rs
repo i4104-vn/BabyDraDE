@@ -15,12 +15,12 @@ use smithay::{
 };
 use tracing::{error, info, warn};
 
+use super::surface::UdevState;
 use crate::adapters::{
     compositor::CalloopData,
-    rendering::{compose_frame, CustomRenderElements, FrameContext},
     desktop::SwitcherOverlay,
+    rendering::{compose_frame, CustomRenderElements, FrameContext},
 };
-use super::surface::UdevState;
 
 pub(crate) fn setup_render_loop(
     event_loop: &mut EventLoop<'_, CalloopData>,

@@ -25,9 +25,7 @@ pub(crate) fn window_state(window: &Window) -> &std::sync::Mutex<WindowStateData
 ///
 /// A panic in one frame must not take down the compositor on the next frame;
 /// recovering the inner data keeps the last known window state usable.
-pub(crate) fn lock_window_state(
-    window: &Window,
-) -> std::sync::MutexGuard<'_, WindowStateData> {
+pub(crate) fn lock_window_state(window: &Window) -> std::sync::MutexGuard<'_, WindowStateData> {
     match window_state(window).lock() {
         Ok(guard) => guard,
         Err(poisoned) => {

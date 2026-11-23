@@ -1,8 +1,6 @@
 use std::time::{Duration, Instant};
 
-use animation::{
-    Easing, Tween, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION,
-};
+use animation::{Easing, Tween, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION};
 use smithay::utils::SERIAL_COUNTER;
 
 use super::BabydraState;
@@ -166,19 +164,24 @@ impl BabydraState {
         if self.overlays.alt_tab_switcher.is_none() {
             self.cycle_alt_tab(false);
         }
-        self.overlays.alt_tab_switcher
+        self.overlays
+            .alt_tab_switcher
             .as_ref()
             .map(|switcher| switcher.selected_index)
     }
 
     /// Focuses the current switcher entry and starts the close animation.
     pub(crate) fn commit_switcher_selection(&mut self) {
-        let window = self.overlays.alt_tab_switcher.as_ref().and_then(|switcher| {
-            switcher
-                .entries
-                .get(switcher.selected_index)
-                .map(|entry| entry.window.clone())
-        });
+        let window = self
+            .overlays
+            .alt_tab_switcher
+            .as_ref()
+            .and_then(|switcher| {
+                switcher
+                    .entries
+                    .get(switcher.selected_index)
+                    .map(|entry| entry.window.clone())
+            });
         if let Some(window) = window {
             self.unminimize_window(&window);
             crate::adapters::input::keyboard::focus::focus_window(
@@ -213,4 +216,3 @@ impl BabydraState {
         switcher.closing = false;
     }
 }
-

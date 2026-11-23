@@ -11,10 +11,10 @@ use smithay::{
 
 use super::super::InputContext;
 use super::drag::{handle_touch_drag, handle_touch_resize};
+use crate::adapters::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
 use crate::adapters::input::{
     common::transform_absolute_position, MoveState, OverlayTouchState, ResizeState,
 };
-use crate::adapters::input::touch::gestures::{on_touch_down, on_touch_motion, on_touch_up};
 use common::Action;
 
 /// Checks whether a touch-down occurs on an active overlay (launcher or switcher)

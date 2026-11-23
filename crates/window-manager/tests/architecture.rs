@@ -12,7 +12,10 @@ fn collect_source_files(dir: &Path, out: &mut Vec<PathBuf>) {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.components().any(|component| component.as_os_str() == "tests") {
+        if path
+            .components()
+            .any(|component| component.as_os_str() == "tests")
+        {
             continue;
         }
         if path.is_dir() {
@@ -59,9 +62,16 @@ const BASELINE_EDGES: [(&str, &str); 6] = [
 
 #[test]
 fn domain_and_application_do_not_import_outer_layers() {
-    let forbidden = ["crate::adapters", "crate::infrastructure", "crate::composition"];
+    let forbidden = [
+        "crate::adapters",
+        "crate::infrastructure",
+        "crate::composition",
+    ];
     for path in source_files() {
-        if !matches!(top_level_area(&path).as_deref(), Some("domain" | "application")) {
+        if !matches!(
+            top_level_area(&path).as_deref(),
+            Some("domain" | "application")
+        ) {
             continue;
         }
         let text = fs::read_to_string(&path).expect("read source file");
@@ -92,7 +102,11 @@ fn adapter_import_edges_are_unchanged() {
         else {
             continue;
         };
-        let Some(from) = ADAPTER_AREAS.iter().copied().find(|area| *area == from_name) else {
+        let Some(from) = ADAPTER_AREAS
+            .iter()
+            .copied()
+            .find(|area| *area == from_name)
+        else {
             continue;
         };
 
@@ -145,7 +159,10 @@ fn domain_and_application_are_framework_free() {
         "std::process",
     ];
     for path in source_files() {
-        if !matches!(top_level_area(&path).as_deref(), Some("domain" | "application")) {
+        if !matches!(
+            top_level_area(&path).as_deref(),
+            Some("domain" | "application")
+        ) {
             continue;
         }
         let text = fs::read_to_string(&path).expect("read source file");

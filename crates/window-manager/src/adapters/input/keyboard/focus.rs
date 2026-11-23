@@ -37,11 +37,7 @@ pub(crate) fn cycle_window_focus<C: InputContext>(
 /// Raises a window to the top of the compositor space and transfers keyboard focus to its surface.
 ///
 /// Notifies all windows of activation state change and triggers pending configure events.
-pub(crate) fn focus_window<C: InputContext>(
-    state: &mut C,
-    window: Window,
-    serial: Serial,
-) {
+pub(crate) fn focus_window<C: InputContext>(state: &mut C, window: Window, serial: Serial) {
     let Some(toplevel) = window.toplevel() else {
         return;
     };

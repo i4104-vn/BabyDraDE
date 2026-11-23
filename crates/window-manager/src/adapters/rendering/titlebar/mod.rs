@@ -237,9 +237,8 @@ pub(crate) fn render(
             }
         })
         .ok()?;
-    let titlebar_y =
-        TitlebarLayout::new(width as f64 / scale.x, maximized)
-            .frame_y(to_pure_location(location), maximized) as i32;
+    let titlebar_y = TitlebarLayout::new(width as f64 / scale.x, maximized)
+        .frame_y(to_pure_location(location), maximized) as i32;
     let titlebar_loc = Point::<i32, Logical>::from((location.x, titlebar_y));
     let titlebar_phys: Point<i32, smithay::utils::Physical> =
         titlebar_loc.to_physical_precise_round(scale);

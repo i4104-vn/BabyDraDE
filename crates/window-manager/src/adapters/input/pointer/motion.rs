@@ -10,10 +10,7 @@ use super::super::InputContext;
 use super::drag::{handle_window_drag, handle_window_resize};
 use crate::adapters::input::common::transform_absolute_position;
 
-fn update_overlay_hover<C: InputContext>(
-    state: &mut C,
-    position: Point<f64, Logical>,
-) {
+fn update_overlay_hover<C: InputContext>(state: &mut C, position: Point<f64, Logical>) {
     if !state.switcher_is_active() {
         state.launcher_update_hover(position);
         return;
