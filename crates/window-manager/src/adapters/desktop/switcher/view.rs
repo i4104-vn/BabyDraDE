@@ -7,7 +7,7 @@ use common::constants::launcher::{SLOT, VISIBLE_SLOTS};
 use ui_kit::components::dock::{draw_dock, visual_center, DockLayout, DockSide};
 use ui_kit::drawing::{draw_text, fit_text, set_bold_font};
 
-use crate::adapters::compositor::AltTabSwitcher;
+use crate::adapters::desktop::switcher::AltTabSwitcher;
 
 use super::draw::{draw_app_badge, Rect};
 

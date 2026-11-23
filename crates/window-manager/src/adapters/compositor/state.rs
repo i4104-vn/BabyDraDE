@@ -38,7 +38,7 @@ mod switcher;
 pub(crate) mod titlebar;
 pub(crate) mod window;
 
-pub(crate) use switcher::{AltTabEntry, AltTabSwitcher};
+use crate::adapters::desktop::switcher::AltTabSwitcher;
 pub(crate) use window::*;
 
 pub(crate) struct CalloopData {

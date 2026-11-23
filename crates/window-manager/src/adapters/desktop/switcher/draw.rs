@@ -2,7 +2,7 @@ use cairo::{Context, FontSlant, FontWeight};
 use gtk4::gdk::prelude::GdkCairoContextExt;
 use ui_kit::drawing::{app_color, draw_text, rounded_rect};
 
-use crate::adapters::compositor::AltTabEntry;
+use crate::adapters::desktop::switcher::AltTabEntry;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Rect {
