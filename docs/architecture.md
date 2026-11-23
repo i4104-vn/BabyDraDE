@@ -38,13 +38,14 @@ The crate follows Clean Architecture. Dependencies point **inward** only:
 ```
 
 Inner layers never import an outer layer. `domain` is a leaf: it owns its keysym
-table, titlebar rules and shortcut matching; window metadata is a plain value
-type and its cache lives in `adapters/window`. `application` owns the decisions:
-which command a key press runs, which window action a gesture maps to, what
-geometry a maximized window gets, which selection MIME to capture and how a
-finger drag moves the switcher. Its ports are being migrated from plain function
-types to traits that can carry errors and be replaced in tests; the composition
-root injects concrete adapters for them.
+table, titlebar rules, shortcut matching and its own pure geometry value types;
+window metadata is a plain value type and its cache lives in `adapters/window`.
+`application` owns the decisions: which command a key press runs, which window
+action a gesture maps to, what geometry a maximized window gets, which selection
+MIME to capture and how a finger drag moves the switcher. Pure policies stay as
+functions; effectful ports are traits that carry errors and can be replaced by
+fakes in tests. The composition root injects concrete adapters for them, so no
+service lives in global mutable state.
 
 Large areas keep their own sub-folder: files are split by responsibility rather
 than merged into big modules. Unit tests are inline `#[cfg(test)]` modules next
@@ -52,28 +53,29 @@ to the code they cover; integration and architecture tests live in `tests/`.
 
 ```text
 src/
-├── composition/      # entry-point wiring: run(), bootstrap, subcommand dispatch
+├── composition/      # coordinator, runtime lifecycle, wiring, bootstrap, commands
 ├── infrastructure/   # backends (Winit/Udev), platform (brand), process, config/
+│   ├── backends/     # shared render_loop plus surface/renderer differences
 │   └── config/       # gesture policy, keymap, pointer and touchpad config
 ├── adapters/         # compositor, input, rendering, desktop and window adapters
-│   ├── compositor/   # protocol handlers + runtime state, hit-test, clipboard
-│   ├── input/        # keyboard, pointer, touch, touchpad; config now in infrastructure
+│   ├── compositor/   # protocol handlers + runtime facade, hit-test
+│   ├── input/        # keyboard, pointer, touch, touchpad; reaches desktop via InputContext
 │   ├── rendering/    # frame composition, elements, blur, titlebar, animation
 │   ├── desktop/      # launcher, switcher, lock, screenshot, clipboard picker
-│   └── window/       # shared window registry, metadata and cursor mapping
-├── application/      # clipboard, gestures, ports, shortcuts, switcher, windows
-├── domain/           # keysyms, shortcuts, titlebar, window
+│   └── window/       # registry, metadata, cursor mapping and the InputContext seam
+├── application/      # clipboard, gestures, ports, shortcuts, switcher, windows, autostart
+├── domain/           # geometry, keysyms, shortcuts, titlebar, window
 ├── tests/            # architecture gate (integration test)
 └── main.rs           # composition root executable
 resources/            # default keymap shipped with the compositor
 ```
 
-Layer boundaries are enforced by code review, Rust module visibility
-(`pub(crate)` inside a binary crate), and an architecture test that runs in CI.
-The current import graph is pinned as a shrinking baseline while the remaining
-cycles are removed; see [ADR 0004](adr/0004-architecture-gate.md). The original
-decision and its rationale are recorded in
-[ADR 0003](adr/0003-clean-architecture.md).
+Layer boundaries are enforced by Rust module visibility (`pub(crate)` inside a
+binary crate) and an architecture test that runs in CI. The test forbids outer
+imports from the core, keeps the core framework-free and service-locator-free,
+and pins the remaining one-way adapter edges as a shrinking baseline; see
+[ADR 0004](adr/0004-architecture-gate.md). The original decision and its
+rationale are recorded in [ADR 0003](adr/0003-clean-architecture.md).
 
 See [Animations, Constants and Enums](animations-constants-enums.md) for frame pacing,
 [Configuration](configuration.md) for the config layout,
