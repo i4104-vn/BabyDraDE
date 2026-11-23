@@ -4,22 +4,13 @@ use smithay::input::keyboard::{keysyms, ModifiersState};
 use smithay::utils::Serial;
 use tracing::info;
 
+use super::super::InputContext;
 use super::focus::{cycle_window_focus, focus_window};
-use crate::adapters::compositor::state::BabydraState;
 use crate::adapters::desktop::lock;
 
 pub(crate) use common::KeyboardAction;
 
 /// Evaluates a pressed keysym against registered global shortcuts.
-///
-/// # Arguments
-///
-/// * `modifiers` - The current active keyboard modifiers state (Ctrl, Alt, Shift, Logo/Super).
-/// * `sym` - The resolved XKB keysym code of the pressed key.
-///
-/// # Returns
-///
-/// Returns `Some(KeyboardAction)` if a global shortcut matched, or `None` if the event should forward to clients.
 pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option<KeyboardAction> {
     // 1. Super + Escape OR Super + Shift + Q OR Ctrl + Alt + Backspace: Quit WM immediately
     if (modifiers.logo && sym == keysyms::KEY_Escape)
@@ -113,17 +104,15 @@ pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option
 }
 
 /// Executes a compositor action triggered by a shortcut or switcher event.
-///
-/// # Arguments
-///
-/// * `state` - Mutable reference to [`BabydraState`].
-/// * `action` - The [`KeyboardAction`] to perform.
-/// * `serial` - Serial identifier associated with the keyboard event.
-pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, serial: Serial) {
+pub(crate) fn execute_action<C: InputContext>(
+    state: &mut C,
+    action: KeyboardAction,
+    serial: Serial,
+) {
     match action {
         KeyboardAction::QuitCompositor => {
             info!("Quit shortcut pressed: Stopping BabyDraDE compositor...");
-            state.loop_signal.stop();
+            state.stop_loop();
         }
         KeyboardAction::CloseActiveWindow => {
             if let Some(active_window) = state.active_window() {
@@ -145,7 +134,7 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
         }
         KeyboardAction::ToggleLauncher => {
             info!("Super+Space pressed: toggling app launcher");
-            state.launcher.toggle();
+            state.launcher_toggle();
         }
         KeyboardAction::Screenshot => {
             info!("Super+Shift+S pressed: taking screenshot");
@@ -179,24 +168,15 @@ pub(crate) fn execute_action(state: &mut BabydraState, action: KeyboardAction, s
             state.cycle_alt_tab(backwards);
         }
         KeyboardAction::AltTabCancel => {
-            if let Some(switcher) = state.alt_tab_switcher.as_mut() {
-                switcher.begin_close();
-            }
+            state.switcher_begin_close();
         }
         KeyboardAction::AltTabCommit => {
-            let selected = state.alt_tab_switcher.as_ref().and_then(|switcher| {
-                switcher
-                    .entries
-                    .get(switcher.selected_index)
-                    .map(|entry| entry.window.clone())
-            });
+            let selected = state.switcher_selected_window();
             if let Some(window) = selected {
                 state.unminimize_window(&window);
                 focus_window(state, window, serial);
             }
-            if let Some(switcher) = state.alt_tab_switcher.as_mut() {
-                switcher.begin_close();
-            }
+            state.switcher_begin_close();
         }
     }
 }

@@ -3,14 +3,14 @@ use smithay::{
     utils::{Logical, Point, Size, Transform},
 };
 
-use crate::adapters::compositor::state::BabydraState;
+use crate::adapters::input::InputContext;
 
 /// Transforms raw hardware absolute input coordinates into logical compositor coordinates,
 /// taking into account screen geometry, orientation, and optional touchscreen override transforms.
 ///
 /// # Arguments
 ///
-/// * `state` - Mutable or immutable reference to [`BabydraState`] containing the current output layout.
+/// * `state` - State providing the current output layout.
 /// * `event` - The absolute input position event providing transformed positions relative to screen mode.
 /// * `touch_override` - Whether to check `BABYDRADE_TOUCH_TRANSFORM` for physical orientation override (used by touchscreens).
 ///
@@ -18,12 +18,12 @@ use crate::adapters::compositor::state::BabydraState;
 ///
 /// Returns `Some(Point<f64, Logical>)` clamped to output geometry bounds, or `None` if no output is attached.
 pub(crate) fn transform_absolute_position<B: InputBackend, T: AbsolutePositionEvent<B>>(
-    state: &BabydraState,
+    state: &impl InputContext,
     event: &T,
     touch_override: bool,
 ) -> Option<Point<f64, Logical>> {
-    let output = state.space.outputs().next()?;
-    let output_geometry = state.space.output_geometry(output)?;
+    let output = state.space().outputs().next()?;
+    let output_geometry = state.space().output_geometry(output)?;
     let transform = if touch_override {
         match std::env::var("BABYDRADE_TOUCH_TRANSFORM").as_deref() {
             Ok("90") => Transform::_90,

@@ -5,7 +5,7 @@ use smithay::{
     input::pointer::AxisFrame,
 };
 
-use crate::adapters::compositor::state::BabydraState;
+use super::super::InputContext;
 
 /// Resolves whether natural scrolling should be applied to an axis event, and inverts
 /// the scroll values if the underlying backend has not already done so.
@@ -58,20 +58,20 @@ pub(crate) fn apply_natural_scroll(
 ///
 /// # Arguments
 ///
-/// * `state` - Mutable reference to [`BabydraState`].
+/// * `state` - Mutable reference to the input context state.
 /// * `event` - The pointer axis event providing vertical and horizontal scroll amounts.
-pub(crate) fn handle_axis<B, E>(state: &mut BabydraState, event: E)
+pub(crate) fn handle_axis<B, E>(state: &mut impl InputContext, event: E)
 where
     B: InputBackend,
     E: PointerAxisEvent<B>,
 {
-    state.cursor_visible = true;
+    state.set_cursor_visible(true);
 
     let source = event.source();
 
     let natural_scroll = match source {
-        AxisSource::Finger | AxisSource::Continuous => state.touchpad_natural_scroll,
-        AxisSource::Wheel | AxisSource::WheelTilt => state.mouse_natural_scroll,
+        AxisSource::Finger | AxisSource::Continuous => state.touchpad_natural_scroll(),
+        AxisSource::Wheel | AxisSource::WheelTilt => state.mouse_natural_scroll(),
     };
 
     let (_vert_amount, vert_v120, _vert_dir) = apply_natural_scroll(
@@ -97,15 +97,15 @@ where
 
     // Wheel/touchpad scrolling over the visible launcher scrolls its app list
     // instead of the window under the pointer.
-    if state.launcher.is_over_panel(state.pointer_location) {
+    if state.launcher_is_over_panel(state.pointer_location()) {
         if scroll_slots != 0.0 {
-            state.launcher.scroll_by(scroll_slots);
+            state.launcher_scroll_by(scroll_slots);
         }
         return;
     }
 
     // Scrolling while the Alt+Tab switcher is open cycles through windows.
-    if state.alt_tab_switcher.is_some() {
+    if state.switcher_is_active() {
         if scroll_slots != 0.0 {
             state.cycle_alt_tab(scroll_slots < 0.0);
         }
@@ -167,9 +167,9 @@ where
         frame = frame.v120(Axis::Vertical, amount_v120.round() as i32);
     }
 
-    if let Some(pointer) = state.seat.get_pointer() {
-        pointer.axis(state, frame);
-        pointer.frame(state);
+    if state.has_pointer() {
+        state.pointer_axis(frame);
+        state.pointer_frame();
     }
 }
 

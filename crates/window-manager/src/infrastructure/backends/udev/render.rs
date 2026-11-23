@@ -103,14 +103,7 @@ pub(crate) fn setup_render_loop(
             let mut s = state_render.borrow_mut();
             if s.active {
                 let state = &mut data.state;
-                if let Some(raw_action) = services::system::window::read_and_clear_window_action()
-                {
-                    if let Some(action) = WindowAction::parse(&raw_action) {
-                        state.handle_window_action(action);
-                    }
-                }
-                state.update_window_animations();
-                state.update_clipboard();
+                super::render_loop::begin_frame(state);
                 let display_handle = &mut data.display_handle;
                 let scale = Scale::from(1.0);
 
@@ -196,30 +189,11 @@ pub(crate) fn setup_render_loop(
                         screenshot_requested = false;
                     }
 
-                    state.space.elements().for_each(|window| {
-                        window.send_frame(
-                            output,
-                            state.start_time.elapsed(),
-                            Some(Duration::ZERO),
-                            |_, _| Some(output.clone()),
-                        );
-                    });
-
-                    let layer_map = smithay::desktop::layer_map_for_output(output);
-                    for layer in layer_map.layers() {
-                        layer.send_frame(
-                            output,
-                            state.start_time.elapsed(),
-                            Some(Duration::ZERO),
-                            |_, _| Some(output.clone()),
-                        );
-                    }
+                    super::render_loop::send_frames(state, output);
                 }
-
-                state.space.refresh();
-                state.popups.cleanup();
-                let _ = display_handle.flush_clients();
             }
+
+            super::render_loop::end_frame(state, display_handle);
 
             // Schedule from the previous deadline, not from render completion,
             // so a slow frame cannot permanently drift the 120 fps cadence.

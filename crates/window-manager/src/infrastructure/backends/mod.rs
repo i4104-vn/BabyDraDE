@@ -1,3 +1,4 @@
+pub(crate) mod render_loop;
 pub(crate) mod udev;
 pub(crate) mod winit;
 

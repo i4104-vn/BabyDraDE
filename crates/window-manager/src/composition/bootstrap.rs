@@ -74,6 +74,8 @@ pub(crate) fn export_toolkit_env() {
     std::env::set_var("XDG_SESSION_DESKTOP", brand::DISPLAY_NAME);
     // SAFETY: see above.
     std::env::set_var("XDG_SESSION_TYPE", "wayland");
+
+    super::input_method::export_defaults();
 }
 
 /// Publishes the compositor's own Wayland socket for child processes.

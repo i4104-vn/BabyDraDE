@@ -2,6 +2,7 @@
 
 pub(crate) mod bootstrap;
 pub(crate) mod commands;
+pub(crate) mod input_method;
 
 use std::error::Error;
 

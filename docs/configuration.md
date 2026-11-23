@@ -47,6 +47,20 @@ mode = "static"
 dnd = false
 ```
 
+## Input method (fcitx5)
+
+Compositor export sẵn các biến môi trường `GTK_IM_MODULE`, `QT_IM_MODULE`,
+`SDL_IM_MODULE`, `INPUT_METHOD=fcitx` và `XMODIFIERS=@im=fcitx` cho mọi tiến
+trình con. Giá trị do người dùng đặt trước đó được giữ nguyên.
+
+Để dùng được bộ gõ, cần có daemon fcitx5 chạy trong phiên Wayland. Thêm lệnh
+khởi động vào `[autostart]` nếu hệ thống của bạn chưa tự chạy:
+
+```toml
+[autostart]
+commands = ["babydra-desktop", "babydra-topbar", "fcitx5"]
+```
+
 Các khóa không được nhận diện sẽ được giữ lại khi migration, nhưng không nên thêm
 subsystem mới vào đây.
 

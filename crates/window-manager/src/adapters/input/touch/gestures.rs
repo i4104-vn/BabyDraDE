@@ -11,17 +11,13 @@ use smithay::{
     utils::{Point, SERIAL_COUNTER},
 };
 
-use crate::{
-    adapters::{
-        compositor::state::{BabydraState, TouchSlotData},
-        input::execute_window_intent,
+use super::super::InputContext;
+use crate::adapters::input::{execute_window_intent, TouchSlotData};
+use crate::application::{
+    gestures::{
+        should_start_scrub, three_finger_tap_intent, two_finger_touch_intent, WindowIntent,
     },
-    application::{
-        gestures::{
-            should_start_scrub, three_finger_tap_intent, two_finger_touch_intent, WindowIntent,
-        },
-        ports::GesturePolicy,
-    },
+    ports::GesturePolicy,
 };
 
 // ----- constants ---------------------------------------------------------
@@ -31,27 +27,16 @@ use common::constants::BTN_MIDDLE;
 // ----- down --------------------------------------------------------------
 
 /// Records the start position and time for a newly contacted finger.
-///
-/// Call this from `handle_touch_down` after the slot is inserted into
-/// `state.touch_slots` to begin tracking the finger for gesture detection.
-/// Any previously consumed gesture state is reset so a fresh gesture can begin.
-///
-/// # Arguments
-///
-/// * `state`    - Mutable reference to [`BabydraState`].
-/// * `slot`     - Touch slot index identifying this finger.
-/// * `position` - Logical screen position at first contact.
-/// * `time_ms`  - Event timestamp in milliseconds.
-pub(crate) fn on_touch_down(
-    state: &mut BabydraState,
+pub(crate) fn on_touch_down<C: InputContext>(
+    state: &mut C,
     slot: TouchSlot,
     position: Point<f64, smithay::utils::Logical>,
     time_ms: u64,
 ) {
     // Reset consumed flag whenever a finger count changes so a new gesture can start.
-    state.touch_gesture.consumed = false;
-    state.touch_gesture.scrubbing = false;
-    state.touch_gesture.slots.insert(
+    state.touch_gesture_mut().consumed = false;
+    state.touch_gesture_mut().scrubbing = false;
+    state.touch_gesture_mut().slots.insert(
         slot,
         TouchSlotData {
             start: position,
@@ -64,27 +49,19 @@ pub(crate) fn on_touch_down(
 // ----- motion ------------------------------------------------------------
 
 /// Updates the current position of an active touch slot during finger movement.
-///
-/// Should be called from `handle_touch_motion` for multi-touch gesture tracking.
-///
-/// # Arguments
-///
-/// * `state`    - Mutable reference to [`BabydraState`].
-/// * `slot`     - The touch slot index being updated.
-/// * `position` - Updated logical screen position for this slot.
-pub(crate) fn on_touch_motion(
-    state: &mut BabydraState,
+pub(crate) fn on_touch_motion<C: InputContext>(
+    state: &mut C,
     slot: TouchSlot,
     position: Point<f64, smithay::utils::Logical>,
 ) {
-    if let Some(data) = state.touch_gesture.slots.get_mut(&slot) {
+    if let Some(data) = state.touch_gesture_mut().slots.get_mut(&slot) {
         data.current = position;
     }
 
     // 3-finger horizontal drag: show the switcher and scrub its active entry
     // live with the fingers instead of switching focus at gesture end.
     let snapshot: Vec<_> = state
-        .touch_gesture
+        .touch_gesture()
         .slots
         .values()
         .map(|data| (data.start, data.current))
@@ -101,17 +78,17 @@ pub(crate) fn on_touch_motion(
         };
         let dx = current_x - start_x;
         let dy = current_y - start_y;
-        let scrubbing = state.touch_gesture.scrubbing;
-        if !scrubbing && should_start_scrub(dx, dy, &state.gesture_config) {
+        let scrubbing = state.touch_gesture().scrubbing;
+        if !scrubbing && should_start_scrub(dx, dy, state.gesture_config()) {
             if let Some(base_index) = state.begin_switcher_scrub() {
-                state.touch_gesture.scrubbing = true;
-                state.touch_gesture.scrub_start_x = start_x;
-                state.touch_gesture.scrub_base_index = base_index;
+                state.touch_gesture_mut().scrubbing = true;
+                state.touch_gesture_mut().scrub_start_x = start_x;
+                state.touch_gesture_mut().scrub_base_index = base_index;
             }
         }
-        if state.touch_gesture.scrubbing {
-            let start_x = state.touch_gesture.scrub_start_x;
-            let base_index = state.touch_gesture.scrub_base_index;
+        if state.touch_gesture().scrubbing {
+            let start_x = state.touch_gesture().scrub_start_x;
+            let base_index = state.touch_gesture().scrub_base_index;
             state.scrub_switcher(start_x, base_index, current_x);
         }
     }
@@ -120,55 +97,42 @@ pub(crate) fn on_touch_motion(
 // ----- up ----------------------------------------------------------------
 
 /// Evaluates accumulated gesture data when a finger lifts off.
-///
-/// If the gesture has not yet been consumed, checks whether the active slots
-/// formed a recognisable pattern (2-finger swipe or 3-finger tap) and fires the
-/// corresponding compositor action.
-///
-/// Call this from `handle_touch_up` **before** removing the slot from
-/// `state.touch_slots` so the finger count is still correct during evaluation.
-///
-/// # Arguments
-///
-/// * `state`   - Mutable reference to [`BabydraState`].
-/// * `slot`    - The touch slot that just lifted.
-/// * `time_ms` - Current event timestamp in milliseconds.
-pub(crate) fn on_touch_up(state: &mut BabydraState, slot: TouchSlot, time_ms: u64) {
-    let n = state.touch_gesture.slots.len();
-    let scrubbing = state.touch_gesture.scrubbing;
+pub(crate) fn on_touch_up<C: InputContext>(state: &mut C, slot: TouchSlot, time_ms: u64) {
+    let n = state.touch_gesture().slots.len();
+    let scrubbing = state.touch_gesture().scrubbing;
     if scrubbing {
         // Releasing the fingers commits the entry currently under them.
         state.commit_switcher_selection();
     }
-    let consumed = state.touch_gesture.consumed || scrubbing;
+    let consumed = state.touch_gesture().consumed || scrubbing;
 
     if !consumed && n >= 2 {
-        let cfg = state.gesture_config.clone();
+        let cfg = state.gesture_config().clone();
         let _ = try_fire_touch_gesture(state, n, time_ms, &cfg);
     }
 
-    state.touch_gesture.slots.remove(&slot);
+    state.touch_gesture_mut().slots.remove(&slot);
 
     // Reset consumed flag once all fingers are off the screen. The switcher
     // stays open on the last active entry.
-    if state.touch_gesture.slots.is_empty() {
-        state.touch_gesture.consumed = false;
-        state.touch_gesture.scrubbing = false;
+    if state.touch_gesture().slots.is_empty() {
+        state.touch_gesture_mut().consumed = false;
+        state.touch_gesture_mut().scrubbing = false;
     }
 }
 
 // ----- gesture evaluation ------------------------------------------------
 
 /// Asks the gesture use case for an intent and executes it against the state.
-fn try_fire_touch_gesture(
-    state: &mut BabydraState,
+fn try_fire_touch_gesture<C: InputContext>(
+    state: &mut C,
     finger_count: usize,
     time_ms: u64,
     cfg: &GesturePolicy,
 ) -> bool {
     let intent = match finger_count {
         2 => {
-            let slots: Vec<_> = state.touch_gesture.slots.values().cloned().collect();
+            let slots: Vec<_> = state.touch_gesture().slots.values().cloned().collect();
             if slots.len() < 2 {
                 return false;
             }
@@ -177,7 +141,7 @@ fn try_fire_touch_gesture(
             two_finger_touch_intent([(first.x, first.y), (second.x, second.y)], cfg)
         }
         3 => {
-            let slots: Vec<_> = state.touch_gesture.slots.values().cloned().collect();
+            let slots: Vec<_> = state.touch_gesture().slots.values().cloned().collect();
             if slots.len() < 3 {
                 return false;
             }
@@ -204,33 +168,27 @@ fn try_fire_touch_gesture(
         execute_window_intent(state, intent)
     };
     if fired {
-        state.touch_gesture.consumed = true;
+        state.touch_gesture_mut().consumed = true;
     }
     fired
 }
 
 /// Synthesizes the middle click a three-finger tap stands for.
-fn synthesize_middle_click(state: &mut BabydraState, time_ms: u64) -> bool {
-    let Some(pointer) = state.seat.get_pointer() else {
+fn synthesize_middle_click<C: InputContext>(state: &mut C, time_ms: u64) -> bool {
+    if !state.has_pointer() {
         return false;
-    };
-    pointer.button(
-        state,
-        &ButtonEvent {
-            serial: SERIAL_COUNTER.next_serial(),
-            time: time_ms as u32,
-            button: BTN_MIDDLE,
-            state: smithay::backend::input::ButtonState::Pressed,
-        },
-    );
-    pointer.button(
-        state,
-        &ButtonEvent {
-            serial: SERIAL_COUNTER.next_serial(),
-            time: time_ms as u32,
-            button: BTN_MIDDLE,
-            state: smithay::backend::input::ButtonState::Released,
-        },
-    );
+    }
+    state.pointer_button(&ButtonEvent {
+        serial: SERIAL_COUNTER.next_serial(),
+        time: time_ms as u32,
+        button: BTN_MIDDLE,
+        state: smithay::backend::input::ButtonState::Pressed,
+    });
+    state.pointer_button(&ButtonEvent {
+        serial: SERIAL_COUNTER.next_serial(),
+        time: time_ms as u32,
+        button: BTN_MIDDLE,
+        state: smithay::backend::input::ButtonState::Released,
+    });
     true
 }

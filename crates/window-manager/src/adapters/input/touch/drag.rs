@@ -2,20 +2,18 @@
 
 use smithay::utils::Point;
 
-use crate::adapters::compositor::state::BabydraState;
+use super::super::InputContext;
 
 /// Processes active interactive window movement driven by touchscreen dragging.
-///
-/// Ensures a minimum distance threshold (16 square pixels) before beginning window translation.
-pub(crate) fn handle_touch_drag(
-    state: &mut BabydraState,
+pub(crate) fn handle_touch_drag<C: InputContext>(
+    state: &mut C,
     position: Point<f64, smithay::utils::Logical>,
 ) -> bool {
-    if let Some(mut move_state) = state.move_state.take() {
+    if let Some(mut move_state) = state.move_state_mut().take() {
         let move_delta = position - move_state.initial_pointer_location;
         let dist_sq = move_delta.x * move_delta.x + move_delta.y * move_delta.y;
         if !move_state.has_dragged && dist_sq < common::DRAG_THRESHOLD_SQ {
-            state.move_state = Some(move_state);
+            *state.move_state_mut() = Some(move_state);
             return true;
         }
 
@@ -31,11 +29,7 @@ pub(crate) fn handle_touch_drag(
                 .unwrap_or(false);
             if is_maximized {
                 let window = move_state.window.clone();
-                let saved_size =
-                    crate::adapters::compositor::state::window::state_data::window_state(&window)
-                        .lock()
-                        .unwrap()
-                        .saved_size;
+                let saved_size = state.saved_window_size(&window);
                 state.unmaximize_window(&window);
                 let size = saved_size.unwrap_or_else(|| window.geometry().size);
                 let desired = Point::from((
@@ -48,25 +42,25 @@ pub(crate) fn handle_touch_drag(
         }
 
         move_state.has_dragged = true;
-        state.last_titlebar_click = None;
+        *state.last_titlebar_click_mut() = None;
 
         let new_loc = move_state.initial_window_location
             + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
         state
-            .space
+            .space_mut()
             .map_element(move_state.window.clone(), new_loc, false);
-        state.move_state = Some(move_state);
+        *state.move_state_mut() = Some(move_state);
         return true;
     }
     false
 }
 
 /// Processes active interactive window resizing driven by touchscreen dragging.
-pub(crate) fn handle_touch_resize(
-    state: &mut BabydraState,
+pub(crate) fn handle_touch_resize<C: InputContext>(
+    state: &mut C,
     position: Point<f64, smithay::utils::Logical>,
 ) -> bool {
-    if let Some(resize_state) = state.resize_state.take() {
+    if let Some(resize_state) = state.resize_state_mut().take() {
         let dx = (position.x - resize_state.initial_pointer_location.x).round() as i32;
         let dy = (position.y - resize_state.initial_pointer_location.y).round() as i32;
 
@@ -121,11 +115,11 @@ pub(crate) fn handle_touch_resize(
 
         if new_x != init_loc.x || new_y != init_loc.y {
             state
-                .space
+                .space_mut()
                 .map_element(resize_state.window.clone(), (new_x, new_y), false);
         }
 
-        state.resize_state = Some(resize_state);
+        *state.resize_state_mut() = Some(resize_state);
         return true;
     }
     false

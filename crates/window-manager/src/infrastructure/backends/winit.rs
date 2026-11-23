@@ -90,15 +90,7 @@ pub(crate) fn init(
                     backend.window().request_redraw();
                 }
                 WinitEvent::Redraw => {
-                    if let Some(raw_action) =
-                        services::system::window::read_and_clear_window_action()
-                    {
-                        if let Some(action) = WindowAction::parse(&raw_action) {
-                            state.handle_window_action(action);
-                        }
-                    }
-                    state.update_window_animations();
-                    state.update_clipboard();
+                    super::render_loop::begin_frame(state);
                     let size = backend.window_size();
 
                     let scale = Scale::from(1.0);
@@ -175,28 +167,8 @@ pub(crate) fn init(
                     backend
                         .submit(render_damage.as_deref())
                         .expect("failed to submit Winit frame");
-                    state.space.elements().for_each(|window| {
-                        window.send_frame(
-                            &output,
-                            state.start_time.elapsed(),
-                            Some(Duration::ZERO),
-                            |_, _| Some(output.clone()),
-                        );
-                    });
-
-                    let layer_map = smithay::desktop::layer_map_for_output(&output);
-                    for layer in layer_map.layers() {
-                        layer.send_frame(
-                            &output,
-                            state.start_time.elapsed(),
-                            Some(Duration::ZERO),
-                            |_, _| Some(output.clone()),
-                        );
-                    }
-
-                    state.space.refresh();
-                    state.popups.cleanup();
-                    let _ = display_handle.flush_clients();
+                    super::render_loop::send_frames(state, &output);
+                    super::render_loop::end_frame(state, display_handle);
                     backend.window().request_redraw();
                 }
                 WinitEvent::CloseRequested => state.loop_signal.stop(),

@@ -5,35 +5,22 @@ use smithay::{
     utils::{Point, SERIAL_COUNTER},
 };
 
-use crate::adapters::compositor::state::BabydraState;
+use super::super::InputContext;
 
 /// Processes active interactive window movement while a pointer button is held down.
-///
-/// Implements a 4-pixel movement threshold before window dragging officially starts
-/// to prevent jitter or accidental micro-moves during clicks.
-///
-/// # Arguments
-///
-/// * `state` - Mutable reference to [`BabydraState`].
-/// * `position` - Current logical pointer coordinate on screen.
-/// * `time` - Timestamp in milliseconds of the motion event.
-///
-/// # Returns
-///
-/// Returns `true` if a window drag was active and handled, or `false` to continue normal pointer motion.
-pub(crate) fn handle_window_drag(
-    state: &mut BabydraState,
+pub(crate) fn handle_window_drag<C: InputContext>(
+    state: &mut C,
     position: Point<f64, smithay::utils::Logical>,
     time: u32,
 ) -> bool {
-    let pointer = state.seat.get_pointer().unwrap();
-    if let Some(mut move_state) = state.move_state.take() {
-        if !state.pointer_pressed_buttons.contains(&move_state.button)
-            && state.pointer_pressed_buttons.is_empty()
+    if let Some(mut move_state) = state.move_state_mut().take() {
+        if !state
+            .pointer_pressed_buttons()
+            .contains(&move_state.button)
+            && state.pointer_pressed_buttons().is_empty()
         {
             let under = state.surface_under(position);
-            pointer.motion(
-                state,
+            state.pointer_motion(
                 under,
                 &MotionEvent {
                     location: position,
@@ -41,7 +28,7 @@ pub(crate) fn handle_window_drag(
                     time,
                 },
             );
-            pointer.frame(state);
+            state.pointer_frame();
             return true;
         }
 
@@ -50,7 +37,7 @@ pub(crate) fn handle_window_drag(
 
         // Require at least a 4-pixel movement threshold before window dragging starts
         if !move_state.has_dragged && dist_sq < common::DRAG_THRESHOLD_SQ {
-            state.move_state = Some(move_state);
+            *state.move_state_mut() = Some(move_state);
             return true;
         }
         if !move_state.has_dragged {
@@ -65,11 +52,7 @@ pub(crate) fn handle_window_drag(
                 .unwrap_or(false);
             if is_maximized {
                 let window = move_state.window.clone();
-                let saved_size =
-                    crate::adapters::compositor::state::window::state_data::window_state(&window)
-                        .lock()
-                        .unwrap()
-                        .saved_size;
+                let saved_size = state.saved_window_size(&window);
                 // Restore the saved normal geometry first, then place that
                 // geometry under the pointer so the drag feels continuous.
                 state.unmaximize_window(&window);
@@ -83,27 +66,29 @@ pub(crate) fn handle_window_drag(
             }
         }
         move_state.has_dragged = true;
-        state.last_titlebar_click = None;
+        *state.last_titlebar_click_mut() = None;
 
         let new_loc = move_state.initial_window_location
             + Point::from((move_delta.x.round() as i32, move_delta.y.round() as i32));
         state
-            .space
+            .space_mut()
             .map_element(move_state.window.clone(), new_loc, false);
-        state.move_state = Some(move_state);
+        *state.move_state_mut() = Some(move_state);
         return true;
     }
     false
 }
 
 /// Processes active interactive window resizing while a pointer button is held down.
-pub(crate) fn handle_window_resize(
-    state: &mut BabydraState,
+pub(crate) fn handle_window_resize<C: InputContext>(
+    state: &mut C,
     position: Point<f64, smithay::utils::Logical>,
 ) -> bool {
-    if let Some(resize_state) = state.resize_state.take() {
-        if !state.pointer_pressed_buttons.contains(&resize_state.button)
-            && state.pointer_pressed_buttons.is_empty()
+    if let Some(resize_state) = state.resize_state_mut().take() {
+        if !state
+            .pointer_pressed_buttons()
+            .contains(&resize_state.button)
+            && state.pointer_pressed_buttons().is_empty()
         {
             if let Some(toplevel) = resize_state.window.toplevel() {
                 toplevel.with_pending_state(|state| {
@@ -170,11 +155,11 @@ pub(crate) fn handle_window_resize(
 
         if new_x != init_loc.x || new_y != init_loc.y {
             state
-                .space
+                .space_mut()
                 .map_element(resize_state.window.clone(), (new_x, new_y), false);
         }
 
-        state.resize_state = Some(resize_state);
+        *state.resize_state_mut() = Some(resize_state);
         return true;
     }
     false

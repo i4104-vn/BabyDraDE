@@ -1,9 +1,8 @@
-use std::{collections::HashMap, ffi::OsString, sync::Arc, time::Instant};
+use std::{ffi::OsString, sync::Arc, time::Instant};
 
 use smithay::{
     desktop::{PopupManager, Space, Window},
     input::{pointer::CursorIcon, Seat, SeatState},
-    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
     reexports::{
         calloop::{generic::Generic, EventLoop, Interest, LoopSignal, PostAction},
         wayland_server::{
@@ -28,11 +27,17 @@ use smithay::{
 };
 
 use crate::adapters::window::cursor::resize_cursor_icon;
+#[allow(unused_imports)]
+pub(crate) use crate::adapters::window::interaction::{
+    MoveState, OverlayTouchState, ResizeState, TouchGestureBuffer, TouchSlotData,
+    TrackpadSwipeBuffer,
+};
 
 mod active_window;
 mod blur;
 mod clipboard;
 mod hit_test;
+mod input_context;
 pub(crate) mod launcher;
 mod switcher;
 pub(crate) mod titlebar;
@@ -44,88 +49,6 @@ pub(crate) use window::*;
 pub(crate) struct CalloopData {
     pub(crate) state: BabydraState,
     pub(crate) display_handle: DisplayHandle,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct MoveState {
-    pub(crate) window: Window,
-    pub(crate) initial_window_location: Point<i32, Logical>,
-    pub(crate) initial_pointer_location: Point<f64, Logical>,
-    pub(crate) has_dragged: bool,
-    pub(crate) button: u32,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ResizeState {
-    pub(crate) window: Window,
-    pub(crate) initial_window_location: Point<i32, Logical>,
-    pub(crate) initial_window_size: smithay::utils::Size<i32, Logical>,
-    pub(crate) initial_pointer_location: Point<f64, Logical>,
-    pub(crate) edges: ResizeEdge,
-    pub(crate) button: u32,
-}
-
-impl ResizeState {
-    pub(crate) fn resizes_left(&self) -> bool {
-        matches!(
-            self.edges,
-            ResizeEdge::Left | ResizeEdge::TopLeft | ResizeEdge::BottomLeft
-        )
-    }
-    pub(crate) fn resizes_right(&self) -> bool {
-        matches!(
-            self.edges,
-            ResizeEdge::Right | ResizeEdge::TopRight | ResizeEdge::BottomRight
-        )
-    }
-    pub(crate) fn resizes_top(&self) -> bool {
-        matches!(
-            self.edges,
-            ResizeEdge::Top | ResizeEdge::TopLeft | ResizeEdge::TopRight
-        )
-    }
-    pub(crate) fn resizes_bottom(&self) -> bool {
-        matches!(
-            self.edges,
-            ResizeEdge::Bottom | ResizeEdge::BottomLeft | ResizeEdge::BottomRight
-        )
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct TrackpadSwipeBuffer {
-    pub(crate) fingers: u32,
-    pub(crate) time: u32,
-    pub(crate) total_delta: Point<f64, Logical>,
-    pub(crate) updates: Vec<(Point<f64, Logical>, u32)>,
-    /// 3-finger horizontal drag is scrubbing the switcher selection.
-    pub(crate) scrubbing: bool,
-    pub(crate) scrub_start_x: f64,
-    pub(crate) scrub_base_index: usize,
-}
-
-/// Per-slot data accumulated while tracking a multi-touch gesture on a touchscreen.
-#[derive(Debug, Clone)]
-pub(crate) struct TouchSlotData {
-    /// Starting position when the finger first touched down.
-    pub(crate) start: Point<f64, Logical>,
-    /// Most recent position of this finger.
-    pub(crate) current: Point<f64, Logical>,
-    /// Wall-clock millisecond timestamp at first contact.
-    pub(crate) start_time_ms: u64,
-}
-
-/// In-progress multi-touch gesture being accumulated for touchscreen swipe/tap detection.
-#[derive(Debug, Clone, Default)]
-pub(crate) struct TouchGestureBuffer {
-    /// Live per-slot tracking data keyed by slot index.
-    pub(crate) slots: HashMap<smithay::backend::input::TouchSlot, TouchSlotData>,
-    /// Whether the gesture has already been consumed (action was fired).
-    pub(crate) consumed: bool,
-    /// 3-finger horizontal drag is scrubbing the switcher selection.
-    pub(crate) scrubbing: bool,
-    pub(crate) scrub_start_x: f64,
-    pub(crate) scrub_base_index: usize,
 }
 
 pub(crate) struct BabydraState {
@@ -174,7 +97,7 @@ pub(crate) struct BabydraState {
     pub(crate) touch_slots: std::collections::HashSet<smithay::backend::input::TouchSlot>,
     pub(crate) windows: Vec<Window>,
     /// Active single-finger touch interaction with compositor overlays (launcher or switcher).
-    pub(crate) overlay_touch: Option<crate::adapters::input::touch::events::OverlayTouchState>,
+    pub(crate) overlay_touch: Option<OverlayTouchState>,
     /// Accumulated per-slot data for multi-touch gesture detection on touchscreens.
     pub(crate) touch_gesture: TouchGestureBuffer,
 
