@@ -190,7 +190,11 @@ pub fn get_important_temperatures() -> Vec<TemperatureReading> {
             selected
                 .iter()
                 .find(|(current, _)| current == group)
-                .map(|(_, reading)| reading.clone())
+                .map(|(group, reading)| TemperatureReading {
+                    label: group.to_string(),
+                    celsius: reading.celsius,
+                    source: reading.source,
+                })
         })
         .take(6)
         .collect()
@@ -202,7 +206,7 @@ pub fn get_cpu_temperature() -> Option<f32> {
     let readings = get_important_temperatures();
     readings
         .iter()
-        .find(|reading| category(&reading.label) == Some("CPU"))
+        .find(|reading| reading.label == "CPU")
         .or_else(|| {
             readings
                 .iter()
