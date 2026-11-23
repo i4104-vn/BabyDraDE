@@ -128,7 +128,9 @@ impl AutoRotate {
             return;
         };
         let baseline = *self.baseline.get_or_insert(current);
-        let base_transform = *self.base_transform.get_or_insert_with(|| baseline_transform(state));
+        let base_transform = *self
+            .base_transform
+            .get_or_insert_with(|| baseline_transform(state));
 
         if self.candidate == Some(current) {
             self.stable += 1;
@@ -217,8 +219,7 @@ fn find_iio_accelerometer() -> Option<Sensor> {
 }
 
 fn sensor_proxy() -> Option<Sensor> {
-    let connection =
-        gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
+    let connection = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
     // Calling the proxy directly also activates it over D-Bus; `NameHasOwner`
     // would report "false" for an installed-but-not-yet-started service.
     if connection
@@ -269,7 +270,9 @@ pub(crate) fn spawn(event_loop: &mut EventLoop<'_, CalloopData>) {
     let enabled = match std::env::var("BABYDRADE_AUTO_ROTATE").as_deref() {
         Ok("0") | Ok("false") => false,
         Ok(_) => true,
-        Err(_) => services::config::load_display_config().auto_rotate.unwrap_or(true),
+        Err(_) => services::config::load_display_config()
+            .auto_rotate
+            .unwrap_or(true),
     };
     if !enabled {
         tracing::info!("auto-rotate disabled by configuration");

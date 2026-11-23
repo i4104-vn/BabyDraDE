@@ -2,6 +2,7 @@ pub mod clock;
 pub mod control_center;
 pub mod status;
 pub mod system_monitor;
+pub mod temperature;
 pub mod tray;
 
 use gtk4::prelude::*;
@@ -24,10 +25,12 @@ pub fn create_right_section(window: &gtk4::ApplicationWindow) -> gtk4::Box {
     let cal_slot = Rc::new(RefCell::new(None));
 
     let tray = tray::create_tray_widget(window);
+    let temperature = temperature::create_temperature_widget();
     let sys_mon = system_monitor::create_sys_monitor_w();
     let status = status::create_status_icons(&app, cc_slot, cal_slot);
 
     container.append(&tray);
+    container.append(&temperature);
     container.append(&sys_mon);
     container.append(&status);
 

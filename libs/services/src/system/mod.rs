@@ -5,6 +5,7 @@ pub mod host;
 pub mod monitor;
 pub mod network;
 pub mod resources;
+pub mod temperature;
 pub mod volume;
 pub mod vpn;
 pub mod window;
@@ -31,6 +32,7 @@ pub use network::{
     NetworkInfo, NetworkReader,
 };
 pub use resources::{CpuInfo, CpuReader, DiskInfo, DiskReader, MemoryInfo, MemoryReader};
+pub use temperature::{get_all_temperatures, get_cpu_temperature, TemperatureReading};
 pub use volume::{get_active_output_name, get_volume_state, set_muted, set_volume, AudioBackend};
 pub use vpn::is_vpn_active;
 
