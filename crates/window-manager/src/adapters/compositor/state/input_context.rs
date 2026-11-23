@@ -286,6 +286,30 @@ impl InputContext for BabydraState {
         self.overlays.launcher.scroll_by(slots);
     }
 
+    fn launcher_search_is_active(&self) -> bool {
+        self.overlays.launcher.search_is_active()
+    }
+
+    fn launcher_search_input(&mut self, character: char) {
+        self.overlays.launcher.search_input(character);
+    }
+
+    fn launcher_search_backspace(&mut self) {
+        self.overlays.launcher.search_backspace();
+    }
+
+    fn launcher_search_move(&mut self, delta: i32) {
+        self.overlays.launcher.search_move(delta);
+    }
+
+    fn launcher_search_escape(&mut self) -> bool {
+        self.overlays.launcher.search_escape()
+    }
+
+    fn launcher_search_click(&mut self, position: Point<f64, Logical>) -> bool {
+        self.overlays.launcher.search_click(position)
+    }
+
     fn cycle_alt_tab(&mut self, backwards: bool) {
         BabydraState::cycle_alt_tab(self, backwards);
     }

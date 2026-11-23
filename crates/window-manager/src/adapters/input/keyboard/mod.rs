@@ -7,7 +7,7 @@ pub(crate) use focus::cycle_window_focus;
 
 use smithay::{
     backend::input::{Event, InputBackend, KeyState, KeyboardKeyEvent},
-    input::keyboard::{keysyms, FilterResult},
+    input::keyboard::{keysyms, xkb, FilterResult},
     utils::SERIAL_COUNTER,
 };
 
@@ -38,9 +38,9 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
             let sym = handle.modified_sym().into();
             let switcher_active = state.switcher_is_active();
 
-            // The launcher owns keyboard input while open: Up/Down move the
-            // selection (held keys auto-repeat), Return launches, Escape closes.
             if state.launcher_is_visible() {
+                let search_active = state.launcher_search_is_active();
+
                 let arrow = match sym {
                     keysyms::KEY_Up => Some(-1),
                     keysyms::KEY_Down => Some(1),
@@ -49,11 +49,17 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                 if let Some(direction) = arrow {
                     match event.state() {
                         KeyState::Pressed => {
-                            if state.launcher_arrow_pressed(direction) {
+                            if search_active {
+                                state.launcher_search_move(direction);
+                            } else if state.launcher_arrow_pressed(direction) {
                                 state.launcher_move_selection(direction);
                             }
                         }
-                        KeyState::Released => state.launcher_arrow_released(direction),
+                        KeyState::Released => {
+                            if !search_active {
+                                state.launcher_arrow_released(direction);
+                            }
+                        }
                     }
                     return FilterResult::Intercept(());
                 }
@@ -65,10 +71,28 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
                             return FilterResult::Intercept(());
                         }
                         keysyms::KEY_Escape => {
-                            state.launcher_close();
+                            if !state.launcher_search_escape() {
+                                state.launcher_close();
+                            }
+                            return FilterResult::Intercept(());
+                        }
+                        keysyms::KEY_BackSpace => {
+                            state.launcher_search_backspace();
                             return FilterResult::Intercept(());
                         }
                         _ => {}
+                    }
+
+                    // A bare printable key jumps straight into the search box.
+                    // Modifier combinations are left to the shortcut pipeline.
+                    if !modifiers.logo && !modifiers.ctrl && !modifiers.alt {
+                        let text = xkb::keysym_to_utf8(handle.modified_sym());
+                        if let Some(character) = text.chars().next() {
+                            if !character.is_control() {
+                                state.launcher_search_input(character);
+                                return FilterResult::Intercept(());
+                            }
+                        }
                     }
                 }
             }

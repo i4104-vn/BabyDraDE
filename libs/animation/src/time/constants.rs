@@ -34,6 +34,10 @@ pub const WINDOW_MINIMIZE_DURATION: Duration = Duration::from_millis(280);
 pub const WINDOW_RESTORE_DURATION: Duration = Duration::from_millis(300);
 pub const WINDOW_GEOMETRY_DURATION: Duration = Duration::from_millis(340);
 
+/// Launcher search overlay: dimmer/panel fade and the bottom-up fly-in.
+pub const SEARCH_OPEN_DURATION: Duration = Duration::from_millis(320);
+pub const SEARCH_FLY_DURATION: Duration = Duration::from_millis(420);
+
 /// Alt+Tab switcher stage pulse, dock highlight and preview/scroll steps.
 pub const STAGE_ANIM_DURATION: Duration = Duration::from_millis(500);
 pub const DOCK_TARGET_ANIM_DURATION: Duration = Duration::from_millis(420);

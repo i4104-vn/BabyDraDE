@@ -41,6 +41,16 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
                 }
             }
 
+            // While the search overlay is expanded it owns the whole screen:
+            // clicking a result activates it, clicking outside returns to the
+            // docked launcher.
+            if button_code == common::BTN_LEFT
+                && !state.pointer_is_grabbed()
+                && state.launcher_search_click(state.pointer_location())
+            {
+                return;
+            }
+
             // The launcher is compositor-owned UI: a click on one of its icons
             // launches that app and must not reach (or raise) any window.
             if !state.switcher_is_active()

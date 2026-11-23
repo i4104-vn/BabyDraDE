@@ -120,6 +120,16 @@ pub(crate) trait InputContext {
     fn launcher_is_over_panel(&self, position: Point<f64, Logical>) -> bool;
     fn launcher_scroll_by(&mut self, slots: f64);
 
+    // -- launcher search overlay --
+    fn launcher_search_is_active(&self) -> bool;
+    fn launcher_search_input(&mut self, character: char);
+    fn launcher_search_backspace(&mut self);
+    fn launcher_search_move(&mut self, delta: i32);
+    /// Returns true when Escape was consumed by the search overlay.
+    fn launcher_search_escape(&mut self) -> bool;
+    /// Returns true when the click was consumed by the search overlay.
+    fn launcher_search_click(&mut self, position: Point<f64, Logical>) -> bool;
+
     // -- Alt+Tab switcher overlay --
     fn cycle_alt_tab(&mut self, backwards: bool);
     fn begin_switcher_scrub(&mut self) -> Option<usize>;
