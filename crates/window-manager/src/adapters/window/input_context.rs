@@ -33,6 +33,7 @@ use smithay::{
 use common::Action;
 
 use crate::application::ports::GesturePolicy;
+use crate::domain::shortcuts::Mods;
 
 use super::interaction::{
     MoveState, OverlayTouchState, ResizeState, TouchGestureBuffer, TrackpadSwipeBuffer,
@@ -98,6 +99,14 @@ pub(crate) trait InputContext {
     fn mouse_natural_scroll(&self) -> bool;
     fn reload_input_config(&mut self);
     fn reload_config(&mut self);
+
+    // -- shortcuts and desktop actions --
+    fn shortcut_command(&self, mods: Mods, keysym: u32) -> Option<String>;
+    fn reload_shortcuts(&self);
+    fn launch_command(&self, command: String);
+    fn lock_screen(&self);
+    fn open_clipboard_picker(&self);
+    fn trigger_screenshot(&self);
 
     // -- launcher overlay --
     fn launcher_is_visible(&self) -> bool;

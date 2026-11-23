@@ -126,10 +126,11 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
             // so Shift does not change letter matching.
             if let Some(raw_sym) = handle.raw_latin_sym_or_raw_current_sym() {
                 if let Some(command) = crate::adapters::input::keymap::matcher::command_for(
+                    &*state,
                     modifiers,
                     raw_sym.into(),
                 ) {
-                    crate::adapters::input::keymap::spawn_command(command);
+                    crate::adapters::input::keymap::spawn_command(&*state, command);
                     return FilterResult::Intercept(());
                 }
             }

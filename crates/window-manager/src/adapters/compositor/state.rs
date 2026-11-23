@@ -109,6 +109,8 @@ pub(crate) struct BabydraState {
     /// Framework-free gesture policy snapshot, refreshed only on config reload.
     pub(crate) gesture_config: crate::application::ports::GesturePolicy,
     load_gesture_policy: crate::application::ports::LoadGesturePolicy,
+    /// Injected shortcut service shared with the reload watcher and input pipeline.
+    shortcuts: Arc<crate::application::shortcuts::ShortcutService>,
 }
 
 impl BabydraState {
@@ -116,6 +118,7 @@ impl BabydraState {
         event_loop: &mut EventLoop<'_, CalloopData>,
         display: Display<Self>,
         load_gesture_policy: crate::application::ports::LoadGesturePolicy,
+        shortcuts: Arc<crate::application::shortcuts::ShortcutService>,
     ) -> Self {
         let display_handle = display.handle();
         let compositor_state = CompositorState::new::<Self>(&display_handle);
@@ -180,6 +183,7 @@ impl BabydraState {
             mouse_natural_scroll: services::config::load_mouse_config().natural_scroll,
             gesture_config: load_gesture_policy(),
             load_gesture_policy,
+            shortcuts,
         }
     }
 

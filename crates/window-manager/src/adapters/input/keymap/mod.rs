@@ -1,10 +1,11 @@
 //! Configuration adapter for global shortcuts.
 //!
 //! Reads `~/.babydra/configs/keymap.toml` and delegates matching and command
-//! dispatch to the [`ShortcutRegistry`] use case. The compositor owns the
-//! input devices (libinput grabs them on a TTY), so a separate evdev listener
-//! can never see key presses; [`crate::adapters::input::keyboard`] calls the
-//! matcher from this module for every key press.
+//! dispatch to the injected `ShortcutService` use case through the input
+//! seam. The compositor owns the input devices (libinput grabs them on a TTY),
+//! so a separate evdev listener can never see key presses;
+//! [`crate::adapters::input::keyboard`] calls the matcher from this module for
+//! every key press.
 
 pub(crate) mod matcher;
 
@@ -12,17 +13,19 @@ pub(crate) use crate::infrastructure::config::keymap as config;
 
 use std::sync::{Arc, RwLock};
 
-use crate::{application::shortcuts::ShortcutRegistry, domain::shortcuts::Shortcut};
+use crate::domain::shortcuts::Shortcut;
+
+use super::InputContext;
 
 /// Shortcut list shared with the hot-reload watcher.
 pub(crate) type SharedShortcuts = Arc<RwLock<Vec<Shortcut>>>;
 
 /// Reloads shortcuts from `~/.babydra/configs/keymap.toml` immediately.
-pub(crate) fn reload() {
-    ShortcutRegistry::get().reload();
+pub(crate) fn reload(state: &impl InputContext) {
+    state.reload_shortcuts();
 }
 
 /// Hands a matched command to the injected launcher port.
-pub(crate) fn spawn_command(command: String) {
-    ShortcutRegistry::get().launch(command);
+pub(crate) fn spawn_command(state: &impl InputContext, command: String) {
+    state.launch_command(command);
 }

@@ -48,12 +48,11 @@ const ADAPTER_AREAS: [&str; 5] = ["compositor", "input", "rendering", "desktop",
 
 // `window` is the neutral adapter that holds shared window metadata. The old
 // `rendering -> compositor` metadata edge is now `rendering -> window`.
-const BASELINE_EDGES: [(&str, &str); 7] = [
+const BASELINE_EDGES: [(&str, &str); 6] = [
     ("compositor", "input"),
     ("compositor", "rendering"),
     ("compositor", "desktop"),
     ("compositor", "window"),
-    ("input", "desktop"),
     ("rendering", "window"),
     ("desktop", "rendering"),
 ];
@@ -111,4 +110,25 @@ fn adapter_import_edges_are_unchanged() {
 
     let baseline: BTreeSet<_> = BASELINE_EDGES.into_iter().collect();
     assert_eq!(edges, baseline, "adapter import graph changed");
+}
+
+/// The application layer must not reach the outside world through a global
+/// service locator; required services are injected through the composition
+/// root instead.
+#[test]
+fn application_has_no_global_service_locator() {
+    for path in source_files() {
+        if top_level_area(&path).as_deref() != Some("application") {
+            continue;
+        }
+        let text = fs::read_to_string(&path).expect("read source file");
+        for pattern in ["OnceLock", "static REGISTRY"] {
+            assert!(
+                !text.contains(pattern),
+                "{} must not use global service locator {}",
+                path.display(),
+                pattern
+            );
+        }
+    }
 }

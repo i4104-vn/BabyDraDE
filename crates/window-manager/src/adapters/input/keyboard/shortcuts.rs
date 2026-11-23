@@ -6,7 +6,6 @@ use tracing::info;
 
 use super::super::InputContext;
 use super::focus::{cycle_window_focus, focus_window};
-use crate::adapters::desktop::lock;
 
 pub(crate) use common::KeyboardAction;
 
@@ -122,15 +121,15 @@ pub(crate) fn execute_action<C: InputContext>(
         }
         KeyboardAction::LockScreen => {
             info!("Super+L pressed: locking the session");
-            lock::spawn();
+            state.lock_screen();
         }
         KeyboardAction::ReloadConfig => {
-            crate::adapters::input::keymap::reload();
+            state.reload_shortcuts();
             state.reload_config();
         }
         KeyboardAction::ClipboardPicker => {
             info!("Super+V pressed: opening clipboard history");
-            crate::adapters::desktop::clipboard::trigger_picker();
+            state.open_clipboard_picker();
         }
         KeyboardAction::ToggleLauncher => {
             info!("Super+Space pressed: toggling app launcher");
@@ -138,7 +137,7 @@ pub(crate) fn execute_action<C: InputContext>(
         }
         KeyboardAction::Screenshot => {
             info!("Super+Shift+S pressed: taking screenshot");
-            crate::adapters::desktop::screenshot::trigger();
+            state.trigger_screenshot();
         }
         KeyboardAction::ToggleMaximize => {
             let active = state.active_window();

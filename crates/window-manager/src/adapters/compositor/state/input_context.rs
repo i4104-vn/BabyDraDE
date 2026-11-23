@@ -30,6 +30,7 @@ use smithay::wayland::shell::wlr_layer::Layer;
 
 use crate::adapters::window::InputContext;
 use crate::application::ports::GesturePolicy;
+use crate::domain::shortcuts::Mods;
 
 use super::{
     window::state_data::window_state, MoveState, OverlayTouchState, ResizeState, BabydraState,
@@ -211,6 +212,30 @@ impl InputContext for BabydraState {
 
     fn reload_config(&mut self) {
         BabydraState::reload_config(self);
+    }
+
+    fn shortcut_command(&self, mods: Mods, keysym: u32) -> Option<String> {
+        self.shortcuts.command_for(mods, keysym)
+    }
+
+    fn reload_shortcuts(&self) {
+        self.shortcuts.reload();
+    }
+
+    fn launch_command(&self, command: String) {
+        self.shortcuts.launch(command);
+    }
+
+    fn lock_screen(&self) {
+        crate::adapters::desktop::lock::spawn();
+    }
+
+    fn open_clipboard_picker(&self) {
+        crate::adapters::desktop::clipboard::trigger_picker();
+    }
+
+    fn trigger_screenshot(&self) {
+        crate::adapters::desktop::screenshot::trigger();
     }
 
     fn launcher_is_visible(&self) -> bool {

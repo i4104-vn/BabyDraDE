@@ -5,6 +5,7 @@ pub(crate) mod commands;
 pub(crate) mod input_method;
 
 use std::error::Error;
+use std::sync::Arc;
 
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
 use tracing::{info, warn};
@@ -14,7 +15,7 @@ use crate::{
         compositor::{BabydraState, CalloopData},
         input::keymap::config,
     },
-    application::shortcuts::ShortcutRegistry,
+    application::shortcuts::ShortcutService,
     infrastructure::{backends, config::gesture_policy, process::spawn_detached},
 };
 
@@ -23,7 +24,7 @@ pub(crate) fn run() -> Result<(), Box<dyn Error>> {
 
     // Composition root: inject concrete config and process adapters into the
     // shortcut use case, then start its hot-reload watcher.
-    let shortcuts = ShortcutRegistry::init(config::load, spawn_detached);
+    let shortcuts = Arc::new(ShortcutService::new(config::load, spawn_detached));
     config::spawn_watcher(shortcuts.shared().clone());
 
     // Capture the *host* display before exporting our own WAYLAND_DISPLAY,
@@ -35,7 +36,7 @@ pub(crate) fn run() -> Result<(), Box<dyn Error>> {
     let mut event_loop: EventLoop<'_, CalloopData> = EventLoop::try_new()?;
     let display: Display<BabydraState> = Display::new()?;
     let display_handle = display.handle();
-    let state = BabydraState::new(&mut event_loop, display, gesture_policy);
+    let state = BabydraState::new(&mut event_loop, display, gesture_policy, shortcuts.clone());
 
     // Toolkit hints must be visible to GTK, but WAYLAND_DISPLAY must still
     // point at the host session here (if any) until the backend is chosen.
