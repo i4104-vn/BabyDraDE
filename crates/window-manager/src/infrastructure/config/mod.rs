@@ -5,7 +5,5 @@
 
 pub(crate) mod gesture;
 pub(crate) mod keymap;
-pub(crate) mod pointer;
-pub(crate) mod touchpad;
 
 pub(crate) use gesture::gesture_policy;

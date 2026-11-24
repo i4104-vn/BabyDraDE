@@ -225,8 +225,8 @@ pub(crate) fn configure_touchpad(
             name,
             sysname
         );
-        let mouse_config = super::pointer::MouseConfig::load();
-        super::pointer::configure_mouse(device, &mouse_config);
+        let mouse_config = crate::adapters::input::pointer::config::MouseConfig::load();
+        crate::adapters::input::pointer::config::configure_mouse(device, &mouse_config);
     }
 }
 
