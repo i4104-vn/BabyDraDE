@@ -8,7 +8,7 @@ use smithay::{
 
 use crate::adapters::input::InputContext;
 
-use super::{models, press, release};
+use super::{press, release};
 use super::models::ButtonContext;
 
 /// Handles pointer button clicks, focus switching, window raising, and Super+Drag initiation.
