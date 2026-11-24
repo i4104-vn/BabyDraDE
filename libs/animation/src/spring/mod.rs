@@ -3,4 +3,5 @@
 mod handler;
 mod render;
 
-pub use handler::{Spring, SpringConfig};
+pub use common::SpringConfig;
+pub use handler::Spring;

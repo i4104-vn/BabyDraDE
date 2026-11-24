@@ -2,7 +2,8 @@
 
 use std::time::Instant;
 
-use super::handler::{Spring, SpringConfig};
+use super::handler::Spring;
+use common::SpringConfig;
 
 impl Spring {
     /// Current interpolated position.
