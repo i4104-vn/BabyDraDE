@@ -4,8 +4,8 @@
 //! the framework-free [`animation`] primitives. Compositor code can depend on
 //! the timing primitives without pulling in the GTK toolkit.
 
-pub mod island;
-pub mod slide;
+mod island;
+mod slide;
 
 pub use island::{
     current_anim_gen, island_animate_size, island_animate_width, island_zoom_in, island_zoom_out,

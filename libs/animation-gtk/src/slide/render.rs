@@ -1,18 +1,10 @@
-//! Directional slide-in / slide-out widget animations.
+//! Widget-side rendering for slide transitions.
 
+use super::handler::{entering_margin, exiting_margin, start_margin, SlideDirection};
 use animation::Easing;
 use gtk4::prelude::*;
 use std::cell::Cell;
 use std::rc::Rc;
-
-/// Direction axis for a slide transition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SlideDirection {
-    Down,
-    Up,
-    Left,
-    Right,
-}
 
 /// Slides a widget into view and stops cleanly with restored margins when a newer animation generation is started.
 pub fn slide_in_cancelable(
@@ -58,14 +50,14 @@ fn slide_in_inner(
     let original_margin_end = widget.margin_end();
 
     match direction {
-        SlideDirection::Down => widget.set_margin_top((original_margin_top - distance_px).max(0)),
-        SlideDirection::Up => {
-            widget.set_margin_bottom((original_margin_bottom - distance_px).max(0))
+        SlideDirection::Down => {
+            widget.set_margin_top(start_margin(original_margin_top, distance_px))
         }
+        SlideDirection::Up => widget.set_margin_bottom(start_margin(original_margin_bottom, distance_px)),
         SlideDirection::Right => {
-            widget.set_margin_start((original_margin_start - distance_px).max(0))
+            widget.set_margin_start(start_margin(original_margin_start, distance_px))
         }
-        SlideDirection::Left => widget.set_margin_end((original_margin_end - distance_px).max(0)),
+        SlideDirection::Left => widget.set_margin_end(start_margin(original_margin_end, distance_px)),
     }
 
     let start_time = std::cell::Cell::new(0i64);
@@ -107,25 +99,15 @@ fn slide_in_inner(
 
         w.set_opacity(eased.clamp(0.0, 1.0));
         match direction {
-            SlideDirection::Down => {
-                let offset = original_margin_top - distance_px;
-                let current = (offset + (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_top(current);
-            }
+            SlideDirection::Down => w.set_margin_top(entering_margin(original_margin_top, distance_px, eased)),
             SlideDirection::Up => {
-                let offset = original_margin_bottom - distance_px;
-                let current = (offset + (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_bottom(current);
+                w.set_margin_bottom(entering_margin(original_margin_bottom, distance_px, eased))
             }
             SlideDirection::Right => {
-                let offset = original_margin_start - distance_px;
-                let current = (offset + (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_start(current);
+                w.set_margin_start(entering_margin(original_margin_start, distance_px, eased))
             }
             SlideDirection::Left => {
-                let offset = original_margin_end - distance_px;
-                let current = (offset + (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_end(current);
+                w.set_margin_end(entering_margin(original_margin_end, distance_px, eased))
             }
         }
         glib::ControlFlow::Continue
@@ -178,20 +160,16 @@ pub fn slide_out(
         w.set_opacity((start_opacity * (1.0 - eased)).clamp(0.0, 1.0));
         match direction {
             SlideDirection::Down => {
-                let current = (original_margin_bottom - (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_bottom(current);
+                w.set_margin_bottom(exiting_margin(original_margin_bottom, distance_px, eased))
             }
             SlideDirection::Up => {
-                let current = (original_margin_top - (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_top(current);
+                w.set_margin_top(exiting_margin(original_margin_top, distance_px, eased))
             }
             SlideDirection::Right => {
-                let current = (original_margin_end - (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_end(current);
+                w.set_margin_end(exiting_margin(original_margin_end, distance_px, eased))
             }
             SlideDirection::Left => {
-                let current = (original_margin_start - (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_start(current);
+                w.set_margin_start(exiting_margin(original_margin_start, distance_px, eased))
             }
         }
         glib::ControlFlow::Continue
@@ -310,20 +288,16 @@ fn slide_out_cb_inner<F>(
         w.set_opacity((start_opacity * (1.0 - eased)).clamp(0.0, 1.0));
         match direction {
             SlideDirection::Down => {
-                let current = (original_margin_bottom - (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_bottom(current);
+                w.set_margin_bottom(exiting_margin(original_margin_bottom, distance_px, eased))
             }
             SlideDirection::Up => {
-                let current = (original_margin_top - (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_top(current);
+                w.set_margin_top(exiting_margin(original_margin_top, distance_px, eased))
             }
             SlideDirection::Right => {
-                let current = (original_margin_end - (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_end(current);
+                w.set_margin_end(exiting_margin(original_margin_end, distance_px, eased))
             }
             SlideDirection::Left => {
-                let current = (original_margin_start - (distance_px as f64 * eased) as i32).max(0);
-                w.set_margin_start(current);
+                w.set_margin_start(exiting_margin(original_margin_start, distance_px, eased))
             }
         }
         glib::ControlFlow::Continue

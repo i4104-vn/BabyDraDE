@@ -1,8 +1,10 @@
-//! Dynamic Island capsule size / zoom transition animations
-//! and animation generation counter for safe cancellation.
+//! Widget-side rendering for Dynamic Island capsule transitions.
 
 use std::cell::Cell;
 
+use super::handler::{
+    child_collapse_opacity, collapse_opacity, interpolate, reveal_opacity,
+};
 use animation::Easing;
 use gtk4::prelude::*;
 
@@ -10,6 +12,10 @@ thread_local! {
     static CURRENT_ANIM_GEN: Cell<u64> = const { Cell::new(0) };
 }
 
+/// Returns the next generation token used to cancel stale animations.
+///
+/// # Returns
+/// A monotonically increasing per-thread generation counter.
 pub fn next_anim_gen() -> u64 {
     CURRENT_ANIM_GEN.with(|g| {
         let next = g.get() + 1;
@@ -18,6 +24,10 @@ pub fn next_anim_gen() -> u64 {
     })
 }
 
+/// Returns the most recently issued animation generation token.
+///
+/// # Returns
+/// The current per-thread generation counter.
 pub fn current_anim_gen() -> u64 {
     CURRENT_ANIM_GEN.with(|g| g.get())
 }
@@ -65,13 +75,11 @@ pub fn island_zoom_in(
         w.set_opacity(1.0);
 
         let eased_w = Easing::EaseOutBackSoft.apply(t);
-        let current_w = target_height + ((target_width - target_height) as f64 * eased_w) as i32;
+        let current_w = interpolate(target_height, target_width, eased_w);
         w.set_size_request(current_w, target_height);
 
         if let Some(ref child) = w.first_child() {
-            let child_t = (t - 0.5) * 2.0;
-            let child_opacity = child_t.clamp(0.0, 1.0);
-            child.set_opacity(child_opacity);
+            child.set_opacity(reveal_opacity(t));
         }
 
         glib::ControlFlow::Continue
@@ -119,16 +127,14 @@ pub fn island_zoom_out(
         }
 
         let t = elapsed_us as f64 / dur_us as f64;
-        let capsule_opacity = (1.0 - (t - 0.5) * 2.0).clamp(0.0, 1.0);
-        w.set_opacity(capsule_opacity);
+        w.set_opacity(collapse_opacity(t));
 
         let eased_w = Easing::EaseOutCubic.apply(t);
-        let current_w = start_h + ((target_width - start_h) as f64 * (1.0 - eased_w)) as i32;
+        let current_w = interpolate(start_h, target_width, 1.0 - eased_w);
         w.set_size_request(current_w, start_h);
 
         if let Some(ref child) = w.first_child() {
-            let child_opacity = (1.0 - t * 2.0).clamp(0.0, 1.0);
-            child.set_opacity(child_opacity);
+            child.set_opacity(child_collapse_opacity(t));
         }
 
         glib::ControlFlow::Continue
@@ -171,8 +177,7 @@ pub fn island_animate_width<F>(
 
         let t = elapsed_us as f64 / dur_us as f64;
         let eased = Easing::EaseOutCubic.apply(t);
-        let current_w = start_width + ((target_width - start_width) as f64 * eased) as i32;
-        w.set_size_request(current_w, -1);
+        w.set_size_request(interpolate(start_width, target_width, eased), -1);
 
         glib::ControlFlow::Continue
     });
@@ -231,8 +236,8 @@ pub fn island_animate_size<F>(
 
         let t = elapsed_us as f64 / dur_us as f64;
         let eased = Easing::EaseOutBackSoft.apply(t);
-        let current_w = start_width + ((target_width - start_width) as f64 * eased) as i32;
-        let current_h = start_height + ((target_height - start_height) as f64 * eased) as i32;
+        let current_w = interpolate(start_width, target_width, eased);
+        let current_h = interpolate(start_height, target_height, eased);
         w.set_size_request(current_w.max(0), current_h.max(0));
 
         if target_width == 0 || target_height == 0 {
