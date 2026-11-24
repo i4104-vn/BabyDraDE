@@ -2,7 +2,7 @@
 
 pub(crate) mod canvas;
 pub(crate) mod handle;
-pub(crate) mod model;
+pub(crate) mod models;
 pub(crate) mod popovers;
 
 mod handler;

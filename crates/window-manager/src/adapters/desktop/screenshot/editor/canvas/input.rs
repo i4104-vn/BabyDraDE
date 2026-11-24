@@ -2,7 +2,7 @@ use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::adapters::desktop::screenshot::editor::model::{Drawing, EditorState, Tool};
+use crate::adapters::desktop::screenshot::editor::models::{Drawing, EditorState, Tool};
 
 /// Selects the topmost drawing under (`px`, `py`), returning `true` when one was hit.
 fn pick_drawing(s: &mut EditorState, px: f64, py: f64) -> bool {

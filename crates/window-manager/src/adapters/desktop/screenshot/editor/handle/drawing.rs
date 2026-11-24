@@ -1,7 +1,7 @@
 //! Cairo rendering, shape drawing, and pixel mosaic blur utilities for Screenshot editor.
 
 use crate::adapters::desktop::screenshot::capture::{get_screenshot_path, send_notification};
-use crate::adapters::desktop::screenshot::editor::model::{Drawing, EditorState};
+use crate::adapters::desktop::screenshot::editor::models::{Drawing, EditorState};
 use gtk4::gdk::prelude::GdkCairoContextExt;
 
 /// Saves the edited crop and notifies the user after a successful write.

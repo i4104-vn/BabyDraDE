@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::handle::drawing::trigger_save;
-use super::model::{EditorState, Tool};
+use super::models::{EditorState, Tool};
 use crate::adapters::desktop::gtk::init_layer_window;
 
 use super::canvas::{draw_editor_canvas, setup_editor_gest};

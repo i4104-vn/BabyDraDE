@@ -5,7 +5,7 @@ use std::io::Write;
 
 use super::drawing::save_cropped_surface;
 use crate::adapters::desktop::screenshot::capture::send_notification;
-use crate::adapters::desktop::screenshot::editor::model::EditorState;
+use crate::adapters::desktop::screenshot::editor::models::EditorState;
 
 /// Copies the cropped annotated screenshot to the clipboard using `wl-copy` or
 /// a GTK clipboard fallback. Returns `true` on success.

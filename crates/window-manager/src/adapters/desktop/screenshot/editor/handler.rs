@@ -6,7 +6,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::adapters::desktop::screenshot::editor::canvas::delete_selected;
 use crate::adapters::desktop::screenshot::editor::handle::clipboard::copy_to_clipboard;
 use crate::adapters::desktop::screenshot::editor::handle::drawing::trigger_save;
-use crate::adapters::desktop::screenshot::editor::model::EditorState;
+use crate::adapters::desktop::screenshot::editor::models::EditorState;
 
 
 

@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::adapters::desktop::screenshot::editor::handle::drawing::{
     draw_pixelated_rect, render_shape,
 };
-use crate::adapters::desktop::screenshot::editor::model::{Drawing, EditorState, Tool};
+use crate::adapters::desktop::screenshot::editor::models::{Drawing, EditorState, Tool};
 
 /// Cached static background. Only the screenshot itself is cached: the crop
 /// rectangle, dimming and annotations are drawn live so moving the crop never
