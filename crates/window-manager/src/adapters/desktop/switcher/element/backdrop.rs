@@ -40,9 +40,7 @@ pub(super) fn update(
         || overlay.backdrop_size != Some(backdrop_size)
         || overlay.backdrop_tick != Some(presence_tick)
     {
-        if let Some(pixels) =
-            render_backdrop(backdrop_w, height, scale, gradient_w, presence)
-        {
+        if let Some(pixels) = render_backdrop(backdrop_w, height, scale, gradient_w, presence) {
             let mut buffer = MemoryRenderBuffer::new(
                 Fourcc::Argb8888,
                 backdrop_size,

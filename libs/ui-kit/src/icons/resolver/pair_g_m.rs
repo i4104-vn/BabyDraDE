@@ -6,10 +6,22 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_GSCONNECT_SVG,
             crate::icons::assets::LIGHT_GSCONNECT_SVG,
         )),
-        "info" => Some((crate::icons::assets::DARK_INFO_SVG, crate::icons::assets::LIGHT_INFO_SVG)),
-        "line" => Some((crate::icons::assets::DARK_LINE_SVG, crate::icons::assets::LIGHT_LINE_SVG)),
-        "lock" => Some((crate::icons::assets::DARK_LOCK_SVG, crate::icons::assets::LIGHT_LOCK_SVG)),
-        "logo" => Some((crate::icons::assets::DARK_LOGO_SVG, crate::icons::assets::LIGHT_LOGO_SVG)),
+        "info" => Some((
+            crate::icons::assets::DARK_INFO_SVG,
+            crate::icons::assets::LIGHT_INFO_SVG,
+        )),
+        "line" => Some((
+            crate::icons::assets::DARK_LINE_SVG,
+            crate::icons::assets::LIGHT_LINE_SVG,
+        )),
+        "lock" => Some((
+            crate::icons::assets::DARK_LOCK_SVG,
+            crate::icons::assets::LIGHT_LOCK_SVG,
+        )),
+        "logo" => Some((
+            crate::icons::assets::DARK_LOGO_SVG,
+            crate::icons::assets::LIGHT_LOGO_SVG,
+        )),
         "logout" => Some((
             crate::icons::assets::DARK_LOGOUT_SVG,
             crate::icons::assets::LIGHT_LOGOUT_SVG,

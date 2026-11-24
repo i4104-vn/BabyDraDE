@@ -95,7 +95,6 @@ pub(crate) fn start_window_transition(
     });
 }
 
-
 mod frame;
 pub(crate) use frame::window_animation_frame;
 mod lifecycle;

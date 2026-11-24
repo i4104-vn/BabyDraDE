@@ -9,8 +9,8 @@ pub(crate) mod touchpad;
 
 mod handler;
 
-pub(crate) use handler::{execute_window_intent, process_input_event};
 pub(crate) use crate::adapters::window::{
     interaction::{MoveState, OverlayTouchState, ResizeState, TouchSlotData, TrackpadSwipeBuffer},
     InputContext,
 };
+pub(crate) use handler::{execute_window_intent, process_input_event};

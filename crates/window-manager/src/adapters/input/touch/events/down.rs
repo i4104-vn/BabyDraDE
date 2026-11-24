@@ -4,7 +4,7 @@ use smithay::{
     backend::input::{InputBackend, TouchDownEvent},
     desktop::{layer_map_for_output, PopupManager, Window},
     input::touch::DownEvent,
-    utils::{SERIAL_COUNTER, Serial},
+    utils::{Serial, SERIAL_COUNTER},
 };
 
 use common::Action;

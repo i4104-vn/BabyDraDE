@@ -94,7 +94,15 @@ pub(crate) fn render(
     }
     surface.flush();
 
-    upload(renderer, &mut surface, width, height, location, scale, maximized)
+    upload(
+        renderer,
+        &mut surface,
+        width,
+        height,
+        location,
+        scale,
+        maximized,
+    )
 }
 
 /// Copies the painted surface into a memory render element.

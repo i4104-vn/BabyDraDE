@@ -2,9 +2,9 @@
 //!
 //! Converts a frame snapshot into a pure layout decision.
 
-use common::Action;
-use crate::domain::geometry::Point;
 use super::models::{FrameInput, TitlebarLayout};
+use crate::domain::geometry::Point;
+use common::Action;
 
 /// Hit-tests a pointer position against a compositor-owned frame.
 ///

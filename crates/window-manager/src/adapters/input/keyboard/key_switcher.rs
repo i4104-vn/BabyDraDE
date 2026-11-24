@@ -1,9 +1,6 @@
 //! Alt-Tab switcher key handling.
 
-use smithay::{
-    backend::input::KeyState,
-    input::keyboard::keysyms,
-};
+use smithay::{backend::input::KeyState, input::keyboard::keysyms};
 
 use crate::adapters::input::{
     keyboard::shortcuts::{check_key_shortcut, KeyboardAction},

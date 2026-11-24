@@ -1,8 +1,8 @@
 //! Physics-driven spring animation.
 
 mod handler;
-mod solver;
 mod render;
+mod solver;
 
 pub use common::SpringConfig;
 pub use handler::Spring;

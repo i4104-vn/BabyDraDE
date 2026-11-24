@@ -1,13 +1,10 @@
 //! Global and configurable shortcut key handling.
 
-use smithay::{
-    backend::input::KeyState,
-    input::keyboard::KeysymHandle,
-};
+use smithay::{backend::input::KeyState, input::keyboard::KeysymHandle};
 
 use crate::adapters::input::{
-    keymap::{matcher::command_for, spawn_command},
     keyboard::shortcuts::check_key_shortcut,
+    keymap::{matcher::command_for, spawn_command},
     InputContext,
 };
 

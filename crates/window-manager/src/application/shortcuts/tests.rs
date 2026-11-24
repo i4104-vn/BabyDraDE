@@ -99,10 +99,7 @@ impl CommandLauncher for FakeLauncher {
     }
 }
 
-fn service_with(
-    repository: Arc<FakeRepository>,
-    launcher: Arc<FakeLauncher>,
-) -> ShortcutService {
+fn service_with(repository: Arc<FakeRepository>, launcher: Arc<FakeLauncher>) -> ShortcutService {
     ShortcutService::new(repository, launcher)
 }
 

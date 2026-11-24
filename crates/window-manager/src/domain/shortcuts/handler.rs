@@ -1,7 +1,7 @@
 //! Shortcut parsing and matching rules.
 
-use crate::domain::keysyms;
 use super::models::{Mods, ResolvedShortcut, Shortcut};
+use crate::domain::keysyms;
 
 /// Parses a modifier specification such as `"S"` or `"W-S"`.
 ///

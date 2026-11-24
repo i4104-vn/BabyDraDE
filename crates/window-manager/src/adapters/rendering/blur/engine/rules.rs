@@ -27,7 +27,6 @@ impl BlurEngine {
         }
     }
 
-
     /// Add an app rule to the blur engine and persist configuration
     #[cfg(test)]
     pub(crate) fn add_app(&mut self, app_id: &str) {
@@ -83,10 +82,7 @@ impl BlurEngine {
         config::save(&self.params);
         info!("BabyDraDE BlurEngine: blur_all set to {}", blur_all);
     }
-
-
 }
-
 
 #[cfg(test)]
 mod tests {

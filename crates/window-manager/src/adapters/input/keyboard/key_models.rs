@@ -1,9 +1,6 @@
 //! Shared keyboard event context.
 
-use smithay::{
-    backend::input::KeyState,
-    input::keyboard::ModifiersState,
-};
+use smithay::{backend::input::KeyState, input::keyboard::ModifiersState};
 
 use crate::adapters::input::keyboard::shortcuts::KeyboardAction;
 

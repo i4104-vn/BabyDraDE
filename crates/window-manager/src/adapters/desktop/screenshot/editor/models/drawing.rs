@@ -190,4 +190,3 @@ pub(crate) enum Tool {
 
 /// Default stroke widths offered by the style popover.
 pub(crate) const STROKE_WIDTHS: [f64; 3] = [3.0, 5.5, 9.0];
-

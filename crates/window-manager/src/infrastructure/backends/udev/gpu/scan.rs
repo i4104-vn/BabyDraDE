@@ -2,12 +2,10 @@
 
 use std::error::Error;
 
-use smithay::{
-    backend::{
-        drm::{DrmNode, NodeType},
-        session::libseat::LibSeatSession,
-        udev::UdevBackend,
-    },
+use smithay::backend::{
+    drm::{DrmNode, NodeType},
+    session::libseat::LibSeatSession,
+    udev::UdevBackend,
 };
 use tracing::info;
 

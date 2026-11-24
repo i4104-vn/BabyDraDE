@@ -8,11 +8,11 @@ use common::constants::launcher::{
     SEARCH_ROW_SPAN, SEARCH_ROW_START, SEARCH_ROW_STEP, SEARCH_SECTION_GAP,
 };
 
-use super::super::SearchText;
-use super::super::SearchItem;
-use super::handler::caret_phase;
 use super::super::index::FileIndex;
 use super::super::layout::SearchLayout;
+use super::super::SearchItem;
+use super::super::SearchText;
+use super::handler::caret_phase;
 
 /// Minimal state shared by input, rendering and hit-testing.
 pub(crate) struct SearchState {

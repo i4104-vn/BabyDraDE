@@ -43,7 +43,9 @@ pub(super) fn launcher<C: InputContext>(ctx: &mut ButtonContext<'_, C>) -> bool 
     // docked launcher.
     if ctx.button_code == common::BTN_LEFT
         && !ctx.state.pointer_is_grabbed()
-        && ctx.state.launcher_search_click(ctx.state.pointer_location())
+        && ctx
+            .state
+            .launcher_search_click(ctx.state.pointer_location())
     {
         return true;
     }

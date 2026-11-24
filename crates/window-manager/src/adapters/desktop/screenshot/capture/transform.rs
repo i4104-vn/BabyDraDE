@@ -4,7 +4,11 @@ use smithay::utils::Transform;
 
 /// Affine matrix mapping the raw frame buffer into the output's logical
 /// orientation. Coefficients come from smithay's `Transform::transform_point_in`.
-pub(crate) fn transform_matrix(transform: Transform, w: i32, h: i32) -> (f64, f64, f64, f64, f64, f64) {
+pub(crate) fn transform_matrix(
+    transform: Transform,
+    w: i32,
+    h: i32,
+) -> (f64, f64, f64, f64, f64, f64) {
     let (w, h) = (w as f64, h as f64);
     match transform {
         Transform::Normal => (1.0, 0.0, 0.0, 1.0, 0.0, 0.0),

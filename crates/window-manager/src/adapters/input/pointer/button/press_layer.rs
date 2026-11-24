@@ -16,10 +16,7 @@ use super::shared;
 /// * `ctx` - Mutable button context.
 pub(super) fn handle<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
     let clicked_layer = ctx.state.layer_under(ctx.state.pointer_location());
-    let is_top_or_overlay = matches!(
-        clicked_layer,
-        Some(Layer::Top) | Some(Layer::Overlay)
-    );
+    let is_top_or_overlay = matches!(clicked_layer, Some(Layer::Top) | Some(Layer::Overlay));
 
     // Ensure pointer focus is updated to the clicked surface
     shared::refresh_pointer_focus(ctx);

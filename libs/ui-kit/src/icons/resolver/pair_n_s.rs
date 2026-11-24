@@ -2,7 +2,10 @@
 
 pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
     match name {
-        "next" => Some((crate::icons::assets::DARK_NEXT_SVG, crate::icons::assets::LIGHT_NEXT_SVG)),
+        "next" => Some((
+            crate::icons::assets::DARK_NEXT_SVG,
+            crate::icons::assets::LIGHT_NEXT_SVG,
+        )),
         "night-light" => Some((
             crate::icons::assets::DARK_NIGHT_LIGHT_SVG,
             crate::icons::assets::LIGHT_NIGHT_LIGHT_SVG,
@@ -19,8 +22,14 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_PERFORMANCE_SVG,
             crate::icons::assets::LIGHT_PERFORMANCE_SVG,
         )),
-        "play" => Some((crate::icons::assets::DARK_PLAY_SVG, crate::icons::assets::LIGHT_PLAY_SVG)),
-        "plus" => Some((crate::icons::assets::DARK_PLUS_SVG, crate::icons::assets::LIGHT_PLUS_SVG)),
+        "play" => Some((
+            crate::icons::assets::DARK_PLAY_SVG,
+            crate::icons::assets::LIGHT_PLAY_SVG,
+        )),
+        "plus" => Some((
+            crate::icons::assets::DARK_PLUS_SVG,
+            crate::icons::assets::LIGHT_PLUS_SVG,
+        )),
         "power" => Some((
             crate::icons::assets::DARK_POWER_SVG,
             crate::icons::assets::LIGHT_POWER_SVG,
@@ -33,7 +42,10 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_PRIVACY_SVG,
             crate::icons::assets::LIGHT_PRIVACY_SVG,
         )),
-        "rect" => Some((crate::icons::assets::DARK_RECT_SVG, crate::icons::assets::LIGHT_RECT_SVG)),
+        "rect" => Some((
+            crate::icons::assets::DARK_RECT_SVG,
+            crate::icons::assets::LIGHT_RECT_SVG,
+        )),
         "refresh" => Some((
             crate::icons::assets::DARK_REFRESH_SVG,
             crate::icons::assets::LIGHT_REFRESH_SVG,
@@ -70,7 +82,10 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_SLEEP_SVG,
             crate::icons::assets::LIGHT_SLEEP_SVG,
         )),
-        "stop" => Some((crate::icons::assets::DARK_STOP_SVG, crate::icons::assets::LIGHT_STOP_SVG)),
+        "stop" => Some((
+            crate::icons::assets::DARK_STOP_SVG,
+            crate::icons::assets::LIGHT_STOP_SVG,
+        )),
         "palette" => Some((
             crate::icons::assets::DARK_DISPLAY_SVG,
             crate::icons::assets::LIGHT_DISPLAY_SVG,
@@ -79,7 +94,10 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_SETTINGS_SVG,
             crate::icons::assets::LIGHT_SETTINGS_SVG,
         )),
-        "square" => Some((crate::icons::assets::DARK_STOP_SVG, crate::icons::assets::LIGHT_STOP_SVG)),
+        "square" => Some((
+            crate::icons::assets::DARK_STOP_SVG,
+            crate::icons::assets::LIGHT_STOP_SVG,
+        )),
         _ => None,
     }
 }

@@ -57,6 +57,6 @@ fn smithay_restore_target(
     (to_smithay_point(loc), to_smithay_size(size))
 }
 
+mod fullscreen;
 mod maximize;
 mod minimize;
-mod fullscreen;

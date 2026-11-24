@@ -1,6 +1,6 @@
 //! construct helpers.
 
-use super::models::{OPEN_MENUS, notify_visibility};
+use super::models::{notify_visibility, OPEN_MENUS};
 use super::*;
 
 impl ContextMenu {

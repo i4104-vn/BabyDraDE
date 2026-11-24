@@ -28,4 +28,3 @@ pub(crate) enum WindowAnimation {
         geometry: GeometryTransition,
     },
 }
-

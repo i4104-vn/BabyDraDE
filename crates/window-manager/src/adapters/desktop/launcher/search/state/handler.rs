@@ -6,11 +6,11 @@ use animation::{FADE_OUT_DURATION, SEARCH_REVEAL_DURATION};
 use common::constants::launcher::SEARCH_CARET_BLINK_MS;
 use smithay::utils::{Logical, Point};
 
-use crate::adapters::desktop::launcher::LauncherApp;
-use super::super::{SearchAction, SearchPanelKey, SearchRegion};
 use super::super::index::build_results;
 use super::super::layout::SearchLayout;
+use super::super::{SearchAction, SearchPanelKey, SearchRegion};
 use super::models::SearchState;
+use crate::adapters::desktop::launcher::LauncherApp;
 
 /// Blink phase from a process-wide clock, so no per-instance timestamp is kept.
 pub(super) fn caret_phase() -> u64 {

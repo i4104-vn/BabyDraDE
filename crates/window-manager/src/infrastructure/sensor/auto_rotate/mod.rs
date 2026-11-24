@@ -29,10 +29,8 @@ pub(super) const PROXY_NAME: &str = "net.hadess.SensorProxy";
 pub(super) const PROXY_PATH: &str = "/net/hadess/SensorProxy";
 pub(super) const PROXY_IFACE: &str = "net.hadess.SensorProxy";
 
-mod models;
 mod handler;
-
-
+mod models;
 
 #[cfg(test)]
 mod tests;

@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 /// Draws an application icon or a small shape-based badge for files and web.
 pub(super) fn draw_badge(
     context: &Context,

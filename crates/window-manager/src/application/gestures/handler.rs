@@ -157,4 +157,3 @@ pub(crate) fn three_finger_tap_intent(
         None
     }
 }
-

@@ -31,4 +31,3 @@ pub(crate) struct BabydraState {
     /// Managed window space and runtime resources.
     pub(crate) resources: RuntimeResources,
 }
-

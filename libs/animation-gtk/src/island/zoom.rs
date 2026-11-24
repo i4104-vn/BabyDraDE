@@ -5,9 +5,7 @@
 use std::cell::Cell;
 
 use super::gen::{current_anim_gen, next_anim_gen};
-use super::handler::{
-    child_collapse_opacity, collapse_opacity, interpolate, reveal_opacity,
-};
+use super::handler::{child_collapse_opacity, collapse_opacity, interpolate, reveal_opacity};
 use animation::Easing;
 use gtk4::prelude::*;
 

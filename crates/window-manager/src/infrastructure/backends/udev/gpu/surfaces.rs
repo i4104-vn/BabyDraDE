@@ -1,10 +1,7 @@
 //! Connector scanning and DRM surface construction.
 
 use smithay::{
-    backend::{
-        allocator::Fourcc,
-        drm::compositor::DrmCompositor,
-    },
+    backend::{allocator::Fourcc, drm::compositor::DrmCompositor},
     output::{Mode, Output, PhysicalProperties, Subpixel},
     reexports::drm::control::ModeTypeFlags,
     utils::Transform,

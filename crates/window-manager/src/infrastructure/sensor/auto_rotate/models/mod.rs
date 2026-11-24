@@ -2,7 +2,6 @@
 
 use super::*;
 
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct Orientation(pub(super) u8);
 

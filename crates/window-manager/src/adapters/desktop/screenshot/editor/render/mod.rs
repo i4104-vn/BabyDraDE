@@ -2,8 +2,8 @@
 
 mod color;
 mod models;
-mod window;
 mod toolbar;
 mod tools;
+mod window;
 
 pub(crate) use window::build_editor_ui;

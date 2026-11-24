@@ -29,10 +29,7 @@ use super::models::GpuContext;
 /// # Returns
 /// `Some(GpuContext)` when every initialization stage succeeds, `None` otherwise.
 pub(super) fn open_gpu(path: &PathBuf, session: &mut LibSeatSession) -> Option<GpuContext> {
-    let owned_fd = match session.open(
-        path,
-        OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOCTTY,
-    ) {
+    let owned_fd = match session.open(path, OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOCTTY) {
         Ok(fd) => fd,
         Err(err) => {
             warn!("Failed to open GPU {:?} via LibSeat: {err}", path);

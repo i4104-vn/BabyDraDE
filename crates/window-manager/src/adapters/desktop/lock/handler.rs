@@ -1,9 +1,9 @@
 //! BabyDraDE Lock Screen — Multi-monitor lock screen with PAM authentication.
 
-use gtk4::prelude::*;
 use super::render::{
     capture_transition_images, create_lock_window, reverse_lock_transition, LockTransition,
 };
+use gtk4::prelude::*;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};

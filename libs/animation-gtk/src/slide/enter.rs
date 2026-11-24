@@ -53,11 +53,15 @@ fn slide_in_inner(
         SlideDirection::Down => {
             widget.set_margin_top(start_margin(original_margin_top, distance_px))
         }
-        SlideDirection::Up => widget.set_margin_bottom(start_margin(original_margin_bottom, distance_px)),
+        SlideDirection::Up => {
+            widget.set_margin_bottom(start_margin(original_margin_bottom, distance_px))
+        }
         SlideDirection::Right => {
             widget.set_margin_start(start_margin(original_margin_start, distance_px))
         }
-        SlideDirection::Left => widget.set_margin_end(start_margin(original_margin_end, distance_px)),
+        SlideDirection::Left => {
+            widget.set_margin_end(start_margin(original_margin_end, distance_px))
+        }
     }
 
     let start_time = std::cell::Cell::new(0i64);
@@ -99,7 +103,9 @@ fn slide_in_inner(
 
         w.set_opacity(eased.clamp(0.0, 1.0));
         match direction {
-            SlideDirection::Down => w.set_margin_top(entering_margin(original_margin_top, distance_px, eased)),
+            SlideDirection::Down => {
+                w.set_margin_top(entering_margin(original_margin_top, distance_px, eased))
+            }
             SlideDirection::Up => {
                 w.set_margin_bottom(entering_margin(original_margin_bottom, distance_px, eased))
             }

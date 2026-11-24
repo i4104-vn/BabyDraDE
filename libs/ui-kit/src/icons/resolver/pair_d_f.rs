@@ -10,7 +10,10 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_DISPLAY_SVG,
             crate::icons::assets::LIGHT_DISPLAY_SVG,
         )),
-        "down" => Some((crate::icons::assets::DARK_DOWN_SVG, crate::icons::assets::LIGHT_DOWN_SVG)),
+        "down" => Some((
+            crate::icons::assets::DARK_DOWN_SVG,
+            crate::icons::assets::LIGHT_DOWN_SVG,
+        )),
         "download" => Some((
             crate::icons::assets::DARK_DOWNLOAD_SVG,
             crate::icons::assets::LIGHT_DOWNLOAD_SVG,
@@ -19,7 +22,10 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_DRIVE_HARDDISK_SVG,
             crate::icons::assets::LIGHT_DRIVE_HARDDISK_SVG,
         )),
-        "edit" => Some((crate::icons::assets::DARK_EDIT_SVG, crate::icons::assets::LIGHT_EDIT_SVG)),
+        "edit" => Some((
+            crate::icons::assets::DARK_EDIT_SVG,
+            crate::icons::assets::LIGHT_EDIT_SVG,
+        )),
         "ellipse" => Some((
             crate::icons::assets::DARK_ELLIPSE_SVG,
             crate::icons::assets::LIGHT_ELLIPSE_SVG,
@@ -36,7 +42,10 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_EXTERNAL_LINK_SVG,
             crate::icons::assets::LIGHT_EXTERNAL_LINK_SVG,
         )),
-        "eye" => Some((crate::icons::assets::DARK_EYE_SVG, crate::icons::assets::LIGHT_EYE_SVG)),
+        "eye" => Some((
+            crate::icons::assets::DARK_EYE_SVG,
+            crate::icons::assets::LIGHT_EYE_SVG,
+        )),
         "eye-off" => Some((
             crate::icons::assets::DARK_EYE_OFF_SVG,
             crate::icons::assets::LIGHT_EYE_OFF_SVG,

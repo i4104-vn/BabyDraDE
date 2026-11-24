@@ -8,8 +8,6 @@ use crate::adapters::desktop::screenshot::editor::handle::clipboard::copy_to_cli
 use crate::adapters::desktop::screenshot::editor::handle::drawing::trigger_save;
 use crate::adapters::desktop::screenshot::editor::models::EditorState;
 
-
-
 /// Sets up keyboard event controllers to handle global shortcuts like Escape (cancel),
 /// Return (copy to clipboard), Ctrl+S (save to file), and Delete (remove selected drawing).
 pub(crate) fn setup_editor_keys(

@@ -3,7 +3,6 @@
 use super::results::draw_results;
 use super::*;
 
-
 /// Draws the flat search column directly onto the dimmer.
 pub(crate) fn draw_panel(
     context: &Context,

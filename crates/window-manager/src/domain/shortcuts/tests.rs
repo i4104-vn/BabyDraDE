@@ -1,6 +1,6 @@
-use super::*;
 use super::handler::to_keysym;
 use super::models::ResolvedShortcut;
+use super::*;
 use crate::domain::keysyms;
 
 #[test]

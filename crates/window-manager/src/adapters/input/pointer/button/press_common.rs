@@ -11,14 +11,13 @@ use crate::adapters::input::pointer::button::models::ButtonContext;
 /// # Arguments
 /// * `ctx` - Mutable button context.
 /// * `window` - Window to raise and focus.
-pub(super) fn raise_and_focus<C: InputContext>(
-    ctx: &mut ButtonContext<'_, C>,
-    window: &Window,
-) {
+pub(super) fn raise_and_focus<C: InputContext>(ctx: &mut ButtonContext<'_, C>, window: &Window) {
     ctx.state.space_mut().raise_element(window, true);
     ctx.state.raise_window(window);
-    ctx.state
-        .set_keyboard_focus(Some(window.toplevel().unwrap().wl_surface().clone()), ctx.serial);
+    ctx.state.set_keyboard_focus(
+        Some(window.toplevel().unwrap().wl_surface().clone()),
+        ctx.serial,
+    );
     ctx.state.space().elements().for_each(|w| {
         let active = w == window;
         w.set_activated(active);

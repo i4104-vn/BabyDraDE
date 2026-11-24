@@ -18,7 +18,8 @@ impl BabydraState {
         start_window_minimizing(window);
 
         let next_top = self
-            .windows.space
+            .windows
+            .space
             .elements()
             .rev()
             .find(|w| *w != window && !is_window_exiting(w))

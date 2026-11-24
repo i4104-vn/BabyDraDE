@@ -97,7 +97,12 @@ fn render_frame(ctx: FrameRenderContext<'_>) {
         };
 
         let below_windows = oriented_size
-            .map(|size| state.overlays.launcher.render(renderer, (size.w, size.h), scale))
+            .map(|size| {
+                state
+                    .overlays
+                    .launcher
+                    .render(renderer, (size.w, size.h), scale)
+            })
             .unwrap_or_default();
         let above_windows = oriented_size
             .map(|size| {

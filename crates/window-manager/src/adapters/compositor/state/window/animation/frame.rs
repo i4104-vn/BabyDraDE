@@ -85,7 +85,6 @@ pub(crate) fn window_animation_frame(window: &Window) -> WindowVisualState {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

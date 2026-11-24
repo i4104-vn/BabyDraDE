@@ -3,14 +3,13 @@
 //! Dispatches events from the backend (keyboard, pointer, touchpad, touch)
 //! to the appropriate specialized input sub-modules.
 
-
 use smithay::{
     backend::input::{InputBackend, InputEvent},
     utils::SERIAL_COUNTER,
 };
 
-use crate::application::gestures::WindowIntent;
 use crate::adapters::window::InputContext;
+use crate::application::gestures::WindowIntent;
 
 use super::{keyboard, pointer, touch, touchpad};
 

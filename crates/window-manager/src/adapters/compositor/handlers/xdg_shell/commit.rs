@@ -5,11 +5,7 @@ use smithay::{
 };
 
 /// Processes a commit on a toplevel or popup surface.
-pub(crate) fn handle_commit(
-    popups: &mut PopupManager,
-    space: &Space<Window>,
-    surface: &WlSurface,
-) {
+pub(crate) fn handle_commit(popups: &mut PopupManager, space: &Space<Window>, surface: &WlSurface) {
     if let Some(window) = space
         .elements()
         .find(|window| {

@@ -2,8 +2,8 @@
 
 use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge;
 
-use common::Action;
 use crate::adapters::input::{InputContext, MoveState, ResizeState};
+use common::Action;
 
 use crate::adapters::input::pointer::button::models::ButtonContext;
 
@@ -60,19 +60,18 @@ pub(super) fn pointer<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
                 }
                 Action::Move => {
                     let now = std::time::Instant::now();
-                    let is_double_click =
-                        if let Some((last_time, last_pos, ref last_win)) =
-                            ctx.state.last_titlebar_click_mut().take()
-                        {
-                            let elapsed = now.duration_since(last_time).as_millis();
-                            let dx = ctx.state.pointer_location().x - last_pos.x;
-                            let dy = ctx.state.pointer_location().y - last_pos.y;
-                            last_win == &window
-                                && elapsed <= common::DOUBLE_CLICK_TIMEOUT_MS
-                                && (dx * dx + dy * dy) <= common::DOUBLE_CLICK_DISTANCE_SQ
-                        } else {
-                            false
-                        };
+                    let is_double_click = if let Some((last_time, last_pos, ref last_win)) =
+                        ctx.state.last_titlebar_click_mut().take()
+                    {
+                        let elapsed = now.duration_since(last_time).as_millis();
+                        let dx = ctx.state.pointer_location().x - last_pos.x;
+                        let dy = ctx.state.pointer_location().y - last_pos.y;
+                        last_win == &window
+                            && elapsed <= common::DOUBLE_CLICK_TIMEOUT_MS
+                            && (dx * dx + dy * dy) <= common::DOUBLE_CLICK_DISTANCE_SQ
+                    } else {
+                        false
+                    };
 
                     if is_double_click {
                         ctx.state.toggle_maximize(&window);

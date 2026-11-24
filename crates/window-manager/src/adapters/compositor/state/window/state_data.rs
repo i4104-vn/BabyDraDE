@@ -34,4 +34,3 @@ pub(crate) fn lock_window_state(window: &Window) -> std::sync::MutexGuard<'_, Wi
         }
     }
 }
-

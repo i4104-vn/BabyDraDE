@@ -1,6 +1,5 @@
 //! Compiled blur program handles.
 
-
 pub(crate) struct DownsampleProgram {
     pub(crate) program: glow::Program,
     pub(crate) u_texture: glow::UniformLocation,

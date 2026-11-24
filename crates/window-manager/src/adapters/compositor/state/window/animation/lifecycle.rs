@@ -20,7 +20,8 @@ impl BabydraState {
 
         // Immediately update active window and transfer keyboard focus to next window
         let next_top = self
-            .windows.space
+            .windows
+            .space
             .elements()
             .rev()
             .find(|w| *w != window && !is_window_exiting(w))
@@ -43,7 +44,8 @@ impl BabydraState {
     pub(crate) fn update_window_animations(&mut self) {
         // A closing switcher stays alive until its fade/slide finishes.
         let switcher_done = self
-            .overlays.alt_tab_switcher
+            .overlays
+            .alt_tab_switcher
             .as_ref()
             .is_some_and(|switcher| switcher.closing && !switcher.presence.is_animating());
         if switcher_done {

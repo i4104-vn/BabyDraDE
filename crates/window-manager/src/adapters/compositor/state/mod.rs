@@ -1,23 +1,14 @@
-use std::{
-    ffi::OsString,
-    sync::Arc,
-    time::Instant,
-};
+use std::{ffi::OsString, sync::Arc, time::Instant};
 
 use smithay::{
     desktop::{PopupManager, Window},
     input::pointer::CursorIcon,
     reexports::{
         calloop::{generic::Generic, EventLoop, Interest, PostAction},
-        wayland_server::{
-            Display, Resource,
-        },
+        wayland_server::{Display, Resource},
     },
     utils::IsAlive,
-    wayland::{
-        shell::xdg::ToplevelSurface,
-        socket::ListeningSocketSource,
-    },
+    wayland::{shell::xdg::ToplevelSurface, socket::ListeningSocketSource},
 };
 
 use crate::adapters::window::cursor::resize_cursor_icon;
@@ -52,9 +43,8 @@ pub(crate) use window::*;
 mod models;
 
 mod lifecycle;
-mod window_ops;
-mod settings;
 mod listener;
-
+mod settings;
+mod window_ops;
 
 pub(crate) use models::{BabydraState, CalloopData, ClientState, RuntimeResources};

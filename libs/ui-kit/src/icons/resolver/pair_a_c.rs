@@ -14,12 +14,18 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_ARROW_SVG,
             crate::icons::assets::LIGHT_ARROW_SVG,
         )),
-        "back" => Some((crate::icons::assets::DARK_BACK_SVG, crate::icons::assets::LIGHT_BACK_SVG)),
+        "back" => Some((
+            crate::icons::assets::DARK_BACK_SVG,
+            crate::icons::assets::LIGHT_BACK_SVG,
+        )),
         "battery" => Some((
             crate::icons::assets::DARK_BATTERY_SVG,
             crate::icons::assets::LIGHT_BATTERY_SVG,
         )),
-        "bell" => Some((crate::icons::assets::DARK_BELL_SVG, crate::icons::assets::LIGHT_BELL_SVG)),
+        "bell" => Some((
+            crate::icons::assets::DARK_BELL_SVG,
+            crate::icons::assets::LIGHT_BELL_SVG,
+        )),
         "bell-off" => Some((
             crate::icons::assets::DARK_BELL_OFF_SVG,
             crate::icons::assets::LIGHT_BELL_OFF_SVG,
@@ -28,7 +34,10 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_BLUETOOTH_SVG,
             crate::icons::assets::LIGHT_BLUETOOTH_SVG,
         )),
-        "blur" => Some((crate::icons::assets::DARK_BLUR_SVG, crate::icons::assets::LIGHT_BLUR_SVG)),
+        "blur" => Some((
+            crate::icons::assets::DARK_BLUR_SVG,
+            crate::icons::assets::LIGHT_BLUR_SVG,
+        )),
         "brightness" => Some((
             crate::icons::assets::DARK_BRIGHTNESS_SVG,
             crate::icons::assets::LIGHT_BRIGHTNESS_SVG,
@@ -69,13 +78,22 @@ pub(super) fn resolve(name: &str) -> Option<(&'static str, &'static str)> {
             crate::icons::assets::DARK_CLOSE_SVG,
             crate::icons::assets::LIGHT_CLOSE_SVG,
         )),
-        "copy" => Some((crate::icons::assets::DARK_COPY_SVG, crate::icons::assets::LIGHT_COPY_SVG)),
-        "cut" => Some((crate::icons::assets::DARK_CUT_SVG, crate::icons::assets::LIGHT_CUT_SVG)),
+        "copy" => Some((
+            crate::icons::assets::DARK_COPY_SVG,
+            crate::icons::assets::LIGHT_COPY_SVG,
+        )),
+        "cut" => Some((
+            crate::icons::assets::DARK_CUT_SVG,
+            crate::icons::assets::LIGHT_CUT_SVG,
+        )),
         "cog" => Some((
             crate::icons::assets::DARK_SETTINGS_SVG,
             crate::icons::assets::LIGHT_SETTINGS_SVG,
         )),
-        "avatar-default" => Some((crate::icons::assets::DARK_USER_SVG, crate::icons::assets::LIGHT_USER_SVG)),
+        "avatar-default" => Some((
+            crate::icons::assets::DARK_USER_SVG,
+            crate::icons::assets::LIGHT_USER_SVG,
+        )),
         "circle" => Some((
             crate::icons::assets::DARK_ELLIPSE_SVG,
             crate::icons::assets::LIGHT_ELLIPSE_SVG,

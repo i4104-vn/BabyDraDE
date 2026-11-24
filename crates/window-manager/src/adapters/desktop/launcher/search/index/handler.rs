@@ -2,9 +2,9 @@
 
 use common::constants::launcher::SEARCH_ROWS_PER_CATEGORY;
 
-use crate::adapters::desktop::launcher::LauncherApp;
 use super::super::SearchItem;
 use super::models::FileIndex;
+use crate::adapters::desktop::launcher::LauncherApp;
 
 /// Lower score means a better match. `None` means "does not match at all".
 pub(super) fn score(haystack: &str, needle: &str) -> Option<usize> {

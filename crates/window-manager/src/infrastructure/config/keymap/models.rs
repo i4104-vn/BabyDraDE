@@ -1,6 +1,9 @@
 //! Keymap configuration models.
 
-use std::{collections::HashMap, sync::{Arc, RwLock}};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use crate::domain::shortcuts::Shortcut;
 use serde::Deserialize;
@@ -13,4 +16,3 @@ pub(super) struct ConfigFile {
     #[serde(default)]
     pub(super) shortcuts: HashMap<String, String>,
 }
-

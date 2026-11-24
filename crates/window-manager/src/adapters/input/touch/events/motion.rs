@@ -7,7 +7,10 @@ use smithay::{
 
 use crate::adapters::input::{
     common::transform_absolute_position,
-    touch::{drag, events::{gesture_state, overlay}},
+    touch::{
+        drag,
+        events::{gesture_state, overlay},
+    },
     InputContext,
 };
 

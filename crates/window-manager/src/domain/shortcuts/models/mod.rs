@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::handler::{to_keysym, parse_modifiers};
+use super::handler::{parse_modifiers, to_keysym};
 
 fn default_true() -> bool {
     true

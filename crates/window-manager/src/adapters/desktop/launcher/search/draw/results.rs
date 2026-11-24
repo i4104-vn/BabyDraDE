@@ -3,7 +3,6 @@
 use super::badge::draw_badge;
 use super::*;
 
-
 /// Headings and result rows share one queue: each takes its own delayed slice
 /// of the master timeline and flies up independently.
 pub(super) fn draw_results(

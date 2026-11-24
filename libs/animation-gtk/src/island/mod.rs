@@ -1,7 +1,7 @@
 //! Dynamic Island capsule size / zoom transitions.
 
-mod handler;
 mod gen;
+mod handler;
 mod resize;
 mod zoom;
 

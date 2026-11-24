@@ -146,4 +146,3 @@ pub(crate) fn spawn(event_loop: &mut EventLoop<'_, CalloopData>) {
         tracing::warn!("cannot start auto-rotate timer: {err}");
     }
 }
-

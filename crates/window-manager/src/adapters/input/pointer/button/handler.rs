@@ -8,8 +8,8 @@ use smithay::{
 
 use crate::adapters::input::InputContext;
 
-use super::{press, release};
 use super::models::ButtonContext;
+use super::{press, release};
 
 /// Handles pointer button clicks, focus switching, window raising, and Super+Drag initiation.
 pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
@@ -20,7 +20,12 @@ pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(
     let serial = SERIAL_COUNTER.next_serial();
     let button_code = event.button_code();
     let time = event.time_msec();
-    let mut ctx = ButtonContext { state, serial, button_code, time };
+    let mut ctx = ButtonContext {
+        state,
+        serial,
+        button_code,
+        time,
+    };
 
     match event.state() {
         ButtonState::Pressed => press::press(&mut ctx),

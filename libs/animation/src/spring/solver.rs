@@ -57,4 +57,3 @@ pub(crate) fn solve_spring(config: &SpringConfig, y0: f64, v0: f64, elapsed: f64
         }
     }
 }
-

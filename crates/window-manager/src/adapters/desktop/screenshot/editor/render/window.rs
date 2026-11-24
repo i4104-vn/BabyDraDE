@@ -7,9 +7,7 @@ use std::rc::Rc;
 
 use super::models::ToolbarContext;
 use super::toolbar;
-use crate::adapters::desktop::screenshot::editor::canvas::{
-    draw_editor_canvas, setup_editor_gest,
-};
+use crate::adapters::desktop::screenshot::editor::canvas::{draw_editor_canvas, setup_editor_gest};
 use crate::adapters::desktop::screenshot::editor::models::EditorState;
 use crate::adapters::desktop::screenshot::editor::setup_editor_keys;
 use ui_kit::layer_shell::{init_layer_window, LayerWindowConfig};
@@ -96,10 +94,7 @@ pub(crate) fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4:
 /// # Returns
 ///
 /// The configured drawing area.
-fn setup_canvas(
-    state: &Rc<RefCell<EditorState>>,
-    overlay: &gtk4::Overlay,
-) -> gtk4::DrawingArea {
+fn setup_canvas(state: &Rc<RefCell<EditorState>>, overlay: &gtk4::Overlay) -> gtk4::DrawingArea {
     let drawing_area = gtk4::DrawingArea::new();
     drawing_area.set_hexpand(true);
     drawing_area.set_vexpand(true);

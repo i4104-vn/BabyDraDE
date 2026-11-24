@@ -7,7 +7,6 @@ use super::sources::{
     COMPOSITE_SHADER_SRC, DOWNSAMPLE_SHADER_SRC, UPSAMPLE_SHADER_SRC, VERTEX_SHADER_SRC,
 };
 
-
 // SAFETY: GL context is current and object names come from this pipeline.
 pub(crate) unsafe fn setup_tex_params(gl: &glow::Context) {
     gl.tex_parameter_i32(

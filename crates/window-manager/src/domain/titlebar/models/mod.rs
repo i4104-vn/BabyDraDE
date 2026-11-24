@@ -2,8 +2,8 @@
 //!
 //! Framework-free value types shared by hit testing and rendering.
 
-use common::{Action, CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS, TITLEBAR_HEIGHT};
 use crate::domain::geometry::Point;
+use common::{Action, CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS, TITLEBAR_HEIGHT};
 
 /// Protocol-independent facts about a window frame.
 ///

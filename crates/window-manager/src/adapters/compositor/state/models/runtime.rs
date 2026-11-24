@@ -2,10 +2,7 @@
 
 use std::{ffi::OsString, time::Instant};
 
-use smithay::{
-    desktop::PopupManager,
-    reexports::calloop::LoopSignal,
-};
+use smithay::{desktop::PopupManager, reexports::calloop::LoopSignal};
 
 use crate::adapters::compositor::state::RenderState;
 

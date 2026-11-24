@@ -1,9 +1,7 @@
 //! Wayland client data attached to each connected client.
 
 use smithay::{
-    reexports::wayland_server::{
-        backend::{ClientData, ClientId, DisconnectReason},
-    },
+    reexports::wayland_server::backend::{ClientData, ClientId, DisconnectReason},
     wayland::compositor::CompositorClientState,
 };
 
