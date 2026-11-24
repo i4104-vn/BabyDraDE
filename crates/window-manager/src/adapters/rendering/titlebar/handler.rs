@@ -17,16 +17,32 @@ use smithay::{
 };
 
 use crate::adapters::rendering::elements::types::CustomRenderElements;
-use crate::domain::geometry::Point as PurePoint;
 use crate::domain::TitlebarLayout;
 
+#[allow(unused_imports)]
 pub(crate) use common::constants::{CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS, TITLEBAR_HEIGHT};
-use common::Action;
 
-/// Converts a Smithay location to the pure point expected by the layout rule.
-fn to_pure_location(location: Point<i32, Logical>) -> PurePoint<i32> {
-    PurePoint::from((location.x, location.y))
-}
+mod models;
+mod render;
+
+use models::{to_pure_location, Controls, PaintStyle};
+use render::{background, buttons};
+
+/// Renders the compositor-owned titlebar for a single frame.
+///
+/// # Arguments
+///
+/// * `renderer` - Glow renderer that receives the finished element.
+/// * `window` - Window whose titlebar is drawn.
+/// * `location` - Window location in logical coordinates.
+/// * `scale` - Output scale used to size the backing surface.
+/// * `pointer` - Pointer position in global logical coordinates.
+/// * `should_blur` - Whether the background should be translucent.
+/// * `opacity` - Translucency level when blur is enabled.
+///
+/// # Returns
+///
+/// A memory render element, or `None` when the titlebar is hidden or drawing fails.
 pub(crate) fn render(
     renderer: &mut GlowRenderer,
     window: &Window,
@@ -64,156 +80,47 @@ pub(crate) fn render(
         let ctx = Context::new(&surface).ok()?;
         ctx.scale(scale.x, scale.y);
         let w_local = width as f64 / scale.x;
-
-        let color = super::color::current_color(window);
-
-        // Clear surface to ensure transparency outside rounded corners
-        ctx.set_operator(cairo::Operator::Clear);
-        ctx.paint().ok()?;
-        ctx.set_operator(cairo::Operator::Over);
-
-        // Paint the background matching the app's sampled color with frosted-glass translucency
-        let h_local = TITLEBAR_HEIGHT as f64;
-        if !maximized {
-            let r = CORNER_RADIUS.min(w_local / 2.0).min(h_local);
-            ctx.new_sub_path();
-            // Top-left rounded corner
-            ctx.arc(
-                r,
-                r,
-                r,
-                std::f64::consts::PI,
-                3.0 * std::f64::consts::FRAC_PI_2,
-            );
-            // Top-right rounded corner
-            ctx.arc(w_local - r, r, r, -std::f64::consts::FRAC_PI_2, 0.0);
-            // Bottom-right corner (straight)
-            ctx.line_to(w_local, h_local);
-            // Bottom-left corner (straight)
-            ctx.line_to(0.0, h_local);
-            ctx.close_path();
-        } else {
-            ctx.rectangle(0.0, 0.0, w_local, h_local);
-        }
-
-        if should_blur {
-            ctx.set_source_rgba(color[0], color[1], color[2], opacity as f64);
-        } else {
-            // No blur — fully opaque solid color matching the app background exactly.
-            ctx.set_source_rgb(color[0], color[1], color[2]);
-        }
-        ctx.fill().ok()?;
-
-        // Subtle 1px bottom separator adapting to dark/light background
-        let luminance = 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2];
-        let (sep_r, sep_g, sep_b, sep_a) = if luminance > 0.5 {
-            (0.0, 0.0, 0.0, 0.12)
-        } else {
-            (1.0, 1.0, 1.0, 0.08)
+        let style = PaintStyle {
+            color: super::color::current_color(window),
+            should_blur,
+            opacity,
+            maximized,
         };
-        ctx.set_source_rgba(sep_r, sep_g, sep_b, sep_a);
-        ctx.rectangle(0.0, h_local - 1.0, w_local, 1.0);
-        ctx.fill().ok()?;
+        background::draw(&ctx, w_local, &style)?;
 
         let layout = TitlebarLayout::new(w_local, maximized);
-        let cy = layout.button(Action::Close).y;
-        let close_x = layout.button(Action::Close).x;
-        let max_x = layout.button(Action::Maximize).x;
-        let min_x = layout.button(Action::Minimize).x;
-
-        let frame_y = layout.frame_y(to_pure_location(location), maximized);
-        let local_pointer =
-            Point::<f64, Logical>::from((pointer.x - location.x as f64, pointer.y - frame_y));
-
-        let in_cluster = local_pointer.x >= (min_x - TITLEBAR_BUTTON_RADIUS)
-            && local_pointer.x <= (close_x + TITLEBAR_BUTTON_RADIUS)
-            && local_pointer.y >= 0.0
-            && local_pointer.y <= TITLEBAR_HEIGHT as f64;
-
-        let hover_close =
-            (local_pointer.x - close_x).hypot(local_pointer.y - cy) <= TITLEBAR_BUTTON_RADIUS;
-        let hover_max =
-            (local_pointer.x - max_x).hypot(local_pointer.y - cy) <= TITLEBAR_BUTTON_RADIUS;
-        let hover_min =
-            (local_pointer.x - min_x).hypot(local_pointer.y - cy) <= TITLEBAR_BUTTON_RADIUS;
-
-        // 1. Close button (Red)
-        ctx.arc(close_x, cy, 6.0, 0.0, std::f64::consts::TAU);
-        if hover_close {
-            ctx.set_source_rgb(1.0, 0.38, 0.35);
-        } else {
-            ctx.set_source_rgb(0.95, 0.32, 0.30);
-        }
-        ctx.fill().ok()?;
-
-        if in_cluster {
-            let alpha = if hover_close { 0.95 } else { 0.65 };
-            ctx.set_source_rgba(0.30, 0.0, 0.0, alpha);
-            ctx.set_line_width(1.2);
-            ctx.set_line_cap(cairo::LineCap::Round);
-
-            let offset = 2.4;
-            ctx.move_to(close_x - offset, cy - offset);
-            ctx.line_to(close_x + offset, cy + offset);
-            ctx.stroke().ok()?;
-
-            ctx.move_to(close_x + offset, cy - offset);
-            ctx.line_to(close_x - offset, cy + offset);
-            ctx.stroke().ok()?;
-        }
-
-        // 2. Maximize / Restore button (Yellow)
-        ctx.arc(max_x, cy, 6.0, 0.0, std::f64::consts::TAU);
-        if hover_max {
-            ctx.set_source_rgb(1.0, 0.78, 0.30);
-        } else {
-            ctx.set_source_rgb(0.98, 0.72, 0.25);
-        }
-        ctx.fill().ok()?;
-
-        if in_cluster {
-            let alpha = if hover_max { 0.95 } else { 0.65 };
-            ctx.set_source_rgba(0.35, 0.20, 0.0, alpha);
-            ctx.set_line_width(1.1);
-            ctx.set_line_cap(cairo::LineCap::Square);
-            ctx.set_line_join(cairo::LineJoin::Miter);
-
-            if maximized {
-                // Restore icon: two overlapping rectangles
-                ctx.rectangle(max_x - 1.2, cy - 3.2, 4.4, 4.4);
-                ctx.stroke().ok()?;
-                ctx.rectangle(max_x - 3.2, cy - 1.2, 4.4, 4.4);
-                ctx.stroke().ok()?;
-            } else {
-                // Maximize icon: single square
-                let s = 5.0;
-                ctx.rectangle(max_x - s / 2.0, cy - s / 2.0, s, s);
-                ctx.stroke().ok()?;
-            }
-        }
-
-        // 3. Minimize button (Green)
-        ctx.arc(min_x, cy, 6.0, 0.0, std::f64::consts::TAU);
-        if hover_min {
-            ctx.set_source_rgb(0.35, 0.88, 0.50);
-        } else {
-            ctx.set_source_rgb(0.30, 0.82, 0.45);
-        }
-        ctx.fill().ok()?;
-
-        if in_cluster {
-            let alpha = if hover_min { 0.95 } else { 0.65 };
-            ctx.set_source_rgba(0.05, 0.25, 0.10, alpha);
-            ctx.set_line_width(1.2);
-            ctx.set_line_cap(cairo::LineCap::Round);
-
-            let offset = 2.8;
-            ctx.move_to(min_x - offset, cy);
-            ctx.line_to(min_x + offset, cy);
-            ctx.stroke().ok()?;
-        }
+        let controls = Controls::new(&layout, location, pointer, maximized);
+        buttons::draw(&ctx, &controls, maximized)?;
     }
     surface.flush();
+
+    upload(renderer, &mut surface, width, height, location, scale, maximized)
+}
+
+/// Copies the painted surface into a memory render element.
+///
+/// # Arguments
+///
+/// * `renderer` - Glow renderer that receives the finished element.
+/// * `surface` - Fully painted titlebar surface.
+/// * `width` - Surface width in physical pixels.
+/// * `height` - Surface height in physical pixels.
+/// * `location` - Window location in logical coordinates.
+/// * `scale` - Output scale used for placement.
+/// * `maximized` - Whether the window is maximized.
+///
+/// # Returns
+///
+/// The titlebar render element, or `None` when the buffer cannot be uploaded.
+fn upload(
+    renderer: &mut GlowRenderer,
+    surface: &mut ImageSurface,
+    width: i32,
+    height: i32,
+    location: Point<i32, Logical>,
+    scale: Scale<f64>,
+    maximized: bool,
+) -> Option<CustomRenderElements> {
     let pixels = surface.data().ok()?.to_vec();
     let mut buffer = MemoryRenderBuffer::new(
         Fourcc::Argb8888,
@@ -235,6 +142,7 @@ pub(crate) fn render(
             }
         })
         .ok()?;
+
     let titlebar_y = TitlebarLayout::new(width as f64 / scale.x, maximized)
         .frame_y(to_pure_location(location), maximized) as i32;
     let titlebar_loc = Point::<i32, Logical>::from((location.x, titlebar_y));
