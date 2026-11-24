@@ -2,22 +2,12 @@
 
 use crate::application::ports::{ConfigError, ShortcutRepository};
 use crate::domain::shortcuts::Shortcut;
-use serde::Deserialize;
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+
+use super::models::{ConfigFile, SharedShortcuts};
 use std::time::Duration;
 
-/// Shortcut table shared with the hot-reload watcher.
-pub(crate) type SharedShortcuts = Arc<RwLock<Vec<Shortcut>>>;
-
-const DEFAULT_KEYMAP: &str = include_str!("../../../resources/keymap.toml");
+const DEFAULT_KEYMAP: &str = include_str!("../../../../resources/keymap.toml");
 const WATCH_INTERVAL: Duration = Duration::from_secs(2);
-
-#[derive(Deserialize, Default)]
-struct ConfigFile {
-    #[serde(default)]
-    shortcuts: HashMap<String, String>,
-}
 
 /// Loads global shortcuts from `~/.babydra/configs/keymap.toml`.
 pub(crate) fn load() -> Vec<Shortcut> {
