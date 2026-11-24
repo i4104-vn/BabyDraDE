@@ -90,13 +90,7 @@ impl BlurEngine {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-use crate::adapters::rendering::blur::config;
-#[cfg(test)]
-use tracing::info;
-
-use super::*;
+    use super::*;
 
     #[test]
     fn test_blur_engine_rules_and_matching() {
