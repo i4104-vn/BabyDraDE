@@ -5,7 +5,7 @@ use std::{
 };
 
 use smithay::{
-    desktop::{PopupManager, Space, Window},
+    desktop::{PopupManager, Window},
     input::pointer::CursorIcon,
     reexports::{
         calloop::{generic::Generic, EventLoop, Interest, PostAction},
@@ -13,7 +13,7 @@ use smithay::{
             Display, Resource,
         },
     },
-    utils::{IsAlive, Point},
+    utils::IsAlive,
     wayland::{
         shell::xdg::ToplevelSurface,
         socket::ListeningSocketSource,
@@ -57,4 +57,4 @@ mod settings;
 mod listener;
 
 
-pub(crate) use models::{BabydraState, CalloopData, ClientState};
+pub(crate) use models::{BabydraState, CalloopData, ClientState, RuntimeResources};

@@ -123,20 +123,20 @@ pub(crate) fn setup_render_loop(
                         .map(|mode| output.current_transform().transform_size(mode.size));
 
                     cursor.set_icon(state.effective_cursor_icon());
-                    let cursor_element = if state.cursor_visible {
-                        cursor.element(renderer, state.pointer_location, scale)
+                    let cursor_element = if state.input.cursor_visible {
+                        cursor.element(renderer, state.input.pointer_location, scale)
                     } else {
                         None
                     };
 
                     let below_windows = oriented_size
-                        .map(|size| state.launcher.render(renderer, (size.w, size.h), scale))
+                        .map(|size| state.overlays.launcher.render(renderer, (size.w, size.h), scale))
                         .unwrap_or_default();
                     let above_windows = oriented_size
                         .map(|size| {
                             switcher_overlay.render(
                                 renderer,
-                                state.alt_tab_switcher.as_ref(),
+                                state.overlays.alt_tab_switcher.as_ref(),
                                 (size.w, size.h),
                                 scale,
                             )
@@ -150,9 +150,9 @@ pub(crate) fn setup_render_loop(
                             cursor: cursor_element,
                             below_windows,
                             above_windows,
-                            space: &state.space,
-                            blur_engine: Some(&state.blur_engine),
-                            pointer: state.pointer_location,
+                            space: &state.windows.space,
+                            blur_engine: Some(&state.resources.render.blur_engine),
+                            pointer: state.input.pointer_location,
                             visuals: &crate::adapters::compositor::window_animation_frame,
                         };
                         compose_frame(renderer, ctx)

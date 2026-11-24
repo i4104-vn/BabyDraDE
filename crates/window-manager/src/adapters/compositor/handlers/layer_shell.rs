@@ -23,7 +23,7 @@ impl WlrLayerShellHandler for BabydraState {
     ) {
         let output = output
             .and_then(|o| Output::from_resource(&o))
-            .or_else(|| self.space.outputs().next().cloned());
+            .or_else(|| self.windows.space.outputs().next().cloned());
 
         if let Some(output) = output {
             info!(
@@ -49,7 +49,7 @@ delegate_layer_shell!(BabydraState);
 
 /// Handles surface commits for layer shell surfaces across all outputs.
 pub(crate) fn handle_commit(state: &BabydraState, surface: &WlSurface) {
-    for output in state.space.outputs() {
+    for output in state.windows.space.outputs() {
         let mut layer_map = layer_map_for_output(output);
         if let Some(layer) = layer_map
             .layer_for_surface(surface, WindowSurfaceType::ALL)

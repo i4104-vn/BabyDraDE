@@ -22,10 +22,10 @@ impl XdgShellHandler for BabydraState {
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let window = Window::new_wayland_window(surface.clone());
         crate::adapters::window::metadata::refresh(&window);
-        let count = self.space.elements().count() as i32;
+        let count = self.windows.space.elements().count() as i32;
         let offset = (count * 36) % 288;
         let loc = (48 + offset, 48 + offset);
-        self.space.map_element(window.clone(), loc, true);
+        self.windows.space.map_element(window.clone(), loc, true);
         self.cleanup_windows();
         self.windows.push(window.clone());
         if let Some(keyboard) = self.wayland.seat.get_keyboard() {
@@ -37,7 +37,7 @@ impl XdgShellHandler for BabydraState {
         }
         // Send initial configure to new toplevel surface so client can map buffers
         surface.send_configure();
-        self.space.elements().for_each(|w| {
+        self.windows.space.elements().for_each(|w| {
             if let Some(toplevel) = w.toplevel() {
                 toplevel.send_pending_configure();
             }
@@ -64,7 +64,7 @@ impl XdgShellHandler for BabydraState {
     }
 
     fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {
-        let _ = self.popups.track_popup(PopupKind::Xdg(surface));
+        let _ = self.resources.popups.track_popup(PopupKind::Xdg(surface));
     }
 
     fn grab(&mut self, _surface: PopupSurface, _seat: wl_seat::WlSeat, _serial: Serial) {}
@@ -86,8 +86,8 @@ impl XdgShellHandler for BabydraState {
                 }
             }
 
-            if let Some(loc) = self.space.element_location(&window) {
-                self.space.raise_element(&window, true);
+            if let Some(loc) = self.windows.space.element_location(&window) {
+                self.windows.space.raise_element(&window, true);
                 let drag_button = self
                     .input
                     .pointer_pressed_buttons
@@ -98,7 +98,7 @@ impl XdgShellHandler for BabydraState {
                 self.input.move_state = Some(crate::adapters::compositor::state::MoveState {
                     window,
                     initial_window_location: loc,
-                    initial_pointer_location: self.pointer_location,
+                    initial_pointer_location: self.input.pointer_location,
                     has_dragged: false,
                     button: drag_button,
                 });
@@ -127,8 +127,8 @@ impl XdgShellHandler for BabydraState {
                 }
             }
 
-            if let Some(loc) = self.space.element_location(&window) {
-                self.space.raise_element(&window, true);
+            if let Some(loc) = self.windows.space.element_location(&window) {
+                self.windows.space.raise_element(&window, true);
                 let drag_button = self
                     .input
                     .pointer_pressed_buttons
@@ -141,7 +141,7 @@ impl XdgShellHandler for BabydraState {
                     window,
                     initial_window_location: loc,
                     initial_window_size: size,
-                    initial_pointer_location: self.pointer_location,
+                    initial_pointer_location: self.input.pointer_location,
                     edges,
                     button: drag_button,
                 });

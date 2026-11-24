@@ -12,7 +12,7 @@ impl BabydraState {
     }
     /// Hot reloads blur and compositor configurations from disk.
     pub(crate) fn reload_config(&mut self) {
-        self.render.reload_config();
+        self.resources.render.reload_config();
     }
     /// Cursor shape the renderer should show this frame.
     ///
@@ -28,7 +28,7 @@ impl BabydraState {
             return CursorIcon::Grabbing;
         }
 
-        let point = self.pointer_location;
+        let point = self.input.pointer_location;
 
         // Hovering a resize border shows the same arrow that a drag would use.
         if let Some((_, _, edge)) = self.window_border_under(point) {

@@ -120,7 +120,7 @@ impl AutoRotate {
         self.stable = 0;
 
         let transform = rotate(base_transform, self.applied);
-        for output in state.state.space.outputs() {
+        for output in state.state.windows.space.outputs() {
             output.change_current_state(None, Some(transform), None, None);
         }
         std::env::set_var("BABYDRADE_TOUCH_TRANSFORM", transform_name(transform));

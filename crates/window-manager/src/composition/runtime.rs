@@ -44,7 +44,7 @@ pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
 
     let (clipboard_tx, clipboard_rx) =
         smithay::reexports::calloop::channel::channel::<Option<String>>();
-    data.state.clipboard_sender = Some(clipboard_tx);
+    data.state.clipboard.sender = Some(clipboard_tx);
     event_loop
         .handle()
         .insert_source(clipboard_rx, |event, _, data| {
@@ -60,17 +60,17 @@ pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
     crate::infrastructure::sensor::auto_rotate::spawn(event_loop);
 
     // Only now publish our own socket; GTK and the backend already started.
-    bootstrap::export_wayland_display(&data.state.socket_name);
+    bootstrap::export_wayland_display(&data.state.resources.socket_name);
 
     info!(
         "BabyDraDE is running. Wayland socket: {}",
-        data.state.socket_name.to_string_lossy()
+        data.state.resources.socket_name.to_string_lossy()
     );
 
     let autostart_children = autostart::start(
         &services::config::load_autostart_config().commands,
         &ProcessLauncher,
-        data.state.socket_name.as_os_str(),
+        data.state.resources.socket_name.as_os_str(),
     );
 
     let run_res = event_loop.run(None, data, |_| {});

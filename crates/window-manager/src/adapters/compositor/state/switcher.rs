@@ -9,7 +9,7 @@ use crate::adapters::desktop::switcher::state::{step_target, AltTabEntry, AltTab
 impl BabydraState {
     pub(crate) fn cycle_alt_tab(&mut self, backwards: bool) {
         if self
-            .alt_tab_switcher
+            .overlays.alt_tab_switcher
             .as_ref()
             .is_some_and(|switcher| switcher.closing)
         {

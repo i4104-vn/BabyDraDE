@@ -14,6 +14,8 @@ use smithay::{
 /// call sites keep working without exposing the vector's ownership.
 pub(crate) struct WindowRegistry {
     pub(crate) entries: Vec<Window>,
+    /// Output space containing the mapped windows.
+    pub(crate) space: Space<Window>,
     /// Policy supplied by the compositor to skip windows leaving the screen
     /// (closing or minimizing) when resolving the active window.
     is_exiting: fn(&Window) -> bool,
@@ -23,6 +25,7 @@ impl WindowRegistry {
     pub(crate) fn new(is_exiting: fn(&Window) -> bool) -> Self {
         Self {
             entries: Vec::new(),
+            space: Space::default(),
             is_exiting,
         }
     }

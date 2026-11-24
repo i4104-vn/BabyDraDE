@@ -19,10 +19,10 @@ pub(crate) fn begin_frame(state: &mut BabydraState) {
 
 /// Sends frame callbacks for one output.
 pub(crate) fn send_frames(state: &mut BabydraState, output: &Output) {
-    state.space.elements().for_each(|window| {
+    state.windows.space.elements().for_each(|window| {
         window.send_frame(
             output,
-            state.start_time.elapsed(),
+            state.resources.start_time.elapsed(),
             Some(Duration::ZERO),
             |_, _| Some(output.clone()),
         );
@@ -32,7 +32,7 @@ pub(crate) fn send_frames(state: &mut BabydraState, output: &Output) {
     for layer in layer_map.layers() {
         layer.send_frame(
             output,
-            state.start_time.elapsed(),
+            state.resources.start_time.elapsed(),
             Some(Duration::ZERO),
             |_, _| Some(output.clone()),
         );
@@ -41,7 +41,7 @@ pub(crate) fn send_frames(state: &mut BabydraState, output: &Output) {
 
 /// Performs the shared end-of-frame bookkeeping.
 pub(crate) fn end_frame(state: &mut BabydraState, display_handle: &mut DisplayHandle) {
-    state.space.refresh();
-    state.popups.cleanup();
+    state.windows.space.refresh();
+    state.resources.popups.cleanup();
     let _ = display_handle.flush_clients();
 }

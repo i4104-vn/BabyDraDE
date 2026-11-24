@@ -62,7 +62,7 @@ macro_rules! switcher_methods {
 
         fn switcher_index_at(&self, point: (f64, f64), slide: f64) -> Option<usize> {
             let switcher = self.overlays.alt_tab_switcher.as_ref()?;
-            let output = self.space.outputs().next().cloned();
+            let output = self.windows.space.outputs().next().cloned();
             let (size, scale) = output
                 .as_ref()
                 .and_then(|output| {

@@ -3,11 +3,11 @@
 macro_rules! windows_methods {
     () => {
         fn space(&self) -> &Space<Window> {
-            &self.space
+            &self.windows.space
         }
 
         fn space_mut(&mut self) -> &mut Space<Window> {
-            &mut self.space
+            &mut self.windows.space
         }
 
         fn windows(&self) -> &[Window] {
@@ -23,7 +23,7 @@ macro_rules! windows_methods {
         }
 
         fn stop_loop(&self) {
-            self.loop_signal.stop();
+            self.resources.loop_signal.stop();
         }
 
         fn raise_window(&mut self, window: &Window) {

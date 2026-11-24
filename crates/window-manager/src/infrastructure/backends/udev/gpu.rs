@@ -271,7 +271,7 @@ fn try_init_gpu(
                     Some((0, 0).into()),
                 );
                 output.set_preferred(smithay_mode);
-                data.state.space.map_output(&output, (0, 0));
+                data.state.windows.space.map_output(&output, (0, 0));
 
                 let planes = drm_device.planes(&crtc).ok();
                 if let Ok(drm_surface) =

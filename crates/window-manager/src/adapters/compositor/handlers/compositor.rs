@@ -41,7 +41,7 @@ impl CompositorHandler for BabydraState {
 
             // Single owner of toplevel `on_commit`: this root-surface lookup also
             // covers subsurface commits, which `xdg_shell::handle_commit` cannot see.
-            if let Some(window) = self.space.elements().find(|window| {
+            if let Some(window) = self.windows.space.elements().find(|window| {
                 window
                     .toplevel()
                     .map(|t| t.wl_surface() == &root)
@@ -51,7 +51,7 @@ impl CompositorHandler for BabydraState {
             }
         }
 
-        xdg_shell::handle_commit(&mut self.popups, &self.space, surface);
+        xdg_shell::handle_commit(&mut self.resources.popups, &self.windows.space, surface);
         layer_shell::handle_commit(self, surface);
     }
 }

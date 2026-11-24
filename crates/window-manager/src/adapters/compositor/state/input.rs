@@ -31,6 +31,10 @@ pub(crate) struct InputState {
     /// Accumulated per-slot data for multi-touch gesture detection on
     /// touchscreens.
     pub(crate) touch_gesture: TouchGestureBuffer,
+    /// Current pointer position in logical coordinates.
+    pub(crate) pointer_location: Point<f64, Logical>,
+    /// Whether the compositor-drawn cursor is visible.
+    pub(crate) cursor_visible: bool,
 }
 
 impl InputState {
@@ -45,6 +49,8 @@ impl InputState {
             touch_slots: HashSet::new(),
             overlay_touch: None,
             touch_gesture: TouchGestureBuffer::default(),
+            pointer_location: Point::from((100.0, 100.0)),
+            cursor_visible: true,
         }
     }
 }

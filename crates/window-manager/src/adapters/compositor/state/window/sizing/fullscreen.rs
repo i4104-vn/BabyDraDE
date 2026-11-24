@@ -11,7 +11,7 @@ impl BabydraState {
         self.unminimize_window(window);
 
         let current_loc = self
-            .space
+            .windows.space
             .element_location(window)
             .unwrap_or_else(default_smithay_position);
         let current_size = window.geometry().size;
@@ -25,21 +25,21 @@ impl BabydraState {
         }
 
         let output = self
-            .space
+            .windows.space
             .outputs_for_element(window)
             .into_iter()
             .next()
-            .or_else(|| self.space.outputs().next().cloned());
+            .or_else(|| self.windows.space.outputs().next().cloned());
         let Some(output) = output else {
             return;
         };
-        let Some(output_geometry) = self.space.output_geometry(&output) else {
+        let Some(output_geometry) = self.windows.space.output_geometry(&output) else {
             return;
         };
 
-        self.space
+        self.windows.space
             .map_element(window.clone(), output_geometry.loc, true);
-        self.space.raise_element(window, true);
+        self.windows.space.raise_element(window, true);
 
         toplevel.with_pending_state(|state| {
             state.states.set(xdg_toplevel::State::Fullscreen);
@@ -60,7 +60,7 @@ impl BabydraState {
         };
 
         let current_loc = self
-            .space
+            .windows.space
             .element_location(window)
             .unwrap_or_else(default_smithay_position);
         let current_size = window.geometry().size;
@@ -75,7 +75,7 @@ impl BabydraState {
 
         let (restore_loc, restore_size) =
             smithay_restore_target(saved_loc.zip(saved_size), current_size);
-        self.space.map_element(window.clone(), restore_loc, false);
+        self.windows.space.map_element(window.clone(), restore_loc, false);
 
         toplevel.with_pending_state(|state| {
             state.states.unset(xdg_toplevel::State::Fullscreen);

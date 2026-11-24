@@ -5,6 +5,7 @@ use super::*;
 
 pub(super) fn baseline_transform(data: &CalloopData) -> Transform {
     data.state
+        .windows
         .space
         .outputs()
         .next()

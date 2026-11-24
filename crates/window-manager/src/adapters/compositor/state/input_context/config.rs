@@ -53,15 +53,15 @@ macro_rules! config_methods {
         }
 
         fn pointer_location(&self) -> Point<f64, Logical> {
-            self.pointer_location
+            self.input.pointer_location
         }
 
         fn set_pointer_location(&mut self, position: Point<f64, Logical>) {
-            self.pointer_location = position;
+            self.input.pointer_location = position;
         }
 
         fn set_cursor_visible(&mut self, visible: bool) {
-            self.cursor_visible = visible;
+            self.input.cursor_visible = visible;
         }
 
         fn gesture_config(&self) -> &GesturePolicy {

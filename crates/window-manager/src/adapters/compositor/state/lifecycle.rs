@@ -22,8 +22,6 @@ impl BabydraState {
         let wayland = WaylandRuntime::new(&display_handle);
 
         let socket_name = Self::init_wayland_listener(display, event_loop);
-        let render = RenderState::new();
-        let blur_engine = render.blur_engine.clone();
         let config = ConfigSnapshot::new(load_gesture_policy, shortcuts);
 
         Self {
@@ -33,16 +31,13 @@ impl BabydraState {
             input: InputState::new(),
             overlays: OverlayState::new(),
             windows: WindowRegistry::new(is_window_exiting),
-            render,
-            start_time: Instant::now(),
-            socket_name,
-            space: Space::default(),
-            loop_signal: event_loop.get_signal(),
-            popups: PopupManager::default(),
-            clipboard_sender: None,
-            blur_engine,
-            pointer_location: Point::from((100.0, 100.0)),
-            cursor_visible: true,
+            resources: RuntimeResources {
+                start_time: Instant::now(),
+                socket_name,
+                loop_signal: event_loop.get_signal(),
+                popups: PopupManager::default(),
+                render: RenderState::new(),
+            },
         }
     }
     /// Records that a client installed a new selection.
@@ -52,7 +47,7 @@ impl BabydraState {
     /// Requests the pending client selection and caches it on a background thread.
     pub(crate) fn update_clipboard(&mut self) {
         self.clipboard
-            .update_clipboard(&self.wayland.seat, self.clipboard_sender.clone());
+            .update_clipboard(&self.wayland.seat, self.clipboard.sender.clone());
     }
     /// Takes ownership of an already cached clipboard selection.
     pub(crate) fn complete_clipboard_capture(&mut self, cached_mime: Option<String>) {

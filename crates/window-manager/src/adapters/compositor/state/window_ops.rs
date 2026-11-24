@@ -24,7 +24,7 @@ impl BabydraState {
     }
     /// Returns the topmost live window, excluding closing animations.
     pub(crate) fn active_window(&self) -> Option<Window> {
-        self.windows.active_window(&self.space)
+        self.windows.active_window(&self.windows.space)
     }
     /// Raises a window to the top of the internal Z-order list.
     pub(crate) fn raise_window(&mut self, window: &Window) {
@@ -32,7 +32,7 @@ impl BabydraState {
     }
     /// Finds a window associated with an XDG toplevel surface.
     pub(crate) fn find_window_for_surface(&self, surface: &ToplevelSurface) -> Option<Window> {
-        self.windows.find_window_for_surface(surface, &self.space)
+        self.windows.find_window_for_surface(surface, &self.windows.space)
     }
     /// Persists metadata about the currently active window.
     pub(crate) fn update_active_window(&self, window: Option<&Window>) {

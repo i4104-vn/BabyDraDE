@@ -4,7 +4,7 @@ use super::*;
 
 impl BabydraState {
     pub(crate) fn minimize_window(&mut self, window: &Window) {
-        let current_loc = self.space.element_location(window);
+        let current_loc = self.windows.space.element_location(window);
         {
             let mut state_guard = lock_window_state(window);
             state_guard.is_minimized = true;
@@ -18,7 +18,7 @@ impl BabydraState {
         start_window_minimizing(window);
 
         let next_top = self
-            .space
+            .windows.space
             .elements()
             .rev()
             .find(|w| *w != window && !is_window_exiting(w))
@@ -48,7 +48,7 @@ impl BabydraState {
             }
         }
 
-        self.space.elements().for_each(|w| {
+        self.windows.space.elements().for_each(|w| {
             if next_top.as_ref() != Some(w) {
                 w.set_activated(false);
             }
@@ -66,7 +66,7 @@ impl BabydraState {
             was
         };
 
-        if was_minimized || !self.space.elements().any(|w| w == window) {
+        if was_minimized || !self.windows.space.elements().any(|w| w == window) {
             let loc = {
                 let state_guard = lock_window_state(window);
                 state_guard
@@ -76,18 +76,18 @@ impl BabydraState {
             // If the shrink animation is still running, abort it so it cannot
             // unmap the window we are bringing back.
             cancel_minimizing_animation(window);
-            self.space.map_element(window.clone(), loc, true);
+            self.windows.space.map_element(window.clone(), loc, true);
         }
 
         if was_minimized {
             start_window_restoring(window);
         }
 
-        self.space.raise_element(window, true);
+        self.windows.space.raise_element(window, true);
         self.raise_window(window);
-        self.space.refresh();
+        self.windows.space.refresh();
 
-        self.space.elements().for_each(|w| {
+        self.windows.space.elements().for_each(|w| {
             let active = w == window;
             w.set_activated(active);
             if let Some(toplevel) = w.toplevel() {

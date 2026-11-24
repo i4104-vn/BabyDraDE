@@ -60,7 +60,7 @@ pub(crate) fn init(
     output.change_current_state(Some(mode), Some(transform), None, Some((0, 0).into()));
     output.set_preferred(mode);
 
-    data.state.space.map_output(&output, (0, 0));
+    data.state.windows.space.map_output(&output, (0, 0));
     let mut damage_tracker = OutputDamageTracker::from_output(&output);
     let mut switcher_overlay = SwitcherOverlay::default();
     backend.window().request_redraw();
@@ -95,20 +95,20 @@ pub(crate) fn init(
                     let oriented_size = output.current_transform().transform_size(size);
 
                     cursor.set_icon(state.effective_cursor_icon());
-                    let cursor_element = if state.cursor_visible {
-                        cursor.element(backend.renderer(), state.pointer_location, scale)
+                    let cursor_element = if state.input.cursor_visible {
+                        cursor.element(backend.renderer(), state.input.pointer_location, scale)
                     } else {
                         None
                     };
 
-                    let below_windows = state.launcher.render(
+                    let below_windows = state.overlays.launcher.render(
                         backend.renderer(),
                         (oriented_size.w, oriented_size.h),
                         scale,
                     );
                     let above_windows = switcher_overlay.render(
                         backend.renderer(),
-                        state.alt_tab_switcher.as_ref(),
+                        state.overlays.alt_tab_switcher.as_ref(),
                         (oriented_size.w, oriented_size.h),
                         scale,
                     );
@@ -120,9 +120,9 @@ pub(crate) fn init(
                             cursor: cursor_element,
                             below_windows,
                             above_windows,
-                            space: &state.space,
-                            blur_engine: Some(&state.blur_engine),
-                            pointer: state.pointer_location,
+                            space: &state.windows.space,
+                            blur_engine: Some(&state.resources.render.blur_engine),
+                            pointer: state.input.pointer_location,
                             visuals: &crate::adapters::compositor::window_animation_frame,
                         };
                         compose_frame(backend.renderer(), ctx)
@@ -169,7 +169,7 @@ pub(crate) fn init(
                     super::render_loop::end_frame(state, display_handle);
                     backend.window().request_redraw();
                 }
-                WinitEvent::CloseRequested => state.loop_signal.stop(),
+                WinitEvent::CloseRequested => state.resources.loop_signal.stop(),
                 _ => {}
             }
         })?;

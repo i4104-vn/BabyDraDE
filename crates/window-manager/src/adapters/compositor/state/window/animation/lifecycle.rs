@@ -20,7 +20,7 @@ impl BabydraState {
 
         // Immediately update active window and transfer keyboard focus to next window
         let next_top = self
-            .space
+            .windows.space
             .elements()
             .rev()
             .find(|w| *w != window && !is_window_exiting(w))
@@ -43,7 +43,7 @@ impl BabydraState {
     pub(crate) fn update_window_animations(&mut self) {
         // A closing switcher stays alive until its fade/slide finishes.
         let switcher_done = self
-            .alt_tab_switcher
+            .overlays.alt_tab_switcher
             .as_ref()
             .is_some_and(|switcher| switcher.closing && !switcher.presence.is_animating());
         if switcher_done {
@@ -58,7 +58,7 @@ impl BabydraState {
         let mut finished_minimizing = Vec::new();
         let mut finished = Vec::new();
 
-        for window in self.space.elements() {
+        for window in self.windows.space.elements() {
             let state_guard = lock_window_state(window);
             if let Some(ref anim) = state_guard.animation {
                 match anim {
@@ -106,8 +106,8 @@ impl BabydraState {
                 let mut state_guard = lock_window_state(&window);
                 state_guard.animation = None;
             }
-            self.space.unmap_elem(&window);
-            self.space.refresh();
+            self.windows.space.unmap_elem(&window);
+            self.windows.space.refresh();
         }
 
         for window in to_close {
@@ -118,7 +118,7 @@ impl BabydraState {
             if let Some(toplevel) = window.toplevel() {
                 toplevel.send_close();
             }
-            self.space.unmap_elem(&window);
+            self.windows.space.unmap_elem(&window);
         }
 
         // Always clean up, including when the last window closed, so the

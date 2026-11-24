@@ -34,6 +34,8 @@ pub(crate) struct ClipboardState {
     pending: Option<Vec<String>>,
     /// MIME types of a capture currently running in a background thread.
     capture: Option<Vec<String>>,
+    /// Channel used by the capture thread to hand ownership back to us.
+    pub(crate) sender: Option<smithay::reexports::calloop::channel::Sender<Option<String>>>,
 }
 
 impl ClipboardState {

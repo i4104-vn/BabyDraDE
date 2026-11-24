@@ -36,14 +36,14 @@ impl SeatHandler for BabydraState {
 
     fn cursor_image(&mut self, _seat: &Seat<Self>, image: CursorImageStatus) {
         match image {
-            CursorImageStatus::Hidden => self.cursor_visible = false,
+            CursorImageStatus::Hidden => self.input.cursor_visible = false,
             CursorImageStatus::Named(icon) => {
                 self.input.cursor_icon = icon;
-                self.cursor_visible = true;
+                self.input.cursor_visible = true;
             }
             // Client-supplied cursor surfaces are not part of a theme; keep the
             // last themed shape visible instead of dropping the pointer.
-            CursorImageStatus::Surface(_) => self.cursor_visible = true,
+            CursorImageStatus::Surface(_) => self.input.cursor_visible = true,
         }
     }
 
