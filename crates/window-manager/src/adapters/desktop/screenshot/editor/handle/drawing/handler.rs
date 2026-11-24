@@ -1,8 +1,8 @@
 //! Screenshot save and geometry helpers.
 
-use crate::adapters::desktop::screenshot::capture::{get_screenshot_path, send_notification};
 use crate::adapters::desktop::screenshot::editor::models::{Drawing, EditorState};
 use gtk4::gdk::prelude::GdkCairoContextExt;
+use services::screenshot::{get_screenshot_path, notify, save_png};
 
 use super::render::{draw_pixelated_rect, render_shape};
 
@@ -12,16 +12,13 @@ pub(crate) fn trigger_save(state: &EditorState) -> bool {
         return false;
     };
     let save_path = get_screenshot_path();
-    let Ok(mut file) = std::fs::File::create(&save_path) else {
-        return false;
-    };
-    if surface.write_to_png(&mut file).is_err() {
+    if !save_png(&surface, &save_path) {
         return false;
     }
     let title = services::trans("screenshot.saved_title");
     let message =
         services::trans("screenshot.saved_msg").replace("{}", &format!("{:?}", save_path));
-    send_notification(&title, &message);
+    notify(&title, &message);
     true
 }
 

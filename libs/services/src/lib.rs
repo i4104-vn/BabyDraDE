@@ -4,6 +4,7 @@ pub mod desktop;
 pub mod files;
 pub mod i18n;
 pub mod models;
+pub mod screenshot;
 pub mod settings {
     pub use crate::config::*;
 }

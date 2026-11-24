@@ -1,6 +1,9 @@
 //! Screen capture and transform matrix helpers.
 
+use std::path::PathBuf;
+
 use cairo::{Context, Format, ImageSurface, Matrix};
+use services::screenshot::{get_screenshot_path, notify, save_png};
 use services::theme::DesktopTheme;
 use smithay::{
     backend::{
@@ -144,24 +147,15 @@ where
             }
 
             tracing::debug!("[screenshot] saving to {}", save_path.display());
-            match std::fs::File::create(&save_path) {
-                Ok(mut file) => {
-                    if let Err(e) = surface.write_to_png(&mut file) {
-                        tracing::warn!("[screenshot] cannot write PNG: {}", e);
-                        return;
-                    }
-                }
-                Err(e) => {
-                    tracing::warn!("[screenshot] cannot create {}: {}", save_path.display(), e);
-                    return;
-                }
+            if !save_png(&surface, &save_path) {
+                return;
             }
             tracing::info!("[screenshot] saved {}", save_path.display());
 
             let notif_title = services::trans("screenshot.full_saved_title");
             let notif_msg =
                 services::trans("screenshot.saved_msg").replace("{}", &format!("{:?}", save_path));
-            send_notification(&notif_title, &notif_msg);
+            notify(&notif_title, &notif_msg);
 
             // Run the GTK annotation editor in its own process: GTK cannot run
             // on a worker thread because the GLib main context is already owned.

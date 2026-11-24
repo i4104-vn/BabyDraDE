@@ -1,23 +1,9 @@
 //! Direct compositor screenshot capture — no external capture utilities.
 
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Shared flag set by the keymap thread and consumed by the render loops.
 static CAPTURE_REQUESTED: AtomicBool = AtomicBool::new(false);
-
-/// Resolves the default file path to save screenshots in `~/Pictures/Screenshots/`.
-pub(crate) fn get_screenshot_path() -> PathBuf {
-    let pictures_dir = dirs::picture_dir().unwrap_or_else(|| {
-        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/tmp"));
-        home.join("Pictures")
-    });
-    let screenshots_dir = pictures_dir.join("Screenshots");
-    let _ = std::fs::create_dir_all(&screenshots_dir);
-
-    let datetime = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
-    screenshots_dir.join(format!("Screenshot_{}.png", datetime))
-}
 
 /// Converts smithay's `ReadPixels` output into cairo's `ARgb32` buffer.
 ///
@@ -51,14 +37,6 @@ pub(crate) fn trigger() {
 pub(crate) fn take_requested() -> bool {
     CAPTURE_REQUESTED.swap(false, Ordering::SeqCst)
 }
-
-/// Dispatches a desktop notification.
-pub(crate) fn send_notification(title: &str, body: &str) {
-    let _ = std::process::Command::new("notify-send")
-        .args(["-a", "BabyDra", title, body])
-        .spawn();
-}
-
 
 pub(crate) use render::capture_screen;
 
