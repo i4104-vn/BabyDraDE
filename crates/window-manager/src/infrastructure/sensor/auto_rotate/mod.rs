@@ -30,12 +30,12 @@ pub(super) const PROXY_PATH: &str = "/net/hadess/SensorProxy";
 pub(super) const PROXY_IFACE: &str = "net.hadess.SensorProxy";
 
 mod models;
-mod ops;
+mod handler;
 
 
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) use ops::spawn;
-use ops::{baseline_transform, read_number, rotate, transform_name};
+pub(crate) use handler::spawn;
+use handler::{baseline_transform, read_number, rotate, transform_name};
