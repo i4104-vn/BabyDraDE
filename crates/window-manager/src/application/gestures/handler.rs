@@ -6,7 +6,7 @@
 
 use common::SwipeDirection;
 
-use super::ports::GesturePolicy;
+use crate::application::ports::GesturePolicy;
 
 /// A decision the core has made; the adapter decides how to perform it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -158,5 +158,3 @@ pub(crate) fn three_finger_tap_intent(
     }
 }
 
-#[cfg(test)]
-mod tests;
