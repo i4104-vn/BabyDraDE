@@ -15,7 +15,7 @@ use crate::{
     infrastructure::{backends, process::ProcessLauncher},
 };
 
-use super::{bootstrap, wiring::Wiring};
+use super::{bootstrap, wiring, wiring::Wiring};
 
 /// Adds context to a failure to register the clipboard completion channel.
 #[derive(Debug)]
@@ -83,4 +83,11 @@ pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
 
     run_res?;
     Ok(())
+}
+
+/// Boots the compositor and starts the event loop.
+pub(crate) fn run() -> Result<(), Box<dyn Error>> {
+    bootstrap::ensure_runtime_dir();
+    let state = wiring::build_state()?;
+    run_loop(state)
 }
