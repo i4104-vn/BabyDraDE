@@ -1,6 +1,5 @@
 //! BabyDraDE Lock Screen — Multi-monitor lock screen with PAM authentication.
 
-pub(crate) mod auth;
 pub(crate) mod render;
 
 use gtk4::prelude::*;

@@ -4,7 +4,7 @@ use gtk4::prelude::*;
 use std::rc::Rc;
 use std::time::Duration;
 
-use super::super::auth::verify_password;
+use services::auth::verify_password;
 
 pub(super) fn setup_auth_handler(
     on_unlock: Rc<dyn Fn()>,

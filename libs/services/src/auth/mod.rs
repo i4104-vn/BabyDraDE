@@ -1,28 +1,28 @@
-//! PAM authentication helper for the BabyDra screen locker.
-//! Integrates with the system's "login" PAM service to verify passwords.
+//! PAM authentication facade.
+//! Integrates with the system "login" PAM service to verify passwords.
 
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_void};
 use std::sync::OnceLock;
 
-pub(crate) const PAM_PROMPT_ECHO_OFF: c_int = 1;
-pub(crate) const PAM_PROMPT_ECHO_ON: c_int = 2;
-pub(crate) const PAM_SUCCESS: c_int = 0;
+const PAM_PROMPT_ECHO_OFF: c_int = 1;
+const PAM_PROMPT_ECHO_ON: c_int = 2;
+const PAM_SUCCESS: c_int = 0;
 
 #[repr(C)]
-pub(crate) struct pam_message {
+struct pam_message {
     pub(crate) msg_style: c_int,
     pub(crate) msg: *const c_char,
 }
 
 #[repr(C)]
-pub(crate) struct pam_response {
+struct pam_response {
     pub(crate) resp: *mut c_char,
     pub(crate) resp_retcode: c_int,
 }
 
 #[repr(C)]
-pub(crate) struct pam_conv {
+struct pam_conv {
     pub(crate) conv: Option<
         // SAFETY: PAM handle and callback pointers stay valid for this call.
         unsafe extern "C" fn(
@@ -111,7 +111,7 @@ fn get_pam() -> Option<&'static PamLib> {
 /// # Safety
 /// Caller must ensure pointers conform to PAM specification.
 // SAFETY: PAM handle and callback pointers stay valid for this call.
-pub(crate) unsafe extern "C" fn pam_conversation_fn(
+unsafe extern "C" fn pam_conversation_fn(
     num_msg: c_int,
     msg: *mut *mut pam_message,
     resp: *mut *mut pam_response,
@@ -121,32 +121,36 @@ pub(crate) unsafe extern "C" fn pam_conversation_fn(
         return 0;
     }
 
-    let resps =
-        libc::malloc(num_msg as usize * std::mem::size_of::<pam_response>()) as *mut pam_response;
-    if resps.is_null() {
-        return 4; // PAM_BUF_ERR
-    }
-    std::ptr::write_bytes(resps, 0, num_msg as usize);
-
-    let password_ptr = appdata_ptr as *const c_char;
-
-    for i in 0..num_msg {
-        let msg_ptr = *msg.add(i as usize);
-        let msg_style = (*msg_ptr).msg_style;
-
-        if msg_style == PAM_PROMPT_ECHO_OFF || msg_style == PAM_PROMPT_ECHO_ON {
-            let resp_str = libc::strdup(password_ptr);
-            (*resps.add(i as usize)).resp = resp_str;
-            (*resps.add(i as usize)).resp_retcode = 0;
+    // SAFETY: `msg`, `resp` and `appdata_ptr` are PAM-owned pointers valid for
+    // the duration of this callback; `resps` is allocated and zeroed here.
+    unsafe {
+        let resps =
+            libc::malloc(num_msg as usize * std::mem::size_of::<pam_response>()) as *mut pam_response;
+        if resps.is_null() {
+            return 4; // PAM_BUF_ERR
         }
-    }
+        std::ptr::write_bytes(resps, 0, num_msg as usize);
 
-    *resp = resps;
-    PAM_SUCCESS
+        let password_ptr = appdata_ptr as *const c_char;
+
+        for i in 0..num_msg {
+            let msg_ptr = *msg.add(i as usize);
+            let msg_style = (*msg_ptr).msg_style;
+
+            if msg_style == PAM_PROMPT_ECHO_OFF || msg_style == PAM_PROMPT_ECHO_ON {
+                let resp_str = libc::strdup(password_ptr);
+                (*resps.add(i as usize)).resp = resp_str;
+                (*resps.add(i as usize)).resp_retcode = 0;
+            }
+        }
+
+        *resp = resps;
+        PAM_SUCCESS
+    }
 }
 
 /// Verifies user credentials using the system PAM "login" service.
-pub(crate) fn verify_password(username: &str, password: &str) -> bool {
+pub fn verify_password(username: &str, password: &str) -> bool {
     let Some(pam) = get_pam() else {
         tracing::error!("PAM dynamic library is not available; password verification aborted");
         return false;
