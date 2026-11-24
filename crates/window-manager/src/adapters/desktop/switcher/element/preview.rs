@@ -12,7 +12,7 @@ use smithay::{
     utils::{Logical, Physical, Point, Rectangle, Scale, Size},
 };
 
-use crate::adapters::desktop::switcher::{view::SwitcherLayout, AltTabSwitcher};
+use crate::adapters::desktop::switcher::{render::SwitcherLayout, AltTabSwitcher};
 use crate::adapters::rendering::elements::types::ConstrainedSurface;
 use crate::adapters::rendering::CustomRenderElements;
 

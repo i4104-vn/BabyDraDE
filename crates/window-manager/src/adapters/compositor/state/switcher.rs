@@ -4,7 +4,7 @@ use animation::{Easing, Tween, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATI
 use smithay::utils::SERIAL_COUNTER;
 
 use super::BabydraState;
-use crate::adapters::desktop::switcher::state::{step_target, AltTabEntry, AltTabSwitcher};
+use crate::adapters::desktop::switcher::models::{step_target, AltTabEntry, AltTabSwitcher};
 
 impl BabydraState {
     pub(crate) fn cycle_alt_tab(&mut self, backwards: bool) {

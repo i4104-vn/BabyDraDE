@@ -9,7 +9,7 @@ use smithay::{
     utils::Scale,
 };
 
-use crate::adapters::desktop::switcher::{view::compute_layout, AltTabSwitcher};
+use crate::adapters::desktop::switcher::{render::compute_layout, AltTabSwitcher};
 use crate::adapters::rendering::CustomRenderElements;
 
 #[derive(Default)]
@@ -102,7 +102,7 @@ impl SwitcherOverlay {
 mod tests {
     use super::super::draw::Rect;
     use super::foreground::overlay_region;
-    use crate::adapters::desktop::switcher::view::SwitcherLayout;
+    use crate::adapters::desktop::switcher::render::SwitcherLayout;
     use crate::adapters::rendering::buffer::render_pixels;
     use smithay::utils::Scale;
 

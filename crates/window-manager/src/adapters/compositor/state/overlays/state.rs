@@ -1,7 +1,7 @@
 //! State owned by the compositor overlays.
 
 use crate::adapters::compositor::state::launcher::LauncherState;
-use crate::adapters::desktop::switcher::state::AltTabSwitcher;
+use crate::adapters::desktop::switcher::models::AltTabSwitcher;
 
 /// The launcher and the Alt+Tab switcher share overlay semantics (they are
 /// mutually exclusive and consume the same touch gestures), so their state is

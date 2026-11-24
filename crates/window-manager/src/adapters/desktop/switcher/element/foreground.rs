@@ -15,7 +15,7 @@ use smithay::{
 };
 
 use crate::adapters::desktop::switcher::{
-    view::{draw_switcher_foreground, SwitcherLayout},
+    render::{draw_switcher_foreground, SwitcherLayout},
     AltTabSwitcher,
 };
 use crate::adapters::rendering::buffer::render_pixels;

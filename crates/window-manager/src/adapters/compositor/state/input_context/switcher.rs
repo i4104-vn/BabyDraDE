@@ -76,7 +76,7 @@ macro_rules! switcher_methods {
                 .unwrap_or(((1920, 1080).into(), smithay::utils::Scale::from(1.0)));
             let logical_w = (size.w as f64 / scale.x).max(1.0);
             let logical_h = (size.h as f64 / scale.y).max(1.0);
-            let layout = crate::adapters::desktop::switcher::view::compute_layout(
+            let layout = crate::adapters::desktop::switcher::render::compute_layout(
                 switcher, logical_w, logical_h,
             )?;
             layout.panel.index_at(
