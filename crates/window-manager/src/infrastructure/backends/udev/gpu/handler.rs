@@ -24,24 +24,8 @@ use tracing::{info, warn};
 
 use crate::adapters::compositor::{BabydraState, CalloopData};
 
-use super::surface::SurfaceData;
-
-pub(crate) struct GpuInitResult {
-    pub(crate) drm_device: DrmDevice,
-    pub(crate) drm_notifier: smithay::backend::drm::DrmDeviceNotifier,
-    pub(crate) surfaces: Vec<SurfaceData>,
-    pub(crate) renderer: GlowRenderer,
-    pub(crate) gbm_device: GbmDevice<DrmDeviceFd>,
-    pub(crate) udev_backend: UdevBackend,
-}
-
-type GpuActivation = (
-    DrmDevice,
-    smithay::backend::drm::DrmDeviceNotifier,
-    Vec<SurfaceData>,
-    GlowRenderer,
-    GbmDevice<DrmDeviceFd>,
-);
+use super::models::{GpuActivation, GpuInitResult};
+use super::super::surface::SurfaceData;
 
 pub(crate) fn scan_and_init_gpu(
     session: &mut smithay::backend::session::libseat::LibSeatSession,
