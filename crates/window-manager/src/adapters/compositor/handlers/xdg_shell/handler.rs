@@ -26,7 +26,7 @@ impl XdgShellHandler for BabydraState {
         self.windows.space.map_element(window.clone(), loc, true);
         self.cleanup_windows();
         self.windows.push(window.clone());
-        if let Some(keyboard) = self.wayland.seat.get_keyboard() {
+        if let Some(keyboard) = self.wayland.seat().get_keyboard() {
             keyboard.set_focus(
                 self,
                 Some(surface.wl_surface().clone()),

@@ -47,13 +47,13 @@ impl BabydraState {
     /// Requests the pending client selection and caches it on a background thread.
     pub(crate) fn update_clipboard(&mut self) {
         self.clipboard
-            .update_clipboard(&self.wayland.seat, self.clipboard.sender.clone());
+            .update_clipboard(self.wayland.seat(), self.clipboard.sender.clone());
     }
     /// Takes ownership of an already cached clipboard selection.
     pub(crate) fn complete_clipboard_capture(&mut self, cached_mime: Option<String>) {
         self.clipboard.complete_clipboard_capture(
             cached_mime,
-            &self.wayland.seat,
+            self.wayland.seat(),
             &self.wayland.display_handle,
         );
     }

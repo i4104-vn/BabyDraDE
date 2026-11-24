@@ -31,7 +31,7 @@ impl SeatHandler for BabydraState {
     type TouchFocus = WlSurface;
 
     fn seat_state(&mut self) -> &mut SeatState<Self> {
-        &mut self.wayland.seat_state
+        self.wayland.seat_state_mut()
     }
 
     fn cursor_image(&mut self, _seat: &Seat<Self>, image: CursorImageStatus) {
@@ -114,7 +114,7 @@ impl SelectionHandler for BabydraState {
 
 impl DataDeviceHandler for BabydraState {
     fn data_device_state(&self) -> &DataDeviceState {
-        &self.wayland.data_device_state
+        self.wayland.data_device_state()
     }
 }
 

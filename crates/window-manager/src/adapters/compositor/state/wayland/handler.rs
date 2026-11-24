@@ -17,8 +17,8 @@ use smithay::{
     },
 };
 
+use super::models::{ProtocolExtensions, SeatRuntime, WaylandRuntime};
 use crate::adapters::compositor::BabydraState;
-use super::models::WaylandRuntime;
 
 impl WaylandRuntime {
     /// Creates the Smithay globals and the single seat used by BabyDraDE.
@@ -48,15 +48,19 @@ impl WaylandRuntime {
             display_handle: display_handle.clone(),
             compositor_state,
             xdg_shell_state,
-            _xdg_decoration_state: xdg_decoration_state,
             wlr_layer_shell_state,
-            _pointer_gestures_state: pointer_gestures_state,
-            _cursor_shape_state: cursor_shape_state,
             shm_state,
-            _output_manager_state: output_manager_state,
-            seat_state,
-            data_device_state,
-            seat,
+            _extensions: ProtocolExtensions {
+                _xdg_decoration_state: xdg_decoration_state,
+                _pointer_gestures_state: pointer_gestures_state,
+                _cursor_shape_state: cursor_shape_state,
+                _output_manager_state: output_manager_state,
+            },
+            seat: SeatRuntime {
+                seat,
+                seat_state,
+                data_device_state,
+            },
         }
     }
 }

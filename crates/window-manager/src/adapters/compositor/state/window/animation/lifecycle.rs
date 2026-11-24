@@ -27,7 +27,7 @@ impl BabydraState {
             .cloned();
         self.update_active_window(next_top.as_ref());
         if let Some(ref next_win) = next_top {
-            if let Some(keyboard) = self.wayland.seat.get_keyboard() {
+            if let Some(keyboard) = self.wayland.seat().get_keyboard() {
                 if let Some(toplevel) = next_win.toplevel() {
                     keyboard.set_focus(
                         self,

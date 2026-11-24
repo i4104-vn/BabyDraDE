@@ -27,7 +27,7 @@ impl BabydraState {
             Some(next) => {
                 next.set_activated(true);
                 if let Some(top) = next.toplevel() {
-                    if let Some(keyboard) = self.wayland.seat.get_keyboard() {
+                    if let Some(keyboard) = self.wayland.seat().get_keyboard() {
                         keyboard.set_focus(
                             self,
                             Some(top.wl_surface().clone()),
@@ -38,7 +38,7 @@ impl BabydraState {
                 }
             }
             None => {
-                if let Some(keyboard) = self.wayland.seat.get_keyboard() {
+                if let Some(keyboard) = self.wayland.seat().get_keyboard() {
                     keyboard.set_focus(
                         self,
                         Option::<WlSurface>::None,
@@ -96,7 +96,7 @@ impl BabydraState {
         });
 
         if let Some(toplevel) = window.toplevel() {
-            if let Some(keyboard) = self.wayland.seat.get_keyboard() {
+            if let Some(keyboard) = self.wayland.seat().get_keyboard() {
                 keyboard.set_focus(
                     self,
                     Some(toplevel.wl_surface().clone()),
