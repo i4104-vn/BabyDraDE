@@ -1,5 +1,14 @@
 //! GPU blur pipeline setup and frame rendering.
 
+use smithay::{
+    backend::renderer::element::Id,
+    utils::{Physical, Rectangle},
+};
+use tracing::error;
+
+use common::constants::{BLUR_CACHE_LIFETIME, MAX_BLUR_CACHE_BYTES};
+
+use super::super::gl::{BlurCache, BlurPipeline};
 use super::*;
 
 impl BlurEngine {

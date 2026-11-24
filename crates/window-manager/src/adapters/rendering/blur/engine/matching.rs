@@ -1,5 +1,8 @@
 //! Blur rule matching for windows, layers and app titles.
 
+use smithay::desktop::Window;
+
+use super::super::config;
 use super::*;
 
 impl BlurEngine {

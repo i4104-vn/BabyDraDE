@@ -1,5 +1,11 @@
 //! Blur rule matching and per-app toggles.
 
+use std::collections::HashMap;
+
+use super::super::config;
+#[cfg(test)]
+use tracing::info;
+
 use super::*;
 
 impl BlurEngine {
@@ -84,7 +90,13 @@ impl BlurEngine {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashMap;
+
+use super::super::config;
+#[cfg(test)]
+use tracing::info;
+
+use super::*;
 
     #[test]
     fn test_blur_engine_rules_and_matching() {
