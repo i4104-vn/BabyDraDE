@@ -1,52 +1,10 @@
-//! Result construction and match-scoring logic.
-
-use std::{fs, path::Path};
+//! Result construction and match-scoring logic over a service-provided index.
 
 use common::constants::launcher::SEARCH_ROWS_PER_CATEGORY;
 
 use crate::adapters::desktop::launcher::LauncherApp;
 use super::super::SearchItem;
-use super::models::{FileEntry, FileIndex, MAX_DEPTH, SKIP_DIRS};
-
-/// Recursively collects up to `budget` entries below `path`.
-pub(super) fn scan_dir(path: &Path, depth: usize, out: &mut Vec<FileEntry>, budget: &mut usize) {
-    if depth > MAX_DEPTH || *budget == 0 {
-        return;
-    }
-    let Ok(entries) = fs::read_dir(path) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        if *budget == 0 {
-            break;
-        }
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if depth > 0 && name.starts_with('.') {
-            continue;
-        }
-        let Ok(kind) = entry.file_type() else {
-            continue;
-        };
-        let is_dir = kind.is_dir();
-        if !is_dir && !kind.is_file() {
-            continue;
-        }
-        if is_dir && SKIP_DIRS.contains(&name.as_str()) {
-            continue;
-        }
-        let path = entry.path();
-        out.push(FileEntry {
-            lower: name.to_lowercase(),
-            name,
-            path: path.clone(),
-            is_dir,
-        });
-        *budget -= 1;
-        if is_dir {
-            scan_dir(&path, depth + 1, out, budget);
-        }
-    }
-}
+use super::models::FileIndex;
 
 /// Lower score means a better match. `None` means "does not match at all".
 pub(super) fn score(haystack: &str, needle: &str) -> Option<usize> {
