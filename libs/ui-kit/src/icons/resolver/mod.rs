@@ -1,6 +1,9 @@
 //! Pure string resolver for BabyDra icon names.
+
 use std::collections::HashMap;
 use std::sync::OnceLock;
+
+mod pairs;
 
 fn aliases() -> &'static HashMap<String, String> {
     static ALIASES: OnceLock<HashMap<String, String>> = OnceLock::new();
@@ -13,22 +16,14 @@ fn aliases() -> &'static HashMap<String, String> {
     })
 }
 
+/// Resolves an icon name to its dark/light SVG asset pair.
 pub fn resolve_icon_pair(name: &str) -> Option<(&'static str, &'static str)> {
     let canonical = aliases().get(name).map(String::as_str).unwrap_or(name);
-
-    pair_a_c::resolve(canonical)
-        .or_else(|| pair_d_f::resolve(canonical))
-        .or_else(|| pair_g_m::resolve(canonical))
-        .or_else(|| pair_n_s::resolve(canonical))
-        .or_else(|| pair_t_z::resolve(canonical))
+    pairs::resolve(canonical)
 }
 
+/// Resolves an icon name to a single SVG asset for the requested theme.
 pub fn resolve_icon(name: &str, dark_mode: bool) -> Option<&'static str> {
     let (dark, light) = resolve_icon_pair(name)?;
     Some(if dark_mode { dark } else { light })
 }
-mod pair_a_c;
-mod pair_d_f;
-mod pair_g_m;
-mod pair_n_s;
-mod pair_t_z;
