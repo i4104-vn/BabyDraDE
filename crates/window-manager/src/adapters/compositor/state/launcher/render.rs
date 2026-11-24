@@ -10,7 +10,7 @@ use super::LauncherState;
 use crate::adapters::desktop::launcher::buffer::{
     buffer_damage, physical_region, render_backdrop_pixels,
 };
-use crate::adapters::desktop::launcher::draw::draw_scene;
+use crate::adapters::desktop::launcher::render::draw_scene;
 use crate::adapters::desktop::launcher::search::buffer::panel_region;
 use crate::adapters::desktop::launcher::search::layout::SearchLayout;
 use crate::adapters::desktop::launcher::{BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO};

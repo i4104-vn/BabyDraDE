@@ -9,7 +9,7 @@
 //! over as soon as the user types while the dock is open.
 
 pub(crate) mod buffer;
-pub(crate) mod draw;
+pub(crate) mod render;
 pub(crate) mod search;
 
 pub(crate) use common::constants::launcher::{
