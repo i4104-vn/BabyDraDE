@@ -1,6 +1,6 @@
 //! Screenshot editor runtime state.
 
-use super::drawing::{Drawing, Tool};
+use super::drawing::{Drawing, Tool, STROKE_WIDTHS};
 
 /// Current active state of the editor.
 pub(crate) struct EditorState {
