@@ -8,7 +8,7 @@
 
 use std::sync::{Arc, RwLock};
 
-use super::ports::{CommandLauncher, ShortcutRepository};
+use crate::application::ports::{CommandLauncher, ShortcutRepository};
 use crate::domain::shortcuts::{self, Mods, Shortcut};
 
 /// Injected shortcut service shared by the input pipeline and reload watcher.
@@ -99,5 +99,3 @@ impl ShortcutService {
     }
 }
 
-#[cfg(test)]
-mod tests;

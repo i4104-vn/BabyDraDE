@@ -1,9 +1,12 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
-use super::*;
-use crate::application::ports::{ConfigError, LaunchError};
+use std::sync::Arc;
+
+use super::ShortcutService;
+use crate::application::ports::{CommandLauncher, ConfigError, LaunchError, ShortcutRepository};
 use crate::domain::keysyms::KEY_e;
+use crate::domain::shortcuts::{Mods, Shortcut};
 
 fn shortcut(command: &str) -> Shortcut {
     Shortcut {
