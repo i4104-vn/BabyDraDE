@@ -1,15 +1,14 @@
+//! Window hit testing.
+
 use common::BORDER_MARGIN;
 use smithay::{
-    desktop::{layer_map_for_output, Window, WindowSurfaceType},
-    reexports::{
-        wayland_protocols::xdg::shell::server::xdg_toplevel::{ResizeEdge, State},
-        wayland_server::protocol::wl_surface::WlSurface,
-    },
+    desktop::{Window, WindowSurfaceType},
+    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::{ResizeEdge, State},
     utils::{Logical, Point},
     wayland::shell::wlr_layer::Layer,
 };
 
-use super::BabydraState;
+use super::super::BabydraState;
 
 impl BabydraState {
     /// Returns true when a window stacked above `window` has a client surface
@@ -19,7 +18,7 @@ impl BabydraState {
             if other == window {
                 return false;
             }
-            if super::is_window_exiting(other) {
+            if crate::adapters::compositor::state::is_window_exiting(other) {
                 continue;
             }
             let Some(location) = self.windows.space.element_location(other) else {
@@ -58,7 +57,7 @@ impl BabydraState {
 
         // The compositor-owned frame sits just above the client surface.
         for window in self.windows.space.elements().rev() {
-            if super::is_window_exiting(window) {
+            if crate::adapters::compositor::state::is_window_exiting(window) {
                 continue;
             }
             let Some(location) = self.windows.space.element_location(window) else {
@@ -75,7 +74,7 @@ impl BabydraState {
         }
         // 1. First check via Smithay's element_under (handles exact input regions)
         if let Some((window, _render_loc)) = self.windows.space.element_under(point) {
-            if !super::is_window_exiting(window) {
+            if !crate::adapters::compositor::state::is_window_exiting(window) {
                 if let Some(loc) = self.windows.space.element_location(window) {
                     return Some((window.clone(), loc));
                 }
@@ -84,7 +83,7 @@ impl BabydraState {
 
         // 2. Fallback: check window bounding box and geometry in space
         for window in self.windows.space.elements().rev() {
-            if super::is_window_exiting(window) {
+            if crate::adapters::compositor::state::is_window_exiting(window) {
                 continue;
             }
             if let Some(bbox) = self.windows.space.element_bbox(window) {
@@ -106,83 +105,6 @@ impl BabydraState {
         None
     }
 
-    pub(crate) fn surface_under(
-        &self,
-        position: Point<f64, Logical>,
-    ) -> Option<(WlSurface, Point<f64, Logical>)> {
-        if let Some(ref move_state) = self.input.move_state {
-            if move_state.has_dragged {
-                return None;
-            }
-        }
-
-        // 1. Check Overlay and Top layer surfaces (bars, overlays, dynamic islands)
-        if let Some(surface) = self.surface_under_layers(position, &[Layer::Overlay, Layer::Top]) {
-            return Some(surface);
-        }
-
-        // 2. Check normal desktop windows
-        if let Some((window, location)) = self.windows.space.element_under(position) {
-            if !super::is_window_exiting(window) {
-                if let Some((surface, point)) =
-                    window.surface_under(position - location.to_f64(), WindowSurfaceType::ALL)
-                {
-                    return Some((surface, (point + location).to_f64()));
-                }
-            }
-        }
-
-        // 3. Check Bottom and Background layer surfaces (wallpapers, desktop widgets)
-        self.surface_under_layers(position, &[Layer::Bottom, Layer::Background])
-    }
-
-    fn surface_under_layers(
-        &self,
-        position: Point<f64, Logical>,
-        layers: &[Layer],
-    ) -> Option<(WlSurface, Point<f64, Logical>)> {
-        for output in self.windows.space.outputs() {
-            let layer_map = layer_map_for_output(output);
-            for layer in layer_map.layers().rev() {
-                if layers.contains(&layer.layer()) {
-                    if let Some(geo) = layer_map.layer_geometry(layer) {
-                        let mut bbox = layer.bbox_with_popups();
-                        bbox.loc += geo.loc;
-                        if bbox.to_f64().contains(position) {
-                            if let Some((surface, surface_location)) = layer
-                                .surface_under(position - geo.loc.to_f64(), WindowSurfaceType::ALL)
-                            {
-                                return Some((surface, (surface_location + geo.loc).to_f64()));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
-    pub(crate) fn layer_under(&self, position: Point<f64, Logical>) -> Option<Layer> {
-        for output in self.windows.space.outputs() {
-            let layer_map = layer_map_for_output(output);
-            for layer in layer_map.layers().rev() {
-                if let Some(geo) = layer_map.layer_geometry(layer) {
-                    let mut bbox = layer.bbox_with_popups();
-                    bbox.loc += geo.loc;
-                    if bbox.to_f64().contains(position)
-                        && layer
-                            .surface_under(position - geo.loc.to_f64(), WindowSurfaceType::ALL)
-                            .is_some()
-                    {
-                        return Some(layer.layer());
-                    }
-                }
-            }
-        }
-        None
-    }
-
     pub(crate) fn window_border_under(
         &self,
         point: Point<f64, Logical>,
@@ -195,7 +117,7 @@ impl BabydraState {
         }
 
         for window in self.windows.space.elements().rev() {
-            if super::is_window_exiting(window) {
+            if crate::adapters::compositor::state::is_window_exiting(window) {
                 continue;
             }
 
