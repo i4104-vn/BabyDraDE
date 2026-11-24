@@ -1,31 +1,21 @@
 //! Compositor render elements for the launcher and search overlay.
 
 use smithay::{
-    backend::{
-        allocator::Fourcc,
-        renderer::element::{
-            memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
-            Kind,
-        },
-    },
-    utils::{Physical, Point, Scale, Transform},
+    backend::{allocator::Fourcc, renderer::element::memory::MemoryRenderBuffer},
+    utils::{Scale, Transform},
 };
 
+use super::context::SurfaceContext;
 use super::LauncherState;
 use crate::adapters::desktop::launcher::buffer::{
     buffer_damage, physical_region, render_backdrop_pixels,
 };
 use crate::adapters::desktop::launcher::draw::draw_scene;
-use crate::adapters::desktop::launcher::search::buffer::{
-    buffer_damage as search_buffer_damage, panel_region,
-    render_backdrop_pixels as render_search_backdrop,
-};
-use crate::adapters::desktop::launcher::search::draw::draw_panel;
+use crate::adapters::desktop::launcher::search::buffer::panel_region;
 use crate::adapters::desktop::launcher::search::layout::SearchLayout;
 use crate::adapters::desktop::launcher::{BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO};
 use crate::adapters::rendering::buffer::render_pixels;
 use crate::adapters::rendering::CustomRenderElements;
-use common::constants::launcher::SEARCH_BACKDROP_ALPHA;
 
 impl LauncherState {
     pub(crate) fn render(
@@ -162,141 +152,22 @@ impl LauncherState {
             }
         }
 
-        // -- search surface -------------------------------------------------
         let layout = SearchLayout::compute(logical_w, logical_h, self.search.content_height());
         self.search.set_layout(layout);
         let search_region = panel_region(&layout, scale, screen_w, screen_h);
-        let panel_key = self.search.panel_key(search_region);
 
-        if self.search_panel_buffer.is_none() || self.search_panel_region != Some(search_region) {
-            self.search_panel_buffer = Some(MemoryRenderBuffer::new(
-                Fourcc::Argb8888,
-                (search_region.2, search_region.3),
-                1,
-                Transform::Normal,
-                None,
-            ));
-            self.search_panel_region = Some(search_region);
-            self.search_panel_key = None;
-        }
-
-        if search_presence > 0.001 && self.search_panel_key.as_ref() != Some(&panel_key) {
-            let search = &self.search;
-            if let Some(pixels) = render_pixels(
-                search_region.2,
-                search_region.3,
-                scale,
-                (search_region.0, search_region.1),
-                |ctx| draw_panel(ctx, search, &layout, search_presence),
-            ) {
-                if let Some(buffer) = self.search_panel_buffer.as_mut() {
-                    let mut context = buffer.render();
-                    let _ = context.draw(|dst| {
-                        if dst.len() != pixels.len() {
-                            return Err(());
-                        }
-                        dst.copy_from_slice(&pixels);
-                        Ok(search_buffer_damage(search_region.2, search_region.3))
-                    });
-                    self.search_panel_key = Some(panel_key);
-                }
-            }
-        }
-
-        let search_backdrop_size = (screen_w, screen_h);
-        let search_backdrop_key = (search_backdrop_size, search_tick, search_presence.to_bits());
-        if search_presence > 0.001
-            && (self.search_backdrop_buffer.is_none()
-                || self.search_backdrop_size != Some(search_backdrop_size)
-                || self.search_backdrop_key != Some(search_backdrop_key))
-        {
-            if let Some(pixels) = render_search_backdrop(
-                screen_w,
-                screen_h,
-                scale,
-                SEARCH_BACKDROP_ALPHA * search_presence,
-            ) {
-                let mut buffer = MemoryRenderBuffer::new(
-                    Fourcc::Argb8888,
-                    search_backdrop_size,
-                    1,
-                    Transform::Normal,
-                    None,
-                );
-                {
-                    let mut context = buffer.render();
-                    let _ = context.draw(|dst| {
-                        if dst.len() != pixels.len() {
-                            return Err(());
-                        }
-                        dst.copy_from_slice(&pixels);
-                        Ok(search_buffer_damage(screen_w, screen_h))
-                    });
-                }
-                self.search_backdrop_buffer = Some(buffer);
-                self.search_backdrop_size = Some(search_backdrop_size);
-                self.search_backdrop_key = Some(search_backdrop_key);
-            }
-        }
-
-        // Front-to-back: search panel, its dimmer, then the fading dock.
-        let mut elements = Vec::with_capacity(4);
-        if search_presence > 0.001 {
-            if let Some(buffer) = self.search_panel_buffer.as_ref() {
-                if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
-                    renderer,
-                    Point::<f64, Physical>::from((search_region.0 as f64, search_region.1 as f64)),
-                    buffer,
-                    None,
-                    None,
-                    None,
-                    Kind::Unspecified,
-                ) {
-                    elements.push(CustomRenderElements::Memory(elem));
-                }
-            }
-            if let Some(backdrop) = self.search_backdrop_buffer.as_ref() {
-                if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
-                    renderer,
-                    Point::<f64, Physical>::from((0.0, 0.0)),
-                    backdrop,
-                    None,
-                    None,
-                    None,
-                    Kind::Unspecified,
-                ) {
-                    elements.push(CustomRenderElements::Memory(elem));
-                }
-            }
-        }
-        if dock_presence > 0.001 {
-            if let Some(buffer) = self.buffer.as_ref() {
-                if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
-                    renderer,
-                    Point::<f64, Physical>::from((region.0 as f64, region.1 as f64)),
-                    buffer,
-                    None,
-                    None,
-                    None,
-                    Kind::Unspecified,
-                ) {
-                    elements.push(CustomRenderElements::Memory(elem));
-                }
-            }
-            if let Some(backdrop) = self.backdrop_buffer.as_ref() {
-                if let Ok(elem) = MemoryRenderBufferRenderElement::from_buffer(
-                    renderer,
-                    Point::<f64, Physical>::from((0.0, 0.0)),
-                    backdrop,
-                    None,
-                    None,
-                    None,
-                    Kind::Unspecified,
-                ) {
-                    elements.push(CustomRenderElements::Memory(elem));
-                }
-            }
-        }
-        elements
+        let mut ctx = SurfaceContext {
+            renderer,
+            scale,
+            screen: (screen_w, screen_h),
+            logical: (logical_w, logical_h),
+            search_presence,
+            dock_presence,
+            search_tick,
+            search_region,
+            region,
+        };
+        super::surface::render_search(self, &ctx);
+        super::surface::collect_elements(self, &mut ctx)
     }
 }

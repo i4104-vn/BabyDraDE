@@ -10,8 +10,11 @@ use crate::adapters::desktop::launcher::search::{
 use crate::adapters::desktop::launcher::{BackdropKey, BufferRegion, CacheKey, LauncherApp};
 use ui_kit::components::dock::{DockLayout, DockSide, DockState};
 
+mod context;
 mod input;
 mod render;
+mod search;
+mod surface;
 
 pub(crate) struct LauncherState {
     apps: Vec<LauncherApp>,
