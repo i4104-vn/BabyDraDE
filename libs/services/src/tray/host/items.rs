@@ -50,7 +50,11 @@ pub(super) fn publish_snapshot(connection: &gio::DBusConnection) {
     }
 }
 
-pub(super) fn read_item(connection: &gio::DBusConnection, service: &str, path: &str) -> Option<TrayItem> {
+pub(super) fn read_item(
+    connection: &gio::DBusConnection,
+    service: &str,
+    path: &str,
+) -> Option<TrayItem> {
     let reply = connection
         .call_sync(
             Some(service),
@@ -102,4 +106,3 @@ pub(super) fn read_item(connection: &gio::DBusConnection, service: &str, path: &
         menu_path: properties.lookup("Menu").ok().flatten().unwrap_or_default(),
     })
 }
-

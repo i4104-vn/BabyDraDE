@@ -125,4 +125,3 @@ pub(super) fn find_sni_path(connection: &gio::DBusConnection, service: &str) -> 
 
     None
 }
-

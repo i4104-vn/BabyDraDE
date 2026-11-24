@@ -86,4 +86,3 @@ pub(crate) fn run() {
     let main_loop = glib::MainLoop::new(Some(&context), false);
     main_loop.run();
 }
-

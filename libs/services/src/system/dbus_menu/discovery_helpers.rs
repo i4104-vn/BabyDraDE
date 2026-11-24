@@ -2,7 +2,6 @@
 
 use gio::glib::Variant;
 
-
 pub(super) fn find_registered_appmenus(conn: &gio::DBusConnection) -> Vec<(String, String)> {
     let reply = match conn.call_sync(
         Some("com.canonical.AppMenu.Registrar"),
@@ -139,8 +138,6 @@ pub(super) fn find_dbusmenu_path(conn: &gio::DBusConnection, service: &str) -> O
 
     None
 }
-
-
 
 #[cfg(test)]
 mod tests {

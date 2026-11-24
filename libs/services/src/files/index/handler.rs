@@ -32,7 +32,12 @@ pub fn scan_home(limit: usize, depth: usize, skip_dirs: &[&str]) -> Vec<FileEntr
 ///
 /// # Returns
 /// The collected entries sorted by lower-cased name.
-pub(super) fn scan_root(root: &Path, limit: usize, depth: usize, skip_dirs: &[&str]) -> Vec<FileEntry> {
+pub(super) fn scan_root(
+    root: &Path,
+    limit: usize,
+    depth: usize,
+    skip_dirs: &[&str],
+) -> Vec<FileEntry> {
     let mut entries = Vec::with_capacity(limit);
     let mut budget = limit;
     let mut walk = Walk {

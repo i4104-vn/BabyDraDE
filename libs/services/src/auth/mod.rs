@@ -124,8 +124,8 @@ unsafe extern "C" fn pam_conversation_fn(
     // SAFETY: `msg`, `resp` and `appdata_ptr` are PAM-owned pointers valid for
     // the duration of this callback; `resps` is allocated and zeroed here.
     unsafe {
-        let resps =
-            libc::malloc(num_msg as usize * std::mem::size_of::<pam_response>()) as *mut pam_response;
+        let resps = libc::malloc(num_msg as usize * std::mem::size_of::<pam_response>())
+            as *mut pam_response;
         if resps.is_null() {
             return 4; // PAM_BUF_ERR
         }

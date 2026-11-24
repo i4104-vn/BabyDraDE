@@ -25,10 +25,13 @@ fn should_collect_sorted_entries_using_hidden_and_depth_rules() {
     fs::create_dir_all(root.path().join("sub/nested/too_deep/very_deep"))
         .expect("create nested dirs");
     fs::write(root.path().join("sub/nested/deep.txt"), "d").expect("write deep file");
-    fs::write(root.path().join("sub/nested/too_deep/deeper.txt"), "dd")
-        .expect("write deeper file");
-    fs::write(root.path().join("sub/nested/too_deep/very_deep/too_far.txt"), "f")
-        .expect("write out-of-depth file");
+    fs::write(root.path().join("sub/nested/too_deep/deeper.txt"), "dd").expect("write deeper file");
+    fs::write(
+        root.path()
+            .join("sub/nested/too_deep/very_deep/too_far.txt"),
+        "f",
+    )
+    .expect("write out-of-depth file");
 
     let entries = scan_root(root.path(), 400, 3, SKIP_DIRS);
 
@@ -48,12 +51,12 @@ fn should_collect_sorted_entries_using_hidden_and_depth_rules() {
             "zeta.txt",
         ]
     );
-    assert!(entries.iter().any(|entry| entry.name == "sub" && entry.is_dir));
-    assert!(
-        entries
-            .iter()
-            .any(|entry| entry.name == "Alpha.txt" && entry.lower == "alpha.txt")
-    );
+    assert!(entries
+        .iter()
+        .any(|entry| entry.name == "sub" && entry.is_dir));
+    assert!(entries
+        .iter()
+        .any(|entry| entry.name == "Alpha.txt" && entry.lower == "alpha.txt"));
 }
 
 #[test]
@@ -66,7 +69,9 @@ fn should_stop_collecting_at_the_entry_budget() {
     let entries = scan_root(root.path(), 2, 3, SKIP_DIRS);
 
     assert_eq!(names(&entries).len(), 2);
-    assert!(names(&entries).iter().all(|name| ["a.txt", "b.txt", "c.txt"].contains(name)));
+    assert!(names(&entries)
+        .iter()
+        .all(|name| ["a.txt", "b.txt", "c.txt"].contains(name)));
 
     let empty = scan_root(root.path(), 0, 3, SKIP_DIRS);
     assert!(empty.is_empty());

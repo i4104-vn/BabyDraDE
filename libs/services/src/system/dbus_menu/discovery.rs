@@ -1,8 +1,7 @@
 //! Finding the D-Bus menu service exported by an application.
 
 use super::discovery_helpers::{
-    find_dbusmenu_path, find_registered_appmenus, get_connection_process_id,
-    service_matches_app_id,
+    find_dbusmenu_path, find_registered_appmenus, get_connection_process_id, service_matches_app_id,
 };
 use super::fetch::fetch_dbus_menu_with_prepared_submenus;
 
