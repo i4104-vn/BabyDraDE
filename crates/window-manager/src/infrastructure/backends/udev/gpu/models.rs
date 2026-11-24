@@ -1,7 +1,5 @@
 //! GPU initialization result models.
 
-use std::path::PathBuf;
-
 use smithay::backend::{
     allocator::gbm::{GbmDevice},
     drm::{DrmDevice, DrmDeviceFd},
