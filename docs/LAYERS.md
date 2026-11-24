@@ -59,8 +59,5 @@ scripts/check-layers.sh
 ```
 
 It runs in CI on every push and pull request (see
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)). The file-size check
-is a ratchet: files already over 200 lines are listed in
-[`scripts/check-layers-baseline.txt`](../scripts/check-layers-baseline.txt).
-New violations fail; remove a baseline entry in the same commit that brings its
-file under the limit.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)). Every file must be
+at most 200 lines; the script fails on any violation.

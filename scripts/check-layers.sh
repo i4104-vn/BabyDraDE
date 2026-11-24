@@ -4,11 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/crates/window-manager/src"
-BASELINE="$(dirname "$0")/check-layers-baseline.txt"
-[ -f "$BASELINE" ] || BASELINE=/dev/null
 LIMIT=200
 FAILED=0
-GRANDFATHERED=0
 
 check_forbidden() {
     local pattern="$1" paths="$2" message="$3"
