@@ -1,110 +1,16 @@
-//! Window hit testing.
+//! Window-border resize hit testing.
 
 use common::BORDER_MARGIN;
 use smithay::{
-    desktop::{Window, WindowSurfaceType},
+    desktop::Window,
     reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::{ResizeEdge, State},
     utils::{Logical, Point},
     wayland::shell::wlr_layer::Layer,
 };
 
-use super::super::BabydraState;
+use crate::adapters::compositor::state::BabydraState;
 
 impl BabydraState {
-    /// Returns true when a window stacked above `window` has a client surface
-    /// at `point`.
-    fn is_occluded(&self, window: &Window, point: Point<f64, Logical>) -> bool {
-        for other in self.windows.space.elements().rev() {
-            if other == window {
-                return false;
-            }
-            if crate::adapters::compositor::state::is_window_exiting(other) {
-                continue;
-            }
-            let Some(location) = self.windows.space.element_location(other) else {
-                continue;
-            };
-            // Match `Space::element_under`: input regions are relative to the
-            // surface render location, not the element's mapped location.
-            let render_location = location - other.geometry().loc;
-            if other
-                .surface_under(point - render_location.to_f64(), WindowSurfaceType::ALL)
-                .is_some()
-            {
-                return true;
-            }
-        }
-        false
-    }
-
-    pub(crate) fn window_under(
-        &self,
-        point: Point<f64, Logical>,
-    ) -> Option<(Window, Point<i32, Logical>)> {
-        if let Some(layer) = self.layer_under(point) {
-            if matches!(layer, Layer::Overlay | Layer::Top) {
-                return None;
-            }
-        }
-
-        // If an overlay or top layer surface (bars, popovers, menus) occludes this point,
-        // no normal window can be under it.
-        if let Some(layer) = self.layer_under(point) {
-            if matches!(layer, Layer::Overlay | Layer::Top) {
-                return None;
-            }
-        }
-
-        // The compositor-owned frame sits just above the client surface.
-        for window in self.windows.space.elements().rev() {
-            if crate::adapters::compositor::state::is_window_exiting(window) {
-                continue;
-            }
-            let Some(location) = self.windows.space.element_location(window) else {
-                continue;
-            };
-            if crate::adapters::compositor::state::titlebar::hit_test(window, location, point)
-                .is_some()
-            {
-                if self.is_occluded(window, point) {
-                    break;
-                }
-                return Some((window.clone(), location));
-            }
-        }
-        // 1. First check via Smithay's element_under (handles exact input regions)
-        if let Some((window, _render_loc)) = self.windows.space.element_under(point) {
-            if !crate::adapters::compositor::state::is_window_exiting(window) {
-                if let Some(loc) = self.windows.space.element_location(window) {
-                    return Some((window.clone(), loc));
-                }
-            }
-        }
-
-        // 2. Fallback: check window bounding box and geometry in space
-        for window in self.windows.space.elements().rev() {
-            if crate::adapters::compositor::state::is_window_exiting(window) {
-                continue;
-            }
-            if let Some(bbox) = self.windows.space.element_bbox(window) {
-                if bbox.to_f64().contains(point) {
-                    if let Some(loc) = self.windows.space.element_location(window) {
-                        return Some((window.clone(), loc));
-                    }
-                }
-            }
-            if let Some(geo) = self.windows.space.element_geometry(window) {
-                if geo.to_f64().contains(point) {
-                    if let Some(loc) = self.windows.space.element_location(window) {
-                        return Some((window.clone(), loc));
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
     pub(crate) fn window_border_under(
         &self,
         point: Point<f64, Logical>,
