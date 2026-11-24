@@ -1,9 +1,10 @@
 //! Dynamic Island capsule size / zoom transitions.
 
 mod handler;
-mod render;
+mod gen;
+mod resize;
+mod zoom;
 
-pub use render::{
-    current_anim_gen, island_animate_size, island_animate_width, island_zoom_in, island_zoom_out,
-    next_anim_gen,
-};
+pub use gen::{current_anim_gen, next_anim_gen};
+pub use resize::{island_animate_size, island_animate_width};
+pub use zoom::{island_zoom_in, island_zoom_out};
