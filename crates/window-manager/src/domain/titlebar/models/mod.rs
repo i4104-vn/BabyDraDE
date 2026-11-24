@@ -1,12 +1,8 @@
-//! Titlebar geometry and hit testing (pure rules).
+//! Titlebar layout models and pure geometry.
 //!
-//! Geometry is expressed with the framework-free value types in
-//! [`crate::domain::geometry`]; no window handle, protocol state or I/O is
-//! involved. The adapter extracts the frame facts into [`FrameInput`] before
-//! calling [`hit_test`], so renderer and input path can never drift apart.
+//! Framework-free value types shared by hit testing and rendering.
 
 use common::{Action, CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS, TITLEBAR_HEIGHT};
-
 use crate::domain::geometry::Point;
 
 /// Protocol-independent facts about a window frame.
@@ -19,29 +15,6 @@ pub(crate) struct FrameInput {
     pub(crate) maximized: bool,
     pub(crate) server_side_decoration: bool,
     pub(crate) fullscreen: bool,
-}
-
-/// Hit-tests a pointer position against a compositor-owned frame.
-///
-/// # Arguments
-///
-/// * `frame` - Frame geometry and decoration state.
-/// * `point` - Pointer position in global logical coordinates.
-///
-/// # Returns
-///
-/// The action under the pointer, or `None` when the point is outside a frame
-/// that can be hit tested.
-pub(crate) fn hit_test(frame: FrameInput, point: Point<f64>) -> Option<Action> {
-    if !frame.server_side_decoration || frame.fullscreen {
-        return None;
-    }
-    TitlebarLayout::new(frame.width, frame.maximized).hit_test(
-        frame.location,
-        frame.width,
-        frame.maximized,
-        point,
-    )
 }
 
 /// A circular titlebar button.
@@ -197,6 +170,3 @@ impl TitlebarLayout {
                 > self.corner_radius.powi(2)
     }
 }
-
-#[cfg(test)]
-mod tests;

@@ -1,4 +1,6 @@
 use super::*;
+use common::Action;
+use crate::domain::geometry::Point;
 
 #[test]
 fn layouts_share_button_positions() {
