@@ -33,7 +33,7 @@ pub(crate) fn physical_region(
 }
 
 /// Same backdrop mirrored for a right-side dock: darkest at the right edge.
-pub(crate) fn render_right_backdrop_pixels(
+pub(crate) fn render_backdrop(
     width: i32,
     height: i32,
     scale: Scale<f64>,
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn right_backdrop_is_darkest_at_the_right_edge() {
-        let pixels = render_right_backdrop_pixels(400, 100, Scale::from(1.0), 400.0, 1.0)
+        let pixels = render_backdrop(400, 100, Scale::from(1.0), 400.0, 1.0)
             .expect("backdrop pixels");
         let alpha_at = |x: usize| pixels[(50 * 400 + x) * 4 + 3];
 

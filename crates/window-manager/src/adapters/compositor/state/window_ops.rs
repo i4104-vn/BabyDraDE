@@ -31,8 +31,8 @@ impl BabydraState {
         self.windows.raise(window);
     }
     /// Finds a window associated with an XDG toplevel surface.
-    pub(crate) fn find_window_for_surface(&self, surface: &ToplevelSurface) -> Option<Window> {
-        self.windows.find_window_for_surface(surface, &self.windows.space)
+    pub(crate) fn find_window(&self, surface: &ToplevelSurface) -> Option<Window> {
+        self.windows.find_window(surface, &self.windows.space)
     }
     /// Persists metadata about the currently active window.
     pub(crate) fn update_active_window(&self, window: Option<&Window>) {

@@ -55,7 +55,7 @@ pub(crate) fn command_for(mods: Mods, keysym: u32, shortcuts: &[Shortcut]) -> Op
 /// # Returns
 ///
 /// The keysym, or `None` when the name is not recognised.
-pub(crate) fn key_name_to_keysym(name: &str) -> Option<u32> {
+pub(crate) fn to_keysym(name: &str) -> Option<u32> {
     let up = name.to_ascii_uppercase();
 
     if up.len() == 1 {

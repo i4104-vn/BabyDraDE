@@ -13,7 +13,7 @@ use smithay::{
     utils::{Buffer, Physical, Point, Rectangle, Scale, Transform},
 };
 
-use crate::adapters::desktop::launcher::buffer::render_right_backdrop_pixels;
+use crate::adapters::desktop::launcher::buffer::render_backdrop;
 use crate::adapters::rendering::CustomRenderElements;
 
 use super::SwitcherOverlay;
@@ -41,7 +41,7 @@ pub(super) fn update(
         || overlay.backdrop_tick != Some(presence_tick)
     {
         if let Some(pixels) =
-            render_right_backdrop_pixels(backdrop_w, height, scale, gradient_w, presence)
+            render_backdrop(backdrop_w, height, scale, gradient_w, presence)
         {
             let mut buffer = MemoryRenderBuffer::new(
                 Fourcc::Argb8888,

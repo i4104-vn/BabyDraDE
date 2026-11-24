@@ -6,4 +6,4 @@ pub(crate) mod drag;
 pub(crate) mod motion;
 
 pub(crate) use button::handle_pointer_button;
-pub(crate) use motion::{handle_pointer_motion, handle_pointer_motion_absolute};
+pub(crate) use motion::{handle_pointer_motion, handle_absolute_motion};

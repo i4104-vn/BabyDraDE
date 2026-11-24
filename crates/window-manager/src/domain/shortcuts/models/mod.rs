@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::handler::{key_name_to_keysym, parse_modifiers};
+use super::handler::{to_keysym, parse_modifiers};
 
 fn default_true() -> bool {
     true
@@ -54,7 +54,7 @@ impl ResolvedShortcut {
         }
         Some(Self {
             mods: parse_modifiers(&shortcut.modifiers)?,
-            keysym: key_name_to_keysym(&shortcut.key)?,
+            keysym: to_keysym(&shortcut.key)?,
             command: shortcut.command.clone(),
         })
     }

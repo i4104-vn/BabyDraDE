@@ -75,7 +75,7 @@ impl XdgShellHandler for BabydraState {
             return;
         }
 
-        let target_window = self.find_window_for_surface(&surface);
+        let target_window = self.find_window(&surface);
 
         if let Some(window) = target_window {
             if let Some(toplevel) = window.toplevel() {
@@ -117,7 +117,7 @@ impl XdgShellHandler for BabydraState {
             return;
         }
 
-        let target_window = self.find_window_for_surface(&surface);
+        let target_window = self.find_window(&surface);
         if let Some(window) = target_window {
             if let Some(toplevel) = window.toplevel() {
                 if toplevel.current_state().states.contains(
@@ -150,19 +150,19 @@ impl XdgShellHandler for BabydraState {
     }
 
     fn maximize_request(&mut self, surface: ToplevelSurface) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
+        if let Some(window) = self.find_window(&surface) {
             self.maximize_window(&window);
         }
     }
 
     fn unmaximize_request(&mut self, surface: ToplevelSurface) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
+        if let Some(window) = self.find_window(&surface) {
             self.unmaximize_window(&window);
         }
     }
 
     fn minimize_request(&mut self, surface: ToplevelSurface) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
+        if let Some(window) = self.find_window(&surface) {
             self.minimize_window(&window);
         }
     }
@@ -172,13 +172,13 @@ impl XdgShellHandler for BabydraState {
         surface: ToplevelSurface,
         output: Option<smithay::reexports::wayland_server::protocol::wl_output::WlOutput>,
     ) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
+        if let Some(window) = self.find_window(&surface) {
             self.fullscreen_window(&window, output);
         }
     }
 
     fn unfullscreen_request(&mut self, surface: ToplevelSurface) {
-        if let Some(window) = self.find_window_for_surface(&surface) {
+        if let Some(window) = self.find_window(&surface) {
             self.unfullscreen_window(&window);
         }
     }

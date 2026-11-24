@@ -56,7 +56,7 @@ impl WindowRegistry {
     }
 
     /// Finds a window associated with an XDG toplevel surface.
-    pub(crate) fn find_window_for_surface(
+    pub(crate) fn find_window(
         &self,
         surface: &ToplevelSurface,
         space: &Space<Window>,

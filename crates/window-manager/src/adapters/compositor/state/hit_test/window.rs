@@ -13,7 +13,7 @@ use super::super::BabydraState;
 impl BabydraState {
     /// Returns true when a window stacked above `window` has a client surface
     /// at `point`.
-    fn is_occluded_by_window_above(&self, window: &Window, point: Point<f64, Logical>) -> bool {
+    fn is_occluded(&self, window: &Window, point: Point<f64, Logical>) -> bool {
         for other in self.windows.space.elements().rev() {
             if other == window {
                 return false;
@@ -66,7 +66,7 @@ impl BabydraState {
             if crate::adapters::compositor::state::titlebar::hit_test(window, location, point)
                 .is_some()
             {
-                if self.is_occluded_by_window_above(window, point) {
+                if self.is_occluded(window, point) {
                     break;
                 }
                 return Some((window.clone(), location));
@@ -195,7 +195,7 @@ impl BabydraState {
 
             // Same occlusion rule as for titlebars: never start a resize on a
             // border that is hidden behind a higher window's surface.
-            if self.is_occluded_by_window_above(window, point) {
+            if self.is_occluded(window, point) {
                 continue;
             }
 

@@ -12,7 +12,7 @@ const WATCH_INTERVAL: Duration = Duration::from_secs(2);
 /// Loads global shortcuts from `~/.babydra/configs/keymap.toml`.
 pub(crate) fn load() -> Vec<Shortcut> {
     let path = services::config::get_keymap_path();
-    export_default_if_missing(&path);
+    export_default(&path);
     let mut shortcuts = Vec::new();
 
     let content = match std::fs::read_to_string(&path) {
@@ -104,7 +104,7 @@ fn file_mtime(path: &std::path::Path) -> Option<std::time::SystemTime> {
 }
 
 /// Exports the bundled keymap template on first startup.
-fn export_default_if_missing(path: &std::path::Path) {
+fn export_default(path: &std::path::Path) {
     if path.exists() {
         return;
     }

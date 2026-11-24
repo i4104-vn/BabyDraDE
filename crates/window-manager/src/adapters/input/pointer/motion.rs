@@ -65,7 +65,7 @@ pub(crate) fn handle_pointer_motion<B: InputBackend, P: PointerMotionEvent<B>>(
 }
 
 /// Handles absolute pointer motion events (such as drawing tablets or virtual VM pointers).
-pub(crate) fn handle_pointer_motion_absolute<B: InputBackend, P: AbsolutePositionEvent<B>>(
+pub(crate) fn handle_absolute_motion<B: InputBackend, P: AbsolutePositionEvent<B>>(
     state: &mut impl InputContext,
     event: P,
 ) {

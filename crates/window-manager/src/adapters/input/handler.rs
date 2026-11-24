@@ -86,7 +86,7 @@ pub(crate) fn process_input_event<C: InputContext, I: InputBackend>(
             pointer::handle_pointer_motion(state, event);
         }
         InputEvent::PointerMotionAbsolute { event, .. } => {
-            pointer::handle_pointer_motion_absolute(state, event);
+            pointer::handle_absolute_motion(state, event);
         }
         InputEvent::PointerButton { event, .. } => {
             pointer::handle_pointer_button(state, event);

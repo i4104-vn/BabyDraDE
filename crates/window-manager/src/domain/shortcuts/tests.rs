@@ -1,15 +1,15 @@
 use super::*;
-use super::handler::key_name_to_keysym;
+use super::handler::to_keysym;
 use super::models::ResolvedShortcut;
 use crate::domain::keysyms;
 
 #[test]
 fn maps_letters_to_lowercase_keysyms() {
-    assert_eq!(key_name_to_keysym("s"), Some(keysyms::KEY_s));
-    assert_eq!(key_name_to_keysym("A"), Some(keysyms::KEY_a));
-    assert_eq!(key_name_to_keysym("f12"), Some(keysyms::KEY_F12));
-    assert_eq!(key_name_to_keysym("Tab"), Some(keysyms::KEY_Tab));
-    assert_eq!(key_name_to_keysym("nope"), None);
+    assert_eq!(to_keysym("s"), Some(keysyms::KEY_s));
+    assert_eq!(to_keysym("A"), Some(keysyms::KEY_a));
+    assert_eq!(to_keysym("f12"), Some(keysyms::KEY_F12));
+    assert_eq!(to_keysym("Tab"), Some(keysyms::KEY_Tab));
+    assert_eq!(to_keysym("nope"), None);
 }
 
 #[test]
