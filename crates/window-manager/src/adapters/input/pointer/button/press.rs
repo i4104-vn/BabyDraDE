@@ -190,7 +190,6 @@ pub(super) fn press<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
                                 edges: smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge::BottomRight,
                                 button: ctx.button_code,
                             });
-                            return;
                         } else {
                             *ctx.state.move_state_mut() = Some(MoveState {
                                 window: window.clone(),
@@ -199,7 +198,6 @@ pub(super) fn press<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
                                 has_dragged: false,
                                 button: ctx.button_code,
                             });
-                            return;
                         }
                     }
                 } else {
