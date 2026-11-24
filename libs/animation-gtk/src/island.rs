@@ -3,7 +3,7 @@
 
 use std::cell::Cell;
 
-use super::easing;
+use animation::Easing;
 use gtk4::prelude::*;
 
 thread_local! {
@@ -64,7 +64,7 @@ pub fn island_zoom_in(
         let t = elapsed_us as f64 / dur_us as f64;
         w.set_opacity(1.0);
 
-        let eased_w = easing::ease_out_back(t);
+        let eased_w = Easing::EaseOutBackSoft.apply(t);
         let current_w = target_height + ((target_width - target_height) as f64 * eased_w) as i32;
         w.set_size_request(current_w, target_height);
 
@@ -122,7 +122,7 @@ pub fn island_zoom_out(
         let capsule_opacity = (1.0 - (t - 0.5) * 2.0).clamp(0.0, 1.0);
         w.set_opacity(capsule_opacity);
 
-        let eased_w = easing::ease_out_cubic(t);
+        let eased_w = Easing::EaseOutCubic.apply(t);
         let current_w = start_h + ((target_width - start_h) as f64 * (1.0 - eased_w)) as i32;
         w.set_size_request(current_w, start_h);
 
@@ -170,7 +170,7 @@ pub fn island_animate_width<F>(
         }
 
         let t = elapsed_us as f64 / dur_us as f64;
-        let eased = easing::ease_out_cubic(t);
+        let eased = Easing::EaseOutCubic.apply(t);
         let current_w = start_width + ((target_width - start_width) as f64 * eased) as i32;
         w.set_size_request(current_w, -1);
 
@@ -230,7 +230,7 @@ pub fn island_animate_size<F>(
         }
 
         let t = elapsed_us as f64 / dur_us as f64;
-        let eased = easing::ease_out_back(t);
+        let eased = Easing::EaseOutBackSoft.apply(t);
         let current_w = start_width + ((target_width - start_width) as f64 * eased) as i32;
         let current_h = start_height + ((target_height - start_height) as f64 * eased) as i32;
         w.set_size_request(current_w.max(0), current_h.max(0));

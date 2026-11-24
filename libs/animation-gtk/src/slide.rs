@@ -1,6 +1,6 @@
 //! Directional slide-in / slide-out widget animations.
 
-use super::easing;
+use animation::Easing;
 use gtk4::prelude::*;
 use std::cell::Cell;
 use std::rc::Rc;
@@ -103,7 +103,7 @@ fn slide_in_inner(
         }
 
         let t = elapsed_us as f64 / dur_us as f64;
-        let eased = easing::ease_out_cubic(t);
+        let eased = Easing::EaseOutCubic.apply(t);
 
         w.set_opacity(eased.clamp(0.0, 1.0));
         match direction {
@@ -173,7 +173,7 @@ pub fn slide_out(
         }
 
         let t = elapsed_us as f64 / dur_us as f64;
-        let eased = easing::ease_out_cubic(t);
+        let eased = Easing::EaseOutCubic.apply(t);
 
         w.set_opacity((start_opacity * (1.0 - eased)).clamp(0.0, 1.0));
         match direction {
@@ -305,7 +305,7 @@ fn slide_out_cb_inner<F>(
         }
 
         let t = elapsed_us as f64 / dur_us as f64;
-        let eased = easing::ease_out_cubic(t);
+        let eased = Easing::EaseOutCubic.apply(t);
 
         w.set_opacity((start_opacity * (1.0 - eased)).clamp(0.0, 1.0));
         match direction {

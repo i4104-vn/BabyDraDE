@@ -3,6 +3,21 @@ use std::f64::consts::PI;
 const BACK_C1: f64 = 1.70158;
 const BACK_C2: f64 = BACK_C1 * 1.525;
 const BACK_C3: f64 = BACK_C1 + 1.0;
+/// Gentler overshoot constant used by the GTK capsule transitions.
+const SOFT_BACK_C1: f64 = 1.25;
+const SOFT_BACK_C3: f64 = SOFT_BACK_C1 + 1.0;
+
+/// Ease-out curve with a gentle overshoot before settling at the target.
+///
+/// # Arguments
+/// * `t` - Normalized linear progress in `0.0..=1.0`.
+///
+/// # Returns
+/// Eased progress, briefly above `1.0` before settling.
+#[inline]
+pub fn ease_out_back_soft(t: f64) -> f64 {
+    1.0 + SOFT_BACK_C3 * (t - 1.0).powi(3) + SOFT_BACK_C1 * (t - 1.0).powi(2)
+}
 
 #[inline]
 pub fn ease_in_back(t: f64) -> f64 {

@@ -52,6 +52,8 @@ pub enum Easing {
     // Back curves
     EaseInBack,
     EaseOutBack,
+    /// Back curve with a gentler overshoot, used by capsule transitions.
+    EaseOutBackSoft,
     EaseInOutBack,
 
     // Elastic curves
@@ -112,6 +114,7 @@ impl Easing {
 
             Self::EaseInBack => overshoot::ease_in_back(t),
             Self::EaseOutBack => overshoot::ease_out_back(t),
+            Self::EaseOutBackSoft => overshoot::ease_out_back_soft(t),
             Self::EaseInOutBack => overshoot::ease_in_out_back(t),
 
             Self::EaseInElastic => overshoot::ease_in_elastic(t),
@@ -139,7 +142,7 @@ mod tests {
         );
     }
 
-    const ALL_CURVES: [Easing; 30] = [
+    const ALL_CURVES: [Easing; 31] = [
         Easing::Linear,
         Easing::EaseInQuad,
         Easing::EaseOutQuad,
@@ -164,6 +167,7 @@ mod tests {
         Easing::EaseInOutCirc,
         Easing::EaseInBack,
         Easing::EaseOutBack,
+        Easing::EaseOutBackSoft,
         Easing::EaseInOutBack,
         Easing::EaseInElastic,
         Easing::EaseOutElastic,
@@ -211,6 +215,14 @@ mod tests {
             "EaseOutBack should overshoot target, got {mid_val}"
         );
         assert_close(easing.apply(1.0), 1.0);
+    }
+
+    #[test]
+    fn soft_back_overshoots_less_than_standard_back() {
+        let t = 0.7;
+        assert!(Easing::EaseOutBackSoft.apply(t) > 1.0);
+        assert!(Easing::EaseOutBackSoft.apply(t) < Easing::EaseOutBack.apply(t));
+        assert_close(Easing::EaseOutBackSoft.apply(1.0), 1.0);
     }
 
     #[test]

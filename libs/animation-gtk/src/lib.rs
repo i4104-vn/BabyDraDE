@@ -4,7 +4,6 @@
 //! the framework-free [`animation`] primitives. Compositor code can depend on
 //! the timing primitives without pulling in the GTK toolkit.
 
-pub mod easing;
 pub mod island;
 pub mod slide;
 
