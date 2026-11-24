@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Smithay needs Wayland/XKB/EGL/GLES headers to build the workspace.
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config clang libclang-dev \
+            libwayland-dev wayland-protocols libxkbcommon-dev libudev-dev \
+            libinput-dev libseat-dev libdrm-dev libgbm-dev \
+            libegl1-mesa-dev libgles2-mesa-dev libgtk-4-dev \
+            libgtk4-layer-shell-dev
+
+      # Mirrors rust-toolchain.toml: 1.100.0, rustfmt + clippy, minimal profile.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.100.0"
+          components: rustfmt, clippy
+
+      - name: Enforce layer boundaries
+        run: scripts/check-layers.sh
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Check all targets
+        run: cargo check --workspace --all-targets
+
+      - name: Run tests
+        run: cargo test --workspace
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings

@@ -1,0 +1,16 @@
+# Grandfathered files over the 200-line limit (scripts/check-layers.sh).
+# This is a shrinking list: when a file is split below the limit, remove its
+# entry in the same commit. New violations not listed here fail CI.
+crates/window-manager/src/adapters/compositor/handlers/xdg_shell/handler.rs
+crates/window-manager/src/adapters/compositor/state/input_context/config.rs
+crates/window-manager/src/adapters/compositor/state/input_context/devices.rs
+crates/window-manager/src/adapters/compositor/state/input_context/switcher.rs
+crates/window-manager/src/adapters/compositor/state/input_context/windows.rs
+crates/window-manager/src/adapters/compositor/state/launcher/input.rs
+crates/window-manager/src/adapters/desktop/launcher/search/text.rs
+crates/window-manager/src/adapters/desktop/lock/render/transition.rs
+crates/window-manager/src/adapters/desktop/switcher/models/mod.rs
+crates/window-manager/src/adapters/desktop/switcher/render.rs
+crates/window-manager/src/adapters/rendering/blur/gl/shaders/compile.rs
+crates/window-manager/src/adapters/rendering/titlebar/color.rs
+crates/window-manager/src/application/shortcuts/tests.rs

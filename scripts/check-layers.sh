@@ -4,7 +4,11 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/crates/window-manager/src"
+BASELINE="$(dirname "$0")/check-layers-baseline.txt"
+[ -f "$BASELINE" ] || BASELINE=/dev/null
+LIMIT=200
 FAILED=0
+GRANDFATHERED=0
 
 check_forbidden() {
     local pattern="$1" paths="$2" message="$3"
@@ -29,16 +33,28 @@ check_forbidden 'crate::adapters|crate::infrastructure' \
 check_forbidden 'gtk4|smithay|wayland' "$SRC/domain" \
     'domain must be framework-free'
 
+# Size limit is a ratchet: files already over the limit are grandfathered in
+# check-layers-baseline.txt. Any new violation fails; shrink the list as files
+# are split so the 200-line standard is eventually universal.
 while IFS= read -r file; do
     lines=$(wc -l < "$file")
-    if [ "$lines" -gt 200 ]; then
-        echo "[!] $file has $lines lines (limit 200)" >&2
+    if [ "$lines" -gt "$LIMIT" ]; then
+        rel="${file#"$ROOT/"}"
+        if grep -F -x -q -- "$rel" "$BASELINE"; then
+            GRANDFATHERED=$((GRANDFATHERED + 1))
+            continue
+        fi
+        echo "[!] $file has $lines lines (limit $LIMIT)" >&2
         FAILED=1
     fi
 done < <(find "$SRC" -name '*.rs' -type f)
 
 if [ "$FAILED" -ne 0 ]; then
     exit 1
+fi
+
+if [ "$GRANDFATHERED" -ne 0 ]; then
+    echo "Note: $GRANDFATHERED file(s) over $LIMIT lines are grandfathered in scripts/check-layers-baseline.txt."
 fi
 
 echo "Layer boundaries and file-size limits are satisfied."

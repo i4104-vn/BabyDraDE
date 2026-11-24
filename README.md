@@ -28,6 +28,21 @@ reload within 2 seconds.
 The full config layout (main `babydra.conf` plus split files in `configs/`) is
 documented in [docs/configuration.md](docs/configuration.md).
 
+## Development
+
+CI runs on every push and pull request (`.github/workflows/ci.yml`) and checks
+layer boundaries, formatting, a full build, tests and clippy. Reproduce locally:
+
+    scripts/check-layers.sh
+    cargo fmt --all -- --check
+    cargo check --workspace --all-targets
+    cargo test --workspace
+    cargo clippy --workspace --all-targets -- -D warnings
+
+Layer and module rules are summarized in [docs/LAYERS.md](docs/LAYERS.md), with
+more detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
 ## Clipboard
 
 `Ctrl+C`, `Ctrl+X` and `Ctrl+V` are always delivered to the focused application,
