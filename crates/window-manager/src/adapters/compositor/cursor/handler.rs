@@ -1,94 +1,15 @@
 use std::collections::HashMap;
 
 use smithay::{
-    backend::{
-        allocator::Fourcc,
-        renderer::{
-            element::{
-                memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
-                Kind,
-            },
-            glow::GlowRenderer,
-        },
-    },
+    backend::{allocator::Fourcc, renderer::element::memory::MemoryRenderBuffer},
     input::pointer::CursorIcon,
-    utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Transform},
+    utils::{Buffer, Point, Rectangle, Transform},
 };
 
 use services::theme::cursor::{load_cursor_icon, CursorImage};
 
-use crate::adapters::rendering::CustomRenderElements;
 use super::data::{CURSOR_HEIGHT, CURSOR_PIXELS, CURSOR_WIDTH};
-
-/// Icons loaded up front so switching shapes never stalls a frame.
-const PRELOADED_ICONS: &[CursorIcon] = &[
-    CursorIcon::Default,
-    CursorIcon::ContextMenu,
-    CursorIcon::Help,
-    CursorIcon::Pointer,
-    CursorIcon::Progress,
-    CursorIcon::Wait,
-    CursorIcon::Cell,
-    CursorIcon::Crosshair,
-    CursorIcon::Text,
-    CursorIcon::VerticalText,
-    CursorIcon::Alias,
-    CursorIcon::Copy,
-    CursorIcon::Move,
-    CursorIcon::NoDrop,
-    CursorIcon::NotAllowed,
-    CursorIcon::Grab,
-    CursorIcon::Grabbing,
-    CursorIcon::EResize,
-    CursorIcon::NResize,
-    CursorIcon::NeResize,
-    CursorIcon::NwResize,
-    CursorIcon::SResize,
-    CursorIcon::SeResize,
-    CursorIcon::SwResize,
-    CursorIcon::WResize,
-    CursorIcon::EwResize,
-    CursorIcon::NsResize,
-    CursorIcon::NeswResize,
-    CursorIcon::NwseResize,
-    CursorIcon::ColResize,
-    CursorIcon::RowResize,
-    CursorIcon::AllScroll,
-    CursorIcon::ZoomIn,
-    CursorIcon::ZoomOut,
-    CursorIcon::DndAsk,
-    CursorIcon::AllResize,
-];
-
-/// A decoded theme image uploaded into a renderable memory buffer.
-struct LoadedCursor {
-    buffer: MemoryRenderBuffer,
-    /// Position of the pointer tip inside the image, in buffer pixels.
-    hotspot: Point<i32, Physical>,
-}
-
-/// Software cursor drawn by the compositor from a configurable theme.
-///
-/// Images for every cursor role (arrow, text, wait, resize, ...) are decoded
-/// by `services` — Xcursor or PNG, with no GTK involved — and cached as
-/// [`MemoryRenderBuffer`]s. The active image follows the last cursor requested
-/// by a Wayland client, with compositor-side overrides while moving or
-/// resizing windows.
-pub(crate) struct Cursor {
-    theme: String,
-    size: u32,
-    hotspot_x: u32,
-    hotspot_y: u32,
-    cache: HashMap<CursorIcon, LoadedCursor>,
-    fallback: LoadedCursor,
-    current: CursorIcon,
-}
-
-impl Default for Cursor {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+use super::models::{Cursor, LoadedCursor, PRELOADED_ICONS};
 
 impl Cursor {
     /// Builds the cursor cache from the theme selected in `configs/cursor.toml`.
@@ -188,28 +109,5 @@ impl Cursor {
         }
         self.current = icon;
         self.ensure_loaded(icon);
-    }
-
-    pub(crate) fn element(
-        &self,
-        renderer: &mut GlowRenderer,
-        pos: Point<f64, Logical>,
-        scale: Scale<f64>,
-    ) -> Option<CustomRenderElements> {
-        let cursor = self.cache.get(&self.current).unwrap_or(&self.fallback);
-
-        // Align the image's hotspot (not its top-left corner) with the pointer.
-        let phys_pos = pos.to_physical_precise_round(scale) - cursor.hotspot;
-        MemoryRenderBufferRenderElement::from_buffer(
-            renderer,
-            phys_pos.to_f64(),
-            &cursor.buffer,
-            None,
-            None,
-            None,
-            Kind::Cursor,
-        )
-        .ok()
-        .map(CustomRenderElements::Memory)
     }
 }
