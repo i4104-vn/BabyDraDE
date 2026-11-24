@@ -1,5 +1,6 @@
 //! items helpers.
 
+use super::models::{wire_row_hover};
 use super::*;
 
 impl ContextMenu {

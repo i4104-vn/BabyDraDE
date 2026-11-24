@@ -1,5 +1,6 @@
 //! widget helpers.
 
+use super::models::{notify_visibility, wire_row_hover};
 use super::*;
 
 impl ContextMenu {
