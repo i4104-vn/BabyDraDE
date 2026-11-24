@@ -1,5 +1,6 @@
 //! Sensor discovery and transform calculation helpers.
 
+use super::models::{AutoRotate, Sensor};
 use super::*;
 
 pub(super) fn baseline_transform(data: &CalloopData) -> Transform {
