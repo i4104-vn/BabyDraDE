@@ -4,11 +4,11 @@ use super::*;
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) struct Orientation(u8);
+pub(super) struct Orientation(pub(super) u8);
 
 impl Orientation {
     /// Dominant gravity axis: Y down, X right, Y up, X left.
-    fn from_gravity(x: f64, y: f64) -> Option<Self> {
+    pub(super) fn from_gravity(x: f64, y: f64) -> Option<Self> {
         let magnitude = x.hypot(y);
         if magnitude < 0.35 {
             return None; // laying flat: keep the current orientation
@@ -20,7 +20,7 @@ impl Orientation {
         }
     }
 
-    fn steps_from(self, baseline: Self) -> u8 {
+    pub(super) fn steps_from(self, baseline: Self) -> u8 {
         (self.0 + 4 - baseline.0) % 4
     }
 }

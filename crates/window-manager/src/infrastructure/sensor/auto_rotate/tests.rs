@@ -1,3 +1,5 @@
+use super::models::Orientation;
+
 use super::*;
 
 #[test]

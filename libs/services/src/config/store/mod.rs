@@ -37,6 +37,8 @@ mod sections;
 mod tests;
 
 pub(crate) use io::invalidate_all;
+#[cfg(test)]
+pub(crate) use io::{read_doc, write_doc};
 pub use sections::{
     has_section, load_root, load_section, migrate_sections, save_root_preserving_unknown,
     save_section,

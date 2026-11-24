@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use super::super::config;
+use crate::adapters::rendering::blur::config;
 #[cfg(test)]
 use tracing::info;
 
@@ -92,7 +92,7 @@ impl BlurEngine {
 mod tests {
     use std::collections::HashMap;
 
-use super::super::config;
+use crate::adapters::rendering::blur::config;
 #[cfg(test)]
 use tracing::info;
 
