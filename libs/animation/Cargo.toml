@@ -7,6 +7,7 @@ authors.workspace = true
 description = "Frame-rate independent animation primitives shared by BabyDraDE UI and compositor"
 
 [dependencies]
+common = { path = "../common" }
 
 [lints]
 workspace = true

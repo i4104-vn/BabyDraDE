@@ -1,4 +1,4 @@
-//! Window geometry and decoration constants. Animation durations live in `animation`.
+//! Window geometry and decoration constants. Animation durations live in `common::constants::animation`.
 
 /// Default window corner radius in pixels (floating / normal state).
 pub const CORNER_RADIUS: f64 = 14.0;
