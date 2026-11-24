@@ -1,61 +1,47 @@
-# Kiến Trúc & Phân Tầng (Clean Architecture — Rust)
+# Architecture & Layering
 
-Tài liệu này định nghĩa sơ đồ phân tầng cứng (hard layers) cho mọi crate trong dự án.
+Defines the dependency rules and structure for BabyDraDE crates.
 
----
-
-## 1. Quy Tắc Phân Tầng (Layer Rules)
+## 1. Layer Rules
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  composition/     Khởi tạo app, wiring, main.rs         │  ← Có thể import TẤT CẢ
-├─────────────────────────────────────────────────────────┤
-│  infrastructure/  File I/O, D-Bus, Wayland backends      │  ← Import: application, domain
-├─────────────────────────────────────────────────────────┤
-│  adapters/        GTK4 widgets, event translators        │  ← Import: application, domain
-├─────────────────────────────────────────────────────────┤
-│  application/     Use cases, state machines, commands    │  ← Import: domain ONLY
-├─────────────────────────────────────────────────────────┤
-│  domain/          Entities, value objects, pure logic    │  ← Import: NOTHING (stdlib only)
-└─────────────────────────────────────────────────────────┘
+composition/     -> Bootstrap, wiring, main.rs (imports all)
+infrastructure/  -> I/O, D-Bus, Wayland backends (imports application, domain)
+adapters/        -> GTK4 widgets, translators (imports application, domain)
+application/     -> Use cases, state machines (imports domain only)
+domain/          -> Pure entities, logic (stdlib only, imports nothing)
 ```
 
-**Quy tắc sắt đá (Hard rules)**:
-- Tầng trong **không bao giờ** import tầng ngoài.
-- `domain/` không được chứa code liên quan đến GTK4, Smithay, hay I/O.
-- `adapters/` không được gọi trực tiếp vào `infrastructure/`.
+Rules:
+- Inward dependencies only. Inner layers never import outer layers.
+- `domain/` must have no GTK4, Smithay, or I/O dependencies.
+- `adapters/` must not directly call `infrastructure/`.
 
----
-
-## 2. Cấu Trúc File Tiêu Chuẩn
+## 2. File Layout
 
 ```text
 src/
 ├── domain/
-│   ├── mod.rs             # re-export công khai
-│   ├── entities.rs        # Struct thuần dữ liệu
-│   └── value_objects.rs   # Newtypes, enums, invariants
+│   ├── mod.rs
+│   ├── entities.rs
+│   └── value_objects.rs
 ├── application/
 │   ├── mod.rs
-│   ├── use_cases.rs       # Logic nghiệp vụ, state transitions
-│   └── ports.rs           # Trait interface (dependency inversion)
+│   ├── use_cases.rs
+│   └── ports.rs
 ├── adapters/
 │   ├── mod.rs
-│   ├── ui/                # GTK4 widgets
-│   └── input_handler.rs   # Chuyển đổi input events → domain types
+│   ├── ui/
+│   └── input_handler.rs
 ├── infrastructure/
 │   ├── mod.rs
-│   └── config_loader.rs   # File I/O, D-Bus, backends
+│   └── config_loader.rs
 └── composition/
-    └── mod.rs             # Wiring, DI, bootstrap
+    └── mod.rs
 ```
 
----
+## 3. Module Rules
 
-## 3. Quy Tắc Tổ Chức Module
-
-- Mỗi module chỉ export qua `mod.rs` — không export trực tiếp từ file con ra ngoài crate.
-- Giới hạn tối đa **200 dòng/file**; vượt quá → tách sub-module.
-- Mỗi thư mục phải có `mod.rs` hoặc `lib.rs`; không để file lơ lửng ngoài module tree.
-- Sử dụng `pub(crate)` thay vì `pub` cho các item chỉ dùng nội bộ crate.
-
+- Re-export items only through `mod.rs`.
+- Maximum 200 lines per file. Split if larger.
+- Use `pub(crate)` by default; avoid public exposure when unnecessary.

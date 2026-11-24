@@ -1,57 +1,68 @@
 ---
 name: desktop-skill
 description: >-
-  Kỹ năng phát triển desktop components cho BabyDraDE bằng Rust/GTK4.
-  Kích hoạt khi người dùng yêu cầu: tạo mới component, refactor code, tổ chức cấu trúc module,
-  tối ưu codebase, dọn dẹp dead code, hoặc áp dụng nguyên tắc SOLID/Clean Architecture.
+  Desktop component and module development for BabyDraDE in Rust/GTK4.
+  Activate when creating components or modules, refactoring, enforcing architecture,
+  structuring animations, writing meaningful tests, or cleaning dead code.
 ---
 
-# Desktop Development Skill — BabyDraDE
+# Desktop Development Skill
 
-Skill này đảm bảo mọi thao tác viết code Rust trong dự án đều tuân thủ nguyên tắc **phân tầng sạch, SOLID, không trùng lặp, dễ mở rộng** và **code được dọn dẹp sau mỗi phiên làm việc**.
+Enforces layered clean architecture, SOLID principles, DRY, uniform module structure, unified animation drivers, purposeful testing, and automatic post-task cleanup in Rust.
 
----
+## References
 
-## Tài Liệu Tham Khảo
+- Meaningful testing rules: [testing-rules.md](./references/testing-rules.md)
+- Post-refactor checklist & library extractions: [post-refactor-checklist.md](./references/post-refactor-checklist.md)
+- Module layout & file naming: [file-naming-structure.md](./references/file-naming-structure.md)
+- Unified animation architecture: [animation-architecture.md](./references/animation-architecture.md)
+- Architecture & layers: [architecture.md](./references/architecture.md)
+- SOLID & anti-bloat: [solid-guidelines.md](./references/solid-guidelines.md)
+- Component rules: [component-design.md](./references/component-design.md)
 
-- **Kiến trúc & cấu trúc phân tầng**: [architecture.md](./references/architecture.md)
-- **Quy tắc SOLID & chống code thừa**: [solid-guidelines.md](./references/solid-guidelines.md)
-- **Quy tắc thiết kế component**: [component-design.md](./references/component-design.md)
+## Workflow
 
----
+### 1. Pre-Implementation
+- Identify target layer (`domain`, `application`, `adapters`, `infrastructure`, `composition`).
+- Check existing libraries in `libs/` (`ui-kit`, `context`, `services`, `common`, `animation`) before writing new code.
+- Apply standardized file layouts:
+  - Non-UI Module: `mod.rs`, `context.rs`, `handler.rs`, `models/`.
+  - UI Module: `mod.rs`, `context.rs`, `handler.rs`, `render.rs`, `render/`, `models/`.
+  - Animation Module: `mod.rs`, `handler.rs`, `render.rs`.
 
-## Quy Trình Mỗi Lần Viết Code
+### 2. Implementation
+- Module File Roles:
+  - `mod.rs`: exports and facades only.
+  - `handler.rs`: core business/event/math logic.
+  - `context.rs`: bundled parameters and context methods.
+  - `models/`: all structs, traits, and implementations.
+  - `render.rs` & `render/`: assemble sub-views (UI modules only).
+- Naming: Function names 1-3 words, concise `<verb>_<noun>`.
+- Documentation: Every function must have standard Rust doc comments (`///`) with purpose, `# Arguments`, and `# Returns`.
+- No Pass-Through Functions: Eliminate wrappers that only forward arguments.
 
-### 1 — Trước khi viết code
+### 3. Purposeful Testing
+Follow [testing-rules.md](./references/testing-rules.md):
+- Test real logic, calculations, state transitions, edge cases, and error branches.
+- Strictly forbidden: Trivial getter/setter tests, constructor mapping checks, and dummy UI instantiation tests.
 
-1. **Xác định tầng**: Xác định rõ file mới thuộc tầng nào (xem [architecture.md](./references/architecture.md)).
-2. **Kiểm tra trùng lặp**: Tìm kiếm logic tương tự đã tồn tại trước khi tạo hàm/struct mới. Nếu có, tái sử dụng hoặc extract thành trait chung.
-3. **Thiết kế interface trước**: Viết trait/signature của public API trước, sau đó mới viết implementation.
+### 4. Post-Implementation Refactoring & Cleanup
+Follow [post-refactor-checklist.md](./references/post-refactor-checklist.md) to extract shared elements:
+- Shared Contexts (> 3 params or multi-module use) -> `libs/context/`.
+- Reusable UI widgets & renderers -> `libs/ui-kit/`.
+- System calls, D-Bus, device integrations -> `libs/services/`.
+- Constants and global enums -> `libs/common/`.
+- Animation math & effects -> `libs/animation/`.
 
-### 2 — Trong khi viết code
-
-- Mỗi struct/function phải có **một trách nhiệm duy nhất** (SRP).
-- Mỗi module **không được vượt quá 200 dòng**; nếu vượt → split thành sub-module.
-- Logic tái sử dụng **phải được đặt vào trait** hoặc hàm helper trong `libs/`.
-- Không clone/copy logic từ nơi khác; luôn extract thành abstraction dùng chung.
-- Áp dụng quy chuẩn từ [solid-guidelines.md](./references/solid-guidelines.md).
-
-### 3 — Dọn dẹp bắt buộc sau mỗi phiên
-
-Sau khi hoàn tất tác vụ, AI **bắt buộc** thực hiện các bước sau:
+Run validation:
 
 ```powershell
-# 1. Kiểm tra warnings và lỗi
-cargo check 2>&1
-
-# 2. Phân tích và loại bỏ dead code, unused imports
-cargo clippy -- -W clippy::all -W clippy::pedantic 2>&1
+cargo test --workspace
+cargo check
+cargo clippy -- -D warnings
 ```
 
-Sau khi chạy, AI phải:
-
-- **Xóa** mọi `use` import không dùng đến.
-- **Xóa** mọi hàm/biến/constant khai báo nhưng không dùng (`#[allow(dead_code)]` chỉ là tạm thời).
-- **Flatten** các wrapper không cần thiết (nếu một struct chỉ bọc một field, cân nhắc bỏ wrapper).
-- **Merge** các function/closure trùng lặp vào một chỗ chung.
-- **Chuyển toàn bộ** các use lên đầu file, ko chứa trong code.
+Required actions:
+- Verify extractions to `libs/` are completed.
+- Remove duplicate structs, unused imports, and dead code.
+- Report all tested, refactored, and cleaned items.

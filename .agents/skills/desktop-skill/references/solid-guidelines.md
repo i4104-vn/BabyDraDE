@@ -1,109 +1,70 @@
-# Quy Tắc SOLID & Chống Code Thừa (Rust)
+# SOLID & Anti-Bloat Guidelines
 
----
+## 1. SOLID in Rust
 
-## 1. SOLID Áp Dụng Cho Rust
+### S - Single Responsibility
+- 1 purpose per struct or function.
+- If a function exceeds 30 lines or a struct exceeds 7 fields, split it.
 
-### S — Single Responsibility (SRP)
-- Mỗi struct/module chỉ làm **một việc** duy nhất.
-- Dấu hiệu vi phạm: struct có field không liên quan nhau, function dài hơn 30 dòng.
-- **Fix**: Tách thành struct nhỏ hơn hoặc extract hàm helper `fn`.
+### O - Open/Closed
+- Extend functionality by implementing traits, not modifying existing match branches.
+- Use generics or trait objects instead of concrete type branching.
 
-### O — Open/Closed (OCP)
-- Mở rộng bằng cách **thêm impl mới cho trait**, không sửa code cũ.
-- Dùng trait objects (`dyn Trait`) hoặc generics thay vì `match` phân nhánh theo loại.
+### L - Liskov Substitution
+- All trait implementations must fulfill the full trait contract.
+- Never use `unimplemented!()` or `todo!()` in production paths.
 
-```rust
-// ❌ Vi phạm OCP — phải sửa match mỗi khi thêm loại mới
-fn render(widget: WidgetKind) {
-    match widget {
-        WidgetKind::Button => { /* ... */ }
-        WidgetKind::Label  => { /* ... */ }
-    }
-}
+### I - Interface Segregation
+- Keep traits small and focused.
+- Split multi-method traits if consumers only need subsets of behavior.
 
-// ✅ Đúng — thêm loại mới chỉ cần impl thêm
-trait Renderable { fn render(&self); }
-fn render(widget: &dyn Renderable) { widget.render(); }
-```
+### D - Dependency Inversion
+- Depend on abstractions (traits), not concrete types.
+- Inject dependencies via constructors or generic bounds.
 
-### L — Liskov Substitution (LSP)
-- Mọi impl của trait phải thực sự thực hiện đúng contract của trait đó.
-- Không dùng `unimplemented!()` hay `todo!()` trong production code.
+## 2. Function Rules
 
-### I — Interface Segregation (ISP)
-- Trait phải nhỏ và tập trung. Nếu implementor buộc phải để trống một method của trait → trait đó cần tách.
+### Concise & Direct Naming
+- 1 to 3 words maximum. Focus directly on the core action.
+- Pattern: `<verb>_<noun>` (e.g., `update_bounds()`, `render_border()`).
+- Omit redundant context already clear from the struct or module (e.g., use `window.title()` instead of `window.get_current_active_window_title()`, `spring.step()` instead of `spring.step_physics_simulation()`).
 
-```rust
-// ❌ Trait quá lớn
-trait Widget { fn render(&self); fn handle_click(&mut self); fn serialize(&self) -> Vec<u8>; }
+### No Pass-Through / Forwarding Functions
+- A function must contain real logic.
+- Do not create a function that only calls another function with the same or forwarded arguments.
+- If `foo()` only calls `bar()`, delete `foo()` and call `bar()` directly at the caller site.
 
-// ✅ Tách nhỏ theo trách nhiệm
-trait Renderable  { fn render(&self); }
-trait Interactive { fn handle_click(&mut self); }
-trait Serializable{ fn serialize(&self) -> Vec<u8>; }
-```
+### Context Structs for Many Parameters
+- When a function needs > 3 parameters, create a dedicated Context struct (e.g., `RenderContext`, `ActionContext`).
+- Implement helper methods directly on the Context struct so it can be reused across modules.
 
-### D — Dependency Inversion (DIP)
-- Module cấp cao phụ thuộc vào **trait (abstraction)**, không phụ thuộc vào concrete struct.
-- Inject dependency qua constructor hoặc generic parameter.
+### Mandatory Rustdoc Documentation
+- Every function must have documentation on top using `///`.
+- Document purpose, `# Arguments`, and `# Returns` (or `# Errors` if returning `Result`).
 
-```rust
-// ❌ Phụ thuộc cứng vào concrete type
-struct App { db: PostgresDb }
+## 3. Code Smells & Fixes
 
-// ✅ Phụ thuộc vào trait
-struct App<S: Storage> { db: S }
-```
-
----
-
-## 2. Chống Code Thừa (DRY — Don't Repeat Yourself)
-
-### Nhận diện code thừa (Code Smell Checklist)
-- Cùng một đoạn logic xuất hiện > 2 lần ở các nơi khác nhau.
-- Nhiều struct có cùng tập field (candidate để extract shared base/trait).
-- Nhiều `match` phân nhánh cùng một enum ở nhiều nơi.
-
-### Hành động khắc phục
-| Code Smell | Fix |
+| Smell | Action |
 | :--- | :--- |
-| Logic lặp > 2 lần | Extract thành `fn` hoặc method trên trait |
-| Nhiều struct cùng field | Extract trait hoặc dùng composition (newtype) |
-| Nhiều `match` cùng enum | Chuyển thành method của enum |
-| Cùng pattern khởi tạo | Extract `fn new_xxx() -> T` builder/constructor |
+| Long function name (> 3 words, redundant context) | Shorten to focused `<verb>_<noun>` or `<verb>` |
+| Logic duplicated >= 2 times | Extract into helper function or shared trait |
+| Function only forwards arguments | Delete wrapper function and call target directly |
+| Function has > 3 parameters | Package into a Context struct and `impl` methods on it |
+| Missing rustdoc header | Add `///` docs describing purpose, arguments, and returns |
+| Structs sharing same fields | Extract trait or compose using newtypes |
+| Identical match branches | Move branch logic into an enum method |
 
----
+## 4. Limits & Standards
 
-## 3. Quy Tắc Viết Hàm & Struct Sạch
+- Functions: <= 30 lines, <= 3 arguments (otherwise use Context), name <= 3 words.
+- Structs: <= 7 fields.
+- Files: <= 200 lines.
+- Use `Option`/`Result` instead of sentinel values (-1, empty string).
+- Use enums instead of boolean flag parameters.
+- Define named constants instead of hardcoded numbers.
 
-```
-Hàm:  ≤ 30 dòng  |  ≤ 3 tham số  |  1 trách nhiệm
-Struct: ≤ 7 fields  |  nếu nhiều hơn → tách thành sub-struct
-File:  ≤ 200 dòng  |  nếu vượt → tách sub-module
-```
+## 5. Error Handling & Logs
 
-- **Ưu tiên `Option` / `Result`** thay vì sentinel value (`-1`, `""`, `null`).
-- **Tránh boolean trap**: Thay `fn set(enabled: bool)` bằng enum `fn set(state: EnableState)`.
-- **Tránh magic number**: Đặt tên constant `const BORDER_RADIUS: f64 = 14.0;` thay vì hardcode.
-
----
-
-## 4. Quy Chuẩn Xử Lý Lỗi
-
-```rust
-// Trong libs/ — dùng thiserror, explicit error types
-#[derive(Debug, thiserror::Error)]
-pub enum AppError {
-    #[error("Config load failed: {0}")]
-    Config(String),
-    #[error("D-Bus unavailable")]
-    DBus,
-}
-
-// KHÔNG dùng unwrap()/expect() trong runtime path
-// KHÔNG dùng anyhow trong libs/ (chỉ dùng ở binary crate nếu cần)
-// Dùng tracing cho log context
-tracing::error!(%err, "Fatal in event loop");
-```
-
+- In `libs/`: Use `thiserror`. Define explicit error enums.
+- Never use `unwrap()` or `expect()` in runtime paths.
+- Use `tracing` macros (`info!`, `warn!`, `error!`) for structured logging.
