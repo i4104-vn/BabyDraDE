@@ -2591,6 +2591,7 @@ dependencies = [
  "common",
  "gdk-pixbuf",
  "gtk4",
+ "gtk4-layer-shell",
  "serde_json",
  "services",
  "tracing",
