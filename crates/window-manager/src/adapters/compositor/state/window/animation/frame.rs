@@ -88,7 +88,7 @@ pub(crate) fn window_animation_frame(window: &Window) -> WindowVisualState {
 
 #[cfg(test)]
 mod tests {
-    use super::super::state_data::WindowStateData;
+    use crate::adapters::compositor::state::window::state_data::WindowStateData;
     use super::*;
     use std::time::Duration;
 
