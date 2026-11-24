@@ -47,5 +47,6 @@ impl Default for BlurEngine {
 }
 
 
+mod matching;
 mod render;
 mod rules;
