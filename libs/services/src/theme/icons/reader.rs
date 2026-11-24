@@ -1,6 +1,10 @@
 use std::fs;
 use std::path::PathBuf;
 
+/// Lists icon theme directories in standard search paths.
+///
+/// # Returns
+/// Sorted, deduplicated icon theme names.
 pub fn list_available_icon_themes() -> Vec<String> {
     let mut themes = Vec::new();
     let search_paths = get_icon_search_paths();
@@ -27,6 +31,13 @@ pub fn list_available_icon_themes() -> Vec<String> {
     themes
 }
 
+/// Locates the directory containing an icon theme.
+///
+/// # Arguments
+/// * `name` - Icon theme name.
+///
+/// # Returns
+/// The theme directory, or `None` if not found.
 pub fn find_icon_theme_path(name: &str) -> Option<PathBuf> {
     let search_paths = get_icon_search_paths();
     for base in search_paths {

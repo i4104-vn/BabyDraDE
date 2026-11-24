@@ -2,6 +2,7 @@
 
 use std::process::Command;
 
+/// Audio control utility available on the system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AudioBackend {
     Wpctl,
@@ -9,6 +10,10 @@ pub enum AudioBackend {
     Amixer,
 }
 
+/// Detects the first available audio control utility.
+///
+/// # Returns
+/// The detected [`AudioBackend`].
 pub fn detect_audio_backend() -> AudioBackend {
     match true {
         _ if Command::new("wpctl").arg("--version").output().is_ok() => AudioBackend::Wpctl,
@@ -17,6 +22,10 @@ pub fn detect_audio_backend() -> AudioBackend {
     }
 }
 
+/// Reads current volume percentage and mute state.
+///
+/// # Returns
+/// `(volume_percent, is_muted)`; defaults to `(80.0, false)`.
 pub fn get_volume_state() -> (f64, bool) {
     let backend = detect_audio_backend();
     match backend {
@@ -64,6 +73,10 @@ pub fn get_volume_state() -> (f64, bool) {
     }
 }
 
+/// Sets the default output volume.
+///
+/// # Arguments
+/// * `pct` - Target volume percentage (clamped by the backend).
 pub fn set_volume(pct: f64) {
     let clamped = pct.clamp(0.0, 150.0);
     match detect_audio_backend() {
@@ -94,6 +107,10 @@ pub fn set_volume(pct: f64) {
     }
 }
 
+/// Sets or clears the default output mute flag.
+///
+/// # Arguments
+/// * `muted` - `true` to mute, `false` to unmute.
 pub fn set_muted(muted: bool) {
     let flag = if muted { "1" } else { "0" };
     match detect_audio_backend() {
@@ -115,6 +132,10 @@ pub fn set_muted(muted: bool) {
     }
 }
 
+/// Reads the display name of the default audio output.
+///
+/// # Returns
+/// The output name, or `None` when it cannot be determined.
 pub fn get_active_output_name() -> Option<String> {
     if let Ok(output) = Command::new("wpctl").args(["status"]).output() {
         let stdout = String::from_utf8_lossy(&output.stdout);

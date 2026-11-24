@@ -1,4 +1,6 @@
+/// GTK4 CSS file discovery.
 pub mod css;
+/// GTK settings.ini parsing.
 pub mod reader;
 
 pub use css::{find_gtk4_css_path, read_gtk4_css};

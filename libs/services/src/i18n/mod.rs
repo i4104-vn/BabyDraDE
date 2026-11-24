@@ -4,6 +4,9 @@
 
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
+
+mod locales;
+use locales::{load_en_map, load_vi_map};
 use std::sync::{mpsc, OnceLock, RwLock};
 
 /// Resolves the locale config file path (~/.babydra/locale.conf or fallback ~/.config/locale.conf).
@@ -59,9 +62,26 @@ static EN_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
 static VI_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
 
 /// Retrieves the current active system locale ("vi" or "en").
+///
+/// A poisoned lock is treated as non-fatal: a warning is logged and the
+/// default locale is returned so translation never crashes the UI.
+///
+/// # Returns
+/// The active locale code (`"vi"` or `"en"`).
 pub fn get_locale() -> String {
     let lock = CURRENT_LOCALE.get_or_init(|| RwLock::new(default_locale()));
-    lock.read().unwrap().clone()
+    read_locale(lock)
+}
+
+/// Reads a locale lock, falling back to the default locale if it is poisoned.
+fn read_locale(lock: &RwLock<String>) -> String {
+    match lock.read() {
+        Ok(guard) => guard.clone(),
+        Err(_) => {
+            tracing::warn!("locale lock poisoned; using default locale");
+            default_locale()
+        }
+    }
 }
 
 /// Sets the current active system locale.
@@ -144,38 +164,6 @@ pub fn watch_locale_changes() -> mpsc::Receiver<String> {
         .ok();
 
     rx
-}
-
-fn parse_locale_map(json_str: &str, target: &mut HashMap<String, String>) {
-    if let Ok(map) = serde_json::from_str::<HashMap<String, String>>(json_str) {
-        target.extend(map);
-    }
-}
-
-fn load_en_map() -> HashMap<String, String> {
-    let mut map = HashMap::new();
-    parse_locale_map(include_str!("locales/common/en.json"), &mut map);
-    parse_locale_map(include_str!("locales/launcher/en.json"), &mut map);
-    parse_locale_map(include_str!("locales/settings/en.json"), &mut map);
-    parse_locale_map(include_str!("locales/explore/en.json"), &mut map);
-    parse_locale_map(include_str!("locales/greeter/en.json"), &mut map);
-    parse_locale_map(include_str!("locales/desktop/en.json"), &mut map);
-    parse_locale_map(include_str!("locales/recorder/en.json"), &mut map);
-    parse_locale_map(include_str!("locales/file_dialog/en.json"), &mut map);
-    map
-}
-
-fn load_vi_map() -> HashMap<String, String> {
-    let mut map = HashMap::new();
-    parse_locale_map(include_str!("locales/common/vi.json"), &mut map);
-    parse_locale_map(include_str!("locales/launcher/vi.json"), &mut map);
-    parse_locale_map(include_str!("locales/settings/vi.json"), &mut map);
-    parse_locale_map(include_str!("locales/explore/vi.json"), &mut map);
-    parse_locale_map(include_str!("locales/greeter/vi.json"), &mut map);
-    parse_locale_map(include_str!("locales/desktop/vi.json"), &mut map);
-    parse_locale_map(include_str!("locales/recorder/vi.json"), &mut map);
-    parse_locale_map(include_str!("locales/file_dialog/vi.json"), &mut map);
-    map
 }
 
 /// Translates a given key into the current active locale's string.

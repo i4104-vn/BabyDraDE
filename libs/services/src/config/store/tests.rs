@@ -41,6 +41,19 @@ fn section_roundtrip_preserves_other_sections() {
 }
 
 #[test]
+fn table_mut_rejects_non_table_document() {
+    let mut doc = toml::Value::Integer(42);
+    let err = table_mut(&mut doc).expect_err("scalar documents have no table");
+    assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
+}
+
+#[test]
+fn table_mut_accepts_table_document() {
+    let mut doc = empty_doc();
+    table_mut(&mut doc).expect("empty table is valid");
+}
+
+#[test]
 fn missing_section_returns_default() {
     let dir = tempfile::tempdir().expect("temp dir");
     let path = dir.path().join("missing.toml");

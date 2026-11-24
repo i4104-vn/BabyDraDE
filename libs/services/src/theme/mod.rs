@@ -1,6 +1,10 @@
+/// Cursor theme discovery.
 pub mod cursor;
+/// GTK settings and CSS discovery.
 pub mod gtk;
+/// Icon theme discovery.
 pub mod icons;
+/// GTK theme configuration model.
 pub mod model;
 
 pub use cursor::{
@@ -14,10 +18,15 @@ pub use gtk::{
 pub use icons::{find_icon_theme_path, get_icon_search_paths, list_available_icon_themes};
 pub use model::{DesktopTheme, GtkThemeConfig};
 
+/// Reads GTK theme settings from the user environment.
 #[derive(Debug, Clone, Default)]
 pub struct GtkThemeReader;
 
 impl GtkThemeReader {
+    /// Creates a GTK theme reader.
+    ///
+    /// # Returns
+    /// A reader instance.
     pub fn new() -> Self {
         Self
     }

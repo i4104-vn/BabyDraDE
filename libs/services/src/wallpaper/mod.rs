@@ -8,6 +8,7 @@ pub const DEFAULT_WALLPAPER_BYTES: &[u8] = include_bytes!(concat!(
     "/../../assets/wallpaper/wallpaper.jpg"
 ));
 
+/// Supported modes for fitting a wallpaper image to the screen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WallpaperMode {
     #[default]
@@ -16,6 +17,10 @@ pub enum WallpaperMode {
 }
 
 impl WallpaperMode {
+    /// Returns the mode identifier used by desktop settings.
+    ///
+    /// # Returns
+    /// One of `"fill"`, `"fit"`, `"stretch"`, `"center"`, `"tile"` or `"zoom"`.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Static => "static",
@@ -34,6 +39,10 @@ pub fn get_wallpaper_dir() -> PathBuf {
     crate::config::get_wallpaper_dir()
 }
 
+/// Reads the configured wallpaper path.
+///
+/// # Returns
+/// The wallpaper file path, or `None` when no wallpaper is configured.
 pub fn get_wallpaper() -> Option<PathBuf> {
     crate::config::invalidate_cache();
     let wallpaper = crate::config::load_wallpaper_config();

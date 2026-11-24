@@ -1,6 +1,7 @@
 use std::fs;
 use std::time::Instant;
 
+/// Per-interface network counters.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct InterfaceStats {
     pub name: String,
@@ -12,6 +13,7 @@ pub struct InterfaceStats {
     pub tx_errors: u64,
 }
 
+/// Aggregate network counters and computed speeds.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct NetworkInfo {
     pub total_rx_bytes: u64,
@@ -21,6 +23,7 @@ pub struct NetworkInfo {
     pub interfaces: Vec<InterfaceStats>,
 }
 
+/// Samples network counters from `/proc/net/dev`.
 #[derive(Debug, Clone)]
 pub struct NetworkReader {
     last_read_time: Option<Instant>,
@@ -34,6 +37,10 @@ impl Default for NetworkReader {
 }
 
 impl NetworkReader {
+    /// Creates a reader with an initialized counter baseline.
+    ///
+    /// # Returns
+    /// A network reader ready for sampling.
     pub fn new() -> Self {
         let mut reader = Self {
             last_read_time: None,
@@ -43,6 +50,10 @@ impl NetworkReader {
         reader
     }
 
+    /// Computes current traffic speeds from the previous sample.
+    ///
+    /// # Returns
+    /// Aggregate counters, per-interface stats and transfer speeds.
     pub fn read(&mut self) -> NetworkInfo {
         let interfaces = Self::parse_proc_net_dev().unwrap_or_default();
         let now = Instant::now();

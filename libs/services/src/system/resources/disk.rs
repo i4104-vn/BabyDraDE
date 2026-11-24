@@ -1,5 +1,6 @@
 use std::path::Path;
 
+/// Filesystem usage snapshot for a mount point.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct DiskInfo {
     pub mount_point: String,
@@ -10,20 +11,34 @@ pub struct DiskInfo {
     pub used_percent: f32,
 }
 
+/// Byte-to-gigabyte convenience conversions for disk readings.
 impl DiskInfo {
+    /// Returns total space in gibibytes.
+    ///
+    /// # Returns
+    /// `total_bytes` converted to GiB.
     pub fn total_gb(&self) -> f64 {
         self.total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
     }
 
+    /// Returns used space in gibibytes.
+    ///
+    /// # Returns
+    /// `used_bytes` converted to GiB.
     pub fn used_gb(&self) -> f64 {
         self.used_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
     }
 
+    /// Returns available space in gibibytes.
+    ///
+    /// # Returns
+    /// `available_bytes` converted to GiB.
     pub fn available_gb(&self) -> f64 {
         self.available_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
     }
 }
 
+/// Queries filesystem statistics for a configured mount point.
 #[derive(Debug, Clone)]
 pub struct DiskReader {
     mount_point: String,
@@ -36,18 +51,33 @@ impl Default for DiskReader {
 }
 
 impl DiskReader {
+    /// Creates a reader for the given mount point.
+    ///
+    /// # Arguments
+    /// * `mount_point` - Filesystem path to query.
     pub fn new(mount_point: &str) -> Self {
         Self {
             mount_point: mount_point.to_string(),
         }
     }
 
+    /// Reads statistics for the configured mount point.
+    ///
+    /// # Returns
+    /// Usage information, or `None` if the path is unavailable.
     pub fn read(&self) -> Option<DiskInfo> {
         Self::read_path(Path::new(&self.mount_point))
     }
 
     #[cfg(unix)]
     #[allow(clippy::unnecessary_cast)]
+    /// Queries filesystem statistics for an arbitrary path via `statvfs`.
+    ///
+    /// # Arguments
+    /// * `path` - Path on the filesystem to query.
+    ///
+    /// # Returns
+    /// Usage information, or `None` if the query fails.
     pub fn read_path(path: &Path) -> Option<DiskInfo> {
         use std::ffi::CString;
         use std::mem::MaybeUninit;
@@ -83,6 +113,13 @@ impl DiskReader {
         })
     }
 
+    /// Queries filesystem statistics for an arbitrary path (non-Unix stub).
+    ///
+    /// # Arguments
+    /// * `path` - Path on the filesystem to query.
+    ///
+    /// # Returns
+    /// Placeholder usage information.
     #[cfg(not(unix))]
     pub fn read_path(path: &Path) -> Option<DiskInfo> {
         Some(DiskInfo {

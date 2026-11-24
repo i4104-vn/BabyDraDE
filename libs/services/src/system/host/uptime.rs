@@ -1,5 +1,6 @@
 use std::fs;
 
+/// System uptime and hostname information.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UptimeInfo {
     pub uptime_seconds: u64,
@@ -7,14 +8,24 @@ pub struct UptimeInfo {
     pub hostname: String,
 }
 
+/// Reads system uptime and hostname from procfs.
 #[derive(Debug, Default, Clone)]
 pub struct UptimeReader;
 
+/// Provides uptime and hostname queries.
 impl UptimeReader {
+    /// Creates an uptime reader.
+    ///
+    /// # Returns
+    /// A stateless reader instance.
     pub fn new() -> Self {
         Self
     }
 
+    /// Reads uptime and hostname, falling back to defaults on failure.
+    ///
+    /// # Returns
+    /// Uptime in seconds, formatted duration and hostname.
     pub fn read(&self) -> UptimeInfo {
         let uptime_seconds = Self::read_uptime_seconds().unwrap_or(0);
         let formatted = Self::format_uptime(uptime_seconds);
@@ -52,6 +63,13 @@ impl UptimeReader {
         None
     }
 
+    /// Formats a duration in seconds as a compact, human-readable string.
+    ///
+    /// # Arguments
+    /// * `total_seconds` - Duration to format.
+    ///
+    /// # Returns
+    /// A string such as `"2d 3h 4m"`, `"3h 4m"` or `"4m"`.
     pub fn format_uptime(total_seconds: u64) -> String {
         let days = total_seconds / 86400;
         let hours = (total_seconds % 86400) / 3600;

@@ -1,25 +1,37 @@
 use std::fs;
 
+/// Temperature reading from a single thermal zone or hwmon sensor.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ThermalZone {
     pub name: String,
     pub temp_celsius: f32,
 }
 
+/// Aggregated thermal readings from all available sensors.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ThermalInfo {
     pub max_temp_celsius: Option<f32>,
     pub zones: Vec<ThermalZone>,
 }
 
+/// Reads thermal zones and hwmon sensors from sysfs.
 #[derive(Debug, Default, Clone)]
 pub struct ThermalReader;
 
+/// Collects system temperature readings.
 impl ThermalReader {
+    /// Creates a thermal reader.
+    ///
+    /// # Returns
+    /// A stateless reader instance.
     pub fn new() -> Self {
         Self
     }
 
+    /// Samples all thermal zones, falling back to hwmon when none exist.
+    ///
+    /// # Returns
+    /// Temperature readings and the hottest sensor value, if any.
     pub fn read(&self) -> ThermalInfo {
         let mut zones = Self::read_thermal_zones();
 

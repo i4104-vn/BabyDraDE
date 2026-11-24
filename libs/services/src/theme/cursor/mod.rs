@@ -1,5 +1,8 @@
+/// Xcursor image loading.
 pub mod loader;
+/// Cursor theme discovery.
 pub mod reader;
+/// Xcursor file parsing.
 pub mod xcursor;
 
 pub use cursor_icon::CursorIcon;

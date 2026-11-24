@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 
+/// Resolved cursor theme name, size and directory.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CursorThemeInfo {
     pub name: String,
@@ -8,6 +9,10 @@ pub struct CursorThemeInfo {
     pub path: Option<PathBuf>,
 }
 
+/// Resolves the active cursor theme from environment and GTK settings.
+///
+/// # Returns
+/// Name, size and optional path of the active cursor theme.
 pub fn read_active_cursor_theme() -> CursorThemeInfo {
     // 1. Check environment variables
     let env_name = std::env::var("XCURSOR_THEME")
@@ -30,6 +35,10 @@ pub fn read_active_cursor_theme() -> CursorThemeInfo {
     CursorThemeInfo { name, size, path }
 }
 
+/// Reads the default cursor theme name from `index.theme`.
+///
+/// # Returns
+/// The theme name, or `None` when unavailable.
 pub fn read_default_index_theme() -> Option<String> {
     let home = std::env::var("HOME").ok()?;
     let path = PathBuf::from(home)
@@ -54,6 +63,13 @@ pub fn read_default_index_theme() -> Option<String> {
     None
 }
 
+/// Locates the directory containing a cursor theme.
+///
+/// # Arguments
+/// * `name` - Cursor theme name.
+///
+/// # Returns
+/// The theme directory, or `None` if not found.
 pub fn find_cursor_theme_path(name: &str) -> Option<PathBuf> {
     let search_paths = get_icon_search_paths();
     for base in search_paths {
@@ -65,6 +81,10 @@ pub fn find_cursor_theme_path(name: &str) -> Option<PathBuf> {
     None
 }
 
+/// Lists cursor themes installed in standard search paths.
+///
+/// # Returns
+/// Sorted, deduplicated cursor theme names.
 pub fn list_available_cursor_themes() -> Vec<String> {
     let mut themes = Vec::new();
     let search_paths = get_icon_search_paths();

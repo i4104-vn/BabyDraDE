@@ -1,3 +1,4 @@
+/// GTK theme preferences gathered from settings.ini and gsettings.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GtkThemeConfig {
     pub theme_name: String,

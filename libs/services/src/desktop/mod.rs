@@ -4,6 +4,7 @@ pub use crate::config::{load_desktop_config, save_desktop_config};
 pub use crate::models::DesktopConfig;
 use std::path::PathBuf;
 
+/// Parsed `.desktop` application entry.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DesktopEntry {
     pub name: String,
@@ -12,6 +13,10 @@ pub struct DesktopEntry {
     pub is_dir: bool,
 }
 
+/// Scans standard application directories for `.desktop` files.
+///
+/// # Returns
+/// A list of parsed desktop entries, one per readable file.
 pub fn fetch_desktop_entries() -> Vec<DesktopEntry> {
     let mut entries = Vec::new();
     let desktop_dir = std::env::var("HOME")

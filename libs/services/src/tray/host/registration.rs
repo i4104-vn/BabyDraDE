@@ -35,13 +35,22 @@ pub(super) fn request_watcher_name(connection: &gio::DBusConnection) -> bool {
     }
 }
 
+/// Extracts the first D-Bus interface from parsed node info.
+pub(super) fn first_interface(
+    node: &gio::DBusNodeInfo,
+) -> Result<gio::DBusInterfaceInfo, glib::Error> {
+    node.interfaces().first().cloned().ok_or_else(|| {
+        tracing::warn!("watcher XML defines no D-Bus interface");
+        glib::Error::new(
+            glib::FileError::Failed,
+            "watcher XML defines no D-Bus interface",
+        )
+    })
+}
+
 pub(super) fn register_watcher(connection: &gio::DBusConnection) -> Result<(), glib::Error> {
     let node = gio::DBusNodeInfo::for_xml(WATCHER_XML)?;
-    let interface = node
-        .interfaces()
-        .first()
-        .cloned()
-        .expect("watcher XML defines one interface");
+    let interface = first_interface(&node)?;
 
     let host_registered = Arc::new(AtomicBool::new(true));
     let registered_for_method = host_registered.clone();
@@ -138,4 +147,3 @@ pub(super) fn normalize_identifier(sender: Option<&str>, identifier: &str) -> It
 
     (identifier.to_string(), "/StatusNotifierItem".to_string())
 }
-

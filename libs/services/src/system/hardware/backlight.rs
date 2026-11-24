@@ -2,6 +2,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+/// Brightness information for a backlight device.
+/// Brightness information for a backlight device.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BacklightInfo {
     pub device_name: String,
@@ -10,17 +12,37 @@ pub struct BacklightInfo {
     pub percent: u8,
 }
 
+/// Discovers and reads the system backlight device.
+/// Discovers and reads the system backlight device.
 #[derive(Debug, Default, Clone)]
 pub struct BacklightReader {
     device_path: Option<PathBuf>,
 }
 
+/// Reads and writes brightness through sysfs.
+/// Reads and writes brightness through sysfs.
 impl BacklightReader {
+    /// Creates a reader, probing `/sys/class/backlight` for a device.
+    ///
+    /// # Returns
+    /// A reader with the detected device cached, if any.
+    /// Creates a reader, probing `/sys/class/backlight` for a device.
+    ///
+    /// # Returns
+    /// A reader with the detected device cached, if any.
     pub fn new() -> Self {
         let device_path = Self::find_backlight_device();
         Self { device_path }
     }
 
+    /// Reads current brightness, re-probing if the cached device disappeared.
+    ///
+    /// # Returns
+    /// The brightness snapshot, or `None` when no readable device exists.
+    /// Reads current brightness, re-probing if the cached device disappeared.
+    ///
+    /// # Returns
+    /// The brightness snapshot, or `None` when no readable device exists.
     pub fn read(&mut self) -> Option<BacklightInfo> {
         let path = match self.device_path {
             Some(ref p) if p.exists() => p.clone(),
@@ -34,6 +56,22 @@ impl BacklightReader {
         Self::read_device(&path)
     }
 
+    /// Sets brightness to a percentage of the device maximum.
+    ///
+    /// # Arguments
+    /// * `target_percent` - Desired percentage, clamped to `0..=100`.
+    ///
+    /// # Errors
+    /// Returns an error when no device exists, sysfs cannot be read/written,
+    /// or `max_brightness` is zero.
+    /// Sets brightness to a percentage of the device maximum.
+    ///
+    /// # Arguments
+    /// * `target_percent` - Desired percentage, clamped to `0..=100`.
+    ///
+    /// # Errors
+    /// Returns an error when no device exists, sysfs cannot be read/written,
+    /// or `max_brightness` is zero.
     pub fn set_brightness_percent(&mut self, target_percent: u8) -> io::Result<()> {
         let path = match self.device_path {
             Some(ref p) if p.exists() => p.clone(),

@@ -1,3 +1,4 @@
+/// Network counter sampling.
 pub mod stats;
 
 pub use stats::{InterfaceStats, NetworkInfo, NetworkReader};
@@ -5,6 +6,7 @@ pub use stats::{InterfaceStats, NetworkInfo, NetworkReader};
 use std::fs;
 use std::process::Command;
 
+/// Kind of the active network connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActiveNetworkType {
     Wifi,
@@ -12,6 +14,7 @@ pub enum ActiveNetworkType {
     Disconnected,
 }
 
+/// Details of the active network interface.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ActiveNetworkInfo {
     pub network_type: ActiveNetworkType,
@@ -21,6 +24,13 @@ pub struct ActiveNetworkInfo {
     pub icon_name: String,
 }
 
+/// Formats a byte rate as a human-readable string.
+///
+/// # Arguments
+/// * `bytes_per_sec` - Transfer rate in bytes per second.
+///
+/// # Returns
+/// A string such as `"1.5 MB/s"`, `"512 KB/s"` or `"64 B/s"`.
 pub fn format_speed(bytes_per_sec: f64) -> String {
     match true {
         _ if bytes_per_sec >= 1_048_576.0 => {
@@ -31,6 +41,10 @@ pub fn format_speed(bytes_per_sec: f64) -> String {
     }
 }
 
+/// Detects the active network interface and its IP address.
+///
+/// # Returns
+/// Connection type, interface name, IP address and display icon.
 pub fn get_active_network_info() -> ActiveNetworkInfo {
     // Check interfaces in /sys/class/net
     let mut active_iface = None;

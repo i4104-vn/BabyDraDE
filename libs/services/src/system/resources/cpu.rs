@@ -1,5 +1,6 @@
 use std::fs;
 
+/// CPU usage snapshot with per-core breakdown.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct CpuInfo {
     pub usage_percent: f32,
@@ -14,6 +15,7 @@ struct CpuStatSnapshot {
     total: u64,
 }
 
+/// Samples CPU usage deltas from `/proc/stat`.
 #[derive(Debug, Clone)]
 pub struct CpuReader {
     last_overall: Option<CpuStatSnapshot>,
@@ -28,6 +30,10 @@ impl Default for CpuReader {
 }
 
 impl CpuReader {
+    /// Creates a reader and primes its usage baseline with an initial sample.
+    ///
+    /// # Returns
+    /// A CPU reader with detected core count and initialized snapshots.
     pub fn new() -> Self {
         let core_count = std::thread::available_parallelism()
             .map(|n| n.get())
@@ -44,6 +50,10 @@ impl CpuReader {
         reader
     }
 
+    /// Samples current CPU usage relative to the previous reading.
+    ///
+    /// # Returns
+    /// Usage percentages for the aggregate and each detected core.
     pub fn read(&mut self) -> CpuInfo {
         let (overall_stat, per_core_stats) = match Self::parse_proc_stat() {
             Some(res) => res,

@@ -26,28 +26,67 @@ fn load_from_disk() -> HashMap<String, (i32, i32)> {
         .unwrap_or_default()
 }
 
-/// Read all positions (zero-copy from cache, no disk I/O).
+/// Acquires the positions lock for reading, recovering from poisoning.
+fn read_map() -> std::sync::RwLockReadGuard<'static, HashMap<String, (i32, i32)>> {
+    match POSITIONS.read() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            tracing::warn!("desktop layout lock poisoned; recovering cached positions");
+            poisoned.into_inner()
+        }
+    }
+}
+
+/// Acquires the positions lock for writing, recovering from poisoning.
+fn write_map() -> std::sync::RwLockWriteGuard<'static, HashMap<String, (i32, i32)>> {
+    match POSITIONS.write() {
+        Ok(guard) => guard,
+        Err(poisoned) => {
+            tracing::warn!("desktop layout lock poisoned; recovering cached positions");
+            poisoned.into_inner()
+        }
+    }
+}
+
+/// Returns a snapshot of all cached icon positions.
+///
+/// # Returns
+/// A clone of the in-memory position map (no disk I/O).
 pub fn get_all_positions() -> HashMap<String, (i32, i32)> {
-    POSITIONS.read().unwrap().clone()
+    read_map().clone()
 }
 
-/// Read one position.
+/// Reads one icon's cached position.
+///
+/// # Arguments
+/// * `name` - Icon name to look up.
+///
+/// # Returns
+/// The stored `(x, y)` position, or `None` if the icon has no saved position.
 pub fn get_position(name: &str) -> Option<(i32, i32)> {
-    POSITIONS.read().unwrap().get(name).copied()
+    read_map().get(name).copied()
 }
 
-/// Set position — instant in-memory, marks dirty for flush.
+/// Sets one icon's position in memory and marks the cache dirty for flush.
+///
+/// # Arguments
+/// * `name` - Icon name.
+/// * `x` - Horizontal position.
+/// * `y` - Vertical position.
 pub fn set_position(name: String, x: i32, y: i32) {
-    let mut map = POSITIONS.write().unwrap();
+    let mut map = write_map();
     if map.get(&name) != Some(&(x, y)) {
         map.insert(name, (x, y));
         DIRTY.store(true, Ordering::Relaxed);
     }
 }
 
-/// Set multiple positions at once — single lock acquisition.
+/// Sets several icon positions with a single lock acquisition.
+///
+/// # Arguments
+/// * `batch` - `(name, x, y)` triples to apply.
 pub fn set_positions(batch: Vec<(String, i32, i32)>) {
-    let mut map = POSITIONS.write().unwrap();
+    let mut map = write_map();
     let mut changed = false;
     for (name, x, y) in batch {
         if map.get(&name) != Some(&(x, y)) {
@@ -60,9 +99,12 @@ pub fn set_positions(batch: Vec<(String, i32, i32)>) {
     }
 }
 
-/// Remove position entries that no longer exist on disk.
+/// Removes cached position entries that no longer exist on disk.
+///
+/// # Arguments
+/// * `existing_names` - Names of icons that still exist on disk.
 pub fn cleanup_stale(existing_names: &[String]) {
-    let mut map = POSITIONS.write().unwrap();
+    let mut map = write_map();
     let set: std::collections::HashSet<&String> = existing_names.iter().collect();
     let initial_len = map.len();
     map.retain(|k, _| set.contains(k));
@@ -71,30 +113,57 @@ pub fn cleanup_stale(existing_names: &[String]) {
     }
 }
 
-/// Clears all saved positions.
+/// Clears all cached icon positions and marks the cache dirty for flush.
 pub fn clear() {
-    let mut map = POSITIONS.write().unwrap();
+    let mut map = write_map();
     map.clear();
     DIRTY.store(true, Ordering::Relaxed);
 }
 
-/// Flush to disk if dirty.
+/// Flushes the cached positions to disk asynchronously when the cache is dirty.
+///
+/// Serialization and file errors are ignored after logging a warning, so a
+/// failed flush never interrupts the caller.
 pub fn flush_if_dirty() {
     if DIRTY
         .compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed)
         .is_ok()
     {
-        let data = POSITIONS.read().unwrap().clone();
+        let data = read_map().clone();
         let path = layout_path();
 
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
 
-        std::thread::spawn(move || {
-            if let Ok(json) = serde_json::to_string_pretty(&data) {
-                let _ = std::fs::write(&path, json);
+        std::thread::spawn(move || match serde_json::to_string_pretty(&data) {
+            Ok(json) => {
+                if let Err(err) = std::fs::write(&path, json) {
+                    tracing::warn!("failed to save desktop layout: {err}");
+                }
             }
+            Err(err) => tracing::warn!("failed to serialize desktop layout: {err}"),
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn poisoned_positions_lock_is_recovered_for_read_and_write() {
+        // Poison the shared map with a panicking writer.
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = POSITIONS.write().expect("acquire positions lock");
+            panic!("poison positions lock");
+        }));
+        assert!(POSITIONS.is_poisoned());
+
+        // Both helpers must recover without panicking.
+        write_map().insert("poison_test".to_string(), (7, 9));
+        assert_eq!(get_position("poison_test"), Some((7, 9)));
+        let all = get_all_positions();
+        assert_eq!(all.get("poison_test"), Some(&(7, 9)));
     }
 }

@@ -1,13 +1,25 @@
+//! Aggregated access to system monitoring: CPU, memory, battery, thermal,
+//! disk, network, uptime, volume and window state.
 pub mod clipboard;
+/// D-Bus application menu discovery and activation.
 pub mod dbus_menu;
+/// Backlight, battery and thermal sensors.
 pub mod hardware;
+/// Host uptime information.
 pub mod host;
+/// Monitor geometry snapshot.
 pub mod monitor;
+/// Network interface detection and statistics.
 pub mod network;
+/// CPU, memory and disk usage readers.
 pub mod resources;
+/// Temperature readings from all kernel sources.
 pub mod temperature;
+/// Audio volume control.
 pub mod volume;
+/// VPN detection.
 pub mod vpn;
+/// Active window metadata and actions.
 pub mod window;
 
 pub use clipboard::{clear_history, history as clipboard_history, store_selection, ClipboardEntry};
@@ -38,6 +50,7 @@ pub use temperature::{
 pub use volume::{get_active_output_name, get_volume_state, set_muted, set_volume, AudioBackend};
 pub use vpn::is_vpn_active;
 
+/// A point-in-time collection of all monitored system metrics.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SystemSnapshot {
     pub cpu: CpuInfo,
@@ -50,6 +63,7 @@ pub struct SystemSnapshot {
     pub uptime: UptimeInfo,
 }
 
+/// Owns the readers used to collect a [`SystemSnapshot`].
 #[derive(Debug, Clone)]
 pub struct SystemService {
     pub cpu: CpuReader,
@@ -69,6 +83,10 @@ impl Default for SystemService {
 }
 
 impl SystemService {
+    /// Creates a service with fresh readers for every subsystem.
+    ///
+    /// # Returns
+    /// A ready-to-use [`SystemService`].
     pub fn new() -> Self {
         Self {
             cpu: CpuReader::new(),
@@ -82,6 +100,10 @@ impl SystemService {
         }
     }
 
+    /// Samples every subsystem once into a [`SystemSnapshot`].
+    ///
+    /// # Returns
+    /// A snapshot containing the latest reading from each subsystem.
     pub fn snapshot(&mut self) -> SystemSnapshot {
         SystemSnapshot {
             cpu: self.cpu.read(),

@@ -1,5 +1,6 @@
 use std::fs;
 
+/// Memory and swap usage snapshot, in bytes and percentages.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct MemoryInfo {
     pub total_bytes: u64,
@@ -15,36 +16,67 @@ pub struct MemoryInfo {
     pub swap_percent: f32,
 }
 
+/// Byte-to-megabyte convenience conversions for memory readings.
 impl MemoryInfo {
+    /// Returns total memory in megabytes.
+    ///
+    /// # Returns
+    /// `total_bytes` converted to MiB.
     pub fn total_mb(&self) -> u64 {
         self.total_bytes / (1024 * 1024)
     }
 
+    /// Returns used memory in megabytes.
+    ///
+    /// # Returns
+    /// `used_bytes` converted to MiB.
     pub fn used_mb(&self) -> u64 {
         self.used_bytes / (1024 * 1024)
     }
 
+    /// Returns available memory in megabytes.
+    ///
+    /// # Returns
+    /// `available_bytes` converted to MiB.
     pub fn available_mb(&self) -> u64 {
         self.available_bytes / (1024 * 1024)
     }
 
+    /// Returns total swap in megabytes.
+    ///
+    /// # Returns
+    /// `swap_total_bytes` converted to MiB.
     pub fn swap_total_mb(&self) -> u64 {
         self.swap_total_bytes / (1024 * 1024)
     }
 
+    /// Returns used swap in megabytes.
+    ///
+    /// # Returns
+    /// `swap_used_bytes` converted to MiB.
     pub fn swap_used_mb(&self) -> u64 {
         self.swap_used_bytes / (1024 * 1024)
     }
 }
 
+/// Reads memory statistics from `/proc/meminfo`.
 #[derive(Debug, Default, Clone)]
 pub struct MemoryReader;
 
+/// Provides memory usage queries.
 impl MemoryReader {
+    /// Creates a memory reader.
+    ///
+    /// # Returns
+    /// A stateless reader instance.
     pub fn new() -> Self {
         Self
     }
 
+    /// Parses `/proc/meminfo` into a [`MemoryInfo`] snapshot.
+    ///
+    /// # Returns
+    /// Current memory statistics, or all-zero defaults on parse failure.
     pub fn read(&self) -> MemoryInfo {
         Self::parse_meminfo().unwrap_or_default()
     }

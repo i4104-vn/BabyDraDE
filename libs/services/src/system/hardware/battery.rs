@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Charge state reported by the kernel power-supply class.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BatteryStatus {
     Charging,
@@ -23,6 +24,7 @@ impl std::fmt::Display for BatteryStatus {
     }
 }
 
+/// Snapshot of a battery device.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct BatteryInfo {
     pub name: String,
@@ -34,17 +36,27 @@ pub struct BatteryInfo {
     pub energy_full_wh: Option<f32>,
 }
 
+/// Discovers and reads the primary battery device.
 #[derive(Debug, Default, Clone)]
 pub struct BatteryReader {
     device_path: Option<PathBuf>,
 }
 
+/// Reads battery state from sysfs.
 impl BatteryReader {
+    /// Creates a reader, probing `/sys/class/power_supply` for a battery.
+    ///
+    /// # Returns
+    /// A reader with the detected device cached, if any.
     pub fn new() -> Self {
         let device_path = Self::find_battery_device();
         Self { device_path }
     }
 
+    /// Reads battery state, re-probing if the cached device disappeared.
+    ///
+    /// # Returns
+    /// The battery snapshot, or `None` when no readable battery exists.
     pub fn read(&mut self) -> Option<BatteryInfo> {
         // Re-check path if not cached or verify it still exists
         let path = match self.device_path {

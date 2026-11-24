@@ -8,6 +8,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
+/// Metadata for the currently focused window.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ActiveWindowInfo {
     pub app_id: String,

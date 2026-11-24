@@ -2,6 +2,7 @@
 
 use super::SystemService;
 
+/// Geometry of the primary monitor.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct MonitorSnapshot {
     pub cpu_percent: f64,
@@ -11,6 +12,13 @@ pub struct MonitorSnapshot {
     pub gpu_percent: f64,
 }
 
+/// Reads the primary monitor geometry from Wayland sysfs.
+///
+/// # Arguments
+/// * `sys` - System service used to refresh related readings.
+///
+/// # Returns
+/// Snapshot containing width and height in pixels.
 pub fn get_monitor_snapshot(sys: &mut SystemService) -> MonitorSnapshot {
     let snap = sys.snapshot();
     let cpu_pct = snap.cpu.usage_percent as f64;

@@ -3,6 +3,10 @@ use std::path::PathBuf;
 
 use crate::theme::model::GtkThemeConfig;
 
+/// Locates the user GTK settings.ini file.
+///
+/// # Returns
+/// The path to `~/.config/gtk-3.0/settings.ini`, if it exists.
 pub fn find_settings_ini_path() -> Option<PathBuf> {
     let mut candidates = Vec::new();
 
@@ -24,6 +28,10 @@ pub fn find_settings_ini_path() -> Option<PathBuf> {
     candidates.into_iter().find(|p| p.is_file())
 }
 
+/// Reads and parses GTK theme settings.
+///
+/// # Returns
+/// The parsed [`GtkThemeConfig`], or defaults when unavailable.
 pub fn read_gtk_settings() -> GtkThemeConfig {
     let path = match find_settings_ini_path() {
         Some(p) => p,
@@ -38,6 +46,14 @@ pub fn read_gtk_settings() -> GtkThemeConfig {
     parse_settings_ini(&content, Some(path.to_string_lossy().to_string()))
 }
 
+/// Parses GTK settings.ini content into a [`GtkThemeConfig`].
+///
+/// # Arguments
+/// * `content` - Raw settings.ini text.
+/// * `source_path` - Optional source path recorded in the config.
+///
+/// # Returns
+/// The parsed theme configuration.
 pub fn parse_settings_ini(content: &str, source_path: Option<String>) -> GtkThemeConfig {
     let mut config = GtkThemeConfig {
         config_source_path: source_path,

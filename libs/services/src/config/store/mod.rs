@@ -30,6 +30,17 @@ fn empty_doc() -> toml::Value {
     toml::Value::Table(toml::Table::new())
 }
 
+/// Returns the document's table, reporting invalid documents instead of panicking.
+fn table_mut(doc: &mut toml::Value) -> std::io::Result<&mut toml::Table> {
+    doc.as_table_mut().ok_or_else(|| {
+        tracing::warn!("configuration document is not a TOML table");
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "TOML document is not a table",
+        )
+    })
+}
+
 mod io;
 mod sections;
 

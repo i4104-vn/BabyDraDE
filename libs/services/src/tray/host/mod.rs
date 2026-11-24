@@ -31,8 +31,15 @@ pub(super) use watcher::run;
 
 #[cfg(test)]
 mod tests {
-    use super::registration::normalize_identifier;
+    use super::registration::{first_interface, normalize_identifier};
     use super::*;
+
+    #[test]
+    fn empty_dbus_node_has_no_interface() {
+        let node = gio::DBusNodeInfo::for_xml("<node/>").expect("valid empty node XML");
+        let err = first_interface(&node).expect_err("empty node has no interfaces");
+        assert!(!err.message().is_empty());
+    }
 
     #[test]
     fn identifier_can_be_a_path_or_a_service_name() {

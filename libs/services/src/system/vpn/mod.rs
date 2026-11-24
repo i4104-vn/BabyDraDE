@@ -2,6 +2,10 @@
 
 use std::fs;
 
+/// Detects whether a VPN interface is present.
+///
+/// # Returns
+/// `true` when a tun/tap or WireGuard interface is up.
 pub fn is_vpn_active() -> bool {
     if let Ok(entries) = fs::read_dir("/sys/class/net") {
         for entry in entries.flatten() {

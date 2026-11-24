@@ -4,18 +4,31 @@
 //! `~/.babydra/configs/*.toml`. Organized into granular submodules per service.
 
 pub mod autostart;
+/// Main application configuration model.
 pub mod babydra;
+/// Blur effect configuration model.
 pub mod blur;
+/// Clipboard behavior configuration model.
 pub mod clipboard;
+/// Cursor configuration model.
 pub mod cursor;
+/// Desktop layout configuration model.
 pub mod desktop;
+/// Display and scaling configuration model.
 pub mod display;
+/// Gesture configuration model.
 pub mod gestures;
+/// Lock screen configuration model.
 pub mod lockscreen;
+/// Mouse configuration model.
 pub mod mouse;
+/// Notification configuration model.
 pub mod notification;
+/// Power management configuration model.
 pub mod power;
+/// Touchpad configuration model.
 pub mod touchpad;
+/// Wallpaper configuration model.
 pub mod wallpaper;
 
 pub use autostart::AutostartConfig;
