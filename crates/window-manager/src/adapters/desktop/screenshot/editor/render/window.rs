@@ -7,12 +7,12 @@ use std::rc::Rc;
 
 use super::models::ToolbarContext;
 use super::toolbar;
-use crate::adapters::desktop::gtk::init_layer_window;
 use crate::adapters::desktop::screenshot::editor::canvas::{
     draw_editor_canvas, setup_editor_gest,
 };
 use crate::adapters::desktop::screenshot::editor::models::EditorState;
 use crate::adapters::desktop::screenshot::editor::setup_editor_keys;
+use ui_kit::layer_shell::{init_layer_window, LayerWindowConfig};
 
 /// Constructs the screenshot editor window, maps its overlay design,
 /// initializes the canvas, and builds the editing toolbars.
@@ -37,17 +37,19 @@ pub(crate) fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4:
     // Stretch across the entire screen, ignoring panel exclusive zones
     init_layer_window(
         &window,
-        Layer::Overlay,
-        KeyboardMode::Exclusive,
-        -1,
-        &[
-            (Edge::Top, true),
-            (Edge::Bottom, true),
-            (Edge::Left, true),
-            (Edge::Right, true),
-        ],
-        0,
-        Some("babydra-screenshot"),
+        &LayerWindowConfig {
+            layer: Layer::Overlay,
+            keyboard_mode: KeyboardMode::Exclusive,
+            exclusive_zone: -1,
+            anchors: &[
+                (Edge::Top, true),
+                (Edge::Bottom, true),
+                (Edge::Left, true),
+                (Edge::Right, true),
+            ],
+            margin_bottom: 0,
+            namespace: Some("babydra-screenshot"),
+        },
     );
     window.add_css_class("screenshot-window");
 

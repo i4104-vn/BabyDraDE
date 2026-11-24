@@ -8,6 +8,7 @@ description = "BabyDraDE Reusable UI Kit — Fluent GTK4 primitives, components,
 
 [dependencies]
 gtk4 = { version = "0.11" }
+gtk4-layer-shell = "0.8"
 gdk-pixbuf = "0.22"
 cairo-rs = "0.22"
 animation = { path = "../animation" }

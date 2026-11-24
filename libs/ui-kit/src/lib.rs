@@ -3,6 +3,7 @@
 pub mod components;
 pub mod drawing;
 pub mod icons;
+pub mod layer_shell;
 pub mod locale;
 pub mod style;
 pub mod theme;

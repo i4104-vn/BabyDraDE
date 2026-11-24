@@ -23,7 +23,7 @@ use std::rc::Rc;
 use transition::schedule_blur_transition;
 use widgets::{setup_clock_timer, setup_focus_management};
 
-use crate::adapters::desktop::gtk::init_layer_window;
+use ui_kit::layer_shell::{init_layer_window, LayerWindowConfig};
 
 /// Spawns a lock window assigned to a specific monitor.
 pub(crate) fn create_lock_window(
@@ -45,17 +45,19 @@ pub(crate) fn create_lock_window(
 
     init_layer_window(
         &window,
-        Layer::Overlay,
-        kbd_mode,
-        -1,
-        &[
-            (Edge::Top, true),
-            (Edge::Bottom, true),
-            (Edge::Left, true),
-            (Edge::Right, true),
-        ],
-        0,
-        Some("babydra-lock"),
+        &LayerWindowConfig {
+            layer: Layer::Overlay,
+            keyboard_mode: kbd_mode,
+            exclusive_zone: -1,
+            anchors: &[
+                (Edge::Top, true),
+                (Edge::Bottom, true),
+                (Edge::Left, true),
+                (Edge::Right, true),
+            ],
+            margin_bottom: 0,
+            namespace: Some("babydra-lock"),
+        },
     );
     window.set_opacity(1.0);
 
