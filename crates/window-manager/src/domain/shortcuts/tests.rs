@@ -1,4 +1,7 @@
 use super::*;
+use super::handler::key_name_to_keysym;
+use super::models::ResolvedShortcut;
+use crate::domain::keysyms;
 
 #[test]
 fn maps_letters_to_lowercase_keysyms() {
