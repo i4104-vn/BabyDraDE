@@ -6,7 +6,7 @@ pub(crate) mod models;
 pub(crate) mod popovers;
 
 mod handler;
-mod view;
+mod render;
 
 pub(crate) use handler::setup_editor_keys;
-pub(crate) use view::build_editor_ui;
+pub(crate) use render::build_editor_ui;
