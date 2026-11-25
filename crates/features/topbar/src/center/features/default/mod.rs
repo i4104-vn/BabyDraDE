@@ -1,10 +1,14 @@
-//! Default Idle Feature for Dynamic Island
+//! Optional idle pill feature for the Dynamic Island.
+//!
+//! It is intentionally not registered by [`crate::center::registry`]: the
+//! panel hides the island while idle. Implemented here as a minimal example of
+//! the common `IslandFeature` trait.
 
 use gtk4::prelude::*;
 use gtk4::{Box, Label, Orientation};
 use ui_kit::icons::get_icon;
 
-use super::IslandFeature;
+use crate::center::{IslandCtx, IslandFeature};
 
 pub struct DefaultFeature {
     container: Box,
@@ -48,11 +52,11 @@ impl IslandFeature for DefaultFeature {
         0
     }
 
-    fn is_active(&self) -> bool {
+    fn is_alive(&self) -> bool {
         true
     }
 
-    fn widget(&self) -> gtk4::Widget {
+    fn build(&mut self, _ctx: &IslandCtx) -> gtk4::Widget {
         self.container.clone().upcast()
     }
 }
