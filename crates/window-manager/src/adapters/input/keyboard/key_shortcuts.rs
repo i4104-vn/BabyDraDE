@@ -1,10 +1,14 @@
 //! Global and configurable shortcut key handling.
 
+use common::ShortcutTarget;
 use smithay::{backend::input::KeyState, input::keyboard::KeysymHandle};
 
 use crate::adapters::input::{
     keyboard::shortcuts::check_key_shortcut,
-    keymap::{matcher::command_for, spawn_command},
+    keymap::{
+        matcher::{command_for, to_mods},
+        spawn_command,
+    },
     InputContext,
 };
 
@@ -31,13 +35,28 @@ pub(super) fn handle<C: InputContext>(
         return true;
     }
 
-    // Configurable shortcuts use the layout-independent raw keysym
-    // so Shift does not change letter matching.
-    if let Some(raw_sym) = handle.raw_latin_sym_or_raw_current_sym() {
-        if let Some(command) = command_for(&*ctx.state, ctx.modifiers, raw_sym.into()) {
+    // Runtime registrations and configurable shortcuts use the
+    // layout-independent raw keysym so Shift does not change letter matching.
+    let Some(raw) = handle.raw_latin_sym_or_raw_current_sym() else {
+        return false;
+    };
+    let raw_sym: u32 = raw.into();
+
+    match ctx.state.registered_shortcut(to_mods(ctx.modifiers), raw_sym) {
+        Some(ShortcutTarget::Action(action)) => {
+            *ctx.action = Some(action);
+            return true;
+        }
+        Some(ShortcutTarget::Command(command)) => {
             spawn_command(&*ctx.state, command);
             return true;
         }
+        None => {}
+    }
+
+    if let Some(command) = command_for(&*ctx.state, ctx.modifiers, raw_sym) {
+        spawn_command(&*ctx.state, command);
+        return true;
     }
 
     false

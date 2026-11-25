@@ -4,6 +4,18 @@ use super::*;
 use crate::domain::keysyms;
 
 #[test]
+fn splits_combos_into_modifiers_and_key() {
+    assert_eq!(
+        parse_combo("W-S-t"),
+        Some(("W-S".to_string(), "t".to_string()))
+    );
+    assert_eq!(parse_combo("A-F4"), Some(("A".to_string(), "F4".to_string())));
+    assert_eq!(parse_combo("t"), None);
+    assert_eq!(parse_combo("-t"), None);
+    assert_eq!(parse_combo("W-"), None);
+}
+
+#[test]
 fn maps_letters_to_lowercase_keysyms() {
     assert_eq!(to_keysym("s"), Some(keysyms::KEY_s));
     assert_eq!(to_keysym("A"), Some(keysyms::KEY_a));

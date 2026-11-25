@@ -88,6 +88,10 @@ macro_rules! config_methods {
             self.config.shortcut_command(mods, keysym)
         }
 
+        fn registered_shortcut(&self, mods: Mods, keysym: u32) -> Option<ShortcutTarget> {
+            self.config.registered_target(mods, keysym)
+        }
+
         fn reload_shortcuts(&self) {
             self.config.reload_shortcuts();
         }

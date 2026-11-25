@@ -6,7 +6,7 @@
 mod handler;
 pub(crate) mod models;
 
-pub(crate) use handler::command_for;
+pub(crate) use handler::{command_for, parse_combo, parse_modifiers, to_keysym};
 pub(crate) use models::{Mods, Shortcut};
 
 #[cfg(test)]

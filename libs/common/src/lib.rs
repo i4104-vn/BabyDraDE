@@ -2,6 +2,11 @@
 
 pub mod constants;
 pub mod enums;
+/// Shared shortcut registration protocol (requires the `serde` feature).
+#[cfg(feature = "serde")]
+pub mod shortcuts;
 
 pub use constants::*;
 pub use enums::*;
+#[cfg(feature = "serde")]
+pub use shortcuts::*;

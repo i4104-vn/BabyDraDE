@@ -1,6 +1,6 @@
 //! Dynamic Island composition root.
 //!
-//! ```
+//! ```text
 //! center/
 //! ├── engine/       # trait, context, handle, state, arbitration
 //! ├── services/     # IPC and shared poller

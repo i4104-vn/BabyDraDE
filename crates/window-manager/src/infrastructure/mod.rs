@@ -10,3 +10,4 @@ pub(crate) mod config;
 pub(crate) mod platform;
 pub(crate) mod process;
 pub(crate) mod sensor;
+pub(crate) mod shortcuts;

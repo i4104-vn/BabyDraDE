@@ -2,8 +2,10 @@
 
 use std::sync::Arc;
 
+use common::ShortcutTarget;
+
 use crate::application::ports::{GesturePolicy, LoadGesturePolicy};
-use crate::application::shortcuts::ShortcutService;
+use crate::application::shortcuts::{ShortcutRegistry, ShortcutService};
 use crate::domain::shortcuts::Mods;
 
 /// Framework-free configuration values refreshed only on config reload.
@@ -17,12 +19,15 @@ pub(crate) struct ConfigSnapshot {
     load_gesture_policy: LoadGesturePolicy,
     /// Injected shortcut service shared with the reload watcher and input pipeline.
     shortcuts: Arc<ShortcutService>,
+    /// Runtime shortcut registry shared with the public API and IPC watcher.
+    registry: Arc<ShortcutRegistry>,
 }
 
 impl ConfigSnapshot {
     pub(crate) fn new(
         load_gesture_policy: LoadGesturePolicy,
         shortcuts: Arc<ShortcutService>,
+        registry: Arc<ShortcutRegistry>,
     ) -> Self {
         Self {
             touchpad_natural_scroll: services::config::load_touchpad_config().natural_scroll,
@@ -30,6 +35,7 @@ impl ConfigSnapshot {
             gesture_config: load_gesture_policy(),
             load_gesture_policy,
             shortcuts,
+            registry,
         }
     }
 
@@ -55,6 +61,20 @@ impl ConfigSnapshot {
 
     pub(crate) fn shortcut_command(&self, mods: Mods, keysym: u32) -> Option<String> {
         self.shortcuts.command_for(mods, keysym)
+    }
+
+    /// Returns a runtime-registered shortcut matching an exact key press.
+    ///
+    /// # Arguments
+    ///
+    /// * `mods` - Active modifier mask.
+    /// * `keysym` - Layout-independent keysym.
+    ///
+    /// # Returns
+    ///
+    /// The registered target, or `None` when nothing matches.
+    pub(crate) fn registered_target(&self, mods: Mods, keysym: u32) -> Option<ShortcutTarget> {
+        self.registry.target_for(mods, keysym)
     }
 
     pub(crate) fn reload_shortcuts(&self) {

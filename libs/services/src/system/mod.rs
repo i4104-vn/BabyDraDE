@@ -19,6 +19,8 @@ pub mod temperature;
 pub mod volume;
 /// VPN detection.
 pub mod vpn;
+/// App-published keyboard shortcut registration.
+pub mod shortcuts;
 /// Active window metadata and actions.
 pub mod window;
 
@@ -27,6 +29,7 @@ pub use dbus_menu::{
     activate_dbus_menu_item, fetch_dbus_menu, fetch_dbus_menu_with_prepared_submenus,
     find_app_menu_service, DbusMenuItem,
 };
+pub use shortcuts::{read_all, ShortcutClient, ShortcutError};
 pub use window::{
     close_window_by_app, get_active_window, get_app_display_name, maximize_active_window,
     minimize_active_window, read_and_clear_window_action, save_active_window, send_window_action,

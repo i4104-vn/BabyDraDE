@@ -1,7 +1,7 @@
 //! Window-manager-owned keymap configuration.
 
 use crate::application::ports::{ConfigError, ShortcutRepository};
-use crate::domain::shortcuts::Shortcut;
+use crate::domain::shortcuts::{parse_combo, Shortcut};
 
 use super::models::{ConfigFile, SharedShortcuts};
 use std::time::Duration;
@@ -32,7 +32,7 @@ pub(crate) fn load() -> Vec<Shortcut> {
     };
 
     for (combo, command) in config.shortcuts {
-        let Some((modifiers, key)) = split_combo(&combo) else {
+        let Some((modifiers, key)) = parse_combo(&combo) else {
             tracing::warn!("ignoring invalid keymap combo {:?}", combo);
             continue;
         };
@@ -64,16 +64,6 @@ impl ShortcutRepository for KeymapRepository {
     fn load(&self) -> Result<Vec<Shortcut>, ConfigError> {
         Ok(load())
     }
-}
-
-/// Splits `"W-S-t"` into `("W-S", "t")`. A key without modifiers is not a
-/// valid global shortcut and is rejected.
-fn split_combo(combo: &str) -> Option<(String, String)> {
-    let (modifiers, key) = combo.rsplit_once('-')?;
-    if key.is_empty() {
-        return None;
-    }
-    Some((modifiers.to_string(), key.to_string()))
 }
 
 /// Watches the keymap file and replaces the shared table when it changes.
@@ -136,15 +126,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn splits_combos() {
-        assert_eq!(
-            split_combo("W-S-t"),
-            Some(("W-S".to_string(), "t".to_string()))
-        );
-        assert_eq!(split_combo("t"), None);
-    }
-
-    #[test]
     fn parses_a_real_config() {
         let raw = r#"
     [shortcuts]
@@ -158,7 +139,7 @@ mod tests {
 
         let mut shortcuts = Vec::new();
         for (combo, command) in config.shortcuts {
-            if let Some((modifiers, key)) = split_combo(&combo) {
+            if let Some((modifiers, key)) = parse_combo(&combo) {
                 if !command.trim().is_empty() {
                     shortcuts.push(Shortcut {
                         id: shortcuts.len() + 1,

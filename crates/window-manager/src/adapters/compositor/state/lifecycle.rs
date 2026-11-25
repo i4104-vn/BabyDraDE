@@ -17,12 +17,13 @@ impl BabydraState {
         display: Display<Self>,
         load_gesture_policy: crate::application::ports::LoadGesturePolicy,
         shortcuts: Arc<crate::application::shortcuts::ShortcutService>,
+        registry: Arc<crate::application::shortcuts::ShortcutRegistry>,
     ) -> Self {
         let display_handle = display.handle();
         let wayland = WaylandRuntime::new(&display_handle);
 
         let socket_name = Self::init_wayland_listener(display, event_loop);
-        let config = ConfigSnapshot::new(load_gesture_policy, shortcuts);
+        let config = ConfigSnapshot::new(load_gesture_policy, shortcuts, registry);
 
         Self {
             wayland,

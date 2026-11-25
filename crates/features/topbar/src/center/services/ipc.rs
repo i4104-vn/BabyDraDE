@@ -77,49 +77,50 @@ pub fn init() {
     std::thread::Builder::new()
         .name("babydra-island-ipc".into())
         .spawn(move || {
-            let Some(connection) =
-                gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>).ok()
-            else {
+            let context = glib::MainContext::new();
+            let main_loop = glib::MainLoop::new(Some(&context), false);
+
+            let services = context.with_thread_default(move || {
+                let connection =
+                    gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>).ok()?;
+                let node = gio::DBusNodeInfo::for_xml(INTROSPECTION_XML).ok()?;
+                let interface = node.lookup_interface("org.babydra.Island")?;
+
+                let tx = sender;
+                let registration = connection
+                    .register_object("/org/babydra/Island", &interface)
+                    .method_call(move |_, _, _, _, method, _, invocation| {
+                        let topic = match method {
+                            "ShowClipboard" | "ToggleClipboard" => Some(CLIPBOARD),
+                            "ShowPower" | "TogglePower" => Some(POWER),
+                            "ShowRecording" => Some(RECORDING),
+                            _ => None,
+                        };
+                        if let Some(topic) = topic {
+                            let _ = tx.send(topic);
+                        }
+                        // GIO requires every method call to be answered.
+                        invocation.return_value(None);
+                    })
+                    .build()
+                    .ok()?;
+
+                let owner = gio::bus_own_name_on_connection(
+                    &connection,
+                    "org.babydra.Island",
+                    gio::BusNameOwnerFlags::NONE,
+                    |_, _| {},
+                    |_, _| {},
+                );
+                Some((connection, registration, owner))
+            });
+
+            // Keep the connection, registration and name owner alive for the
+            // lifetime of the process by running the context's main loop.
+            let Ok(Some(_services)) = services else {
                 return;
             };
-            let Some(node) = gio::DBusNodeInfo::for_xml(INTROSPECTION_XML).ok() else {
-                return;
-            };
-            let Some(interface) = node.lookup_interface("org.babydra.Island") else {
-                return;
-            };
-
-            let tx = sender.clone();
-            if connection
-                .register_object("/org/babydra/Island", &interface)
-                .method_call(move |_, _, _, _, method, _, _| {
-                    let topic = match method {
-                        "ShowClipboard" | "ToggleClipboard" => Some(CLIPBOARD),
-                        "ShowPower" | "TogglePower" => Some(POWER),
-                        "ShowRecording" => Some(RECORDING),
-                        _ => None,
-                    };
-                    if let Some(topic) = topic {
-                        let _ = tx.send(topic);
-                    }
-                })
-                .build()
-                .is_err()
-            {
-                return;
-            }
-
-            let _owner = gio::bus_own_name_on_connection(
-                &connection,
-                "org.babydra.Island",
-                gio::BusNameOwnerFlags::NONE,
-                |_, _| {},
-                |_, _| {},
-            );
-
-            // Keep the worker thread (and therefore the registration) alive.
-            let (_keep_alive_tx, keep_alive_rx) = std::sync::mpsc::channel::<()>();
-            let _ = keep_alive_rx.recv();
+            main_loop.run();
         })
         .ok();
 }

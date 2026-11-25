@@ -27,6 +27,26 @@ pub(crate) fn parse_modifiers(spec: &str) -> Option<Mods> {
     Some(mods)
 }
 
+/// Splits a keymap combo such as `"W-S-t"` into `("W-S", "t")`.
+///
+/// A global shortcut needs at least one modifier, so combos without a dash
+/// or with an empty side are rejected.
+///
+/// # Arguments
+///
+/// * `combo` - Raw combo string from config or a registration request.
+///
+/// # Returns
+///
+/// The modifier spec and key name, or `None` when the combo is malformed.
+pub(crate) fn parse_combo(combo: &str) -> Option<(String, String)> {
+    let (modifiers, key) = combo.rsplit_once('-')?;
+    if modifiers.is_empty() || key.is_empty() {
+        return None;
+    }
+    Some((modifiers.to_string(), key.to_string()))
+}
+
 /// Finds the command bound to an exact key press.
 ///
 /// # Arguments

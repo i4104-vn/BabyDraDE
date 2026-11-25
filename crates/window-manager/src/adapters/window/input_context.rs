@@ -29,7 +29,7 @@ use smithay::{
     wayland::shell::wlr_layer::Layer,
 };
 
-use common::Action;
+use common::{Action, ShortcutTarget};
 
 use crate::adapters::desktop::launcher::search::SearchText;
 use crate::application::ports::GesturePolicy;
@@ -100,6 +100,7 @@ pub(crate) trait InputContext {
 
     // -- shortcuts and desktop actions --
     fn shortcut_command(&self, mods: Mods, keysym: u32) -> Option<String>;
+    fn registered_shortcut(&self, mods: Mods, keysym: u32) -> Option<ShortcutTarget>;
     fn reload_shortcuts(&self);
     fn launch_command(&self, command: String);
     fn lock_screen(&self);

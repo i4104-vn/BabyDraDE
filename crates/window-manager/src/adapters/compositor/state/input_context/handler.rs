@@ -2,7 +2,7 @@
 
 use std::{collections::HashSet, time::Instant};
 
-use common::Action;
+use common::{Action, ShortcutTarget};
 use smithay::utils::{Logical, Point, Serial, Size};
 use smithay::wayland::shell::wlr_layer::Layer;
 use smithay::{

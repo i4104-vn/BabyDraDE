@@ -35,7 +35,7 @@ baseline. There are no cycles. See [DEVELOPMENT.md](DEVELOPMENT.md#architecture-
 | `domain/` | Pure entities and rules: `geometry`, `keysyms`, `shortcuts`, `titlebar`, `window` | nothing inside the crate |
 | `application/` | Use cases and ports: `autostart`, `clipboard`, `gestures`, `shortcuts`, `switcher`, `windows`, `window_action` | `domain` |
 | `adapters/` | Protocol, input, rendering, desktop overlays and window registry | `application`, `domain`, other adapters in the allowed order |
-| `infrastructure/` | Backends, config loaders, process launcher, platform helpers | `application` ports and the compositor runtime |
+| `infrastructure/` | Backends, config loaders, process launcher, shortcut-file watcher, platform helpers | `application` ports and the compositor runtime |
 | `composition/` | Coordinator, wiring, runtime lifecycle, bootstrap, commands | everything |
 
 `domain` and `application` contain no Smithay, GTK, Wayland protocol, filesystem
@@ -119,8 +119,9 @@ API returns a reference with no fallback value.
    switcher, sizing, animation) still need signature changes to move.
 3. `LoadGesturePolicy` is still a function alias; screenshot requests are still
    made by the backends directly to the desktop adapter.
-4. Two shortcut systems coexist: hardcoded system bindings and the configurable
-   keymap. System bindings currently run first.
+4. Three shortcut sources coexist: hardcoded system bindings, runtime app
+   registrations and the configurable keymap, in that precedence order. See
+   [SHORTCUTS.md](SHORTCUTS.md) for both registration APIs.
 5. `libs/common` mixes domain enums with design tokens.
 
 Crate splitting (`babydra-wm-core`, `babydra-wm-wayland`, `babydra-wm-render`,
