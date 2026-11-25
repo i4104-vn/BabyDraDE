@@ -13,14 +13,14 @@ pub mod monitor;
 pub mod network;
 /// CPU, memory and disk usage readers.
 pub mod resources;
+/// App-published keyboard shortcut registration.
+pub mod shortcuts;
 /// Temperature readings from all kernel sources.
 pub mod temperature;
 /// Audio volume control.
 pub mod volume;
 /// VPN detection.
 pub mod vpn;
-/// App-published keyboard shortcut registration.
-pub mod shortcuts;
 /// Active window metadata and actions.
 pub mod window;
 

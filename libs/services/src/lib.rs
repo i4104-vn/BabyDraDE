@@ -1,29 +1,18 @@
 /// Authentication helpers for lock screen and session checks.
 pub mod auth;
-/// Configuration paths, loaders and savers.
+/// Configuration paths, loaders, savers and models.
 pub mod config;
-/// Desktop entry discovery.
+/// Desktop entries, file index, screenshots and wallpaper.
 pub mod desktop;
-/// File indexing service.
-pub mod files;
-/// Internationalization and translation.
-pub mod i18n;
-/// Serializable configuration models.
-pub mod models;
-/// Screenshot capture and persistence helpers.
-pub mod screenshot;
-/// Backward-compatible alias for [`config`].
-pub mod settings {
-    pub use crate::config::*;
-}
 /// System monitoring and control services.
 pub mod system;
-/// GTK theme, icon and cursor discovery.
-pub mod theme;
-/// Status Notifier tray host.
-pub mod tray;
-/// Wallpaper mode and path helpers.
-pub mod wallpaper;
+/// UI support: translations, theme/cursor discovery and tray host.
+pub mod ui;
+
+// Stable re-exports keep existing `services::*` paths working after regrouping.
+pub use config::models;
+pub use desktop::{files, screenshot, wallpaper};
+pub use ui::{i18n, theme, tray};
 
 /// Translates a key into the active locale.
 pub use i18n::trans;

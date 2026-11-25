@@ -112,12 +112,7 @@ impl ShortcutClient {
     /// # Returns
     ///
     /// `Ok(())` once the binding is published.
-    pub fn bind(
-        &self,
-        id: &str,
-        combo: &str,
-        target: ShortcutTarget,
-    ) -> Result<(), ShortcutError> {
+    pub fn bind(&self, id: &str, combo: &str, target: ShortcutTarget) -> Result<(), ShortcutError> {
         self.register(ShortcutBinding {
             id: id.to_string(),
             combo: combo.to_string(),
@@ -158,7 +153,6 @@ impl ShortcutClient {
             .map(|manifest| manifest.bindings)
             .unwrap_or_default()
     }
-
 }
 
 /// Creates an empty manifest at revision zero for `owner`.
@@ -322,7 +316,13 @@ mod tests {
 
         assert!(unregister_in(dir.path(), "app", "terminal").unwrap());
         assert!(!unregister_in(dir.path(), "app", "missing").unwrap());
-        assert_eq!(read_manifest_from(dir.path(), "app").unwrap().bindings.len(), 1);
+        assert_eq!(
+            read_manifest_from(dir.path(), "app")
+                .unwrap()
+                .bindings
+                .len(),
+            1
+        );
 
         clear_in(dir.path(), "app").unwrap();
         assert!(read_manifest_from(dir.path(), "app").is_none());

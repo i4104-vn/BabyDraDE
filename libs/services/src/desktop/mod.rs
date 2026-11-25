@@ -1,8 +1,18 @@
-//! Desktop shell data and file manager backend
+//! Desktop shell data, file indexing, wallpaper and screenshots.
+
+/// Bounded home-directory index used by launcher search.
+pub mod files;
+/// Screenshot capture and persistence helpers.
+pub mod screenshot;
+/// Wallpaper mode and path helpers.
+pub mod wallpaper;
 
 pub use crate::config::{load_desktop_config, save_desktop_config};
 pub use crate::models::DesktopConfig;
+pub use files::{scan_home, FileEntry, MAX_DEPTH, MAX_ENTRIES, SKIP_DIRS};
+pub use screenshot::{copy_to_clipboard, get_screenshot_path, notify, save_png};
 use std::path::PathBuf;
+pub use wallpaper::*;
 
 /// Parsed `.desktop` application entry.
 #[derive(Debug, Clone, PartialEq)]

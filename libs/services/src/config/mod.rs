@@ -4,6 +4,8 @@
 //! split into small files under `~/.babydra/configs/` (see [`settings`]).
 
 pub mod desktop_layout;
+/// Serializable configuration models.
+pub mod models;
 /// Settings file paths and typed loaders.
 pub mod settings;
 mod store;
