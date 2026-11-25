@@ -6,10 +6,10 @@
 
 use crate::center::engine::IslandEngine;
 use crate::center::features::{
-    clipboard::ClipboardFeature, power::PowerFeature, recording::RecordingFeature,
-    system::{
-        BatteryFeature, BluetoothFeature, BrightnessFeature, NetworkFeature, VolumeFeature,
-    },
+    clipboard::ClipboardFeature,
+    power::PowerFeature,
+    recording::RecordingFeature,
+    system::{BatteryFeature, BluetoothFeature, BrightnessFeature, NetworkFeature, VolumeFeature},
     MediaFeature,
 };
 

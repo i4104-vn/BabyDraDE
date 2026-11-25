@@ -14,9 +14,7 @@ use std::time::{Duration, Instant};
 
 use gtk4::prelude::*;
 
-use crate::center::{
-    IslandCtx, IslandFeature, NotchWidget, CAPSULE_HEIGHT, CAPSULE_WIDTH,
-};
+use crate::center::{IslandCtx, IslandFeature, NotchWidget, CAPSULE_HEIGHT, CAPSULE_WIDTH};
 use ui::{render_popover, ClipboardPopover};
 
 pub const PRIORITY: u32 = 95;
@@ -82,7 +80,10 @@ impl IslandFeature for ClipboardFeature {
     }
 
     fn is_popover_open(&self) -> bool {
-        self.popover.borrow().as_ref().is_some_and(|p| p.is_visible())
+        self.popover
+            .borrow()
+            .as_ref()
+            .is_some_and(|p| p.is_visible())
     }
 
     fn build(&mut self, ctx: &IslandCtx) -> gtk4::Widget {

@@ -14,18 +14,13 @@ pub struct RecordingArea {
 }
 
 /// Which part of the screen should be captured.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum RecordingMode {
+    #[default]
     Fullscreen,
     SingleOutput(String),
     Area(RecordingArea),
     Window(String),
-}
-
-impl Default for RecordingMode {
-    fn default() -> Self {
-        Self::Fullscreen
-    }
 }
 
 /// User-configurable recording options.

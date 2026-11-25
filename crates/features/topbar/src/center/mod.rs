@@ -21,6 +21,5 @@ pub use ui::capsule::IslandCapsule as DynamicIsland;
 pub use ui::{IslandPopover, NotchWidget};
 
 pub use engine::{
-    IslandCtx, IslandFeature, IslandViewHandle, CAPSULE_HEIGHT, CAPSULE_WIDTH,
-    PLAYER_CAPSULE_WIDTH,
+    IslandCtx, IslandFeature, IslandViewHandle, CAPSULE_HEIGHT, CAPSULE_WIDTH, PLAYER_CAPSULE_WIDTH,
 };

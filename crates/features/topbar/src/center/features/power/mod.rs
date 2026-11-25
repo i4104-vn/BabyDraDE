@@ -61,7 +61,10 @@ impl IslandFeature for PowerFeature {
     }
 
     fn is_popover_open(&self) -> bool {
-        self.popover.borrow().as_ref().is_some_and(|p| p.is_visible())
+        self.popover
+            .borrow()
+            .as_ref()
+            .is_some_and(|p| p.is_visible())
     }
 
     fn build(&mut self, ctx: &IslandCtx) -> gtk4::Widget {

@@ -41,7 +41,10 @@ pub fn init() {
             tracing::warn!("cannot register island shortcut {id}: {e}");
         }
     }
-    tracing::info!("published {} island shortcuts to the compositor", SHORTCUTS.len());
+    tracing::info!(
+        "published {} island shortcuts to the compositor",
+        SHORTCUTS.len()
+    );
 }
 
 /// Builds the command the compositor runs to trigger one island method.

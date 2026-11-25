@@ -4,8 +4,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-pub use crate::center::features::recording::models::IslandRecordingState;
 use super::recording;
+pub use crate::center::features::recording::models::IslandRecordingState;
 
 /// Spawns a background thread that polls the recording service and mirrors its
 /// state into an `Rc<RefCell<_>>` on the GTK main context.

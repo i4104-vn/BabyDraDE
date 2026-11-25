@@ -80,19 +80,27 @@ impl IslandFeature for VolumeFeature {
         let initialized = self.initialized.clone();
         let ctx = ctx.clone();
 
-        spawn_poller("island-volume", POLL_INTERVAL, service::read, move |state| {
-            let previous = *last.borrow();
-            if !initialized.replace(true) {
-                *last.borrow_mut() = state;
-                return;
-            }
-            if (state.volume - previous.volume).abs() >= 0.5 || state.muted != previous.muted {
-                *last.borrow_mut() = state;
-                widgets.update(icon_for(state.volume, state.muted), &label_for(state.volume, state.muted));
-                ctx.override_show_for(SHOW_DURATION);
-                ctx.tick();
-            }
-        });
+        spawn_poller(
+            "island-volume",
+            POLL_INTERVAL,
+            service::read,
+            move |state| {
+                let previous = *last.borrow();
+                if !initialized.replace(true) {
+                    *last.borrow_mut() = state;
+                    return;
+                }
+                if (state.volume - previous.volume).abs() >= 0.5 || state.muted != previous.muted {
+                    *last.borrow_mut() = state;
+                    widgets.update(
+                        icon_for(state.volume, state.muted),
+                        &label_for(state.volume, state.muted),
+                    );
+                    ctx.override_show_for(SHOW_DURATION);
+                    ctx.tick();
+                }
+            },
+        );
 
         self.widgets.container.clone().upcast()
     }

@@ -41,7 +41,11 @@ pub fn create_keyboard_controller(
 
         match keyval {
             Key::Left | Key::Up | Key::h | Key::k | Key::ISO_Left_Tab => {
-                let previous = if selected.get() == 0 { 3 } else { selected.get() - 1 };
+                let previous = if selected.get() == 0 {
+                    3
+                } else {
+                    selected.get() - 1
+                };
                 selected.set(previous);
                 if let Some(popover) = popover_rc.borrow().as_ref() {
                     highlight_selection(popover, previous);

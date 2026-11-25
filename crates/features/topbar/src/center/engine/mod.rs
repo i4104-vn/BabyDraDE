@@ -73,7 +73,10 @@ impl IslandEngine {
 
     /// Registers a feature, builds its view through the shared context and
     /// returns its handle.
-    pub fn register_feature<F: IslandFeature + 'static>(&mut self, mut feature: F) -> IslandViewHandle {
+    pub fn register_feature<F: IslandFeature + 'static>(
+        &mut self,
+        mut feature: F,
+    ) -> IslandViewHandle {
         let state = Rc::new(ViewState::default());
         let handle = IslandViewHandle {
             state: state.clone(),

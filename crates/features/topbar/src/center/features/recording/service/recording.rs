@@ -42,20 +42,24 @@ pub fn select_geometry_str_with_slurp() -> Option<String> {
     (!geometry.is_empty()).then_some(geometry)
 }
 
+/// Failure returned when no recorder backend is available.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RecordingError;
+
 /// Starts a recording session with the given configuration.
-pub fn start_recording(_config: &RecordingConfig) -> Result<(), ()> {
+pub fn start_recording(_config: &RecordingConfig) -> Result<(), RecordingError> {
     // No in-process recorder backend is registered in the topbar build.
-    Err(())
+    Err(RecordingError)
 }
 
 /// Stops the active recording session.
-pub fn stop_recording() -> Result<(), ()> {
-    Err(())
+pub fn stop_recording() -> Result<(), RecordingError> {
+    Err(RecordingError)
 }
 
 /// Toggles pause/resume.
-pub fn toggle_pause() -> Result<(), ()> {
-    Err(())
+pub fn toggle_pause() -> Result<(), RecordingError> {
+    Err(RecordingError)
 }
 
 /// Whether the recorded system audio stream is muted.
@@ -77,4 +81,3 @@ pub fn toggle_recording_audio_mute() -> bool {
 pub fn toggle_recording_mic_mute() -> bool {
     false
 }
-

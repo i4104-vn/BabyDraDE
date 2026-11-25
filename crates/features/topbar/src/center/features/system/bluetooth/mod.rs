@@ -69,16 +69,21 @@ impl IslandFeature for BluetoothFeature {
         let last = self.last.clone();
         let ctx = ctx.clone();
 
-        spawn_poller("island-bluetooth", POLL_INTERVAL, service::read, move |devices| {
-            if devices == *last.borrow() {
-                return;
-            }
-            *last.borrow_mut() = devices.clone();
-            let (title, value) = presentation(&devices);
-            widgets.update_all("bluetooth", &title, &value);
-            ctx.override_show_for(SHOW_DURATION);
-            ctx.tick();
-        });
+        spawn_poller(
+            "island-bluetooth",
+            POLL_INTERVAL,
+            service::read,
+            move |devices| {
+                if devices == *last.borrow() {
+                    return;
+                }
+                *last.borrow_mut() = devices.clone();
+                let (title, value) = presentation(&devices);
+                widgets.update_all("bluetooth", &title, &value);
+                ctx.override_show_for(SHOW_DURATION);
+                ctx.tick();
+            },
+        );
 
         self.widgets.container.clone().upcast()
     }

@@ -18,7 +18,11 @@ const POLL_INTERVAL: Duration = Duration::from_millis(800);
 
 fn presentation(snapshot: &NetworkSnapshot) -> (&'static str, String, String) {
     if !snapshot.connected {
-        return ("wifi", services::i18n::trans("island.disconnected"), String::new());
+        return (
+            "wifi",
+            services::i18n::trans("island.disconnected"),
+            String::new(),
+        );
     }
     match snapshot.kind {
         ActiveNetworkType::Wifi => (

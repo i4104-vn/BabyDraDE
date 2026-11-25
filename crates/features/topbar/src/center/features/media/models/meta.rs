@@ -66,4 +66,3 @@ pub fn merge_transient_metadata(previous: &PlayerMeta, mut incoming: PlayerMeta)
     }
     incoming
 }
-

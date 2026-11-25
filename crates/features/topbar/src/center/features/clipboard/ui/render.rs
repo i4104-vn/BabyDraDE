@@ -15,7 +15,11 @@ fn load_thumbnail(bytes: &[u8], size: i32) -> Option<gdk_pixbuf::Pixbuf> {
 /// BabyDraDE stores a plain UTF-8 preview; split it the same way upstream's
 /// `ClipboardEntry::preview_lines()` did (up to three lines + overflow count).
 fn preview_lines(entry: &ClipboardEntry) -> (String, usize) {
-    let lines: Vec<&str> = entry.preview.lines().filter(|l| !l.trim().is_empty()).collect();
+    let lines: Vec<&str> = entry
+        .preview
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .collect();
     let shown = lines.iter().take(3).copied().collect::<Vec<_>>().join("\n");
     (shown, lines.len().saturating_sub(3))
 }
@@ -60,8 +64,7 @@ pub fn render_popover(
         0
     };
 
-    for i in 0..MAX_VISIBLE_ITEMS {
-        let row = &popover.rows[i];
+    for (i, row) in popover.rows.iter().take(MAX_VISIBLE_ITEMS).enumerate() {
         if i < visible_count {
             let actual_idx = start + i;
             let entry = &entries[actual_idx];

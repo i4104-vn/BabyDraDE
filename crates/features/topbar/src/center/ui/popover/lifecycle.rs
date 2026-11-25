@@ -39,7 +39,12 @@ pub(super) fn slide(popover: &gtk4::Popover, capsule: &gtk4::Box, content: &gtk4
     let capsule_map = capsule.clone();
     popover.connect_map(move |_| {
         capsule_map.add_css_class("popover-open");
-        slide_in(box_slide.upcast_ref(), animation_gtk::SlideDirection::Down, 15, ms);
+        slide_in(
+            box_slide.upcast_ref(),
+            animation_gtk::SlideDirection::Down,
+            15,
+            ms,
+        );
     });
 
     let capsule_unmap = capsule.clone();
@@ -65,7 +70,12 @@ pub(super) fn modal(popover: &gtk4::Popover, capsule: &gtk4::Box, content: &gtk4
             focus_popover.grab_focus();
             focus_box.grab_focus();
         });
-        slide_in(box_slide.upcast_ref(), animation_gtk::SlideDirection::Down, 15, ms);
+        slide_in(
+            box_slide.upcast_ref(),
+            animation_gtk::SlideDirection::Down,
+            15,
+            ms,
+        );
     });
 
     let capsule_unmap = capsule.clone();

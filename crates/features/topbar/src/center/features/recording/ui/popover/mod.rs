@@ -7,7 +7,9 @@ use std::rc::Rc;
 use gtk4::prelude::*;
 use gtk4::{Box as GtkBox, Label};
 
-use crate::center::features::recording::controller::{connect_popover_actions, PopoverActionsContext};
+use crate::center::features::recording::controller::{
+    connect_popover_actions, PopoverActionsContext,
+};
 use crate::center::features::recording::models::RecordingConfig;
 use crate::center::ui::IslandPopover;
 
@@ -116,5 +118,4 @@ impl RecordingPopover {
             live_row: live.card,
         }
     }
-
 }

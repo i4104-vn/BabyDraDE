@@ -67,7 +67,9 @@ impl RecordingPopover {
             state.framerate, state.format, hdr
         ));
 
-        self.btn_mute_audio.button.set_sensitive(state.audio_enabled);
+        self.btn_mute_audio
+            .button
+            .set_sensitive(state.audio_enabled);
         let audio_icon = if state.is_audio_muted {
             "audio-volume-muted"
         } else {

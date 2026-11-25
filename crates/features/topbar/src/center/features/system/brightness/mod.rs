@@ -75,18 +75,23 @@ impl IslandFeature for BrightnessFeature {
         let initialized = self.initialized.clone();
         let ctx = ctx.clone();
 
-        spawn_poller("island-brightness", POLL_INTERVAL, service::read, move |value| {
-            if !initialized.replace(true) {
-                *last.borrow_mut() = value;
-                return;
-            }
-            if (value - *last.borrow()).abs() >= 0.5 {
-                *last.borrow_mut() = value;
-                widgets.update(icon_for(value), &label_for(value));
-                ctx.override_show_for(SHOW_DURATION);
-                ctx.tick();
-            }
-        });
+        spawn_poller(
+            "island-brightness",
+            POLL_INTERVAL,
+            service::read,
+            move |value| {
+                if !initialized.replace(true) {
+                    *last.borrow_mut() = value;
+                    return;
+                }
+                if (value - *last.borrow()).abs() >= 0.5 {
+                    *last.borrow_mut() = value;
+                    widgets.update(icon_for(value), &label_for(value));
+                    ctx.override_show_for(SHOW_DURATION);
+                    ctx.tick();
+                }
+            },
+        );
 
         self.widgets.container.clone().upcast()
     }

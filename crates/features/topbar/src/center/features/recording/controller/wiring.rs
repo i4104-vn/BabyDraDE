@@ -131,11 +131,13 @@ pub fn connect_popover_actions(context: PopoverActionsContext) {
     {
         let config = context.config.clone();
         let audio_device_names = context.audio_device_names.clone();
-        context.audio_device.connect_selected_notify(move |dropdown| {
-            config.borrow_mut().audio_device = audio_device_names
-                .get(dropdown.selected() as usize)
-                .cloned();
-        });
+        context
+            .audio_device
+            .connect_selected_notify(move |dropdown| {
+                config.borrow_mut().audio_device = audio_device_names
+                    .get(dropdown.selected() as usize)
+                    .cloned();
+            });
     }
 
     {
@@ -160,9 +162,7 @@ pub fn connect_popover_actions(context: PopoverActionsContext) {
         .open_folder
         .connect_clicked(|_| open_recordings_dir_action());
 
-    context
-        .btn_pause
-        .connect_clicked(|_| toggle_pause_action());
+    context.btn_pause.connect_clicked(|_| toggle_pause_action());
 
     {
         let timer_label = context.timer_label.clone();
@@ -197,4 +197,3 @@ pub fn connect_popover_actions(context: PopoverActionsContext) {
             .connect_clicked(move |_| toggle_mic_mute_action(&button));
     }
 }
-

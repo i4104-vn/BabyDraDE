@@ -94,11 +94,8 @@ pub fn create_settings_card() -> SettingsCardWidgets {
     ]);
     let framerate = DropDown::from_strings(&["90 FPS", "60 FPS", "30 FPS", "24 FPS"]);
     let format = DropDown::from_strings(&["MP4 (H.264)", "MKV (H.264)", "WebM (VP9)"]);
-    let codec = DropDown::from_strings(&[
-        "Default",
-        "H.264 (libx264)",
-        "H.264 VA-API (h264_vaapi)",
-    ]);
+    let codec =
+        DropDown::from_strings(&["Default", "H.264 (libx264)", "H.264 VA-API (h264_vaapi)"]);
     let hdr = Switch::new();
     let audio = Switch::new();
 

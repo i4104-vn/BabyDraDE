@@ -51,8 +51,10 @@ impl BatteryFeature {
         Self {
             widgets: NotchWidget::with_value(icon, &title, &value),
             state: Rc::new(RefCell::new(BatteryState {
-                powered: service::read().is_some_and(|info| info.is_charging || service::is_ac_plugged()),
-                low_warned: service::read().is_some_and(|info| info.percentage <= 20 && !info.is_charging),
+                powered: service::read()
+                    .is_some_and(|info| info.is_charging || service::is_ac_plugged()),
+                low_warned: service::read()
+                    .is_some_and(|info| info.percentage <= 20 && !info.is_charging),
                 initialized: false,
             })),
         }
@@ -83,42 +85,47 @@ impl IslandFeature for BatteryFeature {
         let state = self.state.clone();
         let ctx = ctx.clone();
 
-        spawn_poller("island-battery", POLL_INTERVAL, service::read, move |info| {
-            let Some(info) = info else {
-                return;
-            };
-            if info.is_ac_only {
-                return;
-            }
-            let mut state = state.borrow_mut();
-            let powered = info.is_charging || service::is_ac_plugged();
-
-            if !state.initialized {
-                state.initialized = true;
-                state.powered = powered;
-                state.low_warned = info.percentage <= 20 && !powered;
-                return;
-            }
-
-            let title = if !state.powered && powered {
-                state.low_warned = false;
-                services::i18n::trans("island.charging")
-            } else if !powered && info.percentage <= 20 && !state.low_warned {
-                state.low_warned = true;
-                services::i18n::trans("island.low_battery")
-            } else {
-                if powered || info.percentage > 20 {
-                    state.low_warned = false;
+        spawn_poller(
+            "island-battery",
+            POLL_INTERVAL,
+            service::read,
+            move |info| {
+                let Some(info) = info else {
+                    return;
+                };
+                if info.is_ac_only {
+                    return;
                 }
-                state.powered = powered;
-                return;
-            };
+                let mut state = state.borrow_mut();
+                let powered = info.is_charging || service::is_ac_plugged();
 
-            state.powered = powered;
-            widgets.update_all("battery", &title, &format!("{}%", info.percentage));
-            ctx.override_show_for(SHOW_DURATION);
-            ctx.tick();
-        });
+                if !state.initialized {
+                    state.initialized = true;
+                    state.powered = powered;
+                    state.low_warned = info.percentage <= 20 && !powered;
+                    return;
+                }
+
+                let title = if !state.powered && powered {
+                    state.low_warned = false;
+                    services::i18n::trans("island.charging")
+                } else if !powered && info.percentage <= 20 && !state.low_warned {
+                    state.low_warned = true;
+                    services::i18n::trans("island.low_battery")
+                } else {
+                    if powered || info.percentage > 20 {
+                        state.low_warned = false;
+                    }
+                    state.powered = powered;
+                    return;
+                };
+
+                state.powered = powered;
+                widgets.update_all("battery", &title, &format!("{}%", info.percentage));
+                ctx.override_show_for(SHOW_DURATION);
+                ctx.tick();
+            },
+        );
 
         self.widgets.container.clone().upcast()
     }

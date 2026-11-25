@@ -8,8 +8,8 @@ use gdk_pixbuf::prelude::*;
 use gtk4::prelude::*;
 
 use super::super::service::spawn_playerctl_polling;
-use super::visualizer::create_visualizer;
 use super::super::MediaFeature;
+use super::visualizer::create_visualizer;
 
 impl MediaFeature {
     /// Builds the capsule widgets and initializes all feature state.

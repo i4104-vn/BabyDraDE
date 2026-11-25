@@ -81,7 +81,7 @@ pub fn create_keyboard_controller(
                 }
                 glib::Propagation::Stop
             }
-            Key::_1 | Key::KP_1 if entries.len() > 0 => {
+            Key::_1 | Key::KP_1 if !entries.is_empty() => {
                 selected.set(0);
                 copy_and_dismiss(0);
                 glib::Propagation::Stop
