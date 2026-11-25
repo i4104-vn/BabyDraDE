@@ -1,12 +1,11 @@
-//! Dynamic Island capsule: real 150 ms arbitration engine + live features.
+//! Dynamic Island capsule: 150 ms arbitration engine + live features.
 
 use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use super::engine::IslandEngine;
-use super::features::{MediaFeature, RecordingFeature};
+use crate::center::engine::IslandEngine;
 
 pub struct IslandCapsule {
     root: gtk4::Box,
@@ -17,6 +16,10 @@ pub struct IslandCapsule {
 impl IslandCapsule {
     pub fn new() -> Self {
         let engine = Rc::new(RefCell::new(IslandEngine::new()));
+        let weak = Rc::downgrade(&engine);
+        engine.borrow_mut().set_self_weak(weak);
+
+        crate::center::ipc::init();
 
         let capsule = engine.borrow().capsule();
         let click_engine = engine.clone();
@@ -27,11 +30,8 @@ impl IslandCapsule {
         capsule.add_controller(click);
 
         {
-            let mut e = engine.borrow_mut();
-            // Recording is intentionally dormant until a recorder service exists.
-            e.register_feature(RecordingFeature::new());
-            // Media player polls real MPRIS metadata via `playerctl`.
-            e.register_feature(MediaFeature::new());
+            let mut engine = engine.borrow_mut();
+            crate::center::registry::register_all(&mut engine);
         }
 
         let tick_engine = engine.clone();
