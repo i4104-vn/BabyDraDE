@@ -19,6 +19,8 @@ Enforces layered clean architecture, SOLID principles, DRY, uniform module struc
 - Architecture & layers: [architecture.md](./references/architecture.md)
 - SOLID & anti-bloat: [solid-guidelines.md](./references/solid-guidelines.md)
 - Component rules: [component-design.md](./references/component-design.md)
+- Dynamic Island architecture: [dynamic-island-architecture.md](./references/dynamic-island-architecture.md)
+- Adding an island feature: [adding-island-feature.md](./references/adding-island-feature.md)
 
 ## Workflow
 
