@@ -14,7 +14,7 @@ pub struct IslandCapsule {
 }
 
 impl IslandCapsule {
-    pub fn new(app: &gtk4::Application) -> Self {
+    pub fn new() -> Self {
         let engine = Rc::new(RefCell::new(IslandEngine::new()));
         let weak = Rc::downgrade(&engine);
         engine.borrow_mut().set_self_weak(weak);
@@ -22,7 +22,7 @@ impl IslandCapsule {
         crate::center::ipc::init();
 
         let capsule = engine.borrow().capsule();
-        crate::center::services::shortcuts::init(app);
+        crate::center::services::shortcuts::init();
         let click_engine = engine.clone();
         let click = gtk4::GestureClick::new();
         click.connect_pressed(move |_, _, _, _| {
@@ -48,6 +48,12 @@ impl IslandCapsule {
 
     pub fn widget(&self) -> &gtk4::Box {
         &self.root
+    }
+}
+
+impl Default for IslandCapsule {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

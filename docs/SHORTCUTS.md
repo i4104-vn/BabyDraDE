@@ -64,15 +64,16 @@ Combos use the keymap format (`W` = Super, `A` = Alt, `C` = Ctrl, `S` = Shift)
 and require at least one modifier. Invalid combos, empty commands and unparseable
 key names are rejected at registration and logged by the compositor.
 
-### Fixing the topbar shortcuts
+### Topbar shortcuts
 
-The topbar currently installs GTK accelerators (`<Super>v`, `<Super>r`,
-`<Super>F4`) and relies on `KeyboardMode::OnDemand`. The compositor consumes
-those key presses before the panel sees them, so the accelerators never fire.
-Replacing `center/services/shortcuts.rs` with registrations through
-`ShortcutClient` makes the compositor own the bindings and dispatch them to
-the island's existing `org.babydra.Island` D-Bus methods, which already run
-the feature callbacks.
+The topbar used to install GTK accelerators (`<Super>v`, `<Super>r`,
+`<Super>F4`) and relied on `KeyboardMode::OnDemand`. The compositor consumes
+those key presses before the panel sees them, so the accelerators never fired.
+`center/services/shortcuts.rs` now publishes the same combos through
+`ShortcutClient`; the compositor owns the bindings and dispatches them to the
+island's existing `org.babydra.Island` D-Bus methods, which already run the
+feature callbacks. This requires `gdbus` and a session bus in the compositor
+environment, as for any other command-target shortcut.
 
 ## Registering from inside the compositor
 

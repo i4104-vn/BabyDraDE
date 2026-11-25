@@ -10,7 +10,7 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use common::{ShortcutBinding, ShortcutManifest, ShortcutTarget};
+pub use common::{ShortcutBinding, ShortcutManifest, ShortcutTarget};
 
 /// Directory name reserved for shortcut manifests inside the runtime dir.
 const SHORTCUT_DIR: &str = "babydra-shortcuts";
