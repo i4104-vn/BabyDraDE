@@ -1388,32 +1388,85 @@ button.baby-fab.circular:active {
 }
 
 /* === apps/screenshot.css === */
+box.screenshot-action-bar {
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+}
+
 box.screenshot-toolbar {
-    background-color: rgba(14, 14, 18, 0.94);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    background-color: rgba(22, 22, 26, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 9999px;
+    padding: 4px 8px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 button.screenshot-toolbar-btn {
-    background-color: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
-    color: rgba(255, 255, 255, 0.85);
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    color: rgba(255, 255, 255, 0.75);
+    padding: 6px 12px;
+    margin: 0 1px;
+    min-height: 36px;
+    transition: all 150ms ease-out;
 }
 
 button.screenshot-toolbar-btn:hover {
-    background-color: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.14);
-    border-top-color: rgba(255, 255, 255, 0.20);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.10);
     color: #ffffff;
 }
 
 button.screenshot-toolbar-btn.selected {
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+button.screenshot-toolbar-btn.selected image {
+    color: #ffffff;
+}
+
+/* Standalone Circular Action Buttons (Save / Close) */
+button.screenshot-circle-btn {
+    background-color: rgba(22, 22, 26, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 9999px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.25);
+    transition: all 150ms ease-out;
+}
+
+button.screenshot-circle-btn:hover {
+    background-color: rgba(35, 35, 42, 0.98);
+    border-color: rgba(255, 255, 255, 0.20);
+    color: #ffffff;
+}
+
+button.screenshot-circle-btn.save:hover {
+    background-color: rgba(37, 99, 235, 0.9);
+    border-color: rgba(96, 165, 250, 0.5);
+    color: #ffffff;
+}
+
+button.screenshot-circle-btn.close:hover {
+    background-color: rgba(220, 38, 38, 0.9);
+    border-color: rgba(248, 113, 113, 0.5);
     color: #ffffff;
 }
 
 label.capsule-separator {
-    color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.12);
+    margin: 0 4px;
 }
 
 box.color-dot-indicator {
@@ -1433,10 +1486,7 @@ button.color-dot-btn.color-dot-white {
 }
 
 
-button.screenshot-toolbar-btn.selected,
-button.screenshot-toolbar-btn.selected image {
-    color: #60a5fa;
-}
+
 
 
 /* === apps/lock.css === */

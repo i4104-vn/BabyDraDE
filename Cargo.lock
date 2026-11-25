@@ -2891,6 +2891,7 @@ name = "window-manager"
 version = "0.1.0"
 dependencies = [
  "animation",
+ "animation-gtk",
  "cairo-rs",
  "chrono",
  "common",
