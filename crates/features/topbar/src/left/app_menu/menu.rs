@@ -1,10 +1,10 @@
 //! Context menu for active window lifecycle actions
 
 use gtk4::Button;
-use services::system::{
-    close_window_by_app, get_app_display_name, maximize_active_window, minimize_active_window,
-    toggle_fullscreen_active_window, ActiveWindowInfo,
-};
+use protocol::models::WindowAction;
+use services::system::{close_window_by_app, get_app_display_name, ActiveWindowInfo};
+
+use crate::bridge;
 use ui_kit::overlay::context_menu::ContextMenu;
 
 /// Builds and displays the context menu for the currently focused application
@@ -21,13 +21,13 @@ pub fn show_window_action_menu(anchor: &Button, info: &ActiveWindowInfo) {
         .item_sensitive(&display_title, "info", false, || {})
         .separator()
         .item("Minimize Window", "eye-off", || {
-            minimize_active_window();
+            bridge::window_action(WindowAction::Minimize);
         })
         .item("Maximize Window", "square", || {
-            maximize_active_window();
+            bridge::window_action(WindowAction::Maximize);
         })
         .item("Toggle Fullscreen", "display", || {
-            toggle_fullscreen_active_window();
+            bridge::window_action(WindowAction::Fullscreen);
         })
         .separator()
         .item("Close Window", "close", move || {
