@@ -5,11 +5,11 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use super::backlight;
-use super::header::create_header_row;
-use super::storage;
-use super::toggle_grid::create_cc_grid;
-use super::volume;
+use super::modules::backlight;
+use super::modules::header::create_header_row;
+use super::modules::storage;
+use super::modules::toggle_grid::create_cc_grid;
+use super::modules::volume;
 
 pub type WindowSlot = Rc<RefCell<Option<gtk4::ApplicationWindow>>>;
 
