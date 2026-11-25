@@ -1,37 +1,18 @@
-use tracing::warn;
-
-// Window action parsing.
-//
-// Typed window actions crossing the compositor boundary.
-//
-// External producers (dock, topbar, IPC helpers) still send plain strings,
-// but the string is parsed once at the boundary. The rest of the crate deals
-// with an exhaustive enum, so unknown actions cannot be silently ignored
-// by an exhaustive match deep inside the adapter layer.
+//! Typed window actions crossing the compositor boundary.
+//!
+//! Feature apps send `protocol::WindowAction`; the bridge maps it to this
+//! internal enum. Unknown actions are rejected by the protocol codec before
+//! they ever reach the compositor.
 
 /// A window-management command requested from outside the compositor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum WindowAction {
+    /// Close the selected window.
     Close,
+    /// Minimize the selected window.
     Minimize,
+    /// Toggle maximize on the selected window.
     Maximize,
+    /// Toggle fullscreen on the selected window.
     Fullscreen,
-}
-
-impl WindowAction {
-    /// Parses a raw action name coming from an external producer.
-    ///
-    /// Unknown values are logged and discarded here, at the boundary.
-    pub(crate) fn parse(raw: &str) -> Option<Self> {
-        match raw.trim() {
-            "close" => Some(Self::Close),
-            "minimize" => Some(Self::Minimize),
-            "maximize" => Some(Self::Maximize),
-            "fullscreen" => Some(Self::Fullscreen),
-            other => {
-                warn!(action = other, "ignoring unknown window action");
-                None
-            }
-        }
-    }
 }

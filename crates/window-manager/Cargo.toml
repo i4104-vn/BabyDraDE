@@ -46,6 +46,7 @@ gio = "0.22"
 chrono = "0.4"
 dirs = "5.0"
 ui-kit = { path = "../../libs/ui-kit" }
+protocol = { path = "../protocol" }
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.2"
 

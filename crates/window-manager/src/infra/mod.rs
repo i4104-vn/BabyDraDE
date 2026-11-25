@@ -32,15 +32,12 @@ use std::time::Duration;
 
 use smithay::{output::Output, reexports::wayland_server::DisplayHandle};
 
-use crate::{app::state::BabydraState, modules::window::windows::WindowAction};
+use crate::app::state::BabydraState;
 
 /// Runs the state updates that must happen before a frame is composed.
 pub(crate) fn begin_frame(state: &mut BabydraState) {
-    if let Some(raw_action) = services::system::window::read_and_clear_window_action() {
-        if let Some(action) = WindowAction::parse(&raw_action) {
-            BabydraState::handle_window_action(state, action);
-        }
-    }
+    // Every window action arrives through the typed protocol bridge.
+    crate::app::bridge::poll(state);
     state.update_window_animations();
     state.update_clipboard();
 }

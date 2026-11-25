@@ -78,26 +78,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn parses_all_known_actions() {
-        assert_eq!(WindowAction::parse("close"), Some(WindowAction::Close));
-        assert_eq!(
-            WindowAction::parse("minimize"),
-            Some(WindowAction::Minimize)
-        );
-        assert_eq!(
-            WindowAction::parse("maximize"),
-            Some(WindowAction::Maximize)
-        );
-        assert_eq!(
-            WindowAction::parse("fullscreen"),
-            Some(WindowAction::Fullscreen)
-        );
-    }
-
-    #[test]
-    fn rejects_unknown_actions() {
-        assert_eq!(WindowAction::parse("resize"), None);
-        assert_eq!(WindowAction::parse(""), None);
-    }
 }
