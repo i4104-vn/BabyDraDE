@@ -10,7 +10,7 @@ use std::sync::{Arc, OnceLock};
 
 pub use common::{ShortcutBinding, ShortcutTarget};
 
-pub use crate::application::shortcuts::{RegistrationError, ShortcutRegistry};
+pub use crate::core::shortcuts::app::{RegistrationError, ShortcutRegistry};
 
 static REGISTRY: OnceLock<Arc<ShortcutRegistry>> = OnceLock::new();
 

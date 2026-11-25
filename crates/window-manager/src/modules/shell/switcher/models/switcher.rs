@@ -1,0 +1,206 @@
+use std::time::{Duration, Instant};
+
+use animation::{
+    Easing, Tween, HOVER_DURATION, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION,
+};
+use gtk4::gdk_pixbuf::Pixbuf;
+use smithay::desktop::Window;
+
+/// One entry in the Alt+Tab switcher list.
+/// `icon_pixbuf` is resolved eagerly when the switcher opens so that
+/// the render path never has to call into GTK/GIO.
+pub(crate) struct AltTabEntry {
+    pub(crate) window: Window,
+    pub(crate) app_name: String,
+    /// Pre-loaded icon, or `None` if the app has no resolvable icon.
+    pub(crate) icon_pixbuf: Option<Pixbuf>,
+}
+
+pub(crate) struct AltTabSwitcher {
+    pub(crate) entries: Vec<AltTabEntry>,
+    pub(crate) selected_index: usize,
+    /// Icon under the pointer; overrides `selected_index` while hovering.
+    pub(crate) hovered: Option<usize>,
+    /// Continuous carousel position (fractional slots) of the right-side dock.
+    /// Driven by `Tween` so repeated Tab presses accumulate smoothly.
+    pub(crate) scroll: Tween,
+    /// Animated highlight position, independent of the scrolling content.
+    pub(crate) highlight: Tween,
+    /// 0..1 fade of the small preview beside the active icon.
+    pub(crate) stage: Tween,
+    /// 0..1 presence driving the backdrop fade and slide in/out.
+    pub(crate) presence: Tween,
+    /// Rendered while the close animation plays before the state is removed.
+    pub(crate) closing: bool,
+    /// Last Tab step, used to keep held-key repeats continuous.
+    pub(crate) last_step: Option<Instant>,
+    /// Held Tab direction and timers for backend-independent auto-repeat.
+    pub(crate) held_direction: Option<i32>,
+    pub(crate) repeat_started: Option<Instant>,
+    pub(crate) last_repeat: Option<Instant>,
+    /// +1.0 when moving forward, -1.0 when going backwards with Shift+Tab.
+    pub(crate) scroll_direction: f64,
+}
+
+impl AltTabSwitcher {
+    /// Continuous (fractional) selection position for the right-side dock.
+    pub(crate) fn visual_selection(&self) -> f64 {
+        self.scroll.value()
+    }
+
+    /// 0..1 progress of the small preview fade.
+    pub(crate) fn stage_progress(&self) -> f64 {
+        self.stage.value()
+    }
+
+    /// Restarts the preview fade from 0 -> 1 after a selection change.
+    pub(crate) fn restart_stage(&mut self) {
+        self.stage
+            .restart(0.0, 1.0, SWITCHER_PREVIEW_DURATION, Easing::EaseOutCubic);
+    }
+
+    pub(crate) fn presence(&self) -> f64 {
+        self.presence.value()
+    }
+
+    pub(crate) fn set_hover(&mut self, index: Option<usize>) {
+        if self.hovered != index {
+            self.hovered = index;
+            if let Some(index) = index {
+                self.highlight
+                    .retarget(index as f64, HOVER_DURATION, Easing::EaseOutCubic);
+            }
+        }
+    }
+
+    pub(crate) fn highlight_position(&self) -> f64 {
+        self.highlight.value()
+    }
+
+    /// First Tab press starts repeat tracking; backend repeats are ignored
+    /// because `tick_key_repeat` drives held navigation.
+    pub(crate) fn tab_pressed(&mut self, direction: i32) -> bool {
+        if self.closing || self.held_direction == Some(direction) {
+            return false;
+        }
+        self.held_direction = Some(direction);
+        let now = Instant::now();
+        self.repeat_started = Some(now);
+        self.last_repeat = Some(now);
+        true
+    }
+
+    pub(crate) fn tab_released(&mut self, direction: i32) {
+        if self.held_direction == Some(direction) {
+            self.stop_key_repeat();
+        }
+    }
+
+    fn stop_key_repeat(&mut self) {
+        self.held_direction = None;
+        self.repeat_started = None;
+        self.last_repeat = None;
+    }
+
+    pub(crate) fn tick_key_repeat(&mut self) {
+        let Some(direction) = self.held_direction else {
+            return;
+        };
+        let Some(started) = self.repeat_started else {
+            return;
+        };
+        let now = Instant::now();
+        let delay = Duration::from_millis(common::constants::KEY_REPEAT_DELAY_MS);
+        let interval = Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS);
+        if now.duration_since(started) >= delay
+            && now.duration_since(self.last_repeat.unwrap_or(started)) >= interval
+        {
+            self.last_repeat = Some(now);
+            self.repeat_step(direction);
+        }
+    }
+
+    fn repeat_step(&mut self, direction: i32) {
+        let count = self.entries.len();
+        if count < 2 {
+            return;
+        }
+        let (target, wrapped) = step_target(self.scroll.target(), direction as f64, count);
+        self.selected_index = target.round() as usize;
+        let duration = Duration::from_millis(common::constants::KEY_REPEAT_INTERVAL_MS);
+        if wrapped {
+            self.scroll.snap_to(target);
+            self.highlight.snap_to(target);
+        } else {
+            self.scroll.retarget(target, duration, Easing::Linear);
+            self.highlight.retarget(target, duration, Easing::Linear);
+        }
+        self.last_step = Some(Instant::now());
+    }
+
+    pub(crate) fn begin_close(&mut self) {
+        if self.closing {
+            return;
+        }
+        self.closing = true;
+        self.hovered = None;
+        self.stop_key_repeat();
+        self.presence
+            .retarget(0.0, SWITCHER_PREVIEW_DURATION, Easing::EaseInOutCubic);
+    }
+
+    pub(crate) fn drag_by(&mut self, slots: f64) {
+        let count = self.entries.len();
+        if count < 2 || self.closing {
+            return;
+        }
+        self.hovered = None;
+        let current = self.scroll.target();
+        let (next, _) = step_target(current, slots, count);
+        self.selected_index = next.round() as usize;
+        self.scroll.snap_to(next);
+        self.highlight.snap_to(next);
+    }
+
+    pub(crate) fn finish_drag(&mut self) {
+        let count = self.entries.len();
+        if count < 2 || self.closing {
+            return;
+        }
+        let nearest = self.scroll.value().round().rem_euclid(count as f64);
+        self.selected_index = nearest as usize;
+        self.scroll
+            .retarget(nearest, SWITCHER_SCROLL_DURATION, Easing::EaseOutCubic);
+        self.highlight
+            .retarget(nearest, SWITCHER_SCROLL_DURATION, Easing::EaseOutCubic);
+        self.restart_stage();
+    }
+}
+
+/// Next dock position plus whether it wrapped past an end. Wrapping snaps
+/// straight to the first/last icon so there is no empty scroll or drift.
+pub(crate) fn step_target(current: f64, direction: f64, count: usize) -> (f64, bool) {
+    let raw = current + direction;
+    let n = count as f64;
+    if raw >= n {
+        (0.0, true)
+    } else if raw < 0.0 {
+        (n - 1.0, true)
+    } else {
+        (raw, false)
+    }
+}
+
+// Inlined from shell/switcher/models/tests.rs.
+mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn dock_wraps_directly_to_the_first_or_last_icon() {
+        assert_eq!(step_target(0.0, -1.0, 5), (4.0, true));
+        assert_eq!(step_target(0.0, 1.0, 5), (1.0, false));
+        assert_eq!(step_target(4.0, 1.0, 5), (0.0, true));
+        assert_eq!(step_target(4.0, -1.0, 5), (3.0, false));
+    }
+}
