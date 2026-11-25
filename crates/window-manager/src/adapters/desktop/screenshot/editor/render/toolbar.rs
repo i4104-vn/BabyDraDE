@@ -23,6 +23,8 @@ fn toolbar_button(icon: &str, tooltip: &str) -> gtk4::Button {
 fn circle_action_button(icon: &str, tooltip: &str, extra_class: &str) -> gtk4::Button {
     let btn = gtk4::Button::builder()
         .child(&ui_kit::icons::get_icon(icon, 18))
+        .width_request(44)
+        .height_request(44)
         .build();
     btn.set_tooltip_text(Some(tooltip));
     btn.add_css_class("flat");

@@ -3,7 +3,8 @@ use smithay::{
     desktop::{layer_map_for_output, LayerSurface, WindowSurfaceType},
     output::Output,
     reexports::wayland_server::protocol::{wl_output::WlOutput, wl_surface::WlSurface},
-    wayland::shell::wlr_layer::{Layer, WlrLayerShellHandler, WlrLayerShellState},
+    utils::SERIAL_COUNTER,
+    wayland::shell::wlr_layer::{KeyboardInteractivity, Layer, WlrLayerShellHandler, WlrLayerShellState},
 };
 use tracing::{info, warn};
 
@@ -48,8 +49,11 @@ impl WlrLayerShellHandler for BabydraState {
 delegate_layer_shell!(BabydraState);
 
 /// Handles surface commits for layer shell surfaces across all outputs.
-pub(crate) fn handle_commit(state: &BabydraState, surface: &WlSurface) {
-    for output in state.windows.space.outputs() {
+pub(crate) fn handle_commit(state: &mut BabydraState, surface: &WlSurface) {
+    let outputs: Vec<Output> = state.windows.space.outputs().cloned().collect();
+    let mut should_focus = false;
+
+    for output in &outputs {
         let mut layer_map = layer_map_for_output(output);
         if let Some(layer) = layer_map
             .layer_for_surface(surface, WindowSurfaceType::ALL)
@@ -59,7 +63,25 @@ pub(crate) fn handle_commit(state: &BabydraState, surface: &WlSurface) {
             if layer.layer_surface().has_pending_changes() {
                 layer.layer_surface().send_configure();
             }
-            return;
+
+            // If the layer surface requests Exclusive keyboard interaction (e.g. screenshot editor, lock screen),
+            // record that we need to assign keyboard focus.
+            if layer.can_receive_keyboard_focus() {
+                let is_exclusive = layer.cached_state().keyboard_interactivity == KeyboardInteractivity::Exclusive;
+                if is_exclusive {
+                    should_focus = true;
+                }
+            }
+            break;
+        }
+    }
+
+    if should_focus {
+        if let Some(keyboard) = state.wayland.seat().get_keyboard() {
+            if keyboard.current_focus().as_ref() != Some(surface) {
+                let serial = SERIAL_COUNTER.next_serial();
+                keyboard.set_focus(state, Some(surface.clone()), serial);
+            }
         }
     }
 }

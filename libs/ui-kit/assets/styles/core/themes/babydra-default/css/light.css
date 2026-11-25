@@ -1425,7 +1425,7 @@ button.screenshot-toolbar-btn {
     padding: 6px 12px;
     margin: 0 1px;
     min-height: 36px;
-    transition: all 150ms ease-out;
+    transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
 }
 
 button.screenshot-toolbar-btn:hover {
@@ -1451,13 +1451,21 @@ button.screenshot-circle-btn {
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-top: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 9999px;
+    -gtk-outline-radius: 9999px;
     min-width: 44px;
+    max-width: 44px;
     min-height: 44px;
+    max-height: 44px;
     padding: 0;
     margin: 0;
     color: rgba(28, 28, 30, 0.85);
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: all 150ms ease-out;
+    transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
+}
+
+button.screenshot-circle-btn image {
+    margin: 0;
+    padding: 0;
 }
 
 button.screenshot-circle-btn:hover {

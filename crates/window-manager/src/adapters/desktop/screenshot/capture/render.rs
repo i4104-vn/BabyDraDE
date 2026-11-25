@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use cairo::{Context, Format, ImageSurface, Matrix};
-use services::screenshot::{get_screenshot_path, notify, save_png};
+use services::screenshot::{get_screenshot_path, save_png};
 use services::theme::DesktopTheme;
 use smithay::{
     backend::{
@@ -153,7 +153,7 @@ where
             tracing::info!("[screenshot] saved {}", save_path.display());
 
             // Spawn the GTK annotation editor as soon as the image file is written
-            // so the editor window appears instantly without waiting for notification dispatch.
+            // so the editor window appears instantly without unnecessary delays.
             let editor_path = save_path.to_string_lossy().into_owned();
             match std::env::current_exe() {
                 Ok(exe) => {
@@ -167,11 +167,6 @@ where
                 }
                 Err(e) => tracing::warn!("[screenshot] cannot locate compositor binary: {}", e),
             }
-
-            let notif_title = services::trans("screenshot.full_saved_title");
-            let notif_msg =
-                services::trans("screenshot.saved_msg").replace("{}", &format!("{:?}", save_path));
-            notify(&notif_title, &notif_msg);
         });
 
     if let Err(e) = result {
