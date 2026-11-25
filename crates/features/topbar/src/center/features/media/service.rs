@@ -1,10 +1,26 @@
-//! Background `playerctl` poller feeding the island with MPRIS metadata.
+//! Background `playerctl` polling and time formatting for the media feature.
 
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
 const METADATA_FORMAT: &str = "{{ status }}|//|{{ title }}|//|{{ artist }}|//|{{ playerName }}|//|{{ mpris:artUrl }}|//|{{ position }}|//|{{ mpris:length }}";
+
+/// Formats a duration in seconds as `H:MM:SS` or `M:SS`.
+pub fn format_time(secs: f64) -> String {
+    if secs <= 0.0 || secs.is_nan() || secs.is_infinite() {
+        return "0:00".to_string();
+    }
+    let total = secs as u64;
+    let hours = total / 3600;
+    let minutes = (total % 3600) / 60;
+    let seconds = total % 60;
+    if hours > 0 {
+        format!("{}:{:02}:{:02}", hours, minutes, seconds)
+    } else {
+        format!("{}:{:02}", minutes, seconds)
+    }
+}
 
 /// Spawns the polling thread and returns the shared main-thread cache.
 pub fn spawn_playerctl_polling() -> Rc<RefCell<Option<String>>> {

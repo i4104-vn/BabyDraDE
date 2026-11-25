@@ -67,7 +67,3 @@ pub fn merge_transient_metadata(previous: &PlayerMeta, mut incoming: PlayerMeta)
     incoming
 }
 
-pub fn format_time(secs: f64) -> String {
-    let total = secs.max(0.0) as u64;
-    format!("{}:{:02}", total / 60, total % 60)
-}

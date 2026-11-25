@@ -8,7 +8,7 @@ use ui_kit::icons::get_icon;
 
 use crate::center::ui::IslandPopover;
 
-use super::poll::playerctl;
+use super::super::service::playerctl;
 
 #[derive(Clone)]
 pub struct MediaPopover {
