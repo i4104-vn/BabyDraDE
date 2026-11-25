@@ -22,6 +22,7 @@ impl IslandCapsule {
         crate::center::ipc::init();
 
         let capsule = engine.borrow().capsule();
+        crate::center::services::shortcuts::init(&capsule);
         let click_engine = engine.clone();
         let click = gtk4::GestureClick::new();
         click.connect_pressed(move |_, _, _, _| {

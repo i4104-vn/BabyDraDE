@@ -73,6 +73,6 @@ pub(super) fn modal(popover: &gtk4::Popover, capsule: &gtk4::Box, content: &gtk4
         if !other_popover_open(&capsule_unmap, popover) {
             capsule_unmap.remove_css_class("popover-open");
         }
-        set_layer_keyboard_mode(popover, KeyboardMode::None);
+        set_layer_keyboard_mode(popover, KeyboardMode::OnDemand);
     });
 }

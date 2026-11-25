@@ -44,6 +44,11 @@ pub fn register_trigger(topic: &'static str, callback: impl Fn() + 'static) {
     });
 }
 
+/// Fires a feature trigger from local code (hardcoded shortcuts).
+pub fn trigger(topic: &'static str) {
+    fire(topic);
+}
+
 fn fire(topic: &str) {
     TRIGGERS.with(|triggers| {
         if let Ok(triggers) = triggers.try_borrow() {
