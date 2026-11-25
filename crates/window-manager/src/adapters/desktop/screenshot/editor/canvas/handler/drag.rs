@@ -1,7 +1,7 @@
 //! Drag gesture wiring for canvas editing tools.
 
 use gtk4::prelude::*;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::commit::finish_drag;
@@ -14,6 +14,7 @@ pub(super) fn setup_drag(
     state: Rc<RefCell<EditorState>>,
     toolbar_wrapper: &gtk4::Box,
     btn_pen: &gtk4::Button,
+    anim_generation: Rc<Cell<u64>>,
 ) {
     let drag_gesture = gtk4::GestureDrag::new();
 
@@ -33,8 +34,9 @@ pub(super) fn setup_drag(
     let canvas_end = drawing_area.clone();
     let toolbar_end = toolbar_wrapper.clone();
     let btn_pen_end = btn_pen.clone();
+    let gen = anim_generation.clone();
     drag_gesture.connect_drag_end(move |_, _, _| {
-        finish_drag(&state, &canvas_end, &toolbar_end, &btn_pen_end);
+        finish_drag(&state, &canvas_end, &toolbar_end, &btn_pen_end, &gen);
     });
 
     drawing_area.add_controller(drag_gesture);

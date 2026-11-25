@@ -1,6 +1,6 @@
 //! Data contracts shared by the editor window and its toolbar builders.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use crate::adapters::desktop::screenshot::editor::models::EditorState;
@@ -15,12 +15,14 @@ pub(super) struct ToolbarContext {
     pub(super) canvas: gtk4::DrawingArea,
     /// Wrapper whose visibility is toggled by the reset action.
     pub(super) wrapper: gtk4::Box,
+    /// Animation generation counter to support clean cancellation of slide-in/out.
+    pub(super) anim_generation: Rc<Cell<u64>>,
 }
 
 /// Widgets produced by the toolbar builder that the window assembly needs.
 pub(super) struct ToolbarParts {
-    /// The assembled button capsule.
-    pub(super) toolbar: gtk4::Box,
+    /// The assembled action bar container holding the tool capsule and right action buttons.
+    pub(super) action_bar: gtk4::Box,
     /// Pen button used by canvas gestures to restore the active tool.
     pub(super) pen: gtk4::Button,
     /// Color popover opened by right-clicking the canvas.

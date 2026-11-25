@@ -15,6 +15,7 @@ pub(crate) fn trigger() {
 pub(crate) fn open_editor(image_path: String) {
     let app = Application::builder()
         .application_id("org.babydra.screenshot")
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
 
     app.connect_activate(move |app| {

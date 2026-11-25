@@ -5,7 +5,7 @@ mod commit;
 mod drag;
 mod selection;
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use crate::adapters::desktop::screenshot::editor::models::EditorState;
@@ -20,7 +20,14 @@ pub(crate) fn setup_editor_gest(
     toolbar_wrapper: &gtk4::Box,
     btn_pen: &gtk4::Button,
     style_popover: &gtk4::Popover,
+    anim_generation: Rc<Cell<u64>>,
 ) {
-    drag::setup_drag(drawing_area, state.clone(), toolbar_wrapper, btn_pen);
+    drag::setup_drag(
+        drawing_area,
+        state.clone(),
+        toolbar_wrapper,
+        btn_pen,
+        anim_generation,
+    );
     click::setup_click(drawing_area, state, style_popover);
 }

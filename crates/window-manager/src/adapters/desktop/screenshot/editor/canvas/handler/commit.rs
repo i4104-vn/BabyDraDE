@@ -1,7 +1,8 @@
 //! Finalization of drag gestures into committed drawings.
 
+use animation_gtk::{slide_in_cancelable, slide_out_cb_cancelable, SlideDirection};
 use gtk4::prelude::*;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use crate::adapters::desktop::screenshot::editor::models::{Drawing, EditorState, Tool};
@@ -12,9 +13,11 @@ pub(super) fn finish_drag(
     canvas: &gtk4::DrawingArea,
     toolbar: &gtk4::Box,
     btn_pen: &gtk4::Button,
+    anim_generation: &Rc<Cell<u64>>,
 ) {
     let mut s_mut = state.borrow_mut();
     let s = &mut *s_mut;
+    let had_selection_before = s.has_selection;
     match s.current_tool {
         Tool::Select => {
             s.is_selecting = false;
@@ -115,7 +118,38 @@ pub(super) fn finish_drag(
         Tool::Eraser => {}
     }
 
-    toolbar.set_visible(s.has_selection);
+    let has_selection = s.has_selection;
     drop(s_mut);
+
+    // Smoothly fly in from bottom when selection becomes active; slide out if selection is removed
+    if has_selection != had_selection_before || (!toolbar.is_visible() && has_selection) {
+        let next_gen = anim_generation.get() + 1;
+        anim_generation.set(next_gen);
+        if has_selection {
+            slide_in_cancelable(
+                toolbar.upcast_ref::<gtk4::Widget>(),
+                SlideDirection::Up,
+                35,
+                180,
+                anim_generation.clone(),
+                next_gen,
+            );
+        } else if toolbar.is_visible() {
+            let tb = toolbar.clone();
+            slide_out_cb_cancelable(
+                toolbar.upcast_ref::<gtk4::Widget>(),
+                SlideDirection::Down,
+                35,
+                160,
+                true,
+                anim_generation.clone(),
+                next_gen,
+                move || {
+                    tb.set_visible(false);
+                },
+            );
+        }
+    }
+
     canvas.queue_draw();
 }

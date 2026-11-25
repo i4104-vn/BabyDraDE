@@ -1,5 +1,6 @@
-//! Floating toolbar assembly for the screenshot editor.
+//! Floating toolbar and action bar assembly for the screenshot editor.
 
+use animation_gtk::{slide_out_cb_cancelable, SlideDirection};
 use gtk4::prelude::*;
 
 use super::models::{ToolbarContext, ToolbarParts};
@@ -15,6 +16,18 @@ fn toolbar_button(icon: &str, tooltip: &str) -> gtk4::Button {
     btn.set_tooltip_text(Some(tooltip));
     btn.add_css_class("flat");
     btn.add_css_class("screenshot-toolbar-btn");
+    btn
+}
+
+/// Creates a circular standalone action button (e.g. Save, Close).
+fn circle_action_button(icon: &str, tooltip: &str, extra_class: &str) -> gtk4::Button {
+    let btn = gtk4::Button::builder()
+        .child(&ui_kit::icons::get_icon(icon, 18))
+        .build();
+    btn.set_tooltip_text(Some(tooltip));
+    btn.add_css_class("flat");
+    btn.add_css_class("screenshot-circle-btn");
+    btn.add_css_class(extra_class);
     btn
 }
 
@@ -39,6 +52,7 @@ fn wire_reset(ctx: &ToolbarContext, button: &gtk4::Button) {
     let state_reset = ctx.state.clone();
     let toolbar_wrapper_reset = ctx.wrapper.clone();
     let canvas_reset = ctx.canvas.clone();
+    let gen = ctx.anim_generation.clone();
     button.connect_clicked(move |_| {
         let mut s = state_reset.borrow_mut();
         s.has_selection = false;
@@ -54,7 +68,23 @@ fn wire_reset(ctx: &ToolbarContext, button: &gtk4::Button) {
         s.current_tool = Tool::Select;
         s.invalidate();
         drop(s);
-        toolbar_wrapper_reset.set_visible(false);
+
+        let next_gen = gen.get() + 1;
+        gen.set(next_gen);
+        let wrapper = toolbar_wrapper_reset.clone();
+        slide_out_cb_cancelable(
+            toolbar_wrapper_reset.upcast_ref::<gtk4::Widget>(),
+            SlideDirection::Down,
+            35,
+            160,
+            true,
+            gen.clone(),
+            next_gen,
+            move || {
+                wrapper.set_visible(false);
+            },
+        );
+
         canvas_reset.queue_draw();
     });
 }
@@ -95,7 +125,8 @@ fn wire_actions(
     });
 }
 
-/// Builds and assembles the complete toolbar capsule.
+/// Builds and assembles the complete action bar: tools capsule on the left,
+/// standalone circular save and close buttons on the right.
 ///
 /// # Arguments
 ///
@@ -103,14 +134,15 @@ fn wire_actions(
 ///
 /// # Returns
 ///
-/// The assembled toolbar plus the widgets needed by canvas gestures.
+/// The assembled action bar container plus the widgets needed by canvas gestures.
 pub(super) fn build(ctx: &ToolbarContext) -> ToolbarParts {
-    let toolbar = gtk4::Box::new(gtk4::Orientation::Horizontal, 6);
+    // Action bar container with 12px gap between main capsule and right buttons
+    let action_bar = gtk4::Box::new(gtk4::Orientation::Horizontal, 12);
+    action_bar.add_css_class("screenshot-action-bar");
+
+    // Left capsule containing selection indicator/reset, drawing tools, and color
+    let toolbar = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
     toolbar.add_css_class("screenshot-toolbar");
-    toolbar.set_margin_start(16);
-    toolbar.set_margin_end(16);
-    toolbar.set_margin_top(8);
-    toolbar.set_margin_bottom(8);
 
     let btn_reset = toolbar_button("refresh", &services::trans("screenshot.reset_tooltip"));
     let btn_pen = toolbar_button("edit", &services::trans("screenshot.pen_tooltip"));
@@ -137,10 +169,11 @@ pub(super) fn build(ctx: &ToolbarContext) -> ToolbarParts {
     );
 
     let btn_copy = toolbar_button("copy", &services::trans("screenshot.copy_tooltip"));
-    let btn_save = toolbar_button("download", &services::trans("screenshot.save_tooltip"));
-    let btn_cancel = toolbar_button("close", &services::trans("screenshot.cancel_tooltip"));
+    let btn_save = circle_action_button("download", &services::trans("screenshot.save_tooltip"), "save");
+    let btn_cancel = circle_action_button("close", &services::trans("screenshot.cancel_tooltip"), "close");
     wire_actions(ctx, &btn_copy, &btn_save, &btn_cancel);
 
+    // Assemble tool capsule (left side)
     toolbar.append(&btn_reset);
     append_separator(&toolbar);
     for btn in [&btn_pen, &btn_shape, &btn_blur, &btn_eraser] {
@@ -150,11 +183,18 @@ pub(super) fn build(ctx: &ToolbarContext) -> ToolbarParts {
     toolbar.append(&color_btn);
     append_separator(&toolbar);
     toolbar.append(&btn_copy);
-    toolbar.append(&btn_save);
-    toolbar.append(&btn_cancel);
+
+    action_bar.append(&toolbar);
+
+    // Right side: standalone 2 circular buttons (save, close)
+    let right_actions = gtk4::Box::new(gtk4::Orientation::Horizontal, 8);
+    right_actions.append(&btn_save);
+    right_actions.append(&btn_cancel);
+
+    action_bar.append(&right_actions);
 
     ToolbarParts {
-        toolbar,
+        action_bar,
         pen: btn_pen,
         color_popover,
     }

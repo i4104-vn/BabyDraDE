@@ -2,7 +2,7 @@
 
 use gtk4::prelude::*;
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::models::ToolbarContext;
@@ -62,14 +62,17 @@ pub(crate) fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4:
     toolbar_wrapper.set_margin_bottom(30);
     toolbar_wrapper.set_visible(false); // Hidden initially
 
+    let anim_generation = Rc::new(Cell::new(0u64));
+
     let ctx = ToolbarContext {
         state: state.clone(),
         window: window.clone(),
         canvas: drawing_area.clone(),
         wrapper: toolbar_wrapper.clone(),
+        anim_generation: anim_generation.clone(),
     };
     let parts = toolbar::build(&ctx);
-    toolbar_wrapper.append(&parts.toolbar);
+    toolbar_wrapper.append(&parts.action_bar);
     overlay.add_overlay(&toolbar_wrapper);
 
     setup_editor_gest(
@@ -78,6 +81,7 @@ pub(crate) fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4:
         &toolbar_wrapper,
         &parts.pen,
         &parts.color_popover,
+        anim_generation,
     );
     setup_editor_keys(&window, state.clone(), &drawing_area);
 
