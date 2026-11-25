@@ -1,0 +1,166 @@
+//! Global keyboard shortcut definitions, matching, and action execution.
+
+use smithay::input::keyboard::{keysyms, ModifiersState};
+use smithay::utils::Serial;
+use tracing::info;
+
+use super::super::InputContext;
+use super::focus::{cycle_window_focus, focus_window};
+
+pub(crate) use common::KeyboardAction;
+
+/// Evaluates a pressed keysym against registered global shortcuts.
+pub(crate) fn check_key_shortcut(modifiers: &ModifiersState, sym: u32) -> Option<KeyboardAction> {
+    // 1. Super + Escape OR Super + Shift + Q OR Ctrl + Alt + Backspace: Quit WM immediately
+    if (modifiers.logo && sym == keysyms::KEY_Escape)
+        || (modifiers.logo && modifiers.shift && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q))
+        || (modifiers.ctrl && modifiers.alt && sym == keysyms::KEY_BackSpace)
+    {
+        return Some(KeyboardAction::QuitCompositor);
+    }
+
+    // Super + Space: toggle the compositor-owned app launcher.
+    if modifiers.logo
+        && !modifiers.shift
+        && !modifiers.ctrl
+        && !modifiers.alt
+        && sym == keysyms::KEY_space
+    {
+        return Some(KeyboardAction::ToggleLauncher);
+    }
+
+    // Super + Shift + S: capture the screen. The configurable shortcut list
+    // cannot remap this compositor action.
+    if modifiers.logo
+        && modifiers.shift
+        && !modifiers.ctrl
+        && !modifiers.alt
+        && (sym == keysyms::KEY_s || sym == keysyms::KEY_S)
+    {
+        return Some(KeyboardAction::Screenshot);
+    }
+
+    // 2. Super + Q or Alt + F4: Close active window
+    if (modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_q || sym == keysyms::KEY_Q))
+        || (modifiers.alt && sym == keysyms::KEY_F4)
+    {
+        return Some(KeyboardAction::CloseActiveWindow);
+    }
+
+    // 3. Super + L: Lock the current session
+    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_l || sym == keysyms::KEY_L) {
+        return Some(KeyboardAction::LockScreen);
+    }
+
+    // 4. Alt + Tab: choose a window, then focus it when Alt is released
+    if modifiers.alt && (sym == keysyms::KEY_Tab || sym == keysyms::KEY_ISO_Left_Tab) {
+        let backwards = modifiers.shift || sym == keysyms::KEY_ISO_Left_Tab;
+        return Some(KeyboardAction::AltTabStep { backwards });
+    }
+
+    // 5. Super (Win) + F5: Hot reload configuration from disk
+    if modifiers.logo && sym == keysyms::KEY_F5 {
+        return Some(KeyboardAction::ReloadConfig);
+    }
+
+    // 6. Super + M: Maximize/Restore active window
+    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_m || sym == keysyms::KEY_M) {
+        return Some(KeyboardAction::ToggleMaximize);
+    }
+
+    // 7. Super + H: Minimize active window
+    if modifiers.logo && !modifiers.shift && (sym == keysyms::KEY_h || sym == keysyms::KEY_H) {
+        return Some(KeyboardAction::Minimize);
+    }
+
+    // 8. Super + Enter: Toggle fullscreen on the active window
+    if modifiers.logo && !modifiers.shift && sym == keysyms::KEY_Return {
+        return Some(KeyboardAction::ToggleFullscreen);
+    }
+
+    // 9. Super + Tab: Cycle window focus
+    if modifiers.logo
+        && !modifiers.alt
+        && (sym == keysyms::KEY_Tab || sym == keysyms::KEY_ISO_Left_Tab)
+    {
+        return Some(KeyboardAction::CycleWindowFocus {
+            forward: !modifiers.shift,
+        });
+    }
+
+    None
+}
+
+/// Executes a compositor action triggered by a shortcut or switcher event.
+pub(crate) fn execute_action<C: InputContext>(
+    state: &mut C,
+    action: KeyboardAction,
+    serial: Serial,
+) {
+    match action {
+        KeyboardAction::QuitCompositor => {
+            info!("Quit shortcut pressed: Stopping BabyDraDE compositor...");
+            state.stop_loop();
+        }
+        KeyboardAction::CloseActiveWindow => {
+            if let Some(active_window) = state.active_window() {
+                info!("Close shortcut pressed: Closing active window with shrink & fade animation");
+                state.close_window(&active_window);
+            }
+        }
+        KeyboardAction::LockScreen => {
+            info!("Super+L pressed: locking the session");
+            state.lock_screen();
+        }
+        KeyboardAction::ReloadConfig => {
+            state.reload_shortcuts();
+            state.reload_config();
+        }
+        KeyboardAction::ToggleLauncher => {
+            info!("Super+Space pressed: toggling app launcher");
+            state.launcher_toggle();
+        }
+        KeyboardAction::Screenshot => {
+            info!("Super+Shift+S pressed: taking screenshot");
+            state.trigger_screenshot();
+        }
+        KeyboardAction::ToggleMaximize => {
+            let active = state.active_window();
+            if let Some(active_window) = active {
+                info!("Super+M pressed: Toggling maximize on active window");
+                state.toggle_maximize(&active_window);
+            }
+        }
+        KeyboardAction::Minimize => {
+            let active = state.active_window();
+            if let Some(active_window) = active {
+                info!("Super+H pressed: Minimizing active window");
+                state.minimize_window(&active_window);
+            }
+        }
+        KeyboardAction::ToggleFullscreen => {
+            let active = state.active_window();
+            if let Some(active_window) = active {
+                info!("Super+Enter pressed: Toggling fullscreen on active window");
+                state.toggle_fullscreen(&active_window);
+            }
+        }
+        KeyboardAction::CycleWindowFocus { forward } => {
+            cycle_window_focus(state, forward, serial);
+        }
+        KeyboardAction::AltTabStep { backwards } => {
+            state.cycle_alt_tab(backwards);
+        }
+        KeyboardAction::AltTabCancel => {
+            state.switcher_begin_close();
+        }
+        KeyboardAction::AltTabCommit => {
+            let selected = state.switcher_selected_window();
+            if let Some(window) = selected {
+                state.unminimize_window(&window);
+                focus_window(state, window, serial);
+            }
+            state.switcher_begin_close();
+        }
+    }
+}
