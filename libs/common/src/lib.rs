@@ -2,6 +2,9 @@
 
 pub mod constants;
 pub mod enums;
+/// Shared wire protocol types, codec and socket helpers (requires the `serde` feature).
+#[cfg(feature = "serde")]
+pub mod protocol;
 /// Shared shortcut registration protocol (requires the `serde` feature).
 #[cfg(feature = "serde")]
 pub mod shortcuts;
