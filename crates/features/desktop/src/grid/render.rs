@@ -42,7 +42,7 @@ pub fn create_icon_widget(entry: &DesktopEntry, rebuild: Rc<dyn Fn()>) -> Box {
             .item("Open", "folder", {
                 let p = path_clone.clone();
                 move || {
-                    let _ = Command::new("xdg-open").arg(&p).spawn();
+                    let _ = services::filedialog::open::open_target(&p.to_string_lossy());
                 }
             })
             .separator()
@@ -79,7 +79,7 @@ pub fn create_icon_widget(entry: &DesktopEntry, rebuild: Rc<dyn Fn()>) -> Box {
                     _ if n_press >= 2 => {
                         // Double click: open
                         if is_dir {
-                            let _ = Command::new("alacritty")
+                            let opened = Command::new("alacritty")
                                 .arg("--working-directory")
                                 .arg(&path_clone)
                                 .spawn()
@@ -89,9 +89,16 @@ pub fn create_icon_widget(entry: &DesktopEntry, rebuild: Rc<dyn Fn()>) -> Box {
                                         .arg(&path_clone)
                                         .spawn()
                                 })
-                                .or_else(|_| Command::new("xdg-open").arg(&path_clone).spawn());
+                                .is_ok();
+                            if !opened {
+                                let _ = services::filedialog::open::open_target(
+                                    &path_clone.to_string_lossy(),
+                                );
+                            }
                         } else {
-                            let _ = Command::new("xdg-open").arg(&path_clone).spawn();
+                            let _ = services::filedialog::open::open_target(
+                                &path_clone.to_string_lossy(),
+                            );
                         }
                     }
                     _ => {}

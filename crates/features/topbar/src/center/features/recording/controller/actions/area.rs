@@ -12,9 +12,9 @@ use crate::center::ui::IslandPopover;
 
 /// Opens the recordings directory in the system file manager.
 pub fn open_recordings_dir_action() {
-    let _ = std::process::Command::new("xdg-open")
-        .arg(service::get_recordings_dir())
-        .spawn();
+    let _ = services::filedialog::open::open_target(
+        &service::get_recordings_dir().to_string_lossy(),
+    );
 }
 
 /// Triggers `slurp` area selection while temporarily closing the popover,
