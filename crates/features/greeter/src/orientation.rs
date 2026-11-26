@@ -15,7 +15,10 @@ use std::{
 };
 
 use services::{
-    config::{load_display_config_from, models::{DisplayConfig, MonitorOrientation}},
+    config::{
+        load_display_config_from,
+        models::{DisplayConfig, MonitorOrientation},
+    },
     sensors::rotation::{
         DriverFactory, DriverManager, DriverSelection, RotationDriver, RotationTracker,
     },
@@ -26,13 +29,11 @@ use wayland_client::{
     Connection, Dispatch, EventQueue, QueueHandle,
 };
 use wayland_protocols_wlr::output_management::v1::client::{
-    zwlr_output_configuration_head_v1::{
-        Event as ConfigHeadEvent, ZwlrOutputConfigurationHeadV1,
-    },
+    zwlr_output_configuration_head_v1::{Event as ConfigHeadEvent, ZwlrOutputConfigurationHeadV1},
     zwlr_output_configuration_v1::{Event as ConfigEvent, ZwlrOutputConfigurationV1},
     zwlr_output_head_v1::{self, Event as HeadEvent, ZwlrOutputHeadV1},
-    zwlr_output_mode_v1::ZwlrOutputModeV1,
     zwlr_output_manager_v1::{self, Event as ManagerEvent, ZwlrOutputManagerV1},
+    zwlr_output_mode_v1::ZwlrOutputModeV1,
 };
 
 /// Upper bound for each protocol round-trip, so a stalled compositor cannot
@@ -136,7 +137,8 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for OutputState {
                 }
             }
             HeadEvent::Transform { transform } => {
-                state.pending_transform = Some(transform.into_result().unwrap_or(Transform::Normal));
+                state.pending_transform =
+                    Some(transform.into_result().unwrap_or(Transform::Normal));
             }
             _ => {}
         }
@@ -188,15 +190,24 @@ impl Dispatch<ZwlrOutputConfigurationV1, ()> for OutputState {
     }
 }
 
-/// Connects to the compositor and applies the configured rotations.
+/// A connected output manager with its initial head descriptions.
+struct OutputConnection {
+    connection: Connection,
+    queue: EventQueue<OutputState>,
+    qh: QueueHandle<OutputState>,
+    manager: ZwlrOutputManagerV1,
+    state: OutputState,
+    serial: u32,
+}
+
+/// Connects to the compositor and waits for its output descriptions.
 ///
 /// # Returns
-/// The number of outputs whose rotation was changed.
+/// The connected protocol objects and the serial describing current outputs.
 ///
 /// # Errors
-/// Returns an error when the Wayland connection or output manager is
-/// unavailable, or when the compositor rejects the configuration.
-fn apply_protocol(config: &DisplayConfig) -> Result<usize, Box<dyn Error>> {
+/// Returns an error when the connection, manager or output announcement fails.
+fn connect_outputs() -> Result<OutputConnection, Box<dyn Error>> {
     let connection = Connection::connect_to_env()?;
     let (globals, mut queue) = registry_queue_init::<OutputState>(&connection)?;
     let qh = queue.handle();
@@ -210,16 +221,38 @@ fn apply_protocol(config: &DisplayConfig) -> Result<usize, Box<dyn Error>> {
     if !state.done {
         return Err("compositor did not announce its outputs".into());
     }
-
+    let serial = state.serial.ok_or("missing output configuration serial")?;
     let names: Vec<&str> = state.heads.iter().map(|(name, _)| name.as_str()).collect();
     tracing::info!("greeter: compositor outputs: {names:?}");
 
-    let serial = state.serial.ok_or("missing output configuration serial")?;
-    let configuration = manager.create_configuration(serial, &qh, ());
+    Ok(OutputConnection {
+        connection,
+        queue,
+        qh,
+        manager,
+        state,
+        serial,
+    })
+}
+
+/// Connects to the compositor and applies the configured rotations.
+///
+/// # Returns
+/// The number of outputs whose rotation was changed.
+///
+/// # Errors
+/// Returns an error when the Wayland connection or output manager is
+/// unavailable, or when the compositor rejects the configuration.
+fn apply_protocol(config: &DisplayConfig) -> Result<usize, Box<dyn Error>> {
+    let mut outputs = connect_outputs()?;
+    let serial = outputs.serial;
+    let configuration = outputs
+        .manager
+        .create_configuration(serial, &outputs.qh, ());
     let mut applied = 0;
-    for (name, head) in &state.heads {
+    for (name, head) in &outputs.state.heads {
         // A configuration must mention every head, even ones left untouched.
-        let head_config = configuration.enable_head(head, &qh, ());
+        let head_config = configuration.enable_head(head, &outputs.qh, ());
         if let Some(orientation) = config.orientation_for(name) {
             head_config.set_transform(to_wl_transform(orientation));
             applied += 1;
@@ -228,10 +261,10 @@ fn apply_protocol(config: &DisplayConfig) -> Result<usize, Box<dyn Error>> {
     configuration.apply();
 
     let deadline = Instant::now() + PROTOCOL_TIMEOUT;
-    while state.result.is_none() && Instant::now() < deadline {
-        dispatch(&mut queue, &mut state)?;
+    while outputs.state.result.is_none() && Instant::now() < deadline {
+        dispatch(&mut outputs.queue, &mut outputs.state)?;
     }
-    match state.result {
+    match outputs.state.result {
         Some(true) => Ok(applied),
         Some(false) => Err("compositor rejected the output configuration".into()),
         None => Err("no answer from the compositor".into()),
@@ -239,7 +272,10 @@ fn apply_protocol(config: &DisplayConfig) -> Result<usize, Box<dyn Error>> {
 }
 
 /// Dispatches one batch of Wayland events.
-fn dispatch(queue: &mut EventQueue<OutputState>, state: &mut OutputState) -> Result<(), Box<dyn Error>> {
+fn dispatch(
+    queue: &mut EventQueue<OutputState>,
+    state: &mut OutputState,
+) -> Result<(), Box<dyn Error>> {
     queue.blocking_dispatch(state)?;
     Ok(())
 }
@@ -264,75 +300,53 @@ fn to_wl_transform(orientation: MonitorOrientation) -> Transform {
 struct RotationSession {
     driver: DriverManager,
     tracker: RotationTracker,
-    connection: Connection,
-    queue: EventQueue<OutputState>,
-    qh: QueueHandle<OutputState>,
-    manager: ZwlrOutputManagerV1,
-    state: OutputState,
+    outputs: OutputConnection,
     baselines: HashMap<String, Transform>,
 }
 
 impl RotationSession {
     /// Opens a dedicated Wayland connection and captures output baselines.
     fn new(driver: DriverManager) -> Result<Self, Box<dyn Error>> {
-        let connection = Connection::connect_to_env()?;
-        let (globals, mut queue) = registry_queue_init::<OutputState>(&connection)?;
-        let qh = queue.handle();
-        let manager: ZwlrOutputManagerV1 = globals.bind(&qh, 1..=2, ())?;
-
-        let mut state = OutputState::default();
-        let deadline = Instant::now() + PROTOCOL_TIMEOUT;
-        while !state.done && Instant::now() < deadline {
-            dispatch(&mut queue, &mut state)?;
-        }
-        if !state.done {
-            return Err("compositor did not announce its outputs".into());
-        }
-        if state.serial.is_none() {
-            return Err("missing output configuration serial".into());
-        }
-        let baselines = state.transforms.clone();
+        let outputs = connect_outputs()?;
+        let baselines = outputs.state.transforms.clone();
         Ok(Self {
             driver,
             tracker: RotationTracker::new(),
-            connection,
-            queue,
-            qh,
-            manager,
-            state,
+            outputs,
             baselines,
         })
     }
 
     /// Reads one sample and applies a rotation once it becomes stable.
     fn poll(&mut self) {
-        let _ = self.queue.dispatch_pending(&mut self.state);
+        let _ = self.outputs.queue.dispatch_pending(&mut self.outputs.state);
         let Some(gravity) = self.driver.read() else {
             return;
         };
-        if self.state.heads.is_empty() {
+        if self.outputs.state.heads.is_empty() {
             return;
         }
         let Some(steps) = self.tracker.update(gravity) else {
             return;
         };
-        let Some(serial) = self.state.serial else {
-            return;
-        };
+        let serial = self.outputs.state.serial.unwrap_or(self.outputs.serial);
 
-        let configuration = self.manager.create_configuration(serial, &self.qh, ());
-        for (name, head) in &self.state.heads {
+        let configuration = self
+            .outputs
+            .manager
+            .create_configuration(serial, &self.outputs.qh, ());
+        for (name, head) in &self.outputs.state.heads {
             let base = self
                 .baselines
                 .get(name)
                 .copied()
                 .unwrap_or(Transform::Normal);
             configuration
-                .enable_head(head, &self.qh, ())
+                .enable_head(head, &self.outputs.qh, ())
                 .set_transform(rotate_wl(base, steps));
         }
         configuration.apply();
-        let _ = self.connection.flush();
+        let _ = self.outputs.connection.flush();
         tracing::info!("greeter: auto-rotated outputs by {steps} quarter turn(s)");
     }
 }
@@ -390,14 +404,22 @@ fn find_config() -> Option<PathBuf> {
     let mut candidates = Vec::new();
     if let Some(user) = crate::widgets::get_last_user() {
         if valid_username(&user) {
-            if let Some(home) = user_home(&user, &std::fs::read_to_string("/etc/passwd").unwrap_or_default()) {
+            if let Some(home) = user_home(
+                &user,
+                &std::fs::read_to_string("/etc/passwd").unwrap_or_default(),
+            ) {
                 candidates.push(home);
             }
         }
     }
     candidates.push(services::config::get_home_dir());
     if let Ok(entries) = std::fs::read_dir("/home") {
-        candidates.extend(entries.flatten().map(|entry| entry.path()).filter(|path| path.is_dir()));
+        candidates.extend(
+            entries
+                .flatten()
+                .map(|entry| entry.path())
+                .filter(|path| path.is_dir()),
+        );
     }
 
     let mut best: Option<(SystemTime, PathBuf)> = None;
@@ -455,11 +477,13 @@ mod tests {
         assert_eq!(rotate_wl(Transform::Flipped90, 1), Transform::Flipped180);
     }
 
-
     #[test]
     fn user_home_reads_the_sixth_passwd_field() {
         let passwd = "root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000::/home/user:/bin/zsh\n";
-        assert_eq!(user_home("user", passwd), Some(std::path::PathBuf::from("/home/user")));
+        assert_eq!(
+            user_home("user", passwd),
+            Some(std::path::PathBuf::from("/home/user"))
+        );
         assert_eq!(user_home("missing", passwd), None);
     }
 }
