@@ -81,6 +81,11 @@ impl DriverFactory {
     pub(crate) fn with_builtins() -> Self {
         Self::default()
             .register(
+                "gaokun3",
+                &["ssc", "slpi", "matebook-ego"],
+                drivers::gaokun3::Gaokun3Driver::probe,
+            )
+            .register(
                 "iio",
                 &["sysfs", "accelerometer"],
                 drivers::iio::IioDriver::probe,
