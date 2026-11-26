@@ -20,6 +20,8 @@ serde_json = "1.0"
 services = { path = "../../../libs/services" }
 ui-kit = { path = "../../../libs/ui-kit" }
 tracing.workspace = true
+wayland-client = "0.31"
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
 
 [lints]
 workspace = true

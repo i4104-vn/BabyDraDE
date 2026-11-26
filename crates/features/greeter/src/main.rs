@@ -4,6 +4,7 @@
 
 pub(crate) mod auth;
 pub(crate) mod handler;
+pub(crate) mod orientation;
 pub(crate) mod render;
 pub(crate) mod widgets;
 
@@ -17,6 +18,7 @@ fn main() {
 
     let app = gtk4::Application::new(Some("org.babydrade.greeter"), Default::default());
     app.connect_activate(|app| {
+        orientation::apply();
         let greeter = render::build_greeter_ui(app);
         handler::setup_handlers(&greeter);
         greeter.window.present();

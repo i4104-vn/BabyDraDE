@@ -147,6 +147,8 @@ dependencies = [
  "services",
  "tracing",
  "ui-kit",
+ "wayland-client",
+ "wayland-protocols-wlr",
 ]
 
 [[package]]
