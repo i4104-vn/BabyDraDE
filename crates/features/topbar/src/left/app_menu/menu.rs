@@ -1,7 +1,7 @@
 //! Context menu for active window lifecycle actions
 
 use gtk4::Button;
-use protocol::models::WindowAction;
+use services::protocol::WindowAction;
 use services::system::{close_window_by_app, get_app_display_name, ActiveWindowInfo};
 
 use crate::bridge;

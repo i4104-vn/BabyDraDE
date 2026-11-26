@@ -85,6 +85,14 @@ pub fn run() {
 
         window.set_child(Some(&center_box));
         window.present();
+
+        // The bus reader thread delivers into an in-memory inbox. Without a
+        // periodic drain that inbox grows whenever no widget polls events.
+        gtk4::glib::timeout_add_local(std::time::Duration::from_millis(50), || {
+            bridge::drain();
+            gtk4::glib::ControlFlow::Continue
+        });
+
         DISMISS_LAYER.with(|slot| *slot.borrow_mut() = Some(create_dismiss_layer(app)));
         ui_kit::overlay::context_menu::set_visibility_hook(|open| {
             DISMISS_LAYER.with(|slot| {
