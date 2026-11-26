@@ -9,14 +9,15 @@ pub(crate) struct SensorProxyDriver {
 }
 
 impl SensorProxyDriver {
-    /// Connects to the proxy and verifies that a reading is available.
+    /// Connects to the proxy and verifies that an accelerometer is available.
     ///
     /// # Returns
     /// A boxed driver, or `None` when the proxy has no usable accelerometer.
     pub(crate) fn probe() -> Option<Box<dyn RotationDriver>> {
         let mut client = ProxyClient::connect()?;
-        // `read()` claims the sensor itself, so a sensor appearing later is
-        // covered without a second explicit claim here.
+        if !client.has_accelerometer() {
+            return None;
+        }
         client.read()?;
         Some(Box::new(Self { client }))
     }

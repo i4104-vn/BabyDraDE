@@ -11,7 +11,7 @@ use std::time::Duration;
 use super::{drivers, Gravity};
 
 /// Sampling interval used when a driver does not request its own.
-pub const DEFAULT_POLL_INTERVAL: Duration = Duration::from_millis(500);
+pub const DEFAULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 /// Failed reads in a row before the manager probes the next candidate.
 const MAX_CONSECUTIVE_FAILURES: u8 = 3;
 
@@ -81,8 +81,13 @@ impl DriverFactory {
         Self::default()
             .register(
                 "gaokun3",
-                &["ssc", "slpi", "matebook-ego"],
+                &["gaokun", "linux-gaokun", "ssc", "slpi", "matebook-ego"],
                 drivers::gaokun3::Gaokun3Driver::probe,
+            )
+            .register(
+                "sensor-proxy",
+                &["proxy", "dbus", "iio-sensor-proxy"],
+                drivers::sensor_proxy::SensorProxyDriver::probe,
             )
             .register(
                 "iio",
@@ -90,9 +95,9 @@ impl DriverFactory {
                 drivers::iio::IioDriver::probe,
             )
             .register(
-                "sensor-proxy",
-                &["proxy", "dbus", "iio-sensor-proxy"],
-                drivers::sensor_proxy::SensorProxyDriver::probe,
+                "evdev",
+                &["input", "event"],
+                drivers::evdev::EvdevDriver::probe,
             )
     }
 

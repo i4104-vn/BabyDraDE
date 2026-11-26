@@ -1,5 +1,6 @@
 //! Desktop Shell Window (Wayland Layer::Background)
 
+pub mod bridge;
 pub mod grid;
 pub mod wallpaper;
 

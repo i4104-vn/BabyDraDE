@@ -1,4 +1,4 @@
-//! Huawei MateBook E Go (gaokun3) accelerometer driver.
+//! Huawei MateBook E Go (`linux-gaokun` / `huawei,gaokun3`) accelerometer driver.
 //!
 //! This convertible has no IIO sysfs accelerometer: the sensor hangs off the
 //! Qualcomm SSC/SLPI DSP and is published by an SSC-enabled `iio-sensor-proxy`
@@ -15,13 +15,28 @@ use crate::sensors::rotation::{Gravity, RotationDriver};
 
 use super::proxy::ProxyClient;
 
-const COMPATIBLE: &str = "huawei,gaokun3";
-const FASTRPC_PATHS: [&str; 2] = ["/dev/fastrpc-sdsp", "/sys/class/misc/fastrpc-sdsp"];
+const COMPATIBLE_PREFIX: &[u8] = b"huawei,gaokun";
+const DEVICE_TREE_PATHS: [&str; 2] = [
+    "/proc/device-tree/compatible",
+    "/sys/firmware/devicetree/base/compatible",
+];
+const FASTRPC_PATHS: [&str; 3] = [
+    "/dev/fastrpc-sdsp",
+    "/dev/fastrpc-sdsp0",
+    "/sys/class/misc/fastrpc-sdsp",
+];
 
-/// Checks a NUL-separated device-tree `compatible` property.
-fn has_gaokun3_compatible(data: &[u8]) -> bool {
+/// Checks a NUL-separated device-tree `compatible` property for any gaokun model.
+fn has_gaokun_compatible(data: &[u8]) -> bool {
     data.split(|byte| *byte == 0)
-        .any(|entry| entry == COMPATIBLE.as_bytes())
+        .any(|entry| entry.starts_with(COMPATIBLE_PREFIX))
+}
+
+/// Reads the device-tree compatible property from standard Linux paths.
+fn read_compatible() -> Option<Vec<u8>> {
+    DEVICE_TREE_PATHS
+        .iter()
+        .find_map(|path| std::fs::read(path).ok())
 }
 
 pub(crate) struct Gaokun3Driver {
@@ -29,10 +44,10 @@ pub(crate) struct Gaokun3Driver {
 }
 
 impl Gaokun3Driver {
-    /// Detects a gaokun3 with working SSC transport and opens the D-Bus proxy.
+    /// Detects a MateBook E Go (`gaokun`) with SSC transport and opens the D-Bus proxy.
     pub(crate) fn probe() -> Option<Box<dyn RotationDriver>> {
-        let compatible = std::fs::read("/proc/device-tree/compatible").ok()?;
-        if !has_gaokun3_compatible(&compatible) {
+        let compatible = read_compatible()?;
+        if !has_gaokun_compatible(&compatible) {
             return None;
         }
         if !FASTRPC_PATHS.iter().any(|path| Path::new(path).exists()) {
@@ -55,16 +70,17 @@ impl RotationDriver for Gaokun3Driver {
 
 #[cfg(test)]
 mod tests {
-    use super::has_gaokun3_compatible;
+    use super::has_gaokun_compatible;
 
     #[test]
-    fn detects_gaokun3_in_device_tree_compatible() {
-        let compatible = b"huawei,gaokun3\0qcom,sc8280xp\0";
-        assert!(has_gaokun3_compatible(compatible));
+    fn detects_gaokun_variants_in_device_tree_compatible() {
+        assert!(has_gaokun_compatible(b"huawei,gaokun3\0qcom,sc8280xp\0"));
+        assert!(has_gaokun_compatible(b"huawei,gaokun2\0qcom,sc8280xp\0"));
+        assert!(has_gaokun_compatible(b"huawei,gaokun\0qcom,sc8280xp\0"));
     }
 
     #[test]
     fn rejects_other_device_tree_compatibles() {
-        assert!(!has_gaokun3_compatible(b"qcom,sc8280xp\0other,device\0"));
+        assert!(!has_gaokun_compatible(b"qcom,sc8280xp\0other,device\0"));
     }
 }

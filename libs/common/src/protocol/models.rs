@@ -200,6 +200,8 @@ pub enum Event {
     CompositorReady,
     /// The compositor is shutting down.
     Shutdown,
+    /// Configuration was reloaded from disk (Win+F5); features refresh cached data.
+    ConfigReloaded,
 }
 
 #[cfg(test)]

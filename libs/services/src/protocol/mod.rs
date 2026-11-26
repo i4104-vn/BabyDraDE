@@ -15,5 +15,5 @@ pub use bus::Bus;
 pub use common::protocol::{
     ActiveWindowInfo, BusError, BusErrorCode, Control, Envelope, Event, Incoming, Kind, Message,
     MessageId, PeerName, ProtocolError, Request, Response, Target, Topic, WindowAction,
-    WindowTarget, PROTOCOL_VERSION,
+    WindowTarget, CONFIG_RELOAD_TOPIC, PROTOCOL_VERSION,
 };

@@ -42,6 +42,7 @@ impl RotationTarget for CalloopData {
             if let Some((_, transform)) = transforms.iter().find(|(name, _)| *name == output.name())
             {
                 output.change_current_state(None, Some(*transform), None, None);
+                smithay::desktop::layer_map_for_output(output).arrange();
             }
         }
         self.state.set_touch_transform(Some(touch));

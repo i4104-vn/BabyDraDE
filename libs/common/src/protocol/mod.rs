@@ -22,6 +22,9 @@ pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// Topic carrying router presence notifications.
 pub const PEERS_TOPIC: &str = "bus/peers";
 
+/// Topic carrying configuration reload notifications.
+pub const CONFIG_RELOAD_TOPIC: &str = "config/reload";
+
 pub use codec::{decode, encode, CodecError, LineBuffer};
 pub use envelope::{
     BusError, BusErrorCode, Control, Envelope, Incoming, Kind, Message, MessageId, PeerId,

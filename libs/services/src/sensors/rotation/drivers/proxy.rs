@@ -1,8 +1,9 @@
 //! Shared D-Bus client for `iio-sensor-proxy`.
 //!
-//! Upstream publishes `AccelerometerOrientation` (a string) and claim methods;
-//! older/patched proxies may also expose a raw `Accelerate` tuple. Both are
-//! consumed here so every D-Bus based driver shares one implementation.
+//! `net.hadess.SensorProxy` runs on the system D-Bus and publishes
+//! `HasAccelerometer`, `AccelerometerOrientation` and `ClaimAccelerometer`.
+//! Patched proxies may also expose a raw `Accelerate` tuple. Both are consumed
+//! here so every D-Bus based driver shares one implementation.
 
 use gio::glib::Variant;
 
@@ -12,6 +13,7 @@ const PROXY_NAME: &str = "net.hadess.SensorProxy";
 const PROXY_PATH: &str = "/net/hadess/SensorProxy";
 const PROXY_IFACE: &str = "net.hadess.SensorProxy";
 const EARTH_GRAVITY: f64 = 9.80665;
+const FLAT_GRAVITY: Gravity = Gravity { x: 0.0, y: 0.0 };
 
 /// Maps iio-sensor-proxy's orientation enum to a gravity vector.
 ///
@@ -27,17 +29,59 @@ fn gravity_from_orientation(value: &str) -> Option<Gravity> {
     }
 }
 
+/// Checks whether `net.hadess.SensorProxy` responds on the given bus.
+fn proxy_responds(connection: &gio::DBusConnection) -> bool {
+    connection
+        .call_sync(
+            Some(PROXY_NAME),
+            PROXY_PATH,
+            "org.freedesktop.DBus.Properties",
+            "Get",
+            Some(&Variant::from((PROXY_IFACE, "HasAccelerometer"))),
+            None,
+            gio::DBusCallFlags::NONE,
+            500,
+            gio::Cancellable::NONE,
+        )
+        .is_ok()
+}
+
 pub(crate) struct ProxyClient {
     connection: gio::DBusConnection,
     claimed: bool,
 }
 
 impl ProxyClient {
-    /// Opens the session bus where `iio-sensor-proxy` runs.
+    /// Connects to the bus hosting `iio-sensor-proxy`, preferring the system bus.
+    ///
+    /// # Returns
+    /// A connected client, or `None` if neither system nor session bus is available.
     pub(crate) fn connect() -> Option<Self> {
-        let connection = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
+        let system = gio::bus_get_sync(gio::BusType::System, gio::Cancellable::NONE).ok();
+        if let Some(conn) = system {
+            if proxy_responds(&conn) {
+                return Some(Self {
+                    connection: conn,
+                    claimed: false,
+                });
+            }
+            if let Ok(session) = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE) {
+                if proxy_responds(&session) {
+                    return Some(Self {
+                        connection: session,
+                        claimed: false,
+                    });
+                }
+            }
+            // Keep system bus so drivers like gaokun3 can wait for late activation.
+            return Some(Self {
+                connection: conn,
+                claimed: false,
+            });
+        }
+        let session = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
         Some(Self {
-            connection,
+            connection: session,
             claimed: false,
         })
     }
@@ -78,6 +122,13 @@ impl ProxyClient {
         reply.child_value(0).get::<Variant>()
     }
 
+    /// Returns whether the proxy currently reports an accelerometer.
+    pub(crate) fn has_accelerometer(&self) -> bool {
+        self.property("HasAccelerometer", 500)
+            .and_then(|v| v.get::<bool>())
+            .unwrap_or(false)
+    }
+
     /// Claims the accelerometer, starting proxy polling.
     ///
     /// Claiming an absent sensor is allowed by upstream; it lets a sensor that
@@ -93,6 +144,10 @@ impl ProxyClient {
     }
 
     /// Reads the current gravity, preferring raw values when available.
+    ///
+    /// Returns `Some(FLAT_GRAVITY)` when the proxy is healthy but the device is
+    /// flat (`"undefined"`) or still initializing, so the driver manager does not
+    /// misclassify normal idle states as hardware failures.
     pub(crate) fn read(&mut self) -> Option<Gravity> {
         if !self.claim() {
             return None;
@@ -108,8 +163,12 @@ impl ProxyClient {
                 });
             }
         }
-        let value = self.property("AccelerometerOrientation", 500)?;
-        gravity_from_orientation(&value.get::<String>()?)
+        let Some(value) = self.property("AccelerometerOrientation", 500) else {
+            self.claimed = false;
+            return None;
+        };
+        let orientation = value.get::<String>()?;
+        Some(gravity_from_orientation(&orientation).unwrap_or(FLAT_GRAVITY))
     }
 }
 

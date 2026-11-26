@@ -182,9 +182,13 @@ impl BabydraState {
     pub(crate) fn reload_input_config(&mut self) {
         self.config.reload();
     }
-    /// Hot reloads blur and compositor configurations from disk.
+    /// Hot reloads blur and compositor configurations from disk, then notifies features.
     pub(crate) fn reload_config(&mut self) {
         self.resources.render.reload_config();
+        let _ = self.bus.publish(
+            crate::protocol::CONFIG_RELOAD_TOPIC,
+            &crate::protocol::Event::ConfigReloaded,
+        );
     }
     /// Cursor shape the renderer should show this frame.
     ///

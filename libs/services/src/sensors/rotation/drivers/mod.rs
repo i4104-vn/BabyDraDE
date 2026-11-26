@@ -2,6 +2,7 @@
 //!
 //! Register new drivers in `super::driver::DriverFactory`.
 
+pub(crate) mod evdev;
 pub(crate) mod gaokun3;
 pub(crate) mod iio;
 pub(crate) mod proxy;
