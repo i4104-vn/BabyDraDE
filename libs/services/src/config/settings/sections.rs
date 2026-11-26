@@ -1,5 +1,7 @@
 //! Typed load/save helpers for each configuration section.
 
+use std::path::Path;
+
 use super::paths::*;
 use super::setup::{save_root_or_log, save_section_or_log};
 use crate::config::store;
@@ -21,7 +23,15 @@ pub fn save_babydra_config(config: &BabyDraConfig) {
 
 /// Loads `[display]` from `configs/display.toml`.
 pub fn load_display_config() -> DisplayConfig {
-    store::load_section(&get_display_config_path(), "display")
+    load_display_config_from(&get_display_config_path())
+}
+
+/// Loads `[display]` from an explicit path.
+///
+/// The greeter uses this to read the config of the last logged-in user instead
+/// of its own home directory.
+pub fn load_display_config_from(path: &Path) -> DisplayConfig {
+    store::load_section(path, "display")
 }
 
 /// Persists `[display]` into `configs/display.toml`.

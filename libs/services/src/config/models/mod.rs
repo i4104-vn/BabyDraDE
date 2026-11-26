@@ -37,7 +37,7 @@ pub use blur::BlurConfig;
 pub use clipboard::ClipboardConfig;
 pub use cursor::CursorConfig;
 pub use desktop::{CustomContextItem, DesktopConfig};
-pub use display::{DisplayConfig, DisplayMonitorSetting};
+pub use display::{DisplayConfig, DisplayMonitorSetting, MonitorOrientation};
 pub use gestures::GestureConfig;
 pub use lockscreen::LockscreenConfig;
 pub use mouse::MouseConfig;
