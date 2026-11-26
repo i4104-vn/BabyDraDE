@@ -5,19 +5,11 @@
 //! so a sideways-mounted panel keeps working; with auto-rotation disabled the
 //! configured rotation is the final one.
 
-use services::config::{load_display_config, models::MonitorOrientation};
-use smithay::utils::{Physical, Size, Transform};
+pub(crate) use crate::shared::orientation::configured_transform;
 
-/// Resolves the transform configured for a physical connector.
-///
-/// # Arguments
-/// * `connector` - DRM connector name such as `eDP-1`.
-///
-/// # Returns
-/// The configured transform, or `None` when no valid fixed rotation exists.
-pub(crate) fn configured_transform(connector: &str) -> Option<Transform> {
-    to_transform(load_display_config().orientation_for(connector))
-}
+use crate::shared::orientation::to_transform;
+use services::config::load_display_config;
+use smithay::utils::{Physical, Size, Transform};
 
 /// Resolves the transform configured for the single nested Winit output.
 ///
@@ -40,18 +32,4 @@ pub(crate) fn landscape_fallback(size: Size<i32, Physical>) -> Transform {
     } else {
         Transform::Normal
     }
-}
-
-/// Converts a configured orientation into smithay's transform type.
-fn to_transform(orientation: Option<MonitorOrientation>) -> Option<Transform> {
-    orientation.map(|orientation| match orientation {
-        MonitorOrientation::Normal => Transform::Normal,
-        MonitorOrientation::Rotate90 => Transform::_90,
-        MonitorOrientation::Rotate180 => Transform::_180,
-        MonitorOrientation::Rotate270 => Transform::_270,
-        MonitorOrientation::Flipped => Transform::Flipped,
-        MonitorOrientation::Flipped90 => Transform::Flipped90,
-        MonitorOrientation::Flipped180 => Transform::Flipped180,
-        MonitorOrientation::Flipped270 => Transform::Flipped270,
-    })
 }

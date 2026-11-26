@@ -1,6 +1,5 @@
 //! Product identity, command launching and background watchers.
 
-pub(crate) mod auto_rotate;
 pub(crate) mod process;
 
 /// Human-readable product name.

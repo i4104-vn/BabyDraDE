@@ -70,7 +70,7 @@ pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
         .publish("bus/ready", &crate::protocol::Event::CompositorReady);
 
     // Convertible devices can rotate the panel from their accelerometer.
-    crate::infra::process::auto_rotate::spawn(event_loop);
+    crate::modules::auto_rotate::spawn(event_loop);
 
     // Only now publish our own socket; GTK and the backend already started.
     bootstrap::export_wayland_display(&data.state.resources.socket_name);

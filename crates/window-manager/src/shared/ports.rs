@@ -43,6 +43,30 @@ pub(crate) trait AutostartLauncher {
 /// Port that loads a fresh gesture policy snapshot.
 pub(crate) type LoadGesturePolicy = fn() -> GesturePolicy;
 
+/// Minimal view of the compositor's outputs needed by the rotation feature.
+///
+/// The rotation controller depends on this port instead of the concrete state
+/// facade, so its debounce and baseline rules can be tested without a
+/// compositor. Implementations apply one transform per output and a separate
+/// transform for absolute touch input.
+pub(crate) trait RotationTarget {
+    /// Names of the outputs currently attached to the compositor.
+    fn output_names(&self) -> Vec<String>;
+
+    /// Fixed transform configured for an output, if any.
+    fn configured_transform(&self, name: &str) -> Option<smithay::utils::Transform>;
+
+    /// Transform an output currently advertises, if it is still attached.
+    fn current_transform(&self, name: &str) -> Option<smithay::utils::Transform>;
+
+    /// Applies the computed transforms to the named outputs and to touch input.
+    fn apply_transforms(
+        &mut self,
+        transforms: &[(String, smithay::utils::Transform)],
+        touch: smithay::utils::Transform,
+    );
+}
+
 // Input-facing boundary traits (formerly `ports_input`).
 pub(crate) mod input_ports {
     //! Narrow ports between the shared window adapter and its consumers.

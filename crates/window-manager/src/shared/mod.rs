@@ -2,5 +2,6 @@
 
 pub(crate) mod config;
 pub(crate) mod models;
+pub(crate) mod orientation;
 pub(crate) mod ports;
 pub(crate) mod types;
