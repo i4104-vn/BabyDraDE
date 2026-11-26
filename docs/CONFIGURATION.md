@@ -130,6 +130,9 @@ compositor log or by `/sys/class/drm/` (`eDP-1`, `DSI-1`, `HDMI-A-1`, `DP-1`, �
 [display]
 # Keep the fixed rotations below even when a sensor is present.
 auto_rotate = false
+# "auto" (default) probes gaokun3, then IIO, then sensor-proxy; a specific
+# name ("gaokun3", "iio" or "sensor-proxy") forces that driver.
+auto_rotate_driver = "auto"
 
 [[display.monitors]]
 name = "eDP-1"
@@ -174,6 +177,37 @@ accelerometers (`/sys/bus/iio/devices/iio:deviceN`) or `iio-sensor-proxy` on
 D-Bus (`net.hadess.SensorProxy`). The compositor debounces the reading and
 applies the new transform to every output; touch coordinates follow the same
 rotation through in-memory state.
+
+Driver selection is controlled by `[display] auto_rotate_driver`:
+
+- `auto` (used when the key is absent) probes drivers in order — gaokun3, raw
+  IIO, then `iio-sensor-proxy` — and uses the first usable one.
+- `gaokun3` restricts it to the Huawei MateBook E Go SSC sensor. The aliases
+  `ssc`, `slpi` and `matebook-ego` are accepted for the same driver. That
+  convertible has no IIO sysfs accelerometer; the sensor lives behind the
+  Qualcomm SSC/SLPI DSP and is read through an SSC-enabled `iio-sensor-proxy`
+  (which must be claimed before the sensor appears). Detection uses the
+  device-tree compatible string `huawei,gaokun3` plus the `fastrpc-sdsp`
+  transport, so this driver is inert on other machines.
+- `iio` restricts auto-rotation to raw IIO sysfs accelerometers. The aliases
+  `sysfs` and `accelerometer` are accepted for the same driver.
+- `sensor-proxy` restricts it to `iio-sensor-proxy` on D-Bus. The aliases
+  `proxy`, `dbus` and `iio-sensor-proxy` are accepted for the same driver.
+- Any other value logs a warning and falls back to `auto`.
+
+Under `auto`, gaokun3 is probed first because its strict machine check makes it
+a no-op everywhere else; IIO and then the generic D-Bus driver follow.
+
+At runtime the compositor tracks the active driver's health: after three
+consecutive failed reads it switches to the other driver (when available), so a
+sensor that disappears does not leave rotation stuck. Under `auto` this lets it
+fall through gaokun3, IIO and sensor-proxy, then wrap around.
+
+The rotation baseline is now stored per output instead of only for the first
+one: on multi-monitor setups each output remembers the configured rotation it
+rotates from, so auto-rotation stays correct on every screen. The default is
+unchanged — auto-rotation is still on whenever an orientation sensor is present
+unless `auto_rotate = false` is set.
 
 When auto-rotation is active it takes precedence over the fixed orientation:
 the configured rotation is the baseline the sensor rotates from, so a

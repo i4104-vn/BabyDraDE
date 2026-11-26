@@ -13,6 +13,7 @@ src/
 ├── protocol/  compositor-side bus (router, connection, socket, BusSender)
 └── modules/   independent feature modules
     ├── blur/      GPU blur pipeline and shaders
+    ├── auto_rotate/ driver abstraction/factory + sensor drivers
     ├── input/     keyboard, pointer, touchpad, touch
     ├── render/    frame composition
     ├── shell/     launcher, switcher, lock, screenshot
