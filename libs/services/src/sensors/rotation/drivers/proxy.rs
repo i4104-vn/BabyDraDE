@@ -17,7 +17,7 @@ const EARTH_GRAVITY: f64 = 9.80665;
 ///
 /// The signs follow upstream `orientation_calc()`: positive X is `left-up`,
 /// positive Y is `bottom-up`.
-pub(crate) fn gravity_from_orientation(value: &str) -> Option<Gravity> {
+fn gravity_from_orientation(value: &str) -> Option<Gravity> {
     match value {
         "normal" => Some(Gravity { x: 0.0, y: -1.0 }),
         "bottom-up" => Some(Gravity { x: 0.0, y: 1.0 }),
@@ -82,7 +82,7 @@ impl ProxyClient {
     ///
     /// Claiming an absent sensor is allowed by upstream; it lets a sensor that
     /// appears later start updating without a second claim.
-    pub(crate) fn claim(&mut self) -> bool {
+    fn claim(&mut self) -> bool {
         if self.claimed {
             return true;
         }

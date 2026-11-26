@@ -8,7 +8,5 @@ mod driver;
 mod drivers;
 mod tracker;
 
-pub use driver::{
-    DriverFactory, DriverManager, DriverSelection, RotationDriver, DEFAULT_POLL_INTERVAL,
-};
-pub use tracker::{Gravity, Orientation, RotationTracker, REQUIRED_STABLE_READINGS};
+pub use driver::{DriverFactory, DriverManager, DriverSelection, RotationDriver};
+pub use tracker::{Gravity, RotationTracker};

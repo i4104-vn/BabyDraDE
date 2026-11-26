@@ -1,7 +1,7 @@
 //! Pure orientation maths and the gravity debounce state machine.
 
 /// Number of consecutive identical readings required before rotating.
-pub const REQUIRED_STABLE_READINGS: u8 = 3;
+pub(crate) const REQUIRED_STABLE_READINGS: u8 = 3;
 /// Gravity magnitude below which the device is considered laid flat.
 const FLAT_THRESHOLD: f64 = 0.35;
 
@@ -14,7 +14,7 @@ pub struct Gravity {
 
 /// One of four physical quarters around the panel.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Orientation(u8);
+pub(crate) struct Orientation(u8);
 
 impl Orientation {
     /// Maps a gravity sample to its dominant axis.
@@ -99,14 +99,8 @@ mod tests {
 
     #[test]
     fn gravity_maps_to_quarters_and_ignores_flat() {
-        assert_eq!(
-            Orientation::from_gravity(down()),
-            Some(Orientation(0))
-        );
-        assert_eq!(
-            Orientation::from_gravity(right()),
-            Some(Orientation(3))
-        );
+        assert_eq!(Orientation::from_gravity(down()), Some(Orientation(0)));
+        assert_eq!(Orientation::from_gravity(right()), Some(Orientation(3)));
         assert_eq!(
             Orientation::from_gravity(Gravity { x: 0.0, y: -1.0 }),
             Some(Orientation(2))
