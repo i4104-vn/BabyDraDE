@@ -7,6 +7,8 @@
 //! [`shortcuts`] to register runtime shortcuts without reaching into private
 //! internals; out-of-process apps use `services::system::shortcuts` instead.
 
+/// In-memory protocol router and compositor-side bus endpoint.
+pub mod protocol;
 /// Public in-process shortcut registration API.
 pub mod shortcuts;
 
