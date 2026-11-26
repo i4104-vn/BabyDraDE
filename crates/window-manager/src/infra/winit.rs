@@ -52,12 +52,7 @@ pub(crate) fn init(
         refresh: OUTPUT_REFRESH_MHZ,
     };
     let _output_global = output.create_global::<BabydraState>(&data.display_handle);
-    let transform = match std::env::var("BABYDRADE_TRANSFORM").as_deref() {
-        Ok("90") => Transform::Flipped90,
-        Ok("180") => Transform::Normal,
-        Ok("270") => Transform::Flipped270,
-        _ => Transform::Flipped180,
-    };
+    let transform = crate::infra::orientation::primary_transform().unwrap_or(Transform::Normal);
     output.change_current_state(Some(mode), Some(transform), None, Some((0, 0).into()));
     output.set_preferred(mode);
 

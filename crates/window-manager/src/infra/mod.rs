@@ -2,6 +2,7 @@
 
 pub(crate) mod frame_pacing;
 pub(crate) mod models;
+pub(crate) mod orientation;
 pub(crate) mod process;
 pub(crate) mod udev;
 pub(crate) mod winit;
