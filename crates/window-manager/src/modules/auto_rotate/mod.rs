@@ -6,8 +6,6 @@
 //! sensor are a no-op.
 
 mod controller;
-mod driver;
-mod drivers;
 mod models;
 mod service;
 

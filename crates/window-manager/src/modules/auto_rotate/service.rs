@@ -5,15 +5,14 @@ use smithay::{
     utils::Transform,
 };
 
+use services::sensors::rotation::{DriverFactory, DriverSelection};
+
 use crate::{
     app::state::CalloopData,
     shared::ports::{InteractionBuffer, RotationTarget},
 };
 
-use super::{
-    controller::AutoRotate,
-    driver::{DriverFactory, DriverSelection},
-};
+use super::controller::AutoRotate;
 
 impl RotationTarget for CalloopData {
     fn output_names(&self) -> Vec<String> {

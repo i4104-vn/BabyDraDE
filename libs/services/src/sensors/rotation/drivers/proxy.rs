@@ -6,7 +6,7 @@
 
 use gio::glib::Variant;
 
-use crate::modules::auto_rotate::models::Gravity;
+use crate::sensors::rotation::Gravity;
 
 const PROXY_NAME: &str = "net.hadess.SensorProxy";
 const PROXY_PATH: &str = "/net/hadess/SensorProxy";
@@ -116,7 +116,7 @@ impl ProxyClient {
 #[cfg(test)]
 mod tests {
     use super::gravity_from_orientation;
-    use crate::modules::auto_rotate::models::Gravity;
+    use crate::sensors::rotation::Gravity;
 
     #[test]
     fn proxy_orientation_maps_to_gravity() {

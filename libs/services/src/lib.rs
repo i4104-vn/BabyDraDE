@@ -6,6 +6,8 @@ pub mod config;
 pub mod desktop;
 /// Feature-side protocol bus client and shared wire types.
 pub mod protocol;
+/// Shared device sensors, including orientation drivers.
+pub mod sensors;
 /// System monitoring and control services.
 pub mod system;
 /// UI support: translations, theme/cursor discovery and tray host.

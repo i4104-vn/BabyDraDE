@@ -3,18 +3,20 @@
 //! A driver only knows how to produce a gravity sample. The factory owns an
 //! ordered list of candidates, supports explicit selection from configuration,
 //! and the manager replaces a driver that stops producing readings. Adding a
-//! driver for a new machine therefore means registering one probe function;
-//! no controller or wiring code changes.
+//! driver for a new machine means registering one probe function; no consumer
+//! code changes.
 
 use std::time::Duration;
 
-use super::{
-    drivers,
-    models::{Gravity, DEFAULT_POLL_INTERVAL},
-};
+use super::{drivers, Gravity};
+
+/// Sampling interval used when a driver does not request its own.
+pub const DEFAULT_POLL_INTERVAL: Duration = Duration::from_millis(500);
+/// Failed reads in a row before the manager probes the next candidate.
+const MAX_CONSECUTIVE_FAILURES: u8 = 3;
 
 /// A source of gravity samples.
-pub(crate) trait RotationDriver {
+pub trait RotationDriver {
     /// Identifier used in logs and configuration (`iio`, `sensor-proxy`, …).
     fn name(&self) -> &str;
 
@@ -26,9 +28,6 @@ pub(crate) trait RotationDriver {
         DEFAULT_POLL_INTERVAL
     }
 }
-
-/// Failed reads in a row before the manager probes the next candidate.
-const MAX_CONSECUTIVE_FAILURES: u8 = 3;
 
 /// A registered way to build one driver.
 #[derive(Clone, Copy)]
@@ -48,7 +47,7 @@ impl DriverEntry {
 
 /// Driver chosen by configuration, or automatic detection.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum DriverSelection {
+pub enum DriverSelection {
     Auto,
     Named(String),
 }
@@ -61,7 +60,7 @@ impl DriverSelection {
     ///
     /// # Returns
     /// `Auto` when unset, empty or set to `auto`; otherwise the named driver.
-    pub(crate) fn from_config(value: Option<&str>) -> Self {
+    pub fn from_config(value: Option<&str>) -> Self {
         match value.map(str::trim).filter(|value| !value.is_empty()) {
             None => Self::Auto,
             Some("auto") => Self::Auto,
@@ -72,13 +71,13 @@ impl DriverSelection {
 
 /// Registry of available drivers, in probing order.
 #[derive(Default)]
-pub(crate) struct DriverFactory {
+pub struct DriverFactory {
     entries: Vec<DriverEntry>,
 }
 
 impl DriverFactory {
-    /// Builds a factory containing every driver compiled into the compositor.
-    pub(crate) fn with_builtins() -> Self {
+    /// Builds a factory containing every driver compiled into the service.
+    pub fn with_builtins() -> Self {
         Self::default()
             .register(
                 "gaokun3",
@@ -103,7 +102,7 @@ impl DriverFactory {
     /// * `name` - Canonical configuration value.
     /// * `aliases` - Accepted alternative names.
     /// * `probe` - Constructor returning `None` when unavailable on this machine.
-    pub(crate) fn register(
+    pub fn register(
         mut self,
         name: &'static str,
         aliases: &'static [&'static str],
@@ -121,7 +120,7 @@ impl DriverFactory {
     ///
     /// An unknown name warns and falls back to auto detection, so a config typo
     /// does not disable rotation on a machine where a sensor exists.
-    pub(crate) fn create(&self, selection: DriverSelection) -> DriverManager {
+    pub fn create(&self, selection: DriverSelection) -> DriverManager {
         let entries = match selection {
             DriverSelection::Auto => self.entries.clone(),
             DriverSelection::Named(name) => {
@@ -153,7 +152,7 @@ impl DriverFactory {
 }
 
 /// Owns the active driver and swaps it when it stops producing readings.
-pub(crate) struct DriverManager {
+pub struct DriverManager {
     entries: Vec<DriverEntry>,
     active: Option<usize>,
     driver: Option<Box<dyn RotationDriver>>,

@@ -11,7 +11,7 @@
 
 use std::path::Path;
 
-use crate::modules::auto_rotate::{driver::RotationDriver, models::Gravity};
+use crate::sensors::rotation::{Gravity, RotationDriver};
 
 use super::proxy::ProxyClient;
 

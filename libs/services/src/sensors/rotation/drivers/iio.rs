@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::modules::auto_rotate::{driver::RotationDriver, models::Gravity};
+use crate::sensors::rotation::{Gravity, RotationDriver};
 
 const IIO_ROOTS: [&str; 2] = ["/sys/bus/iio/devices", "/sys/class/iio"];
 const SCALE_FILES: [&str; 3] = ["in_accel_scale", "in_accel_x_scale", "in_accel_y_scale"];

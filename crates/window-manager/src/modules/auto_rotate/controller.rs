@@ -1,25 +1,22 @@
-//! Rotation controller: debounces sensor readings and applies transforms.
+//! Rotation controller: reads the shared sensor service and applies transforms.
 //!
 //! The controller is independent of the compositor state and of any concrete
 //! driver. It reads through [`RotationDriver`] and writes through
 //! [`RotationTarget`], which keeps the physics and business rules testable.
 
+use std::time::Duration;
+
+use services::sensors::rotation::{RotationDriver, RotationTracker};
 use smithay::utils::Transform;
 
 use crate::shared::ports::RotationTarget;
 
-use super::{
-    driver::RotationDriver,
-    models::{rotate, Baselines, Orientation, REQUIRED_STABLE_READINGS},
-};
+use super::models::{rotate, Baselines};
 
 pub(crate) struct AutoRotate<R: RotationDriver> {
     source: R,
-    baseline: Option<Orientation>,
+    tracker: RotationTracker,
     baselines: Baselines,
-    candidate: Option<Orientation>,
-    stable: u8,
-    applied: u8,
 }
 
 impl<R: RotationDriver> AutoRotate<R> {
@@ -27,11 +24,8 @@ impl<R: RotationDriver> AutoRotate<R> {
     pub(crate) fn new(source: R) -> Self {
         Self {
             source,
-            baseline: None,
+            tracker: RotationTracker::new(),
             baselines: Baselines::default(),
-            candidate: None,
-            stable: 0,
-            applied: 0,
         }
     }
 
@@ -41,7 +35,7 @@ impl<R: RotationDriver> AutoRotate<R> {
     }
 
     /// Interval at which this controller should be polled.
-    pub(crate) fn poll_interval(&self) -> std::time::Duration {
+    pub(crate) fn poll_interval(&self) -> Duration {
         self.source.poll_interval()
     }
 
@@ -53,28 +47,13 @@ impl<R: RotationDriver> AutoRotate<R> {
         let Some(gravity) = self.source.read() else {
             return;
         };
-        let Some(current) = Orientation::from_gravity(gravity) else {
-            return;
-        };
         let names = target.output_names();
         if names.is_empty() {
             return;
         }
-
-        let baseline = *self.baseline.get_or_insert(current);
-        if self.candidate == Some(current) {
-            self.stable += 1;
-        } else {
-            self.candidate = Some(current);
-            self.stable = 1;
-        }
-
-        let steps = current.steps_from(baseline);
-        if self.stable < REQUIRED_STABLE_READINGS || self.applied == steps {
+        let Some(steps) = self.tracker.update(gravity) else {
             return;
-        }
-        self.applied = steps;
-        self.stable = 0;
+        };
 
         let transforms: Vec<(String, Transform)> = names
             .iter()
@@ -95,7 +74,7 @@ mod tests {
     use std::time::Duration;
 
     use super::{AutoRotate, RotationDriver, RotationTarget, Transform};
-    use crate::modules::auto_rotate::models::Gravity;
+    use services::sensors::rotation::Gravity;
 
     struct Source {
         readings: Vec<Option<Gravity>>,
@@ -172,7 +151,10 @@ mod tests {
         for _ in 0..4 {
             controller.poll(&mut target);
         }
-        assert_eq!(target.applied, vec![("eDP-1".to_string(), Transform::_270)]);
+        assert_eq!(
+            target.applied,
+            vec![("eDP-1".to_string(), Transform::_270)]
+        );
     }
 
     #[test]
@@ -207,13 +189,15 @@ mod tests {
 
     #[test]
     fn ignores_transient_sensor_failures() {
-        let mut controller =
-            controller(vec![down(), None, None, down(), right(), right(), right()]);
+        let mut controller = controller(vec![down(), None, None, down(), right(), right(), right()]);
         let mut target = single_output();
         for _ in 0..7 {
             controller.poll(&mut target);
         }
-        assert_eq!(target.applied, vec![("eDP-1".to_string(), Transform::_270)]);
+        assert_eq!(
+            target.applied,
+            vec![("eDP-1".to_string(), Transform::_270)]
+        );
     }
 
     #[test]
