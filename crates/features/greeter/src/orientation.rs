@@ -1,16 +1,25 @@
-//! Applies fixed monitor orientations to the greetd/cage session.
+//! Applies monitor orientations to the greetd/cage session.
 //!
-//! The greeter runs before the user logs in, so it discovers the display config
-//! on disk and sends each rotation to cage over `zwlr_output_manager_v1`. No
-//! external tool such as `wlr-randr` is needed.
+//! Fixed rotations come from the display config on disk, while automatic
+//! rotation from the accelerometer is always enabled for the greeter and does
+//! not consult that config. Both are sent to cage over `zwlr_output_manager_v1`;
+//! no external tool such as `wlr-randr` is needed.
 
 use std::{
+    cell::RefCell,
+    collections::HashMap,
     error::Error,
     path::{Path, PathBuf},
+    rc::Rc,
     time::{Duration, Instant, SystemTime},
 };
 
-use services::config::{load_display_config_from, models::{DisplayConfig, MonitorOrientation}};
+use services::{
+    config::{load_display_config_from, models::{DisplayConfig, MonitorOrientation}},
+    sensors::rotation::{
+        DriverFactory, DriverManager, DriverSelection, RotationDriver, RotationTracker,
+    },
+};
 use wayland_client::{
     globals::{registry_queue_init, GlobalListContents},
     protocol::{wl_output::Transform, wl_registry},
@@ -47,6 +56,9 @@ pub(crate) fn apply() {
             tracing::warn!("greeter: cannot set orientation over Wayland: {error}");
         }
     }
+    // The login screen must follow the sensor even when `auto_rotate` is
+    // disabled in the config, so this is unconditional and config-independent.
+    start_auto_rotate();
 }
 
 // Wayland protocol client state.
@@ -57,6 +69,10 @@ struct OutputState {
     heads: Vec<(String, ZwlrOutputHeadV1)>,
     /// Head currently being described by the compositor.
     pending_head: Option<ZwlrOutputHeadV1>,
+    /// Transform announced for the head currently being described.
+    pending_transform: Option<Transform>,
+    /// Transform each named head reported at session start (rotation baseline).
+    transforms: HashMap<String, Transform>,
     /// Serial of the current output configuration, used by `create_configuration`.
     serial: Option<u32>,
     /// The compositor finished describing the current outputs.
@@ -111,10 +127,18 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for OutputState {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
     ) {
-        if let HeadEvent::Name { name } = event {
-            if let Some(head) = state.pending_head.take() {
-                state.heads.push((name, head));
+        match event {
+            HeadEvent::Name { name } => {
+                if let Some(head) = state.pending_head.take() {
+                    let transform = state.pending_transform.take().unwrap_or(Transform::Normal);
+                    state.transforms.insert(name.clone(), transform);
+                    state.heads.push((name, head));
+                }
             }
+            HeadEvent::Transform { transform } => {
+                state.pending_transform = Some(transform.into_result().unwrap_or(Transform::Normal));
+            }
+            _ => {}
         }
     }
 
@@ -234,6 +258,128 @@ fn to_wl_transform(orientation: MonitorOrientation) -> Transform {
     }
 }
 
+// Always-on automatic rotation.
+
+/// Continuously rotates every output from the accelerometer.
+struct RotationSession {
+    driver: DriverManager,
+    tracker: RotationTracker,
+    connection: Connection,
+    queue: EventQueue<OutputState>,
+    qh: QueueHandle<OutputState>,
+    manager: ZwlrOutputManagerV1,
+    state: OutputState,
+    baselines: HashMap<String, Transform>,
+}
+
+impl RotationSession {
+    /// Opens a dedicated Wayland connection and captures output baselines.
+    fn new(driver: DriverManager) -> Result<Self, Box<dyn Error>> {
+        let connection = Connection::connect_to_env()?;
+        let (globals, mut queue) = registry_queue_init::<OutputState>(&connection)?;
+        let qh = queue.handle();
+        let manager: ZwlrOutputManagerV1 = globals.bind(&qh, 1..=2, ())?;
+
+        let mut state = OutputState::default();
+        let deadline = Instant::now() + PROTOCOL_TIMEOUT;
+        while !state.done && Instant::now() < deadline {
+            dispatch(&mut queue, &mut state)?;
+        }
+        if !state.done {
+            return Err("compositor did not announce its outputs".into());
+        }
+        if state.serial.is_none() {
+            return Err("missing output configuration serial".into());
+        }
+        let baselines = state.transforms.clone();
+        Ok(Self {
+            driver,
+            tracker: RotationTracker::new(),
+            connection,
+            queue,
+            qh,
+            manager,
+            state,
+            baselines,
+        })
+    }
+
+    /// Reads one sample and applies a rotation once it becomes stable.
+    fn poll(&mut self) {
+        let _ = self.queue.dispatch_pending(&mut self.state);
+        let Some(gravity) = self.driver.read() else {
+            return;
+        };
+        if self.state.heads.is_empty() {
+            return;
+        }
+        let Some(steps) = self.tracker.update(gravity) else {
+            return;
+        };
+        let Some(serial) = self.state.serial else {
+            return;
+        };
+
+        let configuration = self.manager.create_configuration(serial, &self.qh, ());
+        for (name, head) in &self.state.heads {
+            let base = self
+                .baselines
+                .get(name)
+                .copied()
+                .unwrap_or(Transform::Normal);
+            configuration
+                .enable_head(head, &self.qh, ())
+                .set_transform(rotate_wl(base, steps));
+        }
+        configuration.apply();
+        let _ = self.connection.flush();
+        tracing::info!("greeter: auto-rotated outputs by {steps} quarter turn(s)");
+    }
+}
+
+/// Starts accelerometer rotation regardless of the display configuration.
+fn start_auto_rotate() {
+    let driver = DriverFactory::with_builtins().create(DriverSelection::Auto);
+    if driver.name() == "none" {
+        tracing::info!("greeter: no accelerometer driver available; auto-rotate skipped");
+        return;
+    }
+    let interval = driver.poll_interval();
+    let session = match RotationSession::new(driver) {
+        Ok(session) => Rc::new(RefCell::new(session)),
+        Err(error) => {
+            tracing::warn!("greeter: cannot start auto-rotate: {error}");
+            return;
+        }
+    };
+    tracing::info!("greeter: auto-rotate enabled");
+    glib::timeout_add_local(interval, move || {
+        if let Ok(mut session) = session.try_borrow_mut() {
+            session.poll();
+        }
+        glib::ControlFlow::Continue
+    });
+}
+
+/// Rotates a protocol transform clockwise by `steps` quarter turns.
+fn rotate_wl(transform: Transform, steps: u8) -> Transform {
+    let mut result = transform;
+    for _ in 0..steps % 4 {
+        result = match result {
+            Transform::Normal => Transform::_90,
+            Transform::_90 => Transform::_180,
+            Transform::_180 => Transform::_270,
+            Transform::_270 => Transform::Normal,
+            Transform::Flipped => Transform::Flipped90,
+            Transform::Flipped90 => Transform::Flipped180,
+            Transform::Flipped180 => Transform::Flipped270,
+            Transform::Flipped270 => Transform::Flipped,
+            _ => result,
+        };
+    }
+    result
+}
+
 // Display config discovery.
 
 /// Locates the most recently modified readable display config.
@@ -299,7 +445,16 @@ fn user_home(user: &str, passwd: &str) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::user_home;
+    use super::{rotate_wl, user_home};
+    use wayland_client::protocol::wl_output::Transform;
+
+    #[test]
+    fn rotate_wl_keeps_mirrored_family_while_turning() {
+        assert_eq!(rotate_wl(Transform::Normal, 1), Transform::_90);
+        assert_eq!(rotate_wl(Transform::Normal, 4), Transform::Normal);
+        assert_eq!(rotate_wl(Transform::Flipped90, 1), Transform::Flipped180);
+    }
+
 
     #[test]
     fn user_home_reads_the_sixth_passwd_field() {
