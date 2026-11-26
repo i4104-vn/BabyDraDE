@@ -10,7 +10,7 @@ use smithay::{
         wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
         wayland_server::protocol::wl_surface::WlSurface,
     },
-    utils::{Logical, Point, Serial, Size},
+    utils::{Logical, Point, Serial, Size, Transform},
     wayland::shell::wlr_layer::Layer,
 };
 
@@ -178,5 +178,13 @@ impl InteractionBuffer for BabydraState {
 
     fn set_cursor_visible(&mut self, visible: bool) {
         self.input.cursor_visible = visible;
+    }
+
+    fn touch_transform(&self) -> Option<Transform> {
+        self.input.touch_transform
+    }
+
+    fn set_touch_transform(&mut self, transform: Option<Transform>) {
+        self.input.touch_transform = transform;
     }
 }

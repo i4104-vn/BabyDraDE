@@ -26,7 +26,7 @@ use smithay::{
     backend::input::TouchSlot,
     desktop::Window,
     input::pointer::CursorIcon,
-    utils::{Logical, Point},
+    utils::{Logical, Point, Transform},
 };
 
 use crate::modules::window::interaction::{
@@ -54,6 +54,8 @@ pub(crate) struct InputState {
     pub(crate) pointer_location: Point<f64, Logical>,
     /// Whether the compositor-drawn cursor is visible.
     pub(crate) cursor_visible: bool,
+    /// Touch rotation applied by the auto-rotate sensor, if any.
+    pub(crate) touch_transform: Option<Transform>,
 }
 
 impl InputState {
@@ -70,6 +72,7 @@ impl InputState {
             touch_gesture: TouchGestureBuffer::default(),
             pointer_location: Point::from((100.0, 100.0)),
             cursor_visible: true,
+            touch_transform: None,
         }
     }
 }

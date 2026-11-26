@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::app::state::CalloopData;
+use crate::shared::ports::InteractionBuffer;
 
 pub(super) const POLL_INTERVAL: Duration = Duration::from_millis(500);
 pub(super) const REQUIRED_STABLE_READINGS: u8 = 3;
@@ -123,9 +124,7 @@ impl AutoRotate {
         let Some((x, y)) = self.sensor.read_gravity() else {
             return;
         };
-        if std::env::var("BABYDRADE_AUTO_ROTATE_DEBUG").as_deref() == Ok("1") {
-            tracing::debug!("accelerometer: x={x:.3} y={y:.3}");
-        }
+        tracing::debug!("accelerometer: x={x:.3} y={y:.3}");
         let Some(current) = Orientation::from_gravity(x, y) else {
             return;
         };
@@ -151,7 +150,7 @@ impl AutoRotate {
         for output in state.state.windows.space.outputs() {
             output.change_current_state(None, Some(transform), None, None);
         }
-        std::env::set_var("BABYDRADE_TOUCH_TRANSFORM", transform_name(transform));
+        state.state.set_touch_transform(Some(transform));
         tracing::info!("auto-rotated panel to {transform:?}");
     }
 }
@@ -184,19 +183,6 @@ pub(super) fn rotate(transform: Transform, steps: u8) -> Transform {
         };
     }
     result
-}
-
-pub(super) fn transform_name(transform: Transform) -> &'static str {
-    match transform {
-        Transform::Normal => "normal",
-        Transform::_90 => "90",
-        Transform::_180 => "180",
-        Transform::_270 => "270",
-        Transform::Flipped => "flipped",
-        Transform::Flipped90 => "flipped-90",
-        Transform::Flipped180 => "flipped-180",
-        Transform::Flipped270 => "flipped-270",
-    }
 }
 
 pub(super) fn read_number(path: &Path) -> Option<f64> {
@@ -269,16 +255,14 @@ fn detect_sensor() -> Option<Sensor> {
 }
 
 /// Starts automatic rotation when enabled. A sensor being present is enough to
-/// enable it by default; `auto_rotate = false` in display.toml or
-/// `BABYDRADE_AUTO_ROTATE=0` opts out.
+/// enable it by default; `auto_rotate = false` in display.toml opts out.
+///
+/// The transform configured for each monitor is the baseline the sensor rotates
+/// from, so fixed orientation and auto-rotation can be used together.
 pub(crate) fn spawn(event_loop: &mut EventLoop<'_, CalloopData>) {
-    let enabled = match std::env::var("BABYDRADE_AUTO_ROTATE").as_deref() {
-        Ok("0") | Ok("false") => false,
-        Ok(_) => true,
-        Err(_) => services::config::load_display_config()
-            .auto_rotate
-            .unwrap_or(true),
-    };
+    let enabled = services::config::load_display_config()
+        .auto_rotate
+        .unwrap_or(true);
     if !enabled {
         tracing::info!("auto-rotate disabled by configuration");
         return;

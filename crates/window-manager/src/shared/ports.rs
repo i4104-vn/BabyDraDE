@@ -167,6 +167,10 @@ pub(crate) mod input_ports {
         fn pointer_location(&self) -> Point<f64, Logical>;
         fn set_pointer_location(&mut self, position: Point<f64, Logical>);
         fn set_cursor_visible(&mut self, visible: bool);
+        /// Touch rotation currently applied by the auto-rotate sensor.
+        fn touch_transform(&self) -> Option<smithay::utils::Transform>;
+        /// Records the touch rotation used by the next absolute input event.
+        fn set_touch_transform(&mut self, transform: Option<smithay::utils::Transform>);
     }
 
     /// Configuration lookups and system-wide actions triggered by input.

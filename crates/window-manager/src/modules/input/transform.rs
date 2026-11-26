@@ -1,6 +1,6 @@
 use smithay::{
     backend::input::{AbsolutePositionEvent, InputBackend},
-    utils::{Logical, Point, Size, Transform},
+    utils::{Logical, Point, Size},
 };
 
 use crate::modules::input::InputContext;
@@ -12,7 +12,7 @@ use crate::modules::input::InputContext;
 ///
 /// * `state` - State providing the current output layout.
 /// * `event` - The absolute input position event providing transformed positions relative to screen mode.
-/// * `touch_override` - Whether to check `BABYDRADE_TOUCH_TRANSFORM` for physical orientation override (used by touchscreens).
+/// * `touch_override` - Whether to use the auto-rotate touch override (used by touchscreens).
 ///
 /// # Returns
 ///
@@ -25,17 +25,9 @@ pub(crate) fn transform_absolute_position<B: InputBackend, T: AbsolutePositionEv
     let output = state.space().outputs().next()?;
     let output_geometry = state.space().output_geometry(output)?;
     let transform = if touch_override {
-        match std::env::var("BABYDRADE_TOUCH_TRANSFORM").as_deref() {
-            Ok("90") => Transform::_90,
-            Ok("180") => Transform::_180,
-            Ok("270") => Transform::_270,
-            Ok("flipped") => Transform::Flipped,
-            Ok("flipped-90") => Transform::Flipped90,
-            Ok("flipped-180") => Transform::Flipped180,
-            Ok("flipped-270") => Transform::Flipped270,
-            Ok("normal") | Ok("0") => Transform::Normal,
-            _ => output.current_transform(),
-        }
+        state
+            .touch_transform()
+            .unwrap_or_else(|| output.current_transform())
     } else {
         output.current_transform()
     };
