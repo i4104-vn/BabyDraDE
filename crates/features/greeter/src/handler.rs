@@ -4,6 +4,8 @@ use gtk4::prelude::*;
 use std::sync::mpsc;
 use std::time::Duration;
 
+use common::PowerAction;
+
 use super::auth;
 use super::render::GreeterWidgets;
 use super::widgets::{save_last_user, top_bar::TopBarWidget};
@@ -60,22 +62,25 @@ fn setup_splash_transition(greeter: &GreeterWidgets) {
     });
 }
 
-fn power_action(action: &str) {
-    if let Err(err) = std::process::Command::new("systemctl").arg(action).spawn() {
-        tracing::warn!("greeter power action '{action}' failed: {err}");
+fn power_action(action: PowerAction) {
+    let Some(arg) = action.systemctl_arg() else {
+        return;
+    };
+    if let Err(err) = std::process::Command::new("systemctl").arg(arg).spawn() {
+        tracing::warn!("greeter power action '{arg}' failed: {err}");
     }
 }
 
 fn setup_power_buttons(top_bar: &TopBarWidget) {
     top_bar
         .power_btn
-        .connect_clicked(|_| power_action("poweroff"));
+        .connect_clicked(|_| power_action(PowerAction::Shutdown));
     top_bar
         .reboot_btn
-        .connect_clicked(|_| power_action("reboot"));
+        .connect_clicked(|_| power_action(PowerAction::Reboot));
     top_bar
         .suspend_btn
-        .connect_clicked(|_| power_action("suspend"));
+        .connect_clicked(|_| power_action(PowerAction::Sleep));
 }
 
 #[derive(Clone)]

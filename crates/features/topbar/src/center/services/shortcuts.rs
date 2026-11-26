@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use services::system::shortcuts::{ShortcutClient, ShortcutTarget};
 
-const OWNER: &str = "org.babydrade.topbar";
+use crate::bridge::OWNER;
 const BUS_NAME: &str = "org.babydra.Island";
 const OBJECT_PATH: &str = "/org/babydra/Island";
 const INTERFACE: &str = "org.babydra.Island";

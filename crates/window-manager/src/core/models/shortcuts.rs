@@ -8,10 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::shortcuts::parser::{parse_modifiers, to_keysym};
 
-fn default_true() -> bool {
-    true
-}
-
 /// One configured global shortcut: a key combo and the command it runs.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct Shortcut {
@@ -19,7 +15,7 @@ pub(crate) struct Shortcut {
     pub(crate) modifiers: String,
     pub(crate) key: String,
     pub(crate) command: String,
-    #[serde(default = "default_true")]
+    #[serde(default = "common::default_true")]
     pub(crate) enabled: bool,
 }
 

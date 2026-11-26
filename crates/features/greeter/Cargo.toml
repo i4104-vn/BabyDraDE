@@ -17,6 +17,7 @@ glib = "0.22"
 chrono = "0.4"
 greetd_ipc = { version = "0.10", features = ["codec"] }
 serde_json = "1.0"
+common = { path = "../../../libs/common" }
 services = { path = "../../../libs/services" }
 ui-kit = { path = "../../../libs/ui-kit" }
 tracing.workspace = true

@@ -1,5 +1,6 @@
 //! Logo button with quick system actions
 
+use common::PowerAction;
 use gtk4::prelude::*;
 use gtk4::{Button, GestureClick};
 use std::rc::Rc;
@@ -37,16 +38,8 @@ impl LogoButton {
                 .item("About BabyDraDE", "info", || {})
                 .item("System Settings", "settings", || {})
                 .separator()
-                .item("Restart", "refresh", || {
-                    let _ = std::process::Command::new("systemctl")
-                        .arg("reboot")
-                        .spawn();
-                })
-                .item("Shut Down...", "power", || {
-                    let _ = std::process::Command::new("systemctl")
-                        .arg("poweroff")
-                        .spawn();
-                }),
+                .item("Restart", "refresh", || PowerAction::Reboot.execute())
+                .item("Shut Down...", "power", || PowerAction::Shutdown.execute()),
         );
 
         let click = GestureClick::new();

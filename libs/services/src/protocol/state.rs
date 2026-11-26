@@ -12,15 +12,13 @@ use common::protocol::{
     decode, BusError, BusErrorCode, Control, Envelope, Incoming, Kind, LineBuffer, Message,
     MessageId, PeerName, Target,
 };
+// Router/client deadline and presence topic are owned by `common::protocol`.
+pub(crate) use common::protocol::{PEERS_TOPIC, REQUEST_TIMEOUT};
 
 /// Deadline for the initial `Hello`/`Welcome` exchange.
 pub(crate) const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
-/// Deadline recorded for unanswered requests.
-pub(crate) const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// Size of each socket read chunk.
 pub(crate) const CHUNK: usize = 4096;
-/// Topic carrying router presence notifications.
-pub(crate) const PEERS_TOPIC: &str = "bus/peers";
 
 /// Deadline and destination of an unanswered request.
 pub(crate) struct ReaderPending {

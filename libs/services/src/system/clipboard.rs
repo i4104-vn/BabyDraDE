@@ -63,7 +63,7 @@ pub fn ensure_dir() {
 }
 
 fn preview_for(mime: &str, data: &[u8]) -> String {
-    if mime.starts_with("text/") || mime == "UTF8_STRING" || mime == "STRING" {
+    if common::constants::is_text_mime(mime) {
         String::from_utf8_lossy(data).chars().take(240).collect()
     } else {
         format!("<{} bytes>", data.len())
@@ -126,10 +126,8 @@ pub fn read_current() -> Option<(String, Vec<u8>)> {
 /// match exactly.
 pub fn read_current_for(mime_type: &str) -> Option<Vec<u8>> {
     let (mime, data) = read_current()?;
-    let cached_text =
-        mime.starts_with("text/") || matches!(mime.as_str(), "UTF8_STRING" | "STRING");
-    let request_text =
-        mime_type.starts_with("text/") || matches!(mime_type, "UTF8_STRING" | "STRING");
+    let cached_text = common::constants::is_text_mime(&mime);
+    let request_text = common::constants::is_text_mime(mime_type);
     if mime == mime_type || (cached_text && request_text) {
         Some(data)
     } else {

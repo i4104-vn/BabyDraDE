@@ -2,10 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-fn default_true() -> bool {
-    true
-}
-
 fn default_blur_radius() -> f32 {
     18.0
 }
@@ -58,7 +54,7 @@ fn default_blur_app_rules() -> Vec<String> {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct BlurConfig {
     /// Whether background blur is globally enabled.
-    #[serde(default = "default_true")]
+    #[serde(default = "common::default_true")]
     pub enabled: bool,
     /// When true, blurs every window regardless of matching `app_rules`.
     #[serde(default)]

@@ -7,29 +7,15 @@
 //! handlers below.
 
 use crate::protocol::{
-    Message, MessageId, ProtocolError, Request, Response, WindowAction as ProtocolAction,
-    WindowTarget,
+    Message, MessageId, ProtocolError, Request, Response, WindowAction, WindowTarget,
 };
 use smithay::{desktop::Window, utils::SERIAL_COUNTER};
 
 use crate::{
     app::state::BabydraState,
-    modules::{
-        input::keyboard::shortcuts::execute_action,
-        window::{metadata, windows::WindowAction},
-    },
+    modules::{input::keyboard::shortcuts::execute_action, window::metadata},
     shared::ports::SystemActions,
 };
-
-/// Maps a protocol action to the compositor's internal window action.
-fn to_window_action(action: ProtocolAction) -> WindowAction {
-    match action {
-        ProtocolAction::Close => WindowAction::Close,
-        ProtocolAction::Minimize => WindowAction::Minimize,
-        ProtocolAction::Maximize => WindowAction::Maximize,
-        ProtocolAction::Fullscreen => WindowAction::Fullscreen,
-    }
-}
 
 /// Handles one request against live compositor state.
 fn handle(id: MessageId, request: Request, state: &mut BabydraState) -> Response {
@@ -52,13 +38,13 @@ fn handle(id: MessageId, request: Request, state: &mut BabydraState) -> Response
 ///
 /// # Arguments
 /// * `id` - Correlation id of the originating request.
-/// * `action` - Protocol action to translate and apply.
+/// * `action` - Window action to apply.
 /// * `state` - Live compositor state holding the windows.
 ///
 /// # Returns
 /// An acknowledgement response.
-fn handle_window(id: MessageId, action: ProtocolAction, state: &mut BabydraState) -> Response {
-    BabydraState::handle_window_action(state, to_window_action(action));
+fn handle_window(id: MessageId, action: WindowAction, state: &mut BabydraState) -> Response {
+    BabydraState::handle_window_action(state, action);
     Response::Ok { request_id: id }
 }
 

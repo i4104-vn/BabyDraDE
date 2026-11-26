@@ -6,10 +6,6 @@ fn default_power_profile() -> String {
     "balanced".to_string()
 }
 
-fn default_true() -> bool {
-    true
-}
-
 fn default_saver_threshold() -> u32 {
     20
 }
@@ -25,7 +21,7 @@ pub struct PowerConfig {
     #[serde(default = "default_power_profile")]
     pub profile: String,
     /// Whether battery saver activates below [`Self::saver_threshold`].
-    #[serde(default = "default_true")]
+    #[serde(default = "common::default_true")]
     pub auto_saver_enabled: bool,
     /// Percentage threshold below which battery saver activates.
     #[serde(default = "default_saver_threshold")]
@@ -44,7 +40,7 @@ impl Default for PowerConfig {
     fn default() -> Self {
         Self {
             profile: default_power_profile(),
-            auto_saver_enabled: default_true(),
+            auto_saver_enabled: common::default_true(),
             saver_threshold: default_saver_threshold(),
             charge_limit: default_charge_limit(),
         }

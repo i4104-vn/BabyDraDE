@@ -28,12 +28,8 @@ pub struct ShortcutBinding {
     /// Effect to run when the combo is pressed.
     pub target: ShortcutTarget,
     /// Disabled bindings remain published but never match.
-    #[serde(default = "default_true")]
+    #[serde(default = "crate::default_true")]
     pub enabled: bool,
-}
-
-fn default_true() -> bool {
-    true
 }
 
 /// One app's published shortcut table.

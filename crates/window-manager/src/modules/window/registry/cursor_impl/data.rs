@@ -1,7 +1,7 @@
-pub(crate) const CURSOR_WIDTH: i32 = 16;
-pub(crate) const CURSOR_HEIGHT: i32 = 20;
+// Bitmap dimensions are owned by `common::constants::rendering`.
+pub(crate) use common::constants::rendering::{CURSOR_HEIGHT, CURSOR_WIDTH};
 
-pub(crate) const CURSOR_PIXELS: &[u8; 16 * 20] = &[
+pub(crate) const CURSOR_PIXELS: &[u8; (CURSOR_WIDTH as usize) * (CURSOR_HEIGHT as usize)] = &[
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     1, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

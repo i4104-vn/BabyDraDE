@@ -3,10 +3,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-fn default_true() -> bool {
-    true
-}
-
 fn default_icon_size() -> u32 {
     48
 }
@@ -36,7 +32,7 @@ pub struct CustomContextItem {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct DesktopConfig {
     /// Whether file and application icons are displayed on the desktop background.
-    #[serde(default = "default_true")]
+    #[serde(default = "common::default_true")]
     pub show_icons: bool,
     /// Desktop icon dimension in logical pixels.
     #[serde(default = "default_icon_size")]
@@ -48,7 +44,7 @@ pub struct DesktopConfig {
     #[serde(default = "default_desktop_sort_by")]
     pub sort_by: String,
     /// Whether icons automatically align to grid cells.
-    #[serde(default = "default_true")]
+    #[serde(default = "common::default_true")]
     pub auto_arrange: bool,
     /// In-memory cache of icon coordinates on the grid (skipped from persistent config).
     #[serde(skip)]

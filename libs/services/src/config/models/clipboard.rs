@@ -2,10 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-fn default_true() -> bool {
-    true
-}
-
 fn default_clipboard_max_items() -> usize {
     20
 }
@@ -23,7 +19,7 @@ fn default_clipboard_key() -> String {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClipboardConfig {
     /// Whether clipboard history tracking daemon is active.
-    #[serde(default = "default_true")]
+    #[serde(default = "common::default_true")]
     pub enabled: bool,
     /// Maximum number of historic clipboard entries retained.
     #[serde(default = "default_clipboard_max_items")]

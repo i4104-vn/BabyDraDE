@@ -5,11 +5,22 @@
 //! only fill in `target`, `kind` and `payload`. The types, codec and socket
 //! helpers here are shared by the compositor and every feature process.
 
+use std::time::Duration;
+
 pub mod codec;
 pub mod envelope;
 pub mod models;
 pub mod socket;
 pub mod writer;
+
+/// Deadline for a request waiting on a peer response.
+///
+/// Shared by the compositor router and every feature-side bus client so both
+/// sides expire unanswered requests at the same point.
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Topic carrying router presence notifications.
+pub const PEERS_TOPIC: &str = "bus/peers";
 
 pub use codec::{decode, encode, CodecError, LineBuffer};
 pub use envelope::{

@@ -3,6 +3,7 @@ pub mod center;
 pub mod left;
 pub mod right;
 
+use bridge::OWNER;
 use center::DynamicIsland;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, CenterBox};
@@ -27,7 +28,7 @@ pub fn run() {
     }
 
     let app = Application::builder()
-        .application_id("org.babydrade.topbar")
+        .application_id(OWNER)
         .flags(gtk4::gio::ApplicationFlags::NON_UNIQUE)
         .build();
 

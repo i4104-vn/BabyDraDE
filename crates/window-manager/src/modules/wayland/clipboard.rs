@@ -12,14 +12,7 @@ pub(crate) mod policy {
     //!
     //! Pure policy — no pipes, threads or Wayland selection state.
 
-    /// Text MIME types we prefer when capturing a selection, in priority order.
-    const PREFERRED_TEXT_MIMES: &[&str] = &[
-        "text/plain;charset=utf-8",
-        "UTF8_STRING",
-        "text/plain",
-        "text/plain;charset=utf16le",
-        "STRING",
-    ];
+    use common::constants::{MIME_TEXT_PREFIX, PREFERRED_TEXT_MIMES};
 
     /// Selects the MIME type to capture from a client's offered types.
     ///
@@ -39,7 +32,7 @@ pub(crate) mod policy {
         }
         mimes
             .iter()
-            .find(|mime| mime.starts_with("text/"))
+            .find(|mime| mime.starts_with(MIME_TEXT_PREFIX))
             .cloned()
             .or_else(|| mimes.first().cloned())
     }

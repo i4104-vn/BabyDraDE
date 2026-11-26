@@ -144,17 +144,10 @@ impl ClipboardState {
         // representation, so for text we also advertise the common aliases
         // that GTK/Qt/XWayland clients request when pasting.
         let mut offered = vec![cached_mime.clone()];
-        let is_text = cached_mime.starts_with("text/")
-            || matches!(cached_mime.as_str(), "UTF8_STRING" | "STRING");
-        if is_text {
-            for alias in [
-                "UTF8_STRING",
-                "STRING",
-                "text/plain",
-                "text/plain;charset=utf-8",
-            ] {
+        if common::constants::is_text_mime(&cached_mime) {
+            for alias in common::constants::TEXT_MIME_ALIASES {
                 if !offered.iter().any(|mime| mime == alias) {
-                    offered.push(alias.to_string());
+                    offered.push((*alias).to_string());
                 }
             }
         }

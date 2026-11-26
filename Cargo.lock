@@ -139,6 +139,7 @@ name = "babydra-greeter"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "common",
  "glib",
  "greetd_ipc",
  "gtk4",
@@ -160,6 +161,7 @@ dependencies = [
  "animation-gtk",
  "cairo-rs",
  "chrono",
+ "common",
  "dirs",
  "gdk-pixbuf",
  "gio",
