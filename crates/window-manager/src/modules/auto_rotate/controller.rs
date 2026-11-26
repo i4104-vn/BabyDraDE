@@ -151,10 +151,7 @@ mod tests {
         for _ in 0..4 {
             controller.poll(&mut target);
         }
-        assert_eq!(
-            target.applied,
-            vec![("eDP-1".to_string(), Transform::_270)]
-        );
+        assert_eq!(target.applied, vec![("eDP-1".to_string(), Transform::_270)]);
     }
 
     #[test]
@@ -189,15 +186,13 @@ mod tests {
 
     #[test]
     fn ignores_transient_sensor_failures() {
-        let mut controller = controller(vec![down(), None, None, down(), right(), right(), right()]);
+        let mut controller =
+            controller(vec![down(), None, None, down(), right(), right(), right()]);
         let mut target = single_output();
         for _ in 0..7 {
             controller.poll(&mut target);
         }
-        assert_eq!(
-            target.applied,
-            vec![("eDP-1".to_string(), Transform::_270)]
-        );
+        assert_eq!(target.applied, vec![("eDP-1".to_string(), Transform::_270)]);
     }
 
     #[test]
