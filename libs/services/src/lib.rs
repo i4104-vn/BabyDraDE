@@ -14,6 +14,7 @@ pub mod ui;
 // Stable re-exports keep existing `services::*` paths working after regrouping.
 pub use config::models;
 pub use desktop::{files, screenshot, wallpaper};
+pub use system::filedialog;
 pub use ui::{i18n, theme, tray};
 
 /// Translates a key into the active locale.

@@ -1,8 +1,10 @@
 //! Aggregated access to system monitoring: CPU, memory, battery, thermal,
-//! disk, network, uptime, volume and window state.
+//! disk, network, uptime, volume, window state and file chooser services.
 pub mod clipboard;
 /// D-Bus application menu discovery and activation.
 pub mod dbus_menu;
+/// Native file chooser data, filters, places and default-open launcher.
+pub mod filedialog;
 /// Backlight, battery and thermal sensors.
 pub mod hardware;
 /// Host uptime information.

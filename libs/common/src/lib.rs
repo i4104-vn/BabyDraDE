@@ -2,6 +2,8 @@
 
 pub mod constants;
 pub mod enums;
+/// Serializable file chooser contracts shared across crates.
+pub mod filedialog;
 /// Shared wire protocol types, codec and socket helpers (requires the `serde` feature).
 #[cfg(feature = "serde")]
 pub mod protocol;
@@ -11,5 +13,6 @@ pub mod shortcuts;
 
 pub use constants::*;
 pub use enums::*;
+pub use filedialog::*;
 #[cfg(feature = "serde")]
 pub use shortcuts::*;
