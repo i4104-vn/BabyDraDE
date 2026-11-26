@@ -120,25 +120,63 @@ Reads and writes go through `config::store`, which caches by modification time
 and writes atomically with a temporary file plus rename. Input hot paths consume
 snapshots held by `ConfigSnapshot` and `InputState`; they never read the disk.
 
-## 7. Automatic screen rotation
+## 7. Monitor orientation
+
+Orientation is configured per physical output in
+`~/.babydra/configs/display.toml`. Use the connector name reported by the
+compositor log or by `/sys/class/drm/` (`eDP-1`, `DSI-1`, `HDMI-A-1`, `DP-1`, …):
+
+```toml
+[display]
+# Keep the fixed rotations below even when a sensor is present.
+auto_rotate = false
+
+[[display.monitors]]
+name = "eDP-1"
+orientation = "90"
+enabled = true
+
+[[display.monitors]]
+name = "HDMI-A-1"
+orientation = "normal"
+enabled = true
+```
+
+Accepted values are `normal` (or `0`), `90`, `180`, `270`, `flipped`,
+`flipped-90`, `flipped-180` and `flipped-270`. Unknown values and disabled
+entries are ignored. An unconfigured portrait panel still falls back to a
+quarter turn so it renders landscape.
+
+The same file drives both stages of the session:
+
+- **Greeter:** at startup the greeter finds the most recently modified
+  `display.toml` (last logged-in user from `/etc/passwd` first, then any home
+  under `/home`) and applies the rotations directly to cage over the
+  `zwlr_output_manager_v1` Wayland protocol. No `wlr-randr` installation is
+  needed.
+- **Desktop:** the compositor applies the configured rotation when it creates
+  each DRM output; the single-output nested Winit backend uses the first
+  configured monitor.
+
+Changes take effect on the next login/session start: outputs are configured
+once when they are created.
+
+No environment variables take part in orientation any more. The former
+`BABYDRADE_TRANSFORM`, `BABYDRADE_ORIENTATION`, `BABYDRADE_TOUCH_TRANSFORM`,
+`BABYDRADE_AUTO_ROTATE` and `BABYDRADE_AUTO_ROTATE_DEBUG` overrides, along with
+the installer flags and the `03-orientation.sh` step, have been removed.
+
+### Automatic rotation
 
 Automatic rotation is **on by default whenever an orientation sensor is
 present**. Convertible/tablet devices are detected through either raw IIO sysfs
 accelerometers (`/sys/bus/iio/devices/iio:deviceN`) or `iio-sensor-proxy` on
 D-Bus (`net.hadess.SensorProxy`). The compositor debounces the reading and
 applies the new transform to every output; touch coordinates follow the same
-rotation. The transform seen at startup is the baseline, so a sideways-mounted
-panel still rotates correctly.
+rotation through in-memory state.
 
-To opt out, set in `~/.babydra/configs/display.toml`:
-
-```toml
-[display]
-auto_rotate = false
-```
-
-`BABYDRADE_AUTO_ROTATE=1` forces it on and `BABYDRADE_AUTO_ROTATE=0` forces it
-off. `BABYDRADE_AUTO_ROTATE_DEBUG=1` logs raw accelerometer values.
-
-On machines without a sensor the feature is a no-op. `monitors[].orientation`
-still provides a fixed rotation when auto-rotation is disabled.
+When auto-rotation is active it takes precedence over the fixed orientation:
+the configured rotation is the baseline the sensor rotates from, so a
+sideways-mounted panel still rotates correctly. Set `auto_rotate = false` to
+keep the configured rotation permanently. On machines without a sensor the
+feature is a no-op and the configured rotation is used as-is.
