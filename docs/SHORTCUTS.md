@@ -88,7 +88,7 @@ shortcuts_api::bind(
     "babydra-internal",
     "rerender",
     "W-F6",
-    ShortcutTarget::Command("babydra-window-manager --refresh".into()),
+    ShortcutTarget::Command("BabyDra --refresh".into()),
 )?;
 
 let active = shortcuts_api::bindings()?;

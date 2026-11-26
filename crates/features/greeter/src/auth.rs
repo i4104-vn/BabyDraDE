@@ -51,7 +51,7 @@ fn status_error(stage: &str, response: Response) -> String {
 /// Default session started after a successful login.
 fn session_command() -> Vec<String> {
     std::env::var("BABYDRADE_GREETER_SESSION")
-        .unwrap_or_else(|_| "babydra-window-manager".to_string())
+        .unwrap_or_else(|_| "BabyDra".to_string())
         .split_whitespace()
         .map(str::to_string)
         .filter(|part| !part.is_empty())

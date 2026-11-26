@@ -172,7 +172,7 @@ fn launch_desktop_entry(id: &str, path: &Path, uri: &str) -> bool {
             .unwrap_or(&binary);
         if matches!(
             bin_name,
-            "xdg-open" | "babydra-window-manager" | "babydra-filedialog"
+            "xdg-open" | "BabyDra" | "babydra-filedialog"
         ) {
             continue;
         }

@@ -1,7 +1,7 @@
 # Managed by BabyDraDE install.sh
 # greetd configuration used by the BabyDraDE greeter service.
 # After successful authentication the greeter calls StartSession with
-# `babydra-window-manager`, so the compositor starts immediately after login.
+# `BabyDra`, so the compositor starts immediately after login.
 # BABYDRADE_GREETER_SESSION can override that command if needed.
 
 [terminal]

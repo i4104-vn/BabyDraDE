@@ -46,7 +46,7 @@ fn handle_xdg_open_args(args: &[String]) {
         std::process::exit(0);
     }
     if args.iter().any(|arg| arg == "--version") {
-        println!("babydra-window-manager (xdg-open) 1.0.0");
+        println!("BabyDra (xdg-open) 1.0.0");
         std::process::exit(0);
     }
 

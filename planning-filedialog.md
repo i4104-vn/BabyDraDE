@@ -10,7 +10,7 @@
 
 ```text
 User gọi xdg-open <target>
-  → symlink ~/.local/bin/xdg-open → babydra-window-manager
+  → symlink ~/.local/bin/xdg-open → BabyDra
   → main() → app::run() → commands::dispatch()
   → filedialog::dispatch(&args)
     → args[0] filename == "xdg-open"?
@@ -46,7 +46,7 @@ User gọi xdg-open <target>
 
 ### P0 — Critical: File dialog không hiển thị được
 
-**Nguyên nhân gốc:** `show_chooser()` trong `filedialog.rs` tạo một `gtk4::Application` mới hoàn toàn với `app.run_with_args(&[])`. Nhưng binary `babydra-window-manager` đã là một compositor — nó **không có GTK Application** running (nó dùng Smithay, không phải GTK application loop). Khi gọi `Application::builder().build()` và `app.run_with_args(&[])`, nó cố tạo một GTK app process mới **trong cùng process** đang là compositor → xung đột.
+**Nguyên nhân gốc:** `show_chooser()` trong `filedialog.rs` tạo một `gtk4::Application` mới hoàn toàn với `app.run_with_args(&[])`. Nhưng binary `BabyDra` đã là một compositor — nó **không có GTK Application** running (nó dùng Smithay, không phải GTK application loop). Khi gọi `Application::builder().build()` và `app.run_with_args(&[])`, nó cố tạo một GTK app process mới **trong cùng process** đang là compositor → xung đột.
 
 Cụ thể:
 1. **Không có GTK main loop** khi gọi `xdg-open` không có target — `app.run_with_args(&[])` chạy GTK main loop mới nhưng compositor đã có event loop riêng (Smithay).
@@ -188,9 +188,9 @@ file_chooser/
 - [ ] `xdg-open /home/user/file.txt` — mở notepad ✓
 - [ ] `xdg-open /home/user/image.png` — mở preview ✓
 - [ ] `xdg-open` (không target) — hiển thị file chooser dialog, chọn file → mở
-- [ ] `babydra-window-manager --filedialog-chooser` — hiển thị file chooser, output path stdout
-- [ ] `babydra-window-manager --filedialog-chooser -d` — folder picker
-- [ ] `babydra-window-manager --filedialog-chooser -s -n "untitled.txt"` — save dialog
+- [ ] `BabyDra --filedialog-chooser` — hiển thị file chooser, output path stdout
+- [ ] `BabyDra --filedialog-chooser -d` — folder picker
+- [ ] `BabyDra --filedialog-chooser -s -n "untitled.txt"` — save dialog
 - [ ] Desktop grid double-click file → mở đúng app
 - [ ] Dialog đóng bình thường (không crash compositor)
 - [ ] `cargo check --workspace` clean

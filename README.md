@@ -81,7 +81,7 @@ The greetd login screen lives in `crates/features/greeter` and is built as
 `babydra-greeter`. The distro-provided `greetd.service` is enabled as the
 display manager (the setup script only adds a small drop-in when the unit does
 not already claim tty1). After a successful login the greeter starts
-`babydra-window-manager`, so the compositor comes up immediately after login.
+`BabyDra`, so the compositor comes up immediately after login.
 Override the session with `BABYDRADE_GREETER_SESSION` if needed.
 
 `install.sh` parses the command line and then runs the numbered steps in

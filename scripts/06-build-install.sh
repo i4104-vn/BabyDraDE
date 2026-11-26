@@ -4,7 +4,7 @@ set -eu
 . "$(dirname "$0")/common.sh"
 
 BINARIES=(
-    babydra-window-manager
+    BabyDra
     babydra-desktop
     babydra-topbar
     babydra-greeter
@@ -43,33 +43,33 @@ for bin in "${BINARIES[@]}"; do
     fi
 done
 
-# Backwards compatibility: window-manager -> babydra-window-manager.
+# Backwards compatibility: window-manager -> BabyDra.
 for sdir in "${SYSTEM_BIN_DIRS[@]}"; do
-    if [ -d "$sdir" ] && [ -x "$sdir/babydra-window-manager" ]; then
+    if [ -d "$sdir" ] && [ -x "$sdir/BabyDra" ]; then
         if [ -w "$sdir" ]; then
-            ln -sf babydra-window-manager "$sdir/window-manager" 2>/dev/null || true
+            ln -sf BabyDra "$sdir/window-manager" 2>/dev/null || true
         else
-            run_privileged ln -sf babydra-window-manager "$sdir/window-manager" 2>/dev/null || true
+            run_privileged ln -sf BabyDra "$sdir/window-manager" 2>/dev/null || true
         fi
     fi
 done
-if [ -x "$USER_BIN_DIR/babydra-window-manager" ]; then
-    ln -sf babydra-window-manager "$USER_BIN_DIR/window-manager" 2>/dev/null || true
+if [ -x "$USER_BIN_DIR/BabyDra" ]; then
+    ln -sf BabyDra "$USER_BIN_DIR/window-manager" 2>/dev/null || true
 fi
 
 # Replace xdg-open everywhere the compositor binary is installed.
 step "Installing xdg-open shim..."
 for sdir in "${SYSTEM_BIN_DIRS[@]}"; do
-    if [ -d "$sdir" ] && [ -x "$sdir/babydra-window-manager" ]; then
+    if [ -d "$sdir" ] && [ -x "$sdir/BabyDra" ]; then
         if [ -w "$sdir" ]; then
-            ln -sfn babydra-window-manager "$sdir/xdg-open" 2>/dev/null || true
+            ln -sfn BabyDra "$sdir/xdg-open" 2>/dev/null || true
         else
-            run_privileged ln -sfn babydra-window-manager "$sdir/xdg-open" 2>/dev/null || true
+            run_privileged ln -sfn BabyDra "$sdir/xdg-open" 2>/dev/null || true
         fi
     fi
 done
-if [ -x "$USER_BIN_DIR/babydra-window-manager" ]; then
-    ln -sfn babydra-window-manager "$USER_BIN_DIR/xdg-open" 2>/dev/null || true
+if [ -x "$USER_BIN_DIR/BabyDra" ]; then
+    ln -sfn BabyDra "$USER_BIN_DIR/xdg-open" 2>/dev/null || true
 fi
 
 # greetd service, config and TTY takeover are handled by 07-services.sh.
