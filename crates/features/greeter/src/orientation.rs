@@ -21,8 +21,9 @@ use wayland_protocols_wlr::output_management::v1::client::{
         Event as ConfigHeadEvent, ZwlrOutputConfigurationHeadV1,
     },
     zwlr_output_configuration_v1::{Event as ConfigEvent, ZwlrOutputConfigurationV1},
-    zwlr_output_head_v1::{Event as HeadEvent, ZwlrOutputHeadV1},
-    zwlr_output_manager_v1::{Event as ManagerEvent, ZwlrOutputManagerV1},
+    zwlr_output_head_v1::{self, Event as HeadEvent, ZwlrOutputHeadV1},
+    zwlr_output_mode_v1::ZwlrOutputModeV1,
+    zwlr_output_manager_v1::{self, Event as ManagerEvent, ZwlrOutputManagerV1},
 };
 
 /// Upper bound for each protocol round-trip, so a stalled compositor cannot
@@ -95,6 +96,10 @@ impl Dispatch<ZwlrOutputManagerV1, ()> for OutputState {
             _ => {}
         }
     }
+
+    wayland_client::event_created_child!(OutputState, ZwlrOutputManagerV1, [
+        zwlr_output_manager_v1::EVT_HEAD_OPCODE => (ZwlrOutputHeadV1, ())
+    ]);
 }
 
 impl Dispatch<ZwlrOutputHeadV1, ()> for OutputState {
@@ -111,6 +116,22 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for OutputState {
                 state.heads.push((name, head));
             }
         }
+    }
+
+    wayland_client::event_created_child!(OutputState, ZwlrOutputHeadV1, [
+        zwlr_output_head_v1::EVT_MODE_OPCODE => (ZwlrOutputModeV1, ())
+    ]);
+}
+
+impl Dispatch<ZwlrOutputModeV1, ()> for OutputState {
+    fn event(
+        _state: &mut OutputState,
+        _mode: &ZwlrOutputModeV1,
+        _event: wayland_protocols_wlr::output_management::v1::client::zwlr_output_mode_v1::Event,
+        _data: &(),
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+    ) {
     }
 }
 
@@ -165,6 +186,9 @@ fn apply_protocol(config: &DisplayConfig) -> Result<usize, Box<dyn Error>> {
     if !state.done {
         return Err("compositor did not announce its outputs".into());
     }
+
+    let names: Vec<&str> = state.heads.iter().map(|(name, _)| name.as_str()).collect();
+    tracing::info!("greeter: compositor outputs: {names:?}");
 
     let serial = state.serial.ok_or("missing output configuration serial")?;
     let configuration = manager.create_configuration(serial, &qh, ());
