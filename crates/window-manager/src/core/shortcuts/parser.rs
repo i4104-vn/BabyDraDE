@@ -1,6 +1,6 @@
 //! Shortcut parsing rules.
 
-use super::domain::Mods;
+use super::Mods;
 use crate::shared::types::keysyms;
 
 /// Parses a modifier specification such as `"S"` or `"W-S"`.

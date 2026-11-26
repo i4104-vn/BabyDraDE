@@ -1,21 +1,12 @@
 //! Udev/DRM backend: session context, hotplug handling, GPU init and rendering.
 
-#[allow(unused_imports)]
 pub(crate) mod context;
 pub(crate) mod gpu;
 pub(crate) mod handler;
 pub(crate) mod render;
 
-#[allow(unused_imports)]
-pub(crate) use context::claim_seat;
-#[allow(unused_imports)]
-pub(crate) use gpu::{build_surfaces, open_gpu, scan_and_init_gpu, try_init_gpu};
-#[allow(unused_imports)]
-pub(crate) use handler::{
-    register_drm_notifier, register_session_notifier, register_udev_monitor,
-};
-#[allow(unused_imports)]
-pub(crate) use render::{insert_frame_timer, render_frame, setup_render_loop};
+pub(crate) use gpu::scan_and_init_gpu;
+pub(crate) use render::setup_render_loop;
 
 use std::{cell::RefCell, error::Error, rc::Rc};
 

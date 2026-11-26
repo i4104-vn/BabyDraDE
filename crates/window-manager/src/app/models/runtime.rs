@@ -56,7 +56,7 @@ mod state {
             bus::BusHost,
             state::{InputState, OverlayState},
         },
-        modules::wayland::{clipboard::ClipboardState, runtime::WaylandRuntime},
+        modules::wayland::{clipboard::ClipboardState, WaylandRuntime},
         shared::config::snapshot::ConfigSnapshot,
     };
 

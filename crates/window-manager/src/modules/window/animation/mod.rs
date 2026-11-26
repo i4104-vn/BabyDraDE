@@ -16,12 +16,13 @@ use smithay::{
 };
 
 use crate::modules::blur::{BlurEngine, BlurRenderElement};
-use crate::modules::render::elements::types::{
+use crate::modules::render::elements::{
     ConstrainedSurface, CustomRenderElements, WindowBlurId,
 };
 
-
-pub(crate) use crate::modules::window::models::animation::WindowAnimationRenderParams;
+pub(crate) use crate::modules::window::models::animation::{
+    GeometryTransition, WindowAnimation, WindowAnimationRenderParams,
+};
 
 /// Renders a window during any active animation (opening, closing, minimize,
 /// restore or a fullscreen/maximize geometry transition).
@@ -132,15 +133,15 @@ pub(crate) fn render_animated_window(
 
 pub(crate) mod frame;
 pub(crate) mod lifecycle;
-pub(crate) mod models;
 
 pub(crate) use frame::window_animation_frame;
 pub(crate) use lifecycle::{
     cancel_minimizing_animation, is_window_exiting, start_window_minimizing, start_window_opening,
     start_window_restoring, start_window_transition,
 };
-pub(crate) use models::WindowAnimation;
 
 use crate::modules::window::state_data::lock_window_state;
-use crate::shared::types::geometry::{Point as PurePoint, Rectangle as PureRectangle, Size as PureSize};
+use crate::shared::types::geometry::{
+    Point as PurePoint, Rectangle as PureRectangle, Size as PureSize,
+};
 use crate::shared::types::WindowVisualState;

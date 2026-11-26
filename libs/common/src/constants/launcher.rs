@@ -55,9 +55,7 @@ pub const BACKDROP_WIDTH_RATIO: f64 = 0.60;
 pub const PANEL_SURFACE: (f64, f64, f64, f64) = (14.0 / 255.0, 14.0 / 255.0, 18.0 / 255.0, 0.96);
 pub const HAIRLINE: (f64, f64, f64, f64) = (1.0, 1.0, 1.0, 0.12);
 
-// ---------------------------------------------------------------------------
 // Search overlay (the launcher expands into this as soon as text is typed).
-// ---------------------------------------------------------------------------
 
 /// Preferred width of the centered search column in logical pixels.
 pub const SEARCH_PANEL_WIDTH: f64 = 640.0;

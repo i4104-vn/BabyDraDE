@@ -4,12 +4,6 @@
 //! this module only composes the ordered element list for each backend frame.
 
 // Compatibility aliases for modules that moved to their own feature slices.
-#[allow(unused_imports)]
-pub(crate) use crate::modules::blur;
-#[allow(unused_imports)]
-pub(crate) use crate::modules::window::{animation, titlebar};
-#[allow(unused_imports)]
-pub(crate) use crate::modules::window::animation as window_animation;
 
 pub(crate) use frame::compose_frame;
 pub(crate) use models::{CustomRenderElements, FrameContext};
@@ -21,8 +15,6 @@ pub(crate) mod models;
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
-    use super::*;
     use crate::modules::blur::BlurEngine;
 
     #[test]

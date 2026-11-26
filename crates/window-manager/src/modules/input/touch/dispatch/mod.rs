@@ -17,13 +17,8 @@ use smithay::{
 use common::Action;
 
 use crate::modules::input::{
-    common::transform_absolute_position, touch::drag, InputContext, MoveState, ResizeState,
+    touch::drag, transform_absolute_position, InputContext, MoveState, ResizeState,
 };
-
-#[allow(unused_imports)]
-pub(crate) mod events;
-
-// ----- touch down -----------------------------------------------------
 
 /// Handles a touchscreen contact press (touch down).
 ///
@@ -176,8 +171,6 @@ fn dismiss_popups(state: &impl InputContext) {
     }
 }
 
-// ----- touch motion ---------------------------------------------------
-
 /// Handles finger movement across the touchscreen surface.
 ///
 /// Updates gesture tracking, routes overlay/drag interactions, and forwards
@@ -223,8 +216,6 @@ pub(crate) fn handle_touch_motion<B: InputBackend, T: TouchMotionEvent<B>>(
     );
     state.touch_frame();
 }
-
-// ----- touch lifecycle ------------------------------------------------
 
 /// Handles lifting of a finger from the touchscreen surface (touch up).
 ///
@@ -291,8 +282,6 @@ pub(crate) fn handle_touch_frame<B: InputBackend, T: TouchFrameEvent<B>>(
 ) {
     state.touch_frame();
 }
-
-// ----- tests ----------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

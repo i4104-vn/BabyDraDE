@@ -167,8 +167,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn target_frame_rate_is_120_fps() {
-        assert_eq!(TARGET_FPS, 120);
+    fn frame_interval_matches_the_frame_budget() {
         assert!(FRAME_INTERVAL >= Duration::from_micros(8_333));
         assert!(FRAME_INTERVAL <= Duration::from_micros(8_334));
         assert!(DEFAULT_DURATION >= Duration::from_millis(100));

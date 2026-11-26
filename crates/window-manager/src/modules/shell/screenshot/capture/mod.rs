@@ -44,7 +44,6 @@ mod render;
 
 mod transform;
 
-// Inlined from shell/screenshot/capture/tests.rs.
 mod tests {
     #[allow(unused_imports)]
     use smithay::utils::{Size, Transform};

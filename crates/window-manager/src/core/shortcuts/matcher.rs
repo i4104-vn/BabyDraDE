@@ -1,6 +1,6 @@
 //! Shortcut matching rules.
 
-use super::domain::{Mods, ResolvedShortcut, Shortcut};
+use super::{Mods, ResolvedShortcut, Shortcut};
 
 /// Finds the command bound to an exact key press.
 ///

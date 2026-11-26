@@ -61,12 +61,10 @@ impl SearchText {
     }
 }
 
-
 mod edit;
 
 mod words;
 
-// Inlined from text/tests.rs.
 #[cfg(test)]
 mod tests {
     use super::*;

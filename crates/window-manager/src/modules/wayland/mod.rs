@@ -3,4 +3,5 @@
 pub(crate) mod clipboard;
 pub(crate) mod models;
 pub(crate) mod protocols;
-pub(crate) mod runtime;
+
+pub(crate) use models::WaylandRuntime;

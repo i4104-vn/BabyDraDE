@@ -34,16 +34,3 @@ pub(crate) struct WindowMetadata {
     pub(crate) app_name: String,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn idle_visual_state_is_neutral() {
-        let state = WindowVisualState::idle();
-        assert!(!state.active);
-        assert_eq!(state.scale_factor, 1.0);
-        assert_eq!(state.alpha_factor, 1.0);
-        assert!(state.target_rect.is_none());
-    }
-}

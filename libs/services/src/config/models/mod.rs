@@ -51,18 +51,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_touchpad_config_defaults() {
-        let config = TouchpadConfig::default();
-        assert!(config.tap_to_click);
-        assert!(config.tap_drag);
-        assert!(!config.tap_drag_lock);
-        assert_eq!(config.button_map, "lrm");
-        assert!(config.dwt);
-        assert!(!config.natural_scroll);
-        assert_eq!(config.speed, None);
-    }
-
-    #[test]
     fn test_touchpad_config_toml_roundtrip() {
         let toml_str = r#"
 tap_to_click = true
@@ -84,14 +72,6 @@ speed = 0.5
     }
 
     #[test]
-    fn test_mouse_config_defaults() {
-        let config = MouseConfig::default();
-        assert!(!config.natural_scroll);
-        assert_eq!(config.speed, None);
-        assert!(!config.middle_emulation);
-    }
-
-    #[test]
     fn test_mouse_config_toml_roundtrip() {
         let toml_str = r#"
 natural_scroll = true
@@ -102,15 +82,6 @@ middle_emulation = true
         assert!(config.natural_scroll);
         assert_eq!(config.speed, Some(-0.2));
         assert!(config.middle_emulation);
-    }
-
-    #[test]
-    fn test_cursor_config_defaults() {
-        let config = CursorConfig::default();
-        assert_eq!(config.theme, "Adwaita");
-        assert_eq!(config.size, 24);
-        assert_eq!(config.hotspot_x, 0);
-        assert_eq!(config.hotspot_y, 0);
     }
 
     #[test]

@@ -191,7 +191,6 @@ pub(crate) fn step_target(current: f64, direction: f64, count: usize) -> (f64, b
     }
 }
 
-// Inlined from shell/switcher/models/tests.rs.
 mod tests {
     #[allow(unused_imports)]
     use super::*;

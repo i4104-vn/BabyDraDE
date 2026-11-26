@@ -13,7 +13,7 @@ use smithay::{
 };
 
 use crate::modules::shell::switcher::{render::SwitcherLayout, AltTabSwitcher};
-use crate::modules::render::elements::types::ConstrainedSurface;
+use crate::modules::render::elements::ConstrainedSurface;
 use crate::modules::render::CustomRenderElements;
 
 use super::super::draw::Rect;

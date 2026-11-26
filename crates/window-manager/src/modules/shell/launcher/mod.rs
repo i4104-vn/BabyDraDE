@@ -13,7 +13,6 @@ pub(crate) use common::constants::launcher::{
     LABEL_MAX_TEXT, LABEL_MAX_WIDTH, LABEL_PAD, SLOT,
 };
 
-#[allow(unused_imports)]
 pub(crate) use models::{BackdropKey, BufferRegion, CacheKey, LauncherApp, LauncherState};
 
 pub(crate) mod backdrop;

@@ -5,7 +5,7 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use super::models::ToolbarContext;
+use super::ToolbarContext;
 use super::toolbar;
 use crate::modules::shell::screenshot::editor::canvas::{draw_editor_canvas, setup_editor_gest};
 use crate::modules::shell::screenshot::editor::models::EditorState;

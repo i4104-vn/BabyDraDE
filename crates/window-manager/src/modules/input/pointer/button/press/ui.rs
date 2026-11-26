@@ -2,7 +2,7 @@
 
 use crate::modules::input::InputContext;
 
-use crate::modules::input::pointer::button::models::ButtonContext;
+use crate::modules::input::pointer::button::ButtonContext;
 
 /// Handles a click on the task switcher overlay.
 ///

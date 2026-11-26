@@ -10,7 +10,7 @@ use std::sync::RwLock;
 
 use common::{ShortcutBinding, ShortcutManifest, ShortcutTarget};
 
-use crate::core::shortcuts::domain::{parse_combo, parse_modifiers, to_keysym, Mods};
+use crate::core::shortcuts::{parse_combo, parse_modifiers, to_keysym, Mods};
 
 /// Failure returned while registering or resolving a shortcut.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -205,7 +205,7 @@ mod tests {
 
     use super::{RegistrationError, ShortcutRegistry};
     use crate::shared::types::keysyms::{KEY_e, KEY_F1, KEY_t};
-    use crate::core::shortcuts::domain::Mods;
+    use crate::core::shortcuts::Mods;
 
     const KEY_F4: u32 = KEY_F1 + 3;
 

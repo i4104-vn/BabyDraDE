@@ -18,8 +18,6 @@ use crate::modules::input::{
     InputContext,
 };
 
-// ----- launcher --------------------------------------------------------
-
 /// Handles keys while the launcher is visible.
 ///
 /// # Arguments
@@ -142,8 +140,6 @@ pub(crate) fn handle_launcher<C: InputContext>(
     false
 }
 
-// ----- switcher --------------------------------------------------------
-
 /// Handles switcher navigation, cancellation, and commit keys.
 ///
 /// # Arguments
@@ -205,8 +201,6 @@ pub(crate) fn handle_switcher<C: InputContext>(ctx: &mut KeyContext<'_, C>) -> b
 
     false
 }
-
-// ----- shortcuts -------------------------------------------------------
 
 /// Handles global shortcuts and layout-independent configurable commands.
 ///

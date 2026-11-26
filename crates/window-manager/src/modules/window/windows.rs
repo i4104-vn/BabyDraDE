@@ -1,10 +1,8 @@
-// Inlined from window/windows.rs.
 //! Window layout use cases.
 //!
 //! Geometry is pure domain data expressed with [`crate::shared::types::geometry`]
 //! value types. All protocol side effects (mapping, configuring, focusing)
 //! stay in the compositor adapter.
-
 
 use crate::shared::types::geometry::{Point, Rectangle, Size};
 
@@ -77,5 +75,4 @@ mod tests {
             (Point::from((48, 48)), current)
         );
     }
-
 }

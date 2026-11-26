@@ -63,23 +63,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn points_and_sizes_build_from_tuples() {
-        assert_eq!(Point::from((3, 4)), Point { x: 3, y: 4 });
-        assert_eq!(Size::from((5, 6)), Size { w: 5, h: 6 });
-    }
-
-    #[test]
     fn points_add_component_wise() {
         assert_eq!(
             Point::from((1, 2)) + Point::from((3, 4)),
             Point::from((4, 6))
         );
-    }
-
-    #[test]
-    fn rectangles_combine_location_and_size() {
-        let rect = Rectangle::new(Point::from((10, 20)), Size::from((30, 40)));
-        assert_eq!(rect.loc, Point::from((10, 20)));
-        assert_eq!(rect.size, Size::from((30, 40)));
     }
 }

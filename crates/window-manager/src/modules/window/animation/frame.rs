@@ -1,4 +1,3 @@
-// Inlined from window/ops/animation/frame.rs.
 //! Animation frame evaluation and interpolation helpers.
 
 use super::*;

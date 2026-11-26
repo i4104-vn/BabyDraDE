@@ -2,7 +2,7 @@
 
 use gtk4::gdk::prelude::GdkCairoContextExt;
 
-use super::super::models::{LayerCache, SharedCache};
+use super::super::{LayerCache, SharedCache};
 use crate::modules::shell::screenshot::editor::models::EditorState;
 
 /// Renders only the background screenshot into the cache surface. Rebuilt on

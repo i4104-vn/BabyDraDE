@@ -10,7 +10,6 @@ use smithay::{
 
 use crate::modules::input::InputContext;
 
-
 use self::shortcuts::execute_action;
 use filters::KeyContext;
 
@@ -73,11 +72,8 @@ pub(crate) fn handle_keyboard<B: InputBackend, K: KeyboardKeyEvent<B>>(
     }
 }
 
-// Inlined from input/keyboard/filters.rs.
 pub(crate) mod filters;
 
-// Inlined from input/keyboard/focus.rs.
 pub(crate) mod focus;
 
-// Inlined from input/keyboard/shortcuts.rs.
 pub(crate) mod shortcuts;

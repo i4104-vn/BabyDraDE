@@ -1,6 +1,5 @@
 //! Compositor-owned titlebar rendering and hit testing.
 
-
 use cairo::{Context, Format, ImageSurface};
 use smithay::{
     backend::{
@@ -17,11 +16,10 @@ use smithay::{
     utils::{Logical, Point, Scale, Transform},
 };
 
-use crate::modules::render::elements::types::CustomRenderElements;
+use crate::modules::render::elements::CustomRenderElements;
 use crate::shared::types::TitlebarLayout;
 
-#[allow(unused_imports)]
-pub(crate) use common::constants::{CORNER_RADIUS, TITLEBAR_BUTTON_RADIUS, TITLEBAR_HEIGHT};
+pub(crate) use common::constants::TITLEBAR_HEIGHT;
 
 /// Renders the compositor-owned titlebar for a single frame.
 ///
@@ -165,8 +163,6 @@ fn upload(
     .map(CustomRenderElements::Memory)
 }
 
-// Inlined from render/titlebar/paint.rs.
 pub(crate) mod paint;
 
-// Inlined from render/titlebar/theme.rs.
 pub(crate) mod theme;

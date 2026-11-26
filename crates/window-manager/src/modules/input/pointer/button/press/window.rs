@@ -5,7 +5,7 @@ use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::Res
 use crate::modules::input::{InputContext, MoveState, ResizeState};
 use common::Action;
 
-use crate::modules::input::pointer::button::models::ButtonContext;
+use crate::modules::input::pointer::button::ButtonContext;
 
 use super::{layer, shared};
 

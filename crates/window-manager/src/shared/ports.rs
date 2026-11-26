@@ -5,7 +5,7 @@
 
 use std::ffi::OsStr;
 
-use crate::core::shortcuts::domain::Shortcut;
+use crate::core::shortcuts::Shortcut;
 
 pub(crate) use crate::core::models::policy::GesturePolicy;
 pub(crate) use crate::shared::models::ports::{ConfigError, LaunchError};
@@ -80,7 +80,7 @@ pub(crate) mod input_ports {
     use common::{Action, ShortcutTarget};
 
     use crate::shared::ports::GesturePolicy;
-    use crate::core::shortcuts::domain::Mods;
+    use crate::core::shortcuts::Mods;
 
     use crate::modules::window::interaction::{
         MoveState, OverlayTouchState, ResizeState, TouchGestureBuffer, TrackpadSwipeBuffer,

@@ -21,9 +21,7 @@ use smithay::{
     utils::{Physical, Size},
 };
 
-#[allow(unused_imports)]
 use super::transform::transform_matrix;
-#[allow(unused_imports)]
 use super::*;
 
 pub(crate) fn capture_screen<E>(

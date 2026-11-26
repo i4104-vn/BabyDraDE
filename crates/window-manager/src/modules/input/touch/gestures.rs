@@ -14,17 +14,13 @@ use smithay::{
 use super::super::InputContext;
 use crate::modules::input::{execute_window_intent, TouchSlotData};
 use crate::{
-    shared::ports::GesturePolicy,
     modules::input::gestures::{
         should_start_scrub, three_finger_tap_intent, two_finger_touch_intent, WindowIntent,
     },
+    shared::ports::GesturePolicy,
 };
 
-// ----- constants ---------------------------------------------------------
-
 use common::constants::BTN_MIDDLE;
-
-// ----- down --------------------------------------------------------------
 
 /// Records the start position and time for a newly contacted finger.
 pub(crate) fn on_touch_down<C: InputContext>(
@@ -45,8 +41,6 @@ pub(crate) fn on_touch_down<C: InputContext>(
         },
     );
 }
-
-// ----- motion ------------------------------------------------------------
 
 /// Updates the current position of an active touch slot during finger movement.
 pub(crate) fn on_touch_motion<C: InputContext>(
@@ -94,8 +88,6 @@ pub(crate) fn on_touch_motion<C: InputContext>(
     }
 }
 
-// ----- up ----------------------------------------------------------------
-
 /// Evaluates accumulated gesture data when a finger lifts off.
 pub(crate) fn on_touch_up<C: InputContext>(state: &mut C, slot: TouchSlot, time_ms: u64) {
     let n = state.touch_gesture().slots.len();
@@ -120,8 +112,6 @@ pub(crate) fn on_touch_up<C: InputContext>(state: &mut C, slot: TouchSlot, time_
         state.touch_gesture_mut().scrubbing = false;
     }
 }
-
-// ----- gesture evaluation ------------------------------------------------
 
 /// Asks the gesture use case for an intent and executes it against the state.
 fn try_fire_touch_gesture<C: InputContext>(

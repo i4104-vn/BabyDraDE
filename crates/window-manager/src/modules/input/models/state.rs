@@ -5,8 +5,6 @@ use smithay::input::keyboard::ModifiersState;
 
 use common::KeyboardAction;
 
-// ----- shared context -------------------------------------------------
-
 /// Bundles the state and event data needed by the key-family handlers.
 pub(crate) struct KeyContext<'a, C> {
     pub(crate) state: &'a mut C,
@@ -17,8 +15,6 @@ pub(crate) struct KeyContext<'a, C> {
     pub(crate) alt_tab_hold: &'a mut Option<i32>,
     pub(crate) switcher_active: bool,
 }
-
-// ----- pointer button context -----------------------------------------
 
 /// Pointer button event context.
 pub(crate) struct ButtonContext<'a, C> {

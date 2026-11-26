@@ -3,7 +3,6 @@ pub(crate) use crate::modules::window::animation::{
     start_window_restoring, start_window_transition, window_animation_frame,
 };
 
-// Inlined from window/ops/ops.rs.
 #[allow(clippy::module_inception)]
 pub(crate) mod ops {
     //! window_ops helpers.

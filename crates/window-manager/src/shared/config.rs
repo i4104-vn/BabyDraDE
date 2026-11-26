@@ -3,10 +3,8 @@
 //! All filesystem access, default export, watcher threads and parsing live
 //! here. Adapters receive ready-made snapshots instead of reading config.
 
-
 pub(crate) use gesture::gesture_policy;
 
-// Inlined from core/config/gesture.rs.
 pub(crate) mod gesture {
     //! Configuration adapter — translates services config models into core policies.
 
@@ -51,7 +49,6 @@ pub(crate) mod gesture {
     }
 }
 
-// Inlined from core/config/keymap.rs.
 pub(crate) mod keymap {
     //! Keymap loading and hot-reload.
     //!
@@ -62,8 +59,8 @@ pub(crate) mod keymap {
         sync::{Arc, RwLock},
     };
 
+    use crate::core::shortcuts::{parse_combo, Shortcut};
     use crate::shared::ports::{ConfigError, ShortcutRepository};
-    use crate::core::shortcuts::domain::{parse_combo, Shortcut};
     use serde::Deserialize;
 
     use std::time::Duration;
@@ -233,7 +230,6 @@ pub(crate) mod keymap {
     }
 }
 
-// Inlined from core/config/snapshot.rs.
 pub(crate) mod snapshot {
     //! Cached configuration snapshot used by the input pipeline.
     //!

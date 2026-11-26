@@ -2,7 +2,7 @@
 
 use crate::modules::input::InputContext;
 
-use super::models::ButtonContext;
+use super::ButtonContext;
 
 mod layer;
 mod shared;

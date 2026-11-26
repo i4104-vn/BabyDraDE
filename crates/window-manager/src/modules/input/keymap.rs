@@ -21,7 +21,7 @@ pub(crate) mod matcher {
 
     use smithay::input::keyboard::ModifiersState;
 
-    use crate::core::shortcuts::domain::Mods;
+    use crate::core::shortcuts::Mods;
 
     use super::super::InputContext;
 

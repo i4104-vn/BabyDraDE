@@ -9,11 +9,10 @@ use smithay::{
     utils::{Logical, Rectangle, SERIAL_COUNTER},
 };
 
-use crate::modules::window::state_data::lock_window_state;
 use crate::app::state::BabydraState;
+use crate::modules::window::state_data::lock_window_state;
 
-pub(crate) use super::models::{GeometryTransition, WindowAnimation};
-
+pub(crate) use super::{GeometryTransition, WindowAnimation};
 
 /// Checks if a window is leaving the screen (closing or minimizing) and should
 /// therefore be excluded from hit-testing, focus and window switching.
@@ -92,9 +91,6 @@ pub(crate) fn start_window_transition(
         },
     });
 }
-
-// Inlined from window/ops/animation/lifecycle.rs.
-
 
 impl BabydraState {
     /// Starts the closing animation for a window, immediately delegating focus to the next window.

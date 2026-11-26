@@ -4,7 +4,7 @@ use smithay::input::pointer::MotionEvent;
 
 use crate::modules::input::InputContext;
 
-use super::models::ButtonContext;
+use super::ButtonContext;
 
 pub(super) fn release<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
     ctx.state

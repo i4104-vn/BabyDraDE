@@ -10,5 +10,4 @@
 pub(crate) use crate::shared::models::geometry;
 pub(crate) use crate::shared::models::keysyms;
 pub(crate) use crate::shared::models::titlebar::{self, TitlebarLayout};
-#[allow(unused_imports)]
-pub(crate) use crate::shared::models::window::{self, WindowMetadata, WindowVisualState};
+pub(crate) use crate::shared::models::window::{self, WindowVisualState};

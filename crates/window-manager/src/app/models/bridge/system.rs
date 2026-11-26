@@ -2,7 +2,7 @@
 
 use common::ShortcutTarget;
 
-use crate::core::shortcuts::domain::Mods;
+use crate::core::shortcuts::Mods;
 use crate::shared::ports::{GesturePolicy, QueryText, SystemActions};
 use crate::modules::shell::launcher::search::SearchText;
 use crate::app::models::runtime::BabydraState;

@@ -13,7 +13,7 @@ use smithay::{
 
 use crate::modules::blur::{BlurEngine, BlurRenderElement};
 
-use super::types::{CustomRenderElements, LayerBlurId};
+use super::{CustomRenderElements, LayerBlurId};
 
 /// Renders surfaces belonging to the specified WlrLayer layers (e.g. Top, Overlay, Background)
 /// and optionally attaches a blur backdrop for matching layers.

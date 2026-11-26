@@ -17,7 +17,7 @@ use crate::shared::types::geometry::Rectangle as PureRectangle;
 use crate::shared::types::WindowVisualState;
 use common::TITLEBAR_HEIGHT;
 
-use super::types::{CustomRenderElements, WindowBlurId};
+use super::{CustomRenderElements, WindowBlurId};
 
 /// Converts a pure domain rectangle to Smithay geometry at the render boundary.
 fn to_smithay_rect(rect: PureRectangle<f64>) -> Rectangle<f64, Logical> {

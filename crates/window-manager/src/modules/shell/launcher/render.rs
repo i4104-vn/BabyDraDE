@@ -168,12 +168,11 @@ pub(crate) fn draw_scene(
     Ok(())
 }
 
-// Inlined from shell/launcher/render/tests.rs.
 mod tests {
     #[allow(unused_imports)]
-    use crate::modules::shell::launcher::backdrop::render_backdrop_pixels;
-    #[allow(unused_imports)]
     use super::*;
+    #[allow(unused_imports)]
+    use crate::modules::shell::launcher::backdrop::render_backdrop_pixels;
 
     #[test]
     fn fit_text_adds_an_ellipsis_when_too_wide() {
@@ -188,7 +187,8 @@ mod tests {
 
     #[test]
     fn draws_shared_dock_surface() {
-        let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 200, 600).expect("surface");
+        let surface =
+            cairo::ImageSurface::create(cairo::Format::ARgb32, 200, 600).expect("surface");
         let context = Context::new(&surface).expect("context");
         let panel = DockLayout::new(7, 300.0, 200.0, DockSide::Left);
         assert!(draw_dock(

@@ -6,17 +6,16 @@ use smithay::utils::{Physical, Rectangle};
 use common::constants::MAX_BLUR_PASSES;
 
 use super::config::BlurParams;
-use super::gl_state::GlStateSnapshot;
+use super::models::GlStateSnapshot;
 use super::shaders::{
-    compile_composite, compile_downsample, compile_upsample, setup_tex_params, QUAD_VERTICES,
-    CompositeProgram, DownsampleProgram, UpsampleProgram,
+    compile_composite, compile_downsample, compile_upsample, setup_tex_params, CompositeProgram,
+    DownsampleProgram, UpsampleProgram, QUAD_VERTICES,
 };
 
 pub(crate) mod passes;
 
 pub(super) use crate::modules::blur::models::BlurCache;
-#[allow(unused_imports)]
-pub(super) use passes::{run_blur, run_composite, run_downsample, run_upsample, BlurPassTarget, GlRect};
+pub(super) use passes::{run_blur, run_composite, BlurPassTarget};
 
 /// Projects a destination rectangle from Wayland oriented coordinates to OpenGL physical
 /// framebuffer coordinates using Smithay's exact projection matrix for the current frame.

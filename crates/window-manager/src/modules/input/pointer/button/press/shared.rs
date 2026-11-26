@@ -4,7 +4,7 @@ use smithay::desktop::{layer_map_for_output, PopupManager, Window};
 
 use crate::modules::input::InputContext;
 
-use crate::modules::input::pointer::button::models::ButtonContext;
+use crate::modules::input::pointer::button::ButtonContext;
 
 /// Raises a window, focuses its toplevel, and activates its element.
 ///

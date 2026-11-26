@@ -10,11 +10,11 @@ use common::ShortcutTarget;
 
 use crate::core::models::policy::GesturePolicy;
 use crate::core::shortcuts::app::{ShortcutRegistry, ShortcutService};
-use crate::core::shortcuts::domain::Mods;
+use crate::core::shortcuts::Mods;
 use crate::shared::ports::LoadGesturePolicy;
 
 pub(crate) use crate::modules::wayland::clipboard::ClipboardState;
-pub(crate) use crate::modules::wayland::runtime::WaylandRuntime;
+pub(crate) use crate::modules::wayland::WaylandRuntime;
 pub(crate) use crate::modules::window::WindowRegistry;
 
 // Transient input interaction state owned by the compositor.
@@ -76,10 +76,8 @@ impl InputState {
 
 // State for desktop overlays (application launcher and Alt+Tab switcher).
 
-
 pub(crate) use state::OverlayState;
 
-// Inlined from core/state/overlays/state.rs.
 mod state {
     //! State owned by the compositor overlays.
 

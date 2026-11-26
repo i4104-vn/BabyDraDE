@@ -3,7 +3,7 @@
 use animation_gtk::{slide_out_cb_cancelable, SlideDirection};
 use gtk4::prelude::*;
 
-use super::models::{ToolbarContext, ToolbarParts};
+use super::{ToolbarContext, ToolbarParts};
 use crate::modules::shell::screenshot::editor::handle::clipboard::copy_to_clipboard;
 use crate::modules::shell::screenshot::editor::handle::drawing::trigger_save;
 use crate::modules::shell::screenshot::editor::models::Tool;

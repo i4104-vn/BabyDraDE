@@ -5,10 +5,8 @@
 //! `services` and then take ownership of it ourselves, which keeps copy/paste
 //! working exactly like on other desktops.
 
-#[allow(unused_imports)]
 pub(crate) use crate::modules::wayland::models::ClipboardState;
 
-// Inlined from wayland/clipboard/policy.rs.
 pub(crate) mod policy {
     //! Use case: choose which selection MIME type to capture.
     //!

@@ -1,11 +1,14 @@
 //! Shortcut parsing, matching, service and runtime registry.
 
-pub(crate) mod domain;
 pub(crate) mod matcher;
 pub(crate) mod parser;
 pub(crate) mod registry;
 mod service;
 
+pub(crate) use crate::core::models::shortcuts::{Mods, ResolvedShortcut, Shortcut};
+
+pub(crate) use matcher::command_for;
+pub(crate) use parser::{parse_combo, parse_modifiers, to_keysym};
 pub(crate) use registry::ShortcutRegistry;
 pub(crate) use service::ShortcutService;
 

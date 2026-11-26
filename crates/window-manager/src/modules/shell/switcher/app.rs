@@ -25,7 +25,6 @@ pub(crate) fn scrub_index(start_x: f64, current_x: f64, base_index: usize, count
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
 
     #[test]

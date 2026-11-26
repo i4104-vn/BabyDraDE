@@ -9,8 +9,8 @@ use crate::center::engine::IslandEngine;
 
 pub struct IslandCapsule {
     root: gtk4::Box,
-    #[allow(dead_code)]
-    engine: Rc<RefCell<IslandEngine>>,
+    /// Keeps the engine alive for click and tick callbacks registered in `new`.
+    _engine: Rc<RefCell<IslandEngine>>,
 }
 
 impl IslandCapsule {
@@ -43,7 +43,10 @@ impl IslandCapsule {
         });
 
         let root = engine.borrow().root();
-        Self { root, engine }
+        Self {
+            root,
+            _engine: engine,
+        }
     }
 
     pub fn widget(&self) -> &gtk4::Box {

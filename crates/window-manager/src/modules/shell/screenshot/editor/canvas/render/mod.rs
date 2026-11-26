@@ -7,7 +7,7 @@ mod preview;
 
 use crate::modules::shell::screenshot::editor::models::EditorState;
 
-use super::models::SharedCache;
+use super::SharedCache;
 use annotations::render_annotations;
 use cache::{blit_cache, refresh_cache};
 use overlays::{draw_crop_border, draw_dimming};

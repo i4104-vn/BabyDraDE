@@ -12,10 +12,7 @@ pub(crate) mod wiring;
 
 // Compatibility re-exports: keep `crate::app::autostart`, `crate::app::commands`
 // and `crate::app::input_method` resolvable for existing callers.
-#[allow(unused_imports)]
-pub(crate) use bootstrap::{autostart, commands, input_method};
-#[allow(unused_imports)]
-pub(crate) use runtime::run_loop;
+pub(crate) use bootstrap::commands;
 
 /// Boots the compositor and starts the event loop.
 pub(crate) fn run() -> Result<(), Box<dyn Error>> {

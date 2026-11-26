@@ -1,6 +1,7 @@
-// Inlined from window/ops/sizing/mod.rs.
 use crate::modules::window::windows::{default_position, maximize_target, restore_target};
-use crate::shared::types::geometry::{Point as PurePoint, Rectangle as PureRectangle, Size as PureSize};
+use crate::shared::types::geometry::{
+    Point as PurePoint, Rectangle as PureRectangle, Size as PureSize,
+};
 use smithay::{
     desktop::Window,
     reexports::{

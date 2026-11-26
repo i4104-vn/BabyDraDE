@@ -1,4 +1,3 @@
-// Inlined from window/state_data.rs.
 use smithay::desktop::Window;
 use tracing::warn;
 

@@ -1,10 +1,8 @@
 //! BabyDraDE Screenshot — direct compositor capture with an annotation editor.
 
-// Inlined from adapters/desktop/screenshot/editor (formerly the
 // screenshot-editor feature crate).
 pub(crate) mod editor;
 pub(crate) mod models;
-
 
 use gtk4::prelude::*;
 use gtk4::Application;

@@ -5,11 +5,13 @@
 //! which keeps this layer dependent on `domain` only and makes the ports
 //! straightforward to fake in tests. The resulting service is passed by
 //! reference to the components that need it instead of living in a global.
+//!
+//! Domain rules are reached through `crate::core::shortcuts` re-exports.
 
 use std::sync::{Arc, RwLock};
 
 use crate::shared::ports::{CommandLauncher, ShortcutRepository};
-use crate::core::shortcuts::domain::{self, Mods, Shortcut};
+use crate::core::shortcuts::{command_for, Mods, Shortcut};
 
 /// Injected shortcut service shared by the input pipeline and reload watcher.
 pub(crate) struct ShortcutService {
@@ -65,7 +67,7 @@ impl ShortcutService {
     /// The configured command, or `None` when nothing matches.
     pub(crate) fn command_for(&self, mods: Mods, keysym: u32) -> Option<String> {
         let guard = self.shortcuts.read().unwrap_or_else(|e| e.into_inner());
-        domain::command_for(mods, keysym, &guard)
+        command_for(mods, keysym, &guard)
     }
 
     /// Reloads the shortcut table through the injected config port.
@@ -108,7 +110,7 @@ mod tests {
     use super::ShortcutService;
     use crate::shared::ports::{CommandLauncher, ConfigError, LaunchError, ShortcutRepository};
     use crate::shared::types::keysyms::KEY_e;
-    use crate::core::shortcuts::domain::{Mods, Shortcut};
+    use crate::core::shortcuts::{Mods, Shortcut};
 
     fn shortcut(command: &str) -> Shortcut {
         Shortcut {

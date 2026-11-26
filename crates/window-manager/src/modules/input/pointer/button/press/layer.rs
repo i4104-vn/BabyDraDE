@@ -4,7 +4,7 @@ use smithay::wayland::shell::wlr_layer::Layer;
 
 use crate::modules::input::InputContext;
 
-use crate::modules::input::pointer::button::models::ButtonContext;
+use crate::modules::input::pointer::button::ButtonContext;
 
 use super::shared;
 
