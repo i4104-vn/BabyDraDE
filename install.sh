@@ -12,9 +12,6 @@ cd "$ROOT_DIR"
 
 FORCE_INSTALL_DEPS=0
 SKIP_DEPS=0
-BABYDRADE_ORIENTATION="landscape"
-BABYDRADE_TRANSFORM="90"
-BABYDRADE_TOUCH_TRANSFORM=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -26,32 +23,6 @@ while [ $# -gt 0 ]; do
             SKIP_DEPS=1
             shift
             ;;
-        --landscape)
-            BABYDRADE_ORIENTATION="landscape"
-            BABYDRADE_TRANSFORM="90"
-            shift
-            ;;
-        --portrait)
-            BABYDRADE_ORIENTATION="portrait"
-            BABYDRADE_TRANSFORM="0"
-            shift
-            ;;
-        --rotate)
-            if [ $# -gt 1 ]; then
-                BABYDRADE_TRANSFORM="$2"
-                shift 2
-            else
-                shift
-            fi
-            ;;
-        --touch-rotate)
-            if [ $# -gt 1 ]; then
-                BABYDRADE_TOUCH_TRANSFORM="$2"
-                shift 2
-            else
-                shift
-            fi
-            ;;
         *)
             echo "[!] Ignoring unknown option: $1" >&2
             shift
@@ -60,12 +31,10 @@ while [ $# -gt 0 ]; do
 done
 
 export FORCE_INSTALL_DEPS SKIP_DEPS
-export BABYDRADE_ORIENTATION BABYDRADE_TRANSFORM BABYDRADE_TOUCH_TRANSFORM
 
 SCRIPTS=(
     "01-environment.sh"
     "02-gtk-theme.sh"
-    "03-orientation.sh"
     "04-dependencies.sh"
     "05-session.sh"
     "06-build-install.sh"

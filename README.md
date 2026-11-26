@@ -78,9 +78,9 @@ not already claim tty1). After a successful login the greeter starts
 Override the session with `BABYDRADE_GREETER_SESSION` if needed.
 
 `install.sh` parses the command line and then runs the numbered steps in
-`scripts/` in order: locale, GTK theme sync, orientation, dependency check
-(including greetd + cage), hardware session setup, release build + system
-install, and greetd service setup (display-manager alias, `graphical.target`,
+`scripts/` in order: locale, GTK theme sync, dependency check (including greetd
+and cage), hardware session setup, release build + system install, and greetd
+service setup (display-manager alias, `graphical.target`,
 tty1 takeover). It only installs and enables things — it never launches the
 desktop session. greetd starts the compositor after login. Use `--skip-deps`
 to bypass the dependency step.
