@@ -57,4 +57,19 @@ if [ -x "$USER_BIN_DIR/babydra-window-manager" ]; then
     ln -sf babydra-window-manager "$USER_BIN_DIR/window-manager" 2>/dev/null || true
 fi
 
+# Replace xdg-open everywhere the compositor binary is installed.
+step "Installing xdg-open shim..."
+for sdir in "${SYSTEM_BIN_DIRS[@]}"; do
+    if [ -d "$sdir" ] && [ -x "$sdir/babydra-window-manager" ]; then
+        if [ -w "$sdir" ]; then
+            ln -sfn babydra-window-manager "$sdir/xdg-open" 2>/dev/null || true
+        else
+            run_privileged ln -sfn babydra-window-manager "$sdir/xdg-open" 2>/dev/null || true
+        fi
+    fi
+done
+if [ -x "$USER_BIN_DIR/babydra-window-manager" ]; then
+    ln -sfn babydra-window-manager "$USER_BIN_DIR/xdg-open" 2>/dev/null || true
+fi
+
 # greetd service, config and TTY takeover are handled by 07-services.sh.

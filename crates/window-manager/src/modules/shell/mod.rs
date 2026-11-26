@@ -5,6 +5,7 @@
 //! and screenshot) and are kept separate from `rendering`, which only handles
 //! system/window rendering and blur.
 
+pub(crate) mod filedialog;
 pub(crate) mod launcher;
 pub(crate) mod lock;
 pub(crate) mod screenshot;

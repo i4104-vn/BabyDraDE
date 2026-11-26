@@ -74,8 +74,27 @@ pub(crate) fn export_toolkit_env() {
     std::env::set_var("XDG_SESSION_DESKTOP", process::DISPLAY_NAME);
     // SAFETY: see above.
     std::env::set_var("XDG_SESSION_TYPE", "wayland");
+    export_local_bin();
 
     super::input_method::export_defaults();
+}
+
+/// Prepends `~/.local/bin` so child apps resolve our `xdg-open` symlink.
+fn export_local_bin() {
+    let Some(home) = dirs::home_dir() else {
+        return;
+    };
+    let local = home.join(".local/bin");
+    let current = std::env::var_os("PATH").unwrap_or_default();
+    let mut paths: Vec<std::path::PathBuf> = std::env::split_paths(&current).collect();
+    if paths.contains(&local) {
+        return;
+    }
+    paths.insert(0, local);
+    if let Ok(value) = std::env::join_paths(paths) {
+        // SAFETY: called from `app::run` before GTK initialization or threads.
+        std::env::set_var("PATH", value);
+    }
 }
 
 /// Publishes the compositor's own Wayland socket for child processes.

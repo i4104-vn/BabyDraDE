@@ -80,7 +80,7 @@ pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
         data.state.resources.socket_name.to_string_lossy()
     );
 
-    let autostart_children = autostart::start(
+    let children = autostart::start(
         &services::config::load_autostart_config().commands,
         &ProcessLauncher,
         data.state.resources.socket_name.as_os_str(),
@@ -89,7 +89,7 @@ pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
     let run_res = event_loop.run(None, data, |_| {});
 
     info!("BabyDraDE compositor stopping, terminating autostart processes...");
-    for mut child in autostart_children {
+    for mut child in children {
         let _ = child.kill();
         let _ = child.wait();
     }
