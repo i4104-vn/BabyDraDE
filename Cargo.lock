@@ -146,6 +146,7 @@ dependencies = [
  "serde_json",
  "services",
  "tracing",
+ "tracing-subscriber",
  "ui-kit",
  "wayland-client",
  "wayland-protocols-wlr",
