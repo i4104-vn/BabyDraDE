@@ -4,6 +4,8 @@ pub mod auth;
 pub mod config;
 /// Desktop entries, file index, screenshots and wallpaper.
 pub mod desktop;
+/// Feature-side protocol bus client and shared wire types.
+pub mod protocol;
 /// System monitoring and control services.
 pub mod system;
 /// UI support: translations, theme/cursor discovery and tray host.
