@@ -86,3 +86,45 @@ acyclic edges and must keep shrinking. An edge may only be removed, never added.
 **Consequences:** every push and pull request is checked automatically; the
 remaining debt stays visible in one file; all checks are reproducible locally
 with the commands in [DEVELOPMENT.md](DEVELOPMENT.md).
+
+## 5. Relocate the protocol crate under the window manager (2026-11-26, historical — superseded by 6)
+
+Features and the compositor originally shared a top-level `crates/protocol/`
+crate whose `FileTransport` queued envelopes as files in the runtime directory;
+focused-window metadata was written separately as a JSON snapshot. File handoff
+lost events, left stale state behind and made ordering depend on polling.
+
+At this point the crate lived at `crates/window-manager/src/protocol/` and was
+still an independent Cargo crate, so features linked only the small contract
+instead of the heavy compositor crate. Delivery moved to a pure `Router` state
+machine hosted by the compositor: peers exchange newline-framed JSON over uid-scoped abstract
+Unix sockets, requests are correlated by id, presence is published on
+`bus/peers`, and topic values can be retained for late subscribers until a TTL
+expires. No filesystem queues or runtime files are created.
+
+**Consequences:** focused-window metadata arrives as a retained `window.active`
+event and window actions are requests to the `wm` peer. The frame loop no longer
+polls for protocol traffic, and feature code uses thin bus helpers while the
+router owns all delivery policy.
+
+## 6. Dissolve the protocol crate into feature-owned modules (2026-11-26, accepted)
+
+Keeping a second Cargo crate nested in `crates/window-manager/src/protocol/`
+forced a duplicate manifest and blurred ownership: the compositor, the shared
+value types and the feature client all lived in one package that every consumer
+linked in full.
+
+The standalone crate was removed. Ownership now follows the layer that uses
+each part:
+
+- `window_manager::protocol` — the compositor module at
+  `crates/window-manager/src/protocol/`: `Router`, `Connection`, `ReadResult`,
+  socket helpers and `BusSender`, hosted by socket-driven calloop sources.
+- `common::protocol` — the shared wire types and codec (`Request`, `Response`,
+  `Event`, `Envelope`, `MessageId`, `ProtocolError`, ...).
+- `services::protocol` — the feature-side `Bus` client, so apps link the service
+  layer and never the compositor.
+
+**Consequences:** one manifest less, no duplicate manifest to keep in sync, and
+each consumer depends only on the protocol surface it actually uses. The router,
+socket framing and retained-topic policy are unchanged from decision 5.

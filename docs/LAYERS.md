@@ -10,6 +10,7 @@ src/
 ├── core/      pure business rules only (no framework, no feature state)
 ├── app/       bootstrap, wiring, event-loop runtime, state facade
 ├── infra/     Winit/Udev backends, config loaders, process launcher
+├── protocol/  compositor-side bus (router, connection, socket, BusSender)
 └── modules/   independent feature modules
     ├── blur/      GPU blur pipeline and shaders
     ├── input/     keyboard, pointer, touchpad, touch
@@ -28,6 +29,10 @@ src/
 - `app` orchestrates: it owns bootstrap, wiring, runtime lifecycle and the
   `BabydraState` facade. Business decisions stay in `core`/feature modules.
 - `infra` only translates hardware and IO; it must not decide business logic.
+- `protocol/` is compositor-internal: it owns the `Router`, `Connection`, socket
+  helpers and `BusSender`. Shared wire types and the codec live in
+  `common::protocol`; the feature-side `Bus` client lives in
+  `services::protocol`. There is no standalone `protocol` crate.
 - Each module under `modules/` owns its state, logic and rendering, and uses the
   same internal shape: `mod.rs` plus topic sub-folders (`state/`, `render/`,
   `service/`, `ports/`). Animation and titlebar belong to `window`; blur is its

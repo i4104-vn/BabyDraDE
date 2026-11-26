@@ -28,6 +28,27 @@ reload within 2 seconds.
 The full config layout (main `babydra.conf` plus split files in `configs/`) is
 documented in [docs/configuration.md](docs/configuration.md).
 
+## Protocol bus
+
+Features and the compositor exchange typed messages over a uid-scoped abstract
+Unix socket — no files or queue directories are created. There is no standalone
+`protocol` crate; the contract is split by ownership:
+
+- `window_manager::protocol` (in `crates/window-manager/src/protocol/`) owns the
+  compositor-side transport: `Router`, `Connection`, socket helpers and
+  `BusSender`. The compositor hosts the router as socket-driven calloop sources,
+  so frame composition never polls protocol traffic.
+- `common::protocol` owns the shared wire types and codec (`Request`, `Response`,
+  `Event`, `Envelope`, `MessageId`, `ProtocolError`, ...).
+- `services::protocol` owns the feature-side `Bus` client that apps link against
+  without depending on the compositor.
+
+The router stamps sources, correlates requests, tracks presence, and retains
+topic values for late subscribers until their TTL expires. Focused-window
+metadata is a retained `window.active` event; window actions are requests to the
+compositor's `wm` peer. See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the wire
+format, router rules, file layout and usage examples.
+
 ## Development
 
 CI runs on every push and pull request (`.github/workflows/ci.yml`) and checks

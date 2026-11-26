@@ -14,6 +14,7 @@ src/
 ├── core/     pure business rules (shortcuts, policies)
 ├── app/      bootstrap, wiring, runtime, state facade
 ├── infra/    Winit/Udev backends, config loaders, process launcher
+├── protocol/ compositor-side bus module (router, connection, socket)
 └── modules/
     ├── blur/      GPU blur module
     ├── input/     device events
@@ -27,6 +28,15 @@ Every feature module has the same internal shape (`mod.rs` plus topic
 sub-folders), owns its state and rendering, and communicates with other modules
 only through ports in `shared`. Files stay under 500 lines; related files are
 grouped by feature rather than left loose in one folder.
+
+There is no standalone `protocol` crate. The bus is split by ownership:
+`window_manager::protocol` (`src/protocol/`) holds the compositor-side `Router`,
+`Connection`, socket helpers and `BusSender`; `common::protocol` holds the shared
+wire types and codec; `services::protocol` holds the feature-side `Bus` client,
+so features never depend on the compositor. The router is a pure state machine
+over uid-scoped abstract Unix sockets with retained topics, and the compositor
+hosts it as socket-driven calloop sources — frame composition never polls
+protocol traffic. No files or queue directories are used.
 
 ## 2. Boundaries
 
@@ -52,9 +62,9 @@ interface segregation (`WindowControl`, `HitTestQuery`, `InteractionBuffer`,
 
 ## 4. Frame loop and shell
 
-`infra/mod.rs` owns the shared `begin_frame` / `send_frames` / `end_frame`
-steps used by `infra/winit.rs` and `infra/udev.rs`. Window animation and
-titlebar rendering live in `modules/window/{animation,titlebar}/`; GPU blur is
+`infra/frame_pacing.rs` owns the shared `begin_frame` / `send_frames` /
+`end_frame` steps used by `infra/winit.rs` and `infra/udev/render.rs`. Window
+animation and titlebar rendering live in `modules/window/{animation,titlebar}/`; GPU blur is
 the standalone `modules/blur/` module. Each shell overlay owns its state,
 input, layout and drawing under `modules/shell/<feature>/`.
 
@@ -70,3 +80,5 @@ input, layout and drawing under `modules/shell/<feature>/`.
 - [LAYERS.md](LAYERS.md) — module map, boundaries, size and naming rules
 - [DEVELOPMENT.md](DEVELOPMENT.md) — checks, CI and test matrix
 - [DECISIONS.md](DECISIONS.md) — rationale behind the current structure
+- [protocol README](../crates/window-manager/src/protocol/README.md) — router,
+  abstract sockets, retained topics and the WM message contract
