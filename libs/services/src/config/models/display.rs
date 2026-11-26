@@ -159,6 +159,12 @@ pub struct DisplayConfig {
     /// `false` to opt out on a convertible machine.
     #[serde(default)]
     pub auto_rotate: Option<bool>,
+    /// Preferred accelerometer driver: `auto` (the default), `gaokun3`, `iio`
+    /// or `sensor-proxy`. Kept as a free-form string so new drivers can be added
+    /// to the compositor without changing the config schema. Unknown names
+    /// fall back to automatic detection.
+    #[serde(default)]
+    pub auto_rotate_driver: Option<String>,
 }
 
 impl DisplayConfig {
