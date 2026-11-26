@@ -49,6 +49,13 @@ metadata is a retained `window.active` event; window actions are requests to the
 compositor's `wm` peer. See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the wire
 format, router rules, file layout and usage examples.
 
+## File dialogs and `xdg-open`
+
+The compositor binary provides the native GTK file chooser and an `xdg-open`
+replacement. Apps can point `~/.local/bin/xdg-open` at the binary: with a path
+or URL it opens the target via GIO/BabyDra apps, and with no target it shows the
+chooser. See [docs/FILEDIALOG.md](docs/FILEDIALOG.md) for ownership and setup.
+
 ## Development
 
 CI runs on every push and pull request (`.github/workflows/ci.yml`) and checks

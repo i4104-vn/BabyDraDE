@@ -19,7 +19,7 @@ src/
     ├── blur/      GPU blur module
     ├── input/     device events
     ├── render/    frame composition
-    ├── shell/     launcher, switcher, lock, screenshot
+    ├── shell/     launcher, switcher, lock, screenshot, xdg-open dispatch
     ├── wayland/   protocol runtime and delegates
     └── window/    registry, ops, hit_test, interaction, animation, titlebar
 ```
