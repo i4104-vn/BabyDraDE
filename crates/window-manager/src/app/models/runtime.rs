@@ -1,13 +1,9 @@
 //! Compositor runtime models and the facade state structure.
 
-// Compositor state models.
-
-
 pub(crate) use client::ClientState;
 pub(crate) use runtime::RuntimeResources;
 pub(crate) use state::{BabydraState, CalloopData};
 
-// Inlined from core/state/models/client.rs.
 mod client {
     //! Wayland client data attached to each connected client.
 
@@ -28,7 +24,6 @@ mod client {
     }
 }
 
-// Inlined from core/state/models/runtime.rs.
 mod runtime {
     //! Shared runtime resources owned by the compositor state.
 
@@ -48,28 +43,36 @@ mod runtime {
     }
 }
 
-// Inlined from core/state/models/state.rs.
 mod state {
     //! Compositor state data models.
 
+    use crate::protocol::BusSender;
     use smithay::reexports::wayland_server::DisplayHandle;
 
     use crate::modules::window::WindowRegistry;
 
     use crate::{
-        app::state::{InputState, OverlayState},
+        app::{
+            bus::BusHost,
+            state::{InputState, OverlayState},
+        },
         modules::wayland::{clipboard::ClipboardState, runtime::WaylandRuntime},
         shared::config::snapshot::ConfigSnapshot,
     };
 
     use super::RuntimeResources;
 
+    /// Loop data owned by the event loop alongside the compositor state.
     pub(crate) struct CalloopData {
         pub(crate) state: BabydraState,
         pub(crate) display_handle: DisplayHandle,
+        pub(crate) bus: BusHost,
     }
 
+    /// Aggregated live compositor state shared by every subsystem.
     pub(crate) struct BabydraState {
+        /// Sender for the compositor's local protocol peer.
+        pub(crate) bus: BusSender,
         /// Wayland protocol globals and the compositor seat.
         pub(crate) wayland: WaylandRuntime,
         /// Clipboard capture pipeline (MIME queues owned by the component).

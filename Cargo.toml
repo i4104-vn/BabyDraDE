@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "crates/window-manager",
-    "crates/protocol",
     "crates/features/desktop",
     "crates/features/greeter",
     "crates/features/topbar",

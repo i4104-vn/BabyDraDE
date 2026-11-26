@@ -1,8 +1,8 @@
 //! Shared compositor state and lifecycle.
 //!
-//! `BabydraState` owns the seven narrow components; protocol wiring lives in
-//! `wayland`, window lifecycle in `window`, and port implementations in
-//! `input_bridge`.
+//! `BabydraState` owns the live compositor components; protocol transport
+//! lives in [`crate::app::bus`], request handling in [`crate::app::bridge`]
+//! and window lifecycle in `crate::modules::window`.
 //!
 //! This module is a facade over [`crate::app::models`] and holds only the
 //! cross-component orchestration functions.
@@ -28,9 +28,11 @@ pub(crate) use crate::modules::window::ops::{is_window_exiting, start_window_ope
 
 // Lifecycle helpers.
 
-
 impl BabydraState {
     /// Central dispatch function for all hardware and synthetic input events.
+    ///
+    /// # Arguments
+    /// * `event` - Input event to forward to the input pipeline.
     pub(crate) fn process_input_event<I: smithay::backend::input::InputBackend>(
         &mut self,
         event: smithay::backend::input::InputEvent<I>,
@@ -39,12 +41,26 @@ impl BabydraState {
     {
         crate::modules::input::process_input_event(self, event);
     }
+
+    /// Builds the compositor state and registers its Wayland endpoints.
+    ///
+    /// # Arguments
+    /// * `event_loop` - Loop that owns the Wayland listener and display sources.
+    /// * `display` - Wayland display handed to the sources.
+    /// * `load_gesture_policy` - Port used to load the cached gesture policy.
+    /// * `shortcuts` - Shared shortcut service used by the input pipeline.
+    /// * `registry` - Shared runtime shortcut registry.
+    /// * `bus` - Sender for the compositor's local protocol peer.
+    ///
+    /// # Returns
+    /// The fully assembled compositor state.
     pub(crate) fn new(
         event_loop: &mut EventLoop<'_, CalloopData>,
         display: Display<Self>,
         load_gesture_policy: crate::shared::ports::LoadGesturePolicy,
         shortcuts: Arc<crate::core::shortcuts::app::ShortcutService>,
         registry: Arc<crate::core::shortcuts::app::ShortcutRegistry>,
+        bus: crate::protocol::BusSender,
     ) -> Self {
         let display_handle = display.handle();
         let wayland = WaylandRuntime::new(&display_handle);
@@ -53,6 +69,7 @@ impl BabydraState {
         let config = ConfigSnapshot::new(load_gesture_policy, shortcuts, registry);
 
         Self {
+            bus,
             wayland,
             clipboard: ClipboardState::default(),
             config,
@@ -68,16 +85,25 @@ impl BabydraState {
             },
         }
     }
+
     /// Records that a client installed a new selection.
+    ///
+    /// # Arguments
+    /// * `mimes` - MIME types offered by the new selection.
     pub(crate) fn note_client_selection(&mut self, mimes: Vec<String>) {
         self.clipboard.note_client_selection(mimes);
     }
+
     /// Requests the pending client selection and caches it on a background thread.
     pub(crate) fn update_clipboard(&mut self) {
         self.clipboard
             .update_clipboard(self.wayland.seat(), self.clipboard.sender.clone());
     }
+
     /// Takes ownership of an already cached clipboard selection.
+    ///
+    /// # Arguments
+    /// * `cached_mime` - MIME type chosen for the cached selection, if any.
     pub(crate) fn complete_clipboard_capture(&mut self, cached_mime: Option<String>) {
         self.clipboard.complete_clipboard_capture(
             cached_mime,
@@ -89,8 +115,15 @@ impl BabydraState {
 
 // Listener helpers.
 
-
 impl BabydraState {
+    /// Registers the Wayland listening socket and client dispatch source.
+    ///
+    /// # Arguments
+    /// * `display` - Wayland display owned by the registered source.
+    /// * `event_loop` - Loop that owns both sources.
+    ///
+    /// # Returns
+    /// The allocated Wayland socket name.
     pub(super) fn init_wayland_listener(
         display: Display<Self>,
         event_loop: &mut EventLoop<'_, CalloopData>,
@@ -141,7 +174,6 @@ impl BabydraState {
 
 // Settings helpers.
 
-
 impl BabydraState {
     /// Reloads input device configuration from `~/.babydra/configs/input.toml`.
     ///
@@ -160,6 +192,9 @@ impl BabydraState {
     /// last request: borders show the matching directional resize cursor (both
     /// on hover and while dragging), the draggable titlebar shows a grab cursor,
     /// and active moves show a grabbing cursor.
+    ///
+    /// # Returns
+    /// The cursor shape the renderer should show this frame.
     pub(crate) fn effective_cursor_icon(&self) -> CursorIcon {
         if let Some(ref resize) = self.input.resize_state {
             return resize_cursor_icon(resize.edges);

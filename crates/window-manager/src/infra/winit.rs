@@ -89,7 +89,7 @@ pub(crate) fn init(
                     backend.window().request_redraw();
                 }
                 WinitEvent::Redraw => {
-                    super::frame_pacing::begin_frame(state);
+                    crate::infra::frame_pacing::begin_frame(state);
                     let size = backend.window_size();
 
                     let scale = Scale::from(1.0);
@@ -166,8 +166,8 @@ pub(crate) fn init(
                     backend
                         .submit(render_damage.as_deref())
                         .expect("failed to submit Winit frame");
-                    super::frame_pacing::send_frames(state, &output);
-                    super::frame_pacing::end_frame(state, display_handle);
+                    crate::infra::frame_pacing::send_frames(state, &output);
+                    crate::infra::frame_pacing::end_frame(state, display_handle);
                     backend.window().request_redraw();
                 }
                 WinitEvent::CloseRequested => state.resources.loop_signal.stop(),

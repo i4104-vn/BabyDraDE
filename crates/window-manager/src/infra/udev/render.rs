@@ -8,10 +8,7 @@ use std::rc::Rc;
 
 use animation::FRAME_INTERVAL;
 use smithay::{
-    backend::{
-        drm::compositor::FrameFlags,
-        renderer::glow::GlowRenderer,
-    },
+    backend::{drm::compositor::FrameFlags, renderer::glow::GlowRenderer},
     reexports::calloop::{
         timer::{TimeoutAction, Timer},
         EventLoop,
@@ -23,7 +20,9 @@ use tracing::warn;
 use crate::infra::models::{FrameRenderContext, UdevState};
 use crate::{
     app::state::CalloopData,
-    infra::udev::handler::{register_drm_notifier, register_session_notifier, register_udev_monitor},
+    infra::udev::handler::{
+        register_drm_notifier, register_session_notifier, register_udev_monitor,
+    },
     modules::{
         render::{compose_frame, CustomRenderElements, FrameContext as ShellFrameContext},
         shell::{
@@ -32,7 +31,6 @@ use crate::{
         },
     },
 };
-
 
 /// Registers the immediate timer that drives udev frame rendering.
 ///

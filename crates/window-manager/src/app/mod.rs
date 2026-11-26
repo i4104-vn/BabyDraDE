@@ -4,6 +4,7 @@ use std::error::Error;
 
 pub(crate) mod bootstrap;
 pub(crate) mod bridge;
+pub(crate) mod bus;
 pub(crate) mod models;
 pub(crate) mod runtime;
 pub(crate) mod state;

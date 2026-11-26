@@ -35,6 +35,13 @@ impl Error for ClipboardChannelError {
 
 /// Runs the compositor until its event loop stops, cleaning up autostart
 /// processes afterwards.
+///
+/// # Arguments
+/// * `wiring` - Built dependencies the loop drives.
+///
+/// # Errors
+/// Returns an error when the clipboard channel, a backend or the event loop
+/// itself fails.
 pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
     let Wiring {
         event_loop,
@@ -55,6 +62,12 @@ pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
         .map_err(|err| ClipboardChannelError(err.error))?;
 
     backends::init(event_loop, data, *host_has_display)?;
+
+    // Features may be waiting for the compositor before starting their UI.
+    let _ = data
+        .state
+        .bus
+        .publish("bus/ready", &crate::protocol::Event::CompositorReady);
 
     // Convertible devices can rotate the panel from their accelerometer.
     crate::infra::process::auto_rotate::spawn(event_loop);
@@ -80,6 +93,12 @@ pub(crate) fn run_loop(mut wiring: Wiring<'_>) -> Result<(), Box<dyn Error>> {
         let _ = child.kill();
         let _ = child.wait();
     }
+
+    let _ = data
+        .state
+        .bus
+        .publish("bus/shutdown", &crate::protocol::Event::Shutdown);
+    data.state.bus.shutdown();
 
     run_res?;
     Ok(())

@@ -164,7 +164,6 @@ dependencies = [
  "gtk4",
  "gtk4-layer-shell",
  "libc",
- "protocol",
  "serde",
  "services",
  "tokio",
@@ -368,7 +367,9 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1903,15 +1904,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protocol"
-version = "0.1.0"
-dependencies = [
- "common",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "quick-xml"
 version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2148,7 +2140,6 @@ dependencies = [
  "glib",
  "libc",
  "notify",
- "protocol",
  "serde",
  "serde_json",
  "tempfile",
@@ -2915,8 +2906,8 @@ dependencies = [
  "gtk4",
  "gtk4-layer-shell",
  "libc",
- "protocol",
  "serde",
+ "serde_json",
  "services",
  "smithay",
  "smithay-drm-extras",

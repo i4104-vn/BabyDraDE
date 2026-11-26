@@ -12,7 +12,7 @@ use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
 use crate::{
     app::state::{BabydraState, CalloopData},
     core::shortcuts::{ShortcutRegistry, ShortcutService},
-    infra::process::{process::ShortcutCommandLauncher, shortcuts_watcher::spawn_watcher},
+    infra::process::process::ShortcutCommandLauncher,
     shared::config::{gesture_policy, keymap as config},
     shortcuts as api,
 };
@@ -43,6 +43,13 @@ pub(crate) struct Wiring<'a> {
 ///    assembled.
 ///
 /// The runtime publishes our own socket only after the backend has started.
+///
+/// # Returns
+/// The event loop, loop data and host-display flag the runtime needs.
+///
+/// # Errors
+/// Returns an error when the shortcut service, event loop, display, protocol
+/// bus or compositor state cannot be constructed.
 pub(crate) fn build_state<'a>() -> Result<Wiring<'a>, Box<dyn Error>> {
     // Composition root: inject concrete config and process adapters into the
     // shortcut use case, then start its hot-reload watcher.
@@ -52,10 +59,10 @@ pub(crate) fn build_state<'a>() -> Result<Wiring<'a>, Box<dyn Error>> {
     ));
     config::spawn_watcher(shortcuts.shared().clone());
 
-    // Runtime registrations live outside the reloadable keymap table.
+    // Runtime registrations live outside the reloadable keymap table; features
+    // publish them through the protocol bus instead of a watched directory.
     let registry = Arc::new(ShortcutRegistry::new());
     api::publish(registry.clone());
-    spawn_watcher(registry.clone());
 
     // Capture the *host* display before exporting our own WAYLAND_DISPLAY,
     // otherwise the backend would always think it is nested.
@@ -66,12 +73,16 @@ pub(crate) fn build_state<'a>() -> Result<Wiring<'a>, Box<dyn Error>> {
     let mut event_loop: EventLoop<'a, CalloopData> = EventLoop::try_new()?;
     let display: Display<BabydraState> = Display::new()?;
     let display_handle = display.handle();
+
+    // The bus socket must exist before any autostart feature tries to connect.
+    let (bus_host, bus_sender) = super::bus::build()?;
     let state = BabydraState::new(
         &mut event_loop,
         display,
         gesture_policy,
         shortcuts.clone(),
         registry.clone(),
+        bus_sender,
     );
 
     // Toolkit hints must be visible to GTK, but WAYLAND_DISPLAY must still
@@ -80,10 +91,12 @@ pub(crate) fn build_state<'a>() -> Result<Wiring<'a>, Box<dyn Error>> {
     bootstrap::init_gtk();
     services::config::ensure_babydra_dirs();
 
-    let data = CalloopData {
+    let mut data = CalloopData {
         state,
         display_handle,
+        bus: bus_host,
     };
+    super::bus::init(&mut event_loop, &mut data)?;
 
     Ok(Wiring {
         event_loop,
