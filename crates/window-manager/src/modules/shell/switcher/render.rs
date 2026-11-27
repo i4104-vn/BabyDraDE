@@ -64,9 +64,13 @@ fn compute_layout_metrics(
     let panel = DockLayout::new(count, screen_h / 2.0, screen_w, DockSide::Right);
     let active_y = panel.center_y + dock_active_rel(count, highlight_position) * SLOT;
 
+    let top = 8.0f64;
+    // `clamp` panics when min > max; very short outputs leave no room for the
+    // preview, so clamp against a lower bound that is always valid.
+    let bottom = (screen_h - PREVIEW_H - 8.0).max(top);
     let preview = Rect::new(
         (panel.x - PREVIEW_GAP - PREVIEW_W).max(8.0),
-        (active_y - PREVIEW_H / 2.0).clamp(8.0, screen_h - PREVIEW_H - 8.0),
+        (active_y - PREVIEW_H / 2.0).clamp(top, bottom),
         PREVIEW_W,
         PREVIEW_H,
     );

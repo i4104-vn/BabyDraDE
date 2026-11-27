@@ -32,7 +32,7 @@ pub(crate) fn dispatch(args: &[String]) -> bool {
 
     if args.get(1).map(String::as_str) == Some("--filedialog-chooser") {
         let options = parse_cli_options(&args[2..]);
-        let exit_code = run_chooser(options, false);
+        let exit_code = run_chooser(options, ChooserAction::PrintPaths);
         std::process::exit(exit_code);
     }
 
@@ -56,7 +56,7 @@ fn handle_xdg_open_args(args: &[String]) {
             title: trans("file_dialog.title_open_file"),
             ..FileDialogOptions::default()
         };
-        let exit_code = run_chooser(options, true);
+        let exit_code = run_chooser(options, ChooserAction::OpenPicked);
         std::process::exit(exit_code);
     }
 
@@ -70,11 +70,17 @@ fn handle_xdg_open_args(args: &[String]) {
     std::process::exit(i32::from(failed));
 }
 
+/// What to do with the paths chosen in the file chooser.
+#[derive(Clone, Copy)]
+enum ChooserAction {
+    /// Open the first selected path via [`open_target`].
+    OpenPicked,
+    /// Print all selected paths to stdout, one per line.
+    PrintPaths,
+}
+
 /// Runs the GTK4 file chooser application loop.
-///
-/// When `open_picked` is `true`, the chosen path is opened via [`open_target`];
-/// otherwise all chosen paths are printed to stdout (one per line).
-fn run_chooser(options: FileDialogOptions, open_picked: bool) -> i32 {
+fn run_chooser(options: FileDialogOptions, action: ChooserAction) -> i32 {
     let app = Application::builder()
         .application_id("org.babydra.filedialog")
         .flags(gio::ApplicationFlags::NON_UNIQUE)
@@ -90,7 +96,7 @@ fn run_chooser(options: FileDialogOptions, open_picked: bool) -> i32 {
                 exit_code.set(1);
                 return;
             };
-            if open_picked {
+            if matches!(action, ChooserAction::OpenPicked) {
                 let ok = open_target(&paths[0].to_string_lossy());
                 exit_code.set(i32::from(!ok));
             } else {

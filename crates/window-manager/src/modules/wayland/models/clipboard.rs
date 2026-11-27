@@ -82,7 +82,10 @@ impl ClipboardState {
 
         let capture_mime = mime.clone();
         let capture_mimes = mimes.clone();
-        std::thread::Builder::new()
+        // `sender` is moved into the capture thread below; remember whether a
+        // completion event will ever arrive so the guard is not left stuck.
+        let has_completion = sender.is_some();
+        let spawned = std::thread::Builder::new()
             .name("babydrade-clipboard".to_string())
             .spawn(move || {
                 let _ = reader.set_read_timeout(Some(Duration::from_secs(2)));
@@ -118,10 +121,19 @@ impl ClipboardState {
                     // serve; otherwise leave the client selection untouched.
                     let _ = sender.send((!data.is_empty()).then_some(capture_mime));
                 }
-            })
-            .ok();
+            });
 
-        self.capture = Some(mimes);
+        // `complete_clipboard_capture` is the only place that clears this
+        // guard. Without a sender or a live capture thread there will be no
+        // completion event, so leaving it set would block every later capture.
+        match spawned {
+            Ok(_) => {
+                if has_completion {
+                    self.capture = Some(mimes);
+                }
+            }
+            Err(err) => warn!("Cannot spawn clipboard capture thread: {err}"),
+        }
     }
 
     /// Called from the calloop channel once the data has been cached. Now it

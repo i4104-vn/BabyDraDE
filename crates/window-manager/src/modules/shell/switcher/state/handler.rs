@@ -145,6 +145,9 @@ impl BabydraState {
                 // back to a coloured badge when the icon is unavailable.
                 let icon_pixbuf =
                     std::panic::catch_unwind(|| ui_kit::get_app_icon_pixbuf_any(&icon_app_id, 32))
+                        .inspect_err(|_| {
+                            tracing::warn!("icon resolution panicked for '{icon_app_id}'");
+                        })
                         .unwrap_or(None);
 
                 Some(AltTabEntry {
