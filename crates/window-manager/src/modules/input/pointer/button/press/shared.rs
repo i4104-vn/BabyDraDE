@@ -14,10 +14,11 @@ use crate::modules::input::pointer::button::ButtonContext;
 pub(super) fn raise_and_focus<C: InputContext>(ctx: &mut ButtonContext<'_, C>, window: &Window) {
     ctx.state.space_mut().raise_element(window, true);
     ctx.state.raise_window(window);
-    ctx.state.set_keyboard_focus(
-        Some(window.toplevel().unwrap().wl_surface().clone()),
-        ctx.serial,
-    );
+    // A dead client surface has no toplevel to focus; leave focus untouched.
+    if let Some(toplevel) = window.toplevel() {
+        ctx.state
+            .set_keyboard_focus(Some(toplevel.wl_surface().clone()), ctx.serial);
+    }
     ctx.state.space().elements().for_each(|w| {
         let active = w == window;
         w.set_activated(active);

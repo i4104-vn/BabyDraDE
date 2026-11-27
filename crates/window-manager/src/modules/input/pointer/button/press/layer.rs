@@ -35,7 +35,9 @@ pub(super) fn handle<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
 
         ctx.state.space().elements().for_each(|window| {
             window.set_activated(false);
-            window.toplevel().unwrap().send_pending_configure();
+            if let Some(toplevel) = window.toplevel() {
+                toplevel.send_pending_configure();
+            }
         });
         ctx.state.set_keyboard_focus(None, ctx.serial);
         ctx.state.update_active_window(None);
