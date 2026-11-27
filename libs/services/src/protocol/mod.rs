@@ -1,7 +1,7 @@
 //! Feature-side bus client declarations and re-exports.
 //!
-//! Implementation lives in focused siblings: [`state`] owns the reader state
-//! and frame routing, [`bus`] owns connection lifecycle, and [`bus_io`] owns
+//! Implementation lives in focused siblings: `state` owns the reader state
+//! and frame routing, `bus` owns connection lifecycle, and `bus_io` owns
 //! the public request/publish API.
 //!
 //! The wire types and constants are re-exported from the external `common`

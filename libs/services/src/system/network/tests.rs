@@ -5,10 +5,10 @@
 
 use std::fs;
 
-use super::{
-    is_virtual_interface, is_wifi_interface, parse_iw_link_ssid, parse_iwgetid_output,
-    parse_nmcli_active_ssid, sanitize_ssid,
+use super::ssid::{
+    parse_iw_link_ssid, parse_iwgetid_output, parse_nmcli_active_ssid, sanitize_ssid,
 };
+use super::{is_virtual_interface, is_wifi_interface};
 
 #[test]
 fn iw_link_output_yields_the_associated_ssid() {

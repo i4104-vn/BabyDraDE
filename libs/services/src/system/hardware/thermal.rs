@@ -35,7 +35,6 @@ impl ThermalReader {
     pub fn read(&self) -> ThermalInfo {
         let mut zones = Self::read_thermal_zones();
 
-        // If no thermal_zones were found, try hwmon
         if zones.is_empty() {
             zones = Self::read_hwmon();
         }
@@ -102,7 +101,6 @@ impl ThermalReader {
                 .trim()
                 .to_string();
 
-            // Look for temp*_input files
             if let Ok(hw_entries) = fs::read_dir(&path) {
                 for hw_entry in hw_entries.flatten() {
                     let file_name = hw_entry.file_name().to_string_lossy().to_string();

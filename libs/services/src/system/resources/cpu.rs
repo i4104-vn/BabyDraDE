@@ -45,7 +45,6 @@ impl CpuReader {
             core_count,
         };
 
-        // Initialize snapshot
         let _ = reader.read();
         reader
     }
@@ -67,7 +66,6 @@ impl CpuReader {
             }
         };
 
-        // Calculate overall usage delta
         let usage_percent = if let Some(ref prev) = self.last_overall {
             Self::calc_usage_percent(prev, &overall_stat)
         } else {
@@ -75,7 +73,6 @@ impl CpuReader {
         };
         self.last_overall = Some(overall_stat);
 
-        // Calculate per-core usage deltas
         let mut per_core_usage = Vec::with_capacity(per_core_stats.len());
         for (i, current) in per_core_stats.iter().enumerate() {
             let percent = if let Some(prev) = self.last_per_core.get(i) {

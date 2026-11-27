@@ -17,7 +17,6 @@ pub struct CursorThemeInfo {
 /// # Returns
 /// Name, size and optional path of the active cursor theme.
 pub fn read_active_cursor_theme() -> CursorThemeInfo {
-    // 1. Check environment variables
     let env_name = std::env::var("XCURSOR_THEME")
         .ok()
         .filter(|s| !s.is_empty());
@@ -25,7 +24,6 @@ pub fn read_active_cursor_theme() -> CursorThemeInfo {
         .ok()
         .and_then(|s| s.parse::<u32>().ok());
 
-    // 2. Fallback: ~/.icons/default/index.theme
     let file_theme = read_default_index_theme();
 
     let name = env_name

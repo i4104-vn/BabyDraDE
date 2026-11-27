@@ -107,12 +107,10 @@ pub fn persist_locale(locale: &str) {
 
     let content = format!("LANG={lang_str}\nLANGUAGE={lang_str}\nLOCALE={normalized}\n");
 
-    // Write to ~/.babydra/locale.conf
     let babydra_dir = crate::config::get_babydra_dir();
     let _ = std::fs::create_dir_all(&babydra_dir);
     let _ = std::fs::write(babydra_dir.join("locale.conf"), &content);
 
-    // Write to user-level fallback config ~/.config/locale.conf
     if let Some(config_dir) = dirs::config_dir() {
         let _ = std::fs::create_dir_all(&config_dir);
         let locale_file = config_dir.join("locale.conf");

@@ -11,7 +11,6 @@ fn read_locale_recovers_from_poisoned_lock() {
     }));
     assert!(lock.is_poisoned());
 
-    // read_locale must not panic and must return a usable locale code.
     let locale = read_locale(&lock);
     assert!(locale == "en" || locale == "vi");
 }
@@ -26,6 +25,5 @@ fn test_i18n_translation() {
     assert_eq!(trans("screenshot.pen_tooltip"), "Bút vẽ");
     assert_eq!(trans("lock.status"), "Thiết bị đang khóa");
 
-    // Fallback for non-existent key returns key itself
     assert_eq!(trans("non_existent_key_123"), "non_existent_key_123");
 }

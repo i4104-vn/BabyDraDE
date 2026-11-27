@@ -1,7 +1,7 @@
 //! Configuration paths, loaders and savers for the split BabyDraDE config.
 //!
 //! Main settings are kept in `~/.babydra/babydra.conf`. Subsystem settings are
-//! split into small files under `~/.babydra/configs/` (see [`settings`]).
+//! split into small files under `~/.babydra/configs/` (see the `settings` module).
 
 /// Cached icon positions with debounced writes to `configs/desktop.json`.
 pub mod desktop_layout;

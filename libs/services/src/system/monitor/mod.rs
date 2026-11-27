@@ -5,7 +5,7 @@ use super::SystemService;
 /// MiB in one GiB; converts the MiB readings from `SystemService` into GiB.
 const MIB_PER_GIB: f64 = 1024.0;
 
-/// Geometry of the primary monitor.
+/// CPU, memory and GPU usage sampled for the system monitor.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct MonitorSnapshot {
     pub cpu_percent: f64,
@@ -15,13 +15,12 @@ pub struct MonitorSnapshot {
     pub gpu_percent: f64,
 }
 
-/// Reads the primary monitor geometry from Wayland sysfs.
+/// Refreshes `sys` and samples current resource usage.
+///
+/// GPU usage is reported as `0.0` until a source is wired up.
 ///
 /// # Arguments
-/// * `sys` - System service used to refresh related readings.
-///
-/// # Returns
-/// Snapshot containing width and height in pixels.
+/// * `sys` - System service used to refresh the readings.
 pub fn get_monitor_snapshot(sys: &mut SystemService) -> MonitorSnapshot {
     let snap = sys.snapshot();
     let cpu_pct = snap.cpu.usage_percent as f64;

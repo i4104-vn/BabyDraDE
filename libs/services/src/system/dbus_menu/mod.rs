@@ -5,7 +5,6 @@
 
 mod atspi;
 mod discovery;
-mod discovery_helpers;
 mod fetch;
 mod models;
 mod parse;

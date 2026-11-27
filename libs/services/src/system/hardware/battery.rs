@@ -58,8 +58,6 @@ impl BatteryReader {
     /// # Returns
     /// The battery snapshot, or `None` when no readable battery exists.
     pub fn read(&mut self) -> Option<BatteryInfo> {
-        // Reuse the cached device only while it still exists; otherwise probe
-        // again and cache the new path after reading it.
         if let Some(path) = self.device_path.as_ref().filter(|path| path.exists()) {
             return Self::read_battery(path);
         }
@@ -81,7 +79,6 @@ impl BatteryReader {
                 return Some(path);
             }
 
-            // Also check type file if present
             if let Ok(dev_type) = fs::read_to_string(path.join("type")) {
                 if dev_type.trim() == "Battery" {
                     return Some(path);

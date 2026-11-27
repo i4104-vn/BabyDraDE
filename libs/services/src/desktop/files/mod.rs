@@ -1,6 +1,6 @@
 //! Filesystem services shared by desktop adapters.
 //!
-//! [`index`] exposes a bounded, one-shot snapshot of the user's home directory
+//! The `index` module exposes a bounded, one-shot snapshot of the user's home directory
 //! so UI adapters can search paths without performing filesystem walks.
 
 pub mod index;
