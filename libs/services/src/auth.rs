@@ -142,10 +142,19 @@ unsafe extern "C" fn pam_conversation_fn(
             let msg_ptr = *msg.add(i as usize);
             let msg_style = (*msg_ptr).msg_style;
 
-            if msg_style == PAM_PROMPT_ECHO_OFF || msg_style == PAM_PROMPT_ECHO_ON {
-                let resp_str = libc::strdup(password_ptr);
-                (*resps.add(i as usize)).resp = resp_str;
-                (*resps.add(i as usize)).resp_retcode = 0;
+            match msg_style {
+                // Only secret prompts receive the password. An ECHO_ON prompt
+                // is typically the username: answering it with the password
+                // would authenticate the wrong identity (or fail outright).
+                PAM_PROMPT_ECHO_OFF => {
+                    let resp_str = libc::strdup(password_ptr);
+                    // A NULL `resp` is a valid "no answer" when strdup fails;
+                    // never fabricate a dangling or empty response.
+                    (*resps.add(i as usize)).resp = resp_str;
+                    (*resps.add(i as usize)).resp_retcode = 0;
+                }
+                PAM_PROMPT_ECHO_ON => {}
+                _ => {}
             }
         }
 
