@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
 use animation::{Easing, Tween, SWITCHER_PREVIEW_DURATION, SWITCHER_SCROLL_DURATION};
+use smithay::reexports::wayland_server::Resource;
 
 use crate::app::state::BabydraState;
 use crate::modules::shell::switcher::models::{step_target, AltTabEntry, AltTabSwitcher};
@@ -108,15 +109,33 @@ impl BabydraState {
             .filter(|w| !crate::modules::window::ops::is_window_exiting(w))
             .filter_map(|window| {
                 let metadata = crate::modules::window::metadata::get(window)?;
+                // Use the window's real client pid so the switcher label and icon
+                // come from the same installed entry as the topbar.
+                let process_id = window
+                    .toplevel()
+                    .and_then(|toplevel| {
+                        self.wayland
+                            .display_handle
+                            .get_client(toplevel.wl_surface().id())
+                            .ok()
+                    })
+                    .and_then(|client| client.get_credentials(&self.wayland.display_handle).ok())
+                    .and_then(|credentials| u32::try_from(credentials.pid).ok())
+                    .filter(|pid| *pid > 0);
                 let icon_app_id = services::system::window::get_window_icon_id(
                     &metadata.app_id,
                     &metadata.title,
-                    None,
+                    process_id,
                 );
-                let app_name = if metadata.app_name.is_empty() {
+                let app_name = services::system::window::get_app_display_name_with_pid(
+                    &metadata.app_id,
+                    &metadata.title,
+                    process_id,
+                );
+                let app_name = if app_name.is_empty() {
                     "Application".to_string()
                 } else {
-                    metadata.app_name
+                    app_name
                 };
 
                 // Resolve the icon eagerly here (on the event-loop thread, before any

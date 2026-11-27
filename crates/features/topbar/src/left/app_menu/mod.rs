@@ -72,7 +72,12 @@ impl AppMenu {
         app_title_icon.add_css_class("app-title-icon");
         {
             let initial = current_app_info.borrow();
-            update_app_icon(&app_title_icon, &initial.app_id, &initial.title);
+            update_app_icon(
+                &app_title_icon,
+                &initial.app_id,
+                &initial.title,
+                initial.process_id,
+            );
         }
 
         let app_title_label = Label::builder()
@@ -187,7 +192,12 @@ impl AppMenu {
                             &latest.title,
                             latest.process_id,
                         );
-                        update_app_icon(&icon_poll, &latest.app_id, &latest.title);
+                        update_app_icon(
+                            &icon_poll,
+                            &latest.app_id,
+                            &latest.title,
+                            latest.process_id,
+                        );
                         label_poll.set_label(&display_name);
                         trigger_dbus_menu_discovery(
                             &latest.app_id,
@@ -242,7 +252,7 @@ impl AppMenu {
         let is_empty = app_name.trim().is_empty() || app_name.eq_ignore_ascii_case("desktop");
         self.container.set_visible(!is_empty);
         if !is_empty {
-            update_app_icon(&self.app_title_icon, app_name, app_name);
+            update_app_icon(&self.app_title_icon, app_name, app_name, None);
             self.app_title_label.set_label(app_name);
             *self.current_app_info.borrow_mut() = ActiveWindowInfo {
                 app_id: app_name.to_string(),
@@ -294,10 +304,10 @@ impl AppMenu {
     }
 }
 
-fn update_app_icon(icon: &gtk4::Image, app_id: &str, title: &str) {
-    // Identity is resolved from installed desktop entries plus the window's own
-    // title, so Chromium-based apps do not inherit each other's icon.
-    if let Some(gicon) = ui_kit::resolve_app_gicon_for_window(app_id, title) {
+fn update_app_icon(icon: &gtk4::Image, app_id: &str, title: &str, process_id: Option<u32>) {
+    // The label and the icon share one PID-backed desktop entry: a window from
+    // an Electron/Chromium app cannot borrow another app's installed icon.
+    if let Some(gicon) = ui_kit::resolve_app_gicon_for_window_pid(app_id, title, process_id) {
         icon.set_from_gicon(&gicon);
         icon.set_pixel_size(16);
         return;

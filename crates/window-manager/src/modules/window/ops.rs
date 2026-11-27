@@ -63,13 +63,19 @@ pub(crate) mod ops {
                 return ActiveWindowInfo::default();
             };
             let metadata = crate::modules::window::metadata::get(window).unwrap_or_default();
+            // The compositor's credentials are the only pid source available
+            // here. A failed/zero pid is reported as `None` so the identity
+            // resolver falls back to installed-entry app id data instead of
+            // inventing a name; it also walks the real PPid chain when the
+            // direct executable cannot be tied to an entry (wrappers/zygotes).
             let process_id = self
                 .wayland
                 .display_handle
                 .get_client(toplevel.wl_surface().id())
                 .ok()
                 .and_then(|client| client.get_credentials(&self.wayland.display_handle).ok())
-                .and_then(|credentials| u32::try_from(credentials.pid).ok());
+                .and_then(|credentials| u32::try_from(credentials.pid).ok())
+                .filter(|pid| *pid > 0);
             ActiveWindowInfo {
                 app_id: metadata.app_id,
                 title: metadata.title,

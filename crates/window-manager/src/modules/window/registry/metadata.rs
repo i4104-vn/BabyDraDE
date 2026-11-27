@@ -49,8 +49,9 @@ pub(crate) fn refresh(window: &Window) {
     })
     .unwrap_or_default();
 
-    // A shared app id is disambiguated from the title so a window is not
-    // labelled as the shell it happens to run on.
+    // No pid is available at protocol-refresh time; the cached resolver uses
+    // installed desktop entries by app id (or an exact title match) and keeps
+    // the entry's exact name. PID-backed callers refine this when publishing.
     let app_name = services::system::window::get_app_display_name(&app_id, &title);
     if let Ok(mut cache) = cache().write() {
         cache.0.insert(
