@@ -8,27 +8,33 @@ thread_local! {
     /// clicks that land on other surfaces).
     pub(super) static OPEN_MENUS: RefCell<Vec<Popover>> = const { RefCell::new(Vec::new()) };
     /// Shells register a hook here to show/hide their outside-click catcher.
-    pub(super) static VISIBILITY_HOOK: RefCell<Option<std::boxed::Box<dyn Fn(bool)>>> =
+    pub(super) static VISIBILITY_HOOK: RefCell<Option<Rc<dyn Fn(bool)>>> =
         const { RefCell::new(None) };
 }
 
 /// Lets the shell show/hide a full-screen click catcher whenever any context
 /// menu opens or closes (layer-shell panels cannot see clicks on other surfaces).
 pub fn set_visibility_hook(hook: impl Fn(bool) + 'static) {
-    VISIBILITY_HOOK.with(|slot| *slot.borrow_mut() = Some(std::boxed::Box::new(hook)));
+    VISIBILITY_HOOK.with(|slot| *slot.borrow_mut() = Some(Rc::new(hook)));
 }
 
 pub(super) fn notify_visibility(open: bool) {
-    VISIBILITY_HOOK.with(|slot| {
-        if let Some(hook) = slot.borrow().as_ref() {
-            hook(open);
-        }
-    });
+    // Clone the hook out first: a hook may re-enter and change the registry
+    // (for example by closing a menu), which would panic on a held borrow.
+    let hook = VISIBILITY_HOOK.with(|slot| slot.borrow().clone());
+    if let Some(hook) = hook {
+        hook(open);
+    }
 }
 
 /// Closes every open context menu across the application.
 pub fn dismiss_all() {
-    let popovers = OPEN_MENUS.with(|menus| menus.borrow().clone());
+    let popovers = OPEN_MENUS.with(|menus| {
+        let mut menus = menus.borrow_mut();
+        // Drop registrations for popovers that were never opened or are gone.
+        menus.retain(|menu| menu.is_visible());
+        menus.clone()
+    });
     for popover in popovers {
         if popover.is_visible() {
             popover.popdown();
@@ -43,20 +49,6 @@ pub fn dismiss_all() {
 /// menus down or mutates the registry.
 pub fn any_open() -> bool {
     OPEN_MENUS.with(|menus| menus.borrow().iter().any(|menu| menu.is_visible()))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn any_open_reads_registry_without_mutating_it() {
-        let before = OPEN_MENUS.with(|menus| menus.borrow().len());
-        let expected = OPEN_MENUS.with(|menus| menus.borrow().iter().any(|m| m.is_visible()));
-        assert_eq!(any_open(), expected);
-        assert_eq!(any_open(), expected);
-        assert_eq!(OPEN_MENUS.with(|menus| menus.borrow().len()), before);
-    }
 }
 
 /// Adds the shared hover highlight to a menu row. The CSS class works even
@@ -91,3 +83,17 @@ pub struct ContextMenu {
 }
 
 pub type ContextMenuBuilder = ContextMenu;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn any_open_reads_registry_without_mutating_it() {
+        let before = OPEN_MENUS.with(|menus| menus.borrow().len());
+        let expected = OPEN_MENUS.with(|menus| menus.borrow().iter().any(|m| m.is_visible()));
+        assert_eq!(any_open(), expected);
+        assert_eq!(any_open(), expected);
+        assert_eq!(OPEN_MENUS.with(|menus| menus.borrow().len()), before);
+    }
+}

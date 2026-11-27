@@ -55,8 +55,8 @@ pub fn show(
     let callback: CallbackSlot = Rc::new(RefCell::new(Some(StdBox::new(on_selected))));
 
     let window = Window::new();
-    if let Some(app) = gtk4::gio::Application::default()
-        .and_then(|app| app.downcast::<Application>().ok())
+    if let Some(app) =
+        gtk4::gio::Application::default().and_then(|app| app.downcast::<Application>().ok())
     {
         window.set_application(Some(&app));
     }
@@ -125,8 +125,23 @@ pub fn show(
     *render.borrow_mut() = Some(renderer);
 
     wire_list_selection(&list, &state, &bottom.name_entry);
-    wire_confirm_cancel(&window, &state, &callback, &header, &bottom, &nav.path_entry, &navigate_to);
-    wire_toolbar(&window, &state, &render, &navigate_to, &nav, &bottom.filter_dropdown);
+    wire_confirm_cancel(
+        &window,
+        &state,
+        &callback,
+        &header,
+        &bottom,
+        &nav.path_entry,
+        &navigate_to,
+    );
+    wire_toolbar(
+        &window,
+        &state,
+        &render,
+        &navigate_to,
+        &nav,
+        &bottom.filter_dropdown,
+    );
 
     let initial = state.borrow().current.clone();
     navigate_to(initial, false);
@@ -211,11 +226,7 @@ fn create_navigator(
     })
 }
 
-fn wire_list_selection(
-    list: &ListBox,
-    state: &Rc<RefCell<DialogState>>,
-    name_entry: &gtk4::Entry,
-) {
+fn wire_list_selection(list: &ListBox, state: &Rc<RefCell<DialogState>>, name_entry: &gtk4::Entry) {
     let state = state.clone();
     let name_entry = name_entry.clone();
     list.connect_row_selected(move |list, _| {

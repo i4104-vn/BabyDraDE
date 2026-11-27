@@ -94,11 +94,12 @@ impl ScreenRect {
     /// Returns a rectangle shifted inwards by `amount` on every side.
     pub fn inset(&self, amount: i32) -> Self {
         let amount = amount.max(0);
+        let twice = amount.saturating_mul(2);
         Self::new(
             self.x.saturating_add(amount),
             self.y.saturating_add(amount),
-            (self.width - 2 * amount).max(0),
-            (self.height - 2 * amount).max(0),
+            self.width.saturating_sub(twice).max(0),
+            self.height.saturating_sub(twice).max(0),
         )
     }
 
@@ -268,7 +269,10 @@ pub fn fit_rect_with_policy(
         }
     }
 
-    (position, clamp_on_side(rect, anchor, position, area, gap, cross))
+    (
+        position,
+        clamp_on_side(rect, anchor, position, area, gap, cross),
+    )
 }
 
 /// Computes the final popover position and rectangle, allowing a flip to the
@@ -282,7 +286,16 @@ pub fn fit_rect(
     gap: i32,
     cross: CrossAlign,
 ) -> (PositionType, ScreenRect) {
-    fit_rect_with_policy(anchor, preferred, size, bounds, margin, gap, cross, FitPolicy::Flip)
+    fit_rect_with_policy(
+        anchor,
+        preferred,
+        size,
+        bounds,
+        margin,
+        gap,
+        cross,
+        FitPolicy::Flip,
+    )
 }
 
 /// Returns the GTK pointing rectangle (parent-widget coordinates) that places
@@ -314,12 +327,7 @@ pub fn pointing_rect_for(
         (PositionType::Left, CrossAlign::End) => (rect.right(), rect.bottom() - 1),
         _ => (rect.x, rect.y - 1),
     };
-    ScreenRect::new(
-        x.saturating_sub(origin.0),
-        y.saturating_sub(origin.1),
-        1,
-        1,
-    )
+    ScreenRect::new(x.saturating_sub(origin.0), y.saturating_sub(origin.1), 1, 1)
 }
 
 /// Mirrors GTK's placement of a popover around an explicit pointing rectangle.
@@ -428,13 +436,15 @@ pub fn widget_rect(widget: &Widget) -> ScreenRect {
 /// Largest popover width that fits on `widget`'s monitor with `margin` on both
 /// sides. Returns `None` when no display is available.
 pub fn max_popover_width(widget: &Widget, margin: i32) -> Option<i32> {
-    monitor_rect_for(widget).map(|rect| (rect.width - 2 * margin.max(0)).max(1))
+    let inset = margin.max(0).saturating_mul(2);
+    monitor_rect_for(widget).map(|rect| rect.width.saturating_sub(inset).max(1))
 }
 
 /// Largest popover height that fits on `widget`'s monitor with `margin` on both
 /// sides. Returns `None` when no display is available.
 pub fn max_popover_height(widget: &Widget, margin: i32) -> Option<i32> {
-    monitor_rect_for(widget).map(|rect| (rect.height - 2 * margin.max(0)).max(1))
+    let inset = margin.max(0).saturating_mul(2);
+    monitor_rect_for(widget).map(|rect| rect.height.saturating_sub(inset).max(1))
 }
 
 /// Measures the natural size of a popover's content.
@@ -847,7 +857,9 @@ mod tests {
 
     #[test]
     fn topbar_tooltip_stays_below_anchor_with_minimum_gap() {
-        assert!(ANCHOR_GAP >= 10 && ANCHOR_GAP <= 16);
+        const {
+            assert!(ANCHOR_GAP >= 10 && ANCHOR_GAP <= 16);
+        }
         let anchor = ScreenRect::new(1500, 6, 28, 28);
         let (position, rect, placed, offset) = placed_rect(
             anchor,

@@ -90,11 +90,9 @@ impl TooltipPopover {
 
     /// Returns whether the tooltip is currently suppressed.
     pub fn is_suppressed(&self) -> bool {
-        if let Some(ref f) = *self.suppress_fn.borrow() {
-            f()
-        } else {
-            false
-        }
+        // Copy the callback out so it can safely reconfigure the tooltip.
+        let f = self.suppress_fn.borrow().clone();
+        f.is_some_and(|f| f())
     }
 
     /// Displays the tooltip popover strictly below its anchor, clamped to the

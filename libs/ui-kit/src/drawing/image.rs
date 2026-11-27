@@ -38,6 +38,9 @@ pub fn apply_circular_mask(pixbuf: &gdk_pixbuf::Pixbuf) -> gdk_pixbuf::Pixbuf {
 
     let out_stride = out.rowstride() as usize;
     let out_n_channels = out.n_channels() as usize;
+    // SAFETY: `out` is a freshly created Pixbuf that is neither cloned nor
+    // shared outside this function, and no iterator or other reference to its
+    // pixel data exists while `out_pixels` is alive.
     let out_pixels = unsafe { out.pixels() };
 
     let center_x = (w - 1) as f64 / 2.0;
