@@ -12,8 +12,8 @@ use gtk4::gio::prelude::ApplicationExt;
 use gtk4::prelude::*;
 
 fn main() {
-    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| "info".into());
+    let filter =
+        tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
     if std::env::var_os("GREETD_SOCK").is_none() {
