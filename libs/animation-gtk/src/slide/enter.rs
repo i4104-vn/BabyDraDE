@@ -1,12 +1,16 @@
 //! Slide-in widget animations.
 
-use super::handler::{entering_margin, start_margin, SlideDirection};
+use super::handler::{
+    entering_margin, start_margin, AnimationGeneration, GenerationToken, SlideDirection,
+};
 use animation::Easing;
 use gtk4::prelude::*;
 use std::cell::Cell;
 use std::rc::Rc;
 
-/// Slides a widget into view and stops cleanly with restored margins when a newer animation generation is started.
+/// Slides a widget into view, cancellable through a caller-owned counter.
+///
+/// Kept for existing callers; new code should use [`slide_in_generated`].
 pub fn slide_in_cancelable(
     widget: &gtk4::Widget,
     direction: SlideDirection,
@@ -15,12 +19,31 @@ pub fn slide_in_cancelable(
     generation: Rc<Cell<u64>>,
     expected_generation: u64,
 ) {
+    slide_in_generated(
+        widget,
+        direction,
+        distance_px,
+        duration_ms,
+        &AnimationGeneration::from_cell(generation),
+        GenerationToken::new(expected_generation),
+    );
+}
+
+/// Slides a widget into view and restores its rest state when superseded.
+pub fn slide_in_generated(
+    widget: &gtk4::Widget,
+    direction: SlideDirection,
+    distance_px: i32,
+    duration_ms: u64,
+    generation: &AnimationGeneration,
+    token: GenerationToken,
+) {
     slide_in_inner(
         widget,
         direction,
         distance_px,
         duration_ms,
-        Some((generation, expected_generation)),
+        Some((generation.clone(), token)),
     );
 }
 
@@ -39,7 +62,7 @@ fn slide_in_inner(
     direction: SlideDirection,
     distance_px: i32,
     duration_ms: u64,
-    cancellation: Option<(Rc<Cell<u64>>, u64)>,
+    cancellation: Option<(AnimationGeneration, GenerationToken)>,
 ) {
     widget.set_opacity(0.0);
     widget.set_visible(true);
@@ -71,8 +94,10 @@ fn slide_in_inner(
         if w.root().is_none() {
             return glib::ControlFlow::Break;
         }
-        if let Some((ref generation, expected)) = cancellation {
-            if generation.get() != expected {
+        if let Some((ref generation, token)) = cancellation {
+            if !generation.is_current(token) {
+                // Never leave the widget invisible after a cancelled entry.
+                w.set_opacity(1.0);
                 match direction {
                     SlideDirection::Down => w.set_margin_top(original_margin_top),
                     SlideDirection::Up => w.set_margin_bottom(original_margin_bottom),

@@ -12,5 +12,7 @@ pub use island::{
     next_anim_gen,
 };
 pub use slide::{
-    slide_in, slide_in_cancelable, slide_out, slide_out_cb, slide_out_cb_cancelable, SlideDirection,
+    slide_in, slide_in_cancelable, slide_in_generated, slide_out, slide_out_cb,
+    slide_out_cb_cancelable, slide_out_cb_generated, AnimationGeneration, GenerationToken,
+    SlideDirection, VisibilityAfter,
 };
