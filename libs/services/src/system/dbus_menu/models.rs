@@ -12,6 +12,7 @@ pub struct MenuActionRef {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+#[non_exhaustive]
 pub struct DbusMenuItem {
     pub id: i32,
     pub label: String,

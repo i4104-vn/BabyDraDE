@@ -57,7 +57,40 @@ pub(super) fn is_submenu_display(value: &str) -> bool {
     )
 }
 
+/// Maximum nesting accepted from an exporter's layout variant. Prevents a
+/// deeply nested (or malicious) D-Bus message from exhausting the stack.
+const MAX_LAYOUT_DEPTH: usize = 16;
+
+/// Checks the whole subtree before parsing so one over-deep child rejects the
+/// entire layout instead of being silently dropped by its parent.
+fn layout_too_deep(var: &Variant, depth: usize) -> bool {
+    if depth > MAX_LAYOUT_DEPTH {
+        return true;
+    }
+    let actual: Cow<'_, Variant> = if var.is_container() && var.type_().as_str() == "v" {
+        Cow::Owned(var.child_value(0))
+    } else {
+        Cow::Borrowed(var)
+    };
+    if actual.n_children() < 3 {
+        return false;
+    }
+    let children = actual.child_value(2);
+    (0..children.n_children()).any(|i| layout_too_deep(&children.child_value(i), depth + 1))
+}
+
 pub(super) fn parse_layout_variant(var: &Variant) -> Option<DbusMenuItem> {
+    if layout_too_deep(var, 0) {
+        return None;
+    }
+    parse_layout_variant_inner(var, 0)
+}
+
+fn parse_layout_variant_inner(var: &Variant, depth: usize) -> Option<DbusMenuItem> {
+    if depth > MAX_LAYOUT_DEPTH {
+        return None;
+    }
+
     let actual_var: Cow<'_, Variant> = if var.is_container() && var.type_().as_str() == "v" {
         Cow::Owned(var.child_value(0))
     } else {
@@ -129,7 +162,7 @@ pub(super) fn parse_layout_variant(var: &Variant) -> Option<DbusMenuItem> {
     let mut children = Vec::new();
     for i in 0..children_var.n_children() {
         let child_val = children_var.child_value(i);
-        if let Some(parsed_child) = parse_layout_variant(&child_val) {
+        if let Some(parsed_child) = parse_layout_variant_inner(&child_val, depth + 1) {
             if parsed_child.visible {
                 children.push(parsed_child);
             }
@@ -173,7 +206,10 @@ mod tests {
 
     use gio::glib::Variant;
 
-    use super::{is_separator_type, is_submenu_display, normalize_menu_label, property_bool};
+    use super::{
+        is_separator_type, is_submenu_display, normalize_menu_label, parse_layout_variant,
+        property_bool, MAX_LAYOUT_DEPTH,
+    };
 
     #[test]
     fn labels_are_stripped_of_toolkit_mnemonics() {
@@ -203,5 +239,20 @@ mod tests {
         assert_eq!(property_bool(&props, &["visible"]), Some(true));
         assert_eq!(property_bool(&props, &["sensitive"]), Some(true));
         assert_eq!(property_bool(&props, &["missing"]), None);
+    }
+
+    fn nested_layout(depth: usize) -> Variant {
+        let mut children: Vec<Variant> = Vec::new();
+        for _ in 0..depth {
+            let item = Variant::from((1i32, HashMap::<String, Variant>::new(), children));
+            children = vec![item];
+        }
+        Variant::from((1i32, HashMap::<String, Variant>::new(), children))
+    }
+
+    #[test]
+    fn deeply_nested_layout_is_rejected() {
+        assert!(parse_layout_variant(&nested_layout(2)).is_some());
+        assert!(parse_layout_variant(&nested_layout(MAX_LAYOUT_DEPTH + 5)).is_none());
     }
 }

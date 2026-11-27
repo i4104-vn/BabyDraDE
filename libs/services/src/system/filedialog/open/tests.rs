@@ -33,3 +33,31 @@ fn appends_path_when_no_field_present() {
         ))
     );
 }
+
+#[test]
+fn keeps_quoted_arguments_with_spaces() {
+    assert_eq!(
+        parse_desktop_entry(
+            "Exec=note --title \"My Notes\" %f",
+            Path::new("/tmp/note.txt"),
+            "file:///tmp/note.txt"
+        ),
+        Some((
+            "note".to_string(),
+            vec!["--title".into(), "My Notes".into(), "/tmp/note.txt".into()],
+            false,
+        ))
+    );
+}
+
+#[test]
+fn substitutes_field_inside_a_quoted_argument() {
+    assert_eq!(
+        parse_desktop_entry(
+            "Exec=note \"%f\"",
+            Path::new("/tmp/note.txt"),
+            "file:///tmp/note.txt"
+        ),
+        Some(("note".to_string(), vec!["/tmp/note.txt".into()], false,))
+    );
+}
