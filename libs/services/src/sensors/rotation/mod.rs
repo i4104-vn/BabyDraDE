@@ -7,6 +7,8 @@
 mod driver;
 mod drivers;
 mod tracker;
+mod worker;
 
 pub use driver::{DriverFactory, DriverManager, DriverSelection, RotationDriver};
 pub use tracker::{Gravity, RotationTracker};
+pub use worker::RotationWorker;

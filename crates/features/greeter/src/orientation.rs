@@ -20,7 +20,7 @@ use services::{
         models::{DisplayConfig, MonitorOrientation},
     },
     sensors::rotation::{
-        DriverFactory, DriverManager, DriverSelection, RotationDriver, RotationTracker,
+        DriverFactory, DriverSelection, RotationDriver, RotationTracker, RotationWorker,
     },
 };
 use wayland_client::{
@@ -298,7 +298,7 @@ fn to_wl_transform(orientation: MonitorOrientation) -> Transform {
 
 /// Continuously rotates every output from the accelerometer.
 struct RotationSession {
-    driver: DriverManager,
+    driver: RotationWorker,
     tracker: RotationTracker,
     outputs: OutputConnection,
     baselines: HashMap<String, Transform>,
@@ -306,7 +306,7 @@ struct RotationSession {
 
 impl RotationSession {
     /// Opens a dedicated Wayland connection and captures output baselines.
-    fn new(driver: DriverManager) -> Result<Self, Box<dyn Error>> {
+    fn new(driver: RotationWorker) -> Result<Self, Box<dyn Error>> {
         let outputs = connect_outputs()?;
         let baselines = outputs.state.transforms.clone();
         Ok(Self {
@@ -353,11 +353,14 @@ impl RotationSession {
 
 /// Starts accelerometer rotation regardless of the display configuration.
 fn start_auto_rotate() {
-    let driver = DriverFactory::with_builtins().create(DriverSelection::Auto);
-    if driver.name() == "none" {
+    let manager = DriverFactory::with_builtins().create(DriverSelection::Auto);
+    if manager.name() == "none" {
         tracing::info!("greeter: no accelerometer driver available; auto-rotate skipped");
         return;
     }
+    // Sampling happens on a worker thread: a stalled proxy must never block
+    // the login UI's main loop.
+    let driver = RotationWorker::spawn(manager);
     let interval = driver.poll_interval();
     let session = match RotationSession::new(driver) {
         Ok(session) => Rc::new(RefCell::new(session)),

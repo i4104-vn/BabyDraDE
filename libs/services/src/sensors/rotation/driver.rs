@@ -16,7 +16,10 @@ pub const DEFAULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 const MAX_CONSECUTIVE_FAILURES: u8 = 3;
 
 /// A source of gravity samples.
-pub trait RotationDriver {
+///
+/// Drivers are polled on a dedicated worker thread, so they must be movable
+/// across threads.
+pub trait RotationDriver: Send {
     /// Identifier used in logs and configuration (`iio`, `sensor-proxy`, …).
     fn name(&self) -> &str;
 
@@ -187,8 +190,18 @@ impl RotationDriver for DriverManager {
     }
 
     fn read(&mut self) -> Option<Gravity> {
-        if self.driver.is_none() && !self.activate_from(0) {
-            return None;
+        if self.driver.is_none() {
+            // Retry probing at a bounded rate. A probe can itself perform
+            // blocking D-Bus calls, so doing it on every poll is wasteful on a
+            // machine that has no sensor.
+            self.failures += 1;
+            if self.failures < MAX_CONSECUTIVE_FAILURES {
+                return None;
+            }
+            self.failures = 0;
+            if !self.activate_from(0) {
+                return None;
+            }
         }
         match self.driver.as_mut().and_then(|driver| driver.read()) {
             Some(gravity) => {
@@ -198,6 +211,7 @@ impl RotationDriver for DriverManager {
             None => {
                 self.failures += 1;
                 if self.failures >= MAX_CONSECUTIVE_FAILURES {
+                    self.failures = 0;
                     let next = self.active.map_or(0, |index| index + 1);
                     if !self.activate_from(next) {
                         tracing::warn!("no alternative auto-rotate driver available");
@@ -217,6 +231,8 @@ impl RotationDriver for DriverManager {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use super::{DriverFactory, DriverSelection, Gravity, RotationDriver};
 
     struct FakeDriver {
@@ -258,6 +274,15 @@ mod tests {
         }))
     }
 
+    static PROBES: AtomicUsize = AtomicUsize::new(0);
+
+    /// Counts probes without capturing state, since probe functions are plain
+    /// function pointers in the driver registry.
+    fn counting_unavailable() -> Option<Box<dyn RotationDriver>> {
+        PROBES.fetch_add(1, Ordering::SeqCst);
+        None
+    }
+
     #[test]
     fn auto_selection_falls_back_when_primary_probe_fails() {
         let factory = DriverFactory::default()
@@ -283,6 +308,20 @@ mod tests {
             .register("sensor-proxy", &[], proxy);
         let manager = factory.create(DriverSelection::Named("bogus".into()));
         assert_eq!(manager.name(), "iio");
+    }
+
+    #[test]
+    fn retries_unavailable_drivers_with_backoff() {
+        PROBES.store(0, Ordering::SeqCst);
+        let factory = DriverFactory::default().register("iio", &[], counting_unavailable);
+        let mut manager = factory.create(DriverSelection::Auto);
+        assert_eq!(PROBES.load(Ordering::SeqCst), 1);
+        for _ in 0..2 {
+            let _ = manager.read();
+        }
+        assert_eq!(PROBES.load(Ordering::SeqCst), 1);
+        let _ = manager.read();
+        assert_eq!(PROBES.load(Ordering::SeqCst), 2);
     }
 
     #[test]

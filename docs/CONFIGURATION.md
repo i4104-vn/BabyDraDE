@@ -172,11 +172,13 @@ the installer flags and the `03-orientation.sh` step, have been removed.
 ### Automatic rotation
 
 Automatic rotation is **on by default whenever an orientation sensor is
-present**. Convertible/tablet devices are detected through either raw IIO sysfs
-accelerometers (`/sys/bus/iio/devices/iio:deviceN`) or `iio-sensor-proxy` on
-D-Bus (`net.hadess.SensorProxy`). The compositor debounces the reading and
-applies the new transform to every output; touch coordinates follow the same
-rotation through in-memory state.
+present**. Convertible/tablet devices are detected through raw IIO sysfs
+accelerometers (`/sys/bus/iio/devices/iio:deviceN`), `iio-sensor-proxy` on
+D-Bus (`net.hadess.SensorProxy`), or the SSC/SLPI sensor on the Huawei MateBook
+E Go (via `ssccli`). The compositor debounces the reading and applies the new
+transform to every output; touch coordinates follow the same rotation through
+in-memory state. Sensor sampling runs on a background thread so a slow sensor
+never delays input or rendering.
 
 Driver selection is controlled by `[display] auto_rotate_driver`:
 
@@ -184,11 +186,16 @@ Driver selection is controlled by `[display] auto_rotate_driver`:
   IIO, then `iio-sensor-proxy` — and uses the first usable one.
 - `gaokun3` restricts it to the Huawei MateBook E Go SSC sensor. The aliases
   `ssc`, `slpi` and `matebook-ego` are accepted for the same driver. That
-  convertible has no IIO sysfs accelerometer; the sensor lives behind the
-  Qualcomm SSC/SLPI DSP and is read through an SSC-enabled `iio-sensor-proxy`
-  (which must be claimed before the sensor appears). Detection uses the
-  device-tree compatible string `huawei,gaokun3` plus the `fastrpc-sdsp`
-  transport, so this driver is inert on other machines.
+  convertible has no IIO sysfs accelerometer and `iio-sensor-proxy` reports
+  `No accelerometer`: the sensor lives behind the Qualcomm SSC/SLPI DSP and is
+  reachable only through `libssc` over QMI/QRTR. The driver therefore runs
+  `ssccli --sensor accelerometer` (from the `libssc` package) and parses its
+  `X=.. Y=.. Z=.. m/s²` stream; the path can be overridden with the
+  `BABYDRADE_SSCCLI` environment variable. Detection uses the device-tree
+  compatible string `huawei,gaokun3` plus the `fastrpc-sdsp` transport, so this
+  driver is inert on other machines. The DSP can take tens of seconds after
+  boot to expose the sensor, so missing readings are treated as flat until the
+  first sample arrives instead of disabling the driver.
 - `iio` restricts auto-rotation to raw IIO sysfs accelerometers. The aliases
   `sysfs` and `accelerometer` are accepted for the same driver.
 - `sensor-proxy` restricts it to `iio-sensor-proxy` on D-Bus. The aliases

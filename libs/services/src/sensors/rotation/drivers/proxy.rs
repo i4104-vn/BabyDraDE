@@ -14,6 +14,11 @@ const PROXY_PATH: &str = "/net/hadess/SensorProxy";
 const PROXY_IFACE: &str = "net.hadess.SensorProxy";
 const EARTH_GRAVITY: f64 = 9.80665;
 const FLAT_GRAVITY: Gravity = Gravity { x: 0.0, y: 0.0 };
+/// Milliseconds to wait for a property reply. A healthy local proxy answers in
+/// a few milliseconds; a longer wait only slows down failure recovery.
+const PROPERTY_TIMEOUT_MS: i32 = 250;
+/// Milliseconds to wait for `ClaimAccelerometer`.
+const CLAIM_TIMEOUT_MS: i32 = 500;
 
 /// Maps iio-sensor-proxy's orientation enum to a gravity vector.
 ///
@@ -40,7 +45,7 @@ fn proxy_responds(connection: &gio::DBusConnection) -> bool {
             Some(&Variant::from((PROXY_IFACE, "HasAccelerometer"))),
             None,
             gio::DBusCallFlags::NONE,
-            500,
+            PROPERTY_TIMEOUT_MS,
             gio::Cancellable::NONE,
         )
         .is_ok()
@@ -124,7 +129,7 @@ impl ProxyClient {
 
     /// Returns whether the proxy currently reports an accelerometer.
     pub(crate) fn has_accelerometer(&self) -> bool {
-        self.property("HasAccelerometer", 500)
+        self.property("HasAccelerometer", PROPERTY_TIMEOUT_MS)
             .and_then(|v| v.get::<bool>())
             .unwrap_or(false)
     }
@@ -137,7 +142,7 @@ impl ProxyClient {
         if self.claimed {
             return true;
         }
-        if self.call("ClaimAccelerometer", 1000).is_some() {
+        if self.call("ClaimAccelerometer", CLAIM_TIMEOUT_MS).is_some() {
             self.claimed = true;
         }
         self.claimed
@@ -152,7 +157,7 @@ impl ProxyClient {
         if !self.claim() {
             return None;
         }
-        if let Some(value) = self.property("Accelerate", 500) {
+        if let Some(value) = self.property("Accelerate", PROPERTY_TIMEOUT_MS) {
             if let (Some(x), Some(y)) = (
                 value.child_value(0).get::<f64>(),
                 value.child_value(1).get::<f64>(),
@@ -163,7 +168,7 @@ impl ProxyClient {
                 });
             }
         }
-        let Some(value) = self.property("AccelerometerOrientation", 500) else {
+        let Some(value) = self.property("AccelerometerOrientation", PROPERTY_TIMEOUT_MS) else {
             self.claimed = false;
             return None;
         };

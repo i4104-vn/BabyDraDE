@@ -5,7 +5,7 @@ use smithay::{
     utils::Transform,
 };
 
-use services::sensors::rotation::{DriverFactory, DriverSelection};
+use services::sensors::rotation::{DriverFactory, DriverSelection, RotationDriver, RotationWorker};
 
 use crate::{
     app::state::CalloopData,
@@ -65,11 +65,13 @@ pub(crate) fn spawn(event_loop: &mut EventLoop<'_, CalloopData>) {
 
     let selection = DriverSelection::from_config(config.auto_rotate_driver.as_deref());
     let manager = DriverFactory::with_builtins().create(selection);
-    let mut controller = AutoRotate::new(manager);
-    if controller.driver_name() == "none" {
+    if manager.name() == "none" {
         tracing::info!("auto-rotate: no accelerometer driver available on this machine");
         return;
     }
+    // Reading a sensor can block for seconds on a stalled proxy; keep it off
+    // the event loop so input and rendering stay responsive.
+    let mut controller = AutoRotate::new(RotationWorker::spawn(manager));
     tracing::info!(driver = controller.driver_name(), "auto-rotate enabled");
 
     if let Err(err) = event_loop.handle().insert_source(
