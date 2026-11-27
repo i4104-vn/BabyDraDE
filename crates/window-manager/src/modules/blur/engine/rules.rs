@@ -40,6 +40,20 @@ impl BlurEngine {
             .collect();
     }
 
+    /// Whether `rules_lower` still reflects every entry in `params.app_rules`.
+    /// Comparing only lengths misses same-length edits, such as a rule changed
+    /// in place in the persisted configuration.
+    fn rules_current(&self) -> bool {
+        let expected: Vec<String> = self
+            .params
+            .app_rules
+            .iter()
+            .map(|rule| rule.trim().to_lowercase())
+            .filter(|rule| !rule.is_empty())
+            .collect();
+        self.rules_lower == expected
+    }
+
     /// Reload blur configuration from disk and environment variables
     pub(crate) fn reload_config(&mut self) {
         self.params = config::load();
@@ -52,7 +66,7 @@ impl BlurEngine {
             return false;
         }
 
-        if self.rules_lower.len() != self.params.app_rules.len() {
+        if !self.rules_current() {
             self.sync_rules();
         }
 
@@ -76,7 +90,7 @@ impl BlurEngine {
             return false;
         }
 
-        if self.rules_lower.len() != self.params.app_rules.len() {
+        if !self.rules_current() {
             self.sync_rules();
         }
 
@@ -94,7 +108,7 @@ impl BlurEngine {
         let app_lower = app_id.map(str::to_lowercase);
         let title_lower = title.map(str::to_lowercase);
 
-        let use_cached = self.rules_lower.len() == self.params.app_rules.len();
+        let use_cached = self.rules_current();
         if use_cached {
             for rule in &self.rules_lower {
                 if rule == "*" {

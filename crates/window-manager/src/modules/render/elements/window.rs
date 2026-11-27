@@ -57,20 +57,17 @@ pub(crate) fn render_window(
     visuals: &dyn Fn(&Window) -> WindowVisualState,
 ) -> Vec<CustomRenderElements> {
     let (should_blur, opacity, configured_corner_radius) = if let Some(engine_lock) = blur_engine {
-        if let Ok(mut engine) = engine_lock.lock() {
-            let matched = engine.matches_window(window);
-            (
-                matched,
-                if matched {
-                    engine.params.window_opacity
-                } else {
-                    1.0
-                },
-                engine.params.corner_radius,
-            )
-        } else {
-            (false, 1.0, common::CORNER_RADIUS_F32)
-        }
+        let mut engine = super::blur_engine(engine_lock);
+        let matched = engine.matches_window(window);
+        (
+            matched,
+            if matched {
+                engine.params.window_opacity
+            } else {
+                1.0
+            },
+            engine.params.corner_radius,
+        )
     } else {
         (false, 1.0, common::CORNER_RADIUS_F32)
     };
@@ -131,10 +128,7 @@ pub(crate) fn render_window(
     // 2. Blur backdrop element (placed behind window surfaces and server-side titlebar)
     if should_blur {
         if let Some(engine_lock) = blur_engine {
-            let is_blur_enabled = engine_lock
-                .lock()
-                .map(|e| e.params.enabled)
-                .unwrap_or(false);
+            let is_blur_enabled = super::blur_engine(engine_lock).params.enabled;
 
             if is_blur_enabled {
                 let bbox = window.bbox();

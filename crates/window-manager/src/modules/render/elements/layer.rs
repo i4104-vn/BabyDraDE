@@ -38,11 +38,8 @@ pub(crate) fn render_layer_surfaces(
                 ) {
                     (true, _) => false,
                     (false, Some(engine_lock)) => {
-                        if let Ok(mut engine) = engine_lock.lock() {
-                            engine.matches_layer(layer.namespace())
-                        } else {
-                            false
-                        }
+                        let mut engine = super::blur_engine(engine_lock);
+                        engine.matches_layer(layer.namespace())
                     }
                     (false, None) => false,
                 };
@@ -59,11 +56,7 @@ pub(crate) fn render_layer_surfaces(
 
                 if should_blur {
                     if let Some(engine_lock) = blur_engine {
-                        let corner_radius = if let Ok(engine) = engine_lock.lock() {
-                            engine.params.corner_radius
-                        } else {
-                            0.0
-                        };
+                        let corner_radius = super::blur_engine(engine_lock).params.corner_radius;
                         let blur_area = Rectangle::new(geo.loc, geo.size);
 
                         layer

@@ -77,9 +77,11 @@ impl RenderElement<GlowRenderer> for BlurRenderElement {
         };
 
         frame.with_context(|glow| {
-            if let Ok(mut engine) = self.blur_engine.lock() {
-                engine.render_blur(glow, &self.id, dst, self.corner_radius, projection);
-            }
+            let mut engine = self.blur_engine.lock().unwrap_or_else(|poisoned| {
+                tracing::warn!("recovering poisoned blur engine lock");
+                poisoned.into_inner()
+            });
+            engine.render_blur(glow, &self.id, dst, self.corner_radius, projection);
         })?;
         Ok(())
     }
