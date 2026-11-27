@@ -5,7 +5,7 @@ use super::{DriverManager, DriverSelection, RotationDriver};
 use crate::sensors::drivers;
 
 /// Registry of available drivers, in probing order.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct DriverFactory {
     entries: Vec<DriverEntry>,
 }

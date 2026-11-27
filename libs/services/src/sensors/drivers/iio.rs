@@ -80,7 +80,7 @@ fn apply_matrix(m: &[f64; 9], x: f64, y: f64, z: f64) -> (f64, f64, f64) {
     )
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum ChannelMode {
     Raw,
     Input,
@@ -145,6 +145,7 @@ fn inspect_device(path: &Path) -> Option<(u8, IioDriver)> {
     ))
 }
 
+#[derive(Debug)]
 pub(crate) struct IioDriver {
     path: PathBuf,
     mode: ChannelMode,

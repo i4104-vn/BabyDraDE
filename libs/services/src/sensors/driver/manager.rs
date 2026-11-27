@@ -9,6 +9,7 @@ use super::{Gravity, RotationDriver, DEFAULT_POLL_INTERVAL};
 const MAX_CONSECUTIVE_FAILURES: u8 = 3;
 
 /// Owns the active driver and swaps it when it stops producing readings.
+#[derive(Debug)]
 pub struct DriverManager {
     pub(super) entries: Vec<DriverEntry>,
     pub(super) active: Option<usize>,

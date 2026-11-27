@@ -91,6 +91,7 @@ fn find_accel_event_node() -> Option<PathBuf> {
     None
 }
 
+#[derive(Debug)]
 pub(crate) struct EvdevDriver {
     file: File,
 }

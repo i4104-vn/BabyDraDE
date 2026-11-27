@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::{DriverFactory, DriverSelection, Gravity, RotationDriver};
 
+#[derive(Debug)]
 struct FakeDriver {
     name: &'static str,
     value: Option<Gravity>,

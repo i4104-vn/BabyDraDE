@@ -3,7 +3,7 @@
 use super::RotationDriver;
 
 /// A registered way to build one driver.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(super) struct DriverEntry {
     pub(super) name: &'static str,
     pub(super) aliases: &'static [&'static str],

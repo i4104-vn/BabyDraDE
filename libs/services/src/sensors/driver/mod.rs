@@ -28,7 +28,7 @@ pub const DEFAULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 ///
 /// Drivers are polled on a dedicated worker thread, so they must be movable
 /// across threads.
-pub trait RotationDriver: Send {
+pub trait RotationDriver: Send + std::fmt::Debug {
     /// Identifier used in logs and configuration (`iio`, `sensor-proxy`, …).
     fn name(&self) -> &str;
 

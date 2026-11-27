@@ -4,6 +4,7 @@ use crate::sensors::{Gravity, RotationDriver};
 
 use super::proxy::ProxyClient;
 
+#[derive(Debug)]
 pub(crate) struct SensorProxyDriver {
     client: ProxyClient,
 }

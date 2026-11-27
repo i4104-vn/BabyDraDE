@@ -81,6 +81,7 @@ fn parse_measurement(line: &str) -> Option<Gravity> {
     })
 }
 
+#[derive(Debug)]
 pub(crate) struct Gaokun3Driver {
     child: Child,
     latest: Arc<Mutex<Option<Gravity>>>,
