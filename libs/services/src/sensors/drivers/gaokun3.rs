@@ -18,7 +18,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::sensors::rotation::{Gravity, RotationDriver};
+use crate::sensors::{Gravity, RotationDriver};
 
 const COMPATIBLE_PREFIX: &[u8] = b"huawei,gaokun";
 const DEVICE_TREE_PATHS: [&str; 2] = [
@@ -198,7 +198,7 @@ impl Drop for Gaokun3Driver {
 #[cfg(test)]
 mod tests {
     use super::{has_gaokun_compatible, parse_measurement};
-    use crate::sensors::rotation::Gravity;
+    use crate::sensors::Gravity;
 
     #[test]
     fn detects_gaokun_variants_in_device_tree_compatible() {

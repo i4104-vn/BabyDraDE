@@ -5,10 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{
-    autostart::AutostartConfig, notification::NotificationConfig, power::PowerConfig,
-    wallpaper::WallpaperConfig,
-};
+use crate::models::{AutostartConfig, NotificationConfig, PowerConfig, WallpaperConfig};
 
 /// Main configuration model matching `~/.babydra/babydra.conf`.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]

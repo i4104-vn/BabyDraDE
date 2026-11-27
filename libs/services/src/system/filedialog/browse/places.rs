@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::i18n::trans;
 
-use super::QuickAccessPlace;
+use super::super::QuickAccessPlace;
 
 /// Resolves user directories and system roots shown as quick access entries.
 ///

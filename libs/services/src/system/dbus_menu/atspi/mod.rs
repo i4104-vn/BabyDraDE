@@ -6,7 +6,6 @@
 //! API directly, so no additional crate or workspace manifest change is
 //! required. It is used as a fallback after D-Bus menu discovery fails.
 
-mod activation;
 mod connection;
 mod discovery;
 mod ids;
@@ -15,7 +14,6 @@ mod menu;
 #[cfg(test)]
 mod tests;
 
-pub(super) use activation::activate_atspi_action;
 pub(super) use discovery::find_atspi_menubar;
 pub(super) use ids::{atspi_bus_name, encode_atspi_source};
-pub(super) use menu::fetch_atspi_menu;
+pub(super) use menu::{activate_atspi_action, fetch_atspi_menu};

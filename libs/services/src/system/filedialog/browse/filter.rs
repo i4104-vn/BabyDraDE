@@ -4,7 +4,7 @@ use std::path::Path;
 
 use gio::content_type_guess;
 
-use super::FileFilter;
+use super::super::FileFilter;
 
 /// Checks a filename against a simple glob such as `*.png`, `foo.*` or `*`.
 ///

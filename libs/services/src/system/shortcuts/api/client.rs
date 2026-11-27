@@ -6,12 +6,12 @@ use std::sync::Mutex;
 use common::protocol::{Request, Response};
 use common::{ShortcutBinding, ShortcutTarget};
 
-use super::error::ShortcutError;
-use super::snapshot::entries_for_owner;
-use super::transport::{
+use super::super::transport::{
     await_response, ensure_bus, into_ack, into_entries, into_removal, io_error, lock_state,
     valid_owner, ClientState, WM_PEER,
 };
+use super::error::ShortcutError;
+use super::snapshot::entries_for_owner;
 
 /// A shortcut publisher bound to one app id.
 pub struct ShortcutClient {

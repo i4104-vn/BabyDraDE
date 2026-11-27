@@ -3,33 +3,69 @@
 //! Main settings live in `~/.babydra/babydra.conf`; subsystem settings live in
 //! `~/.babydra/configs/*.toml`. Organized into granular submodules per service.
 
-pub mod autostart;
-/// Main application configuration model.
-pub mod babydra;
-/// Blur effect configuration model.
-pub mod blur;
-/// Clipboard behavior configuration model.
-pub mod clipboard;
-/// Cursor configuration model.
-pub mod cursor;
-/// Desktop layout configuration model.
-pub mod desktop;
-/// Display and scaling configuration model.
-pub mod display;
-/// Gesture configuration model.
-pub mod gestures;
-/// Lock screen configuration model.
-pub mod lockscreen;
-/// Mouse configuration model.
-pub mod mouse;
-/// Notification configuration model.
-pub mod notification;
-/// Power management configuration model.
-pub mod power;
-/// Touchpad configuration model.
-pub mod touchpad;
-/// Wallpaper configuration model.
-pub mod wallpaper;
+/// Appearance-related configuration models.
+pub mod appearance {
+    /// Blur effect configuration model.
+    #[path = "blur.rs"]
+    pub mod blur;
+    /// Cursor configuration model.
+    #[path = "cursor.rs"]
+    pub mod cursor;
+    /// Desktop layout configuration model.
+    #[path = "desktop.rs"]
+    pub mod desktop;
+    /// Display and scaling configuration model.
+    #[path = "display.rs"]
+    pub mod display;
+    /// Wallpaper configuration model.
+    #[path = "wallpaper.rs"]
+    pub mod wallpaper;
+}
+
+/// Input device configuration models.
+pub mod input {
+    /// Gesture configuration model.
+    #[path = "gestures.rs"]
+    pub mod gestures;
+    /// Mouse configuration model.
+    #[path = "mouse.rs"]
+    pub mod mouse;
+    /// Touchpad configuration model.
+    #[path = "touchpad.rs"]
+    pub mod touchpad;
+}
+
+/// Session configuration models.
+pub mod session {
+    /// Autostart configuration model.
+    #[path = "autostart.rs"]
+    pub mod autostart;
+    /// Main application configuration model.
+    #[path = "babydra.rs"]
+    pub mod babydra;
+    /// Lock screen configuration model.
+    #[path = "lockscreen.rs"]
+    pub mod lockscreen;
+    /// Notification configuration model.
+    #[path = "notification.rs"]
+    pub mod notification;
+}
+
+/// System behavior configuration models.
+pub mod system {
+    /// Clipboard behavior configuration model.
+    #[path = "clipboard.rs"]
+    pub mod clipboard;
+    /// Power management configuration model.
+    #[path = "power.rs"]
+    pub mod power;
+}
+
+// Keep the original flat module paths working alongside the topic folders.
+pub use appearance::{blur, cursor, desktop, display, wallpaper};
+pub use input::{gestures, mouse, touchpad};
+pub use session::{autostart, babydra, lockscreen, notification};
+pub use system::{clipboard, power};
 
 pub use autostart::AutostartConfig;
 pub use babydra::BabyDraConfig;

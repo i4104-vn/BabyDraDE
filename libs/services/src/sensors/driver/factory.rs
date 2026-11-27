@@ -2,7 +2,7 @@
 
 use super::selection::DriverEntry;
 use super::{DriverManager, DriverSelection, RotationDriver};
-use crate::sensors::rotation::drivers;
+use crate::sensors::drivers;
 
 /// Registry of available drivers, in probing order.
 #[derive(Default)]

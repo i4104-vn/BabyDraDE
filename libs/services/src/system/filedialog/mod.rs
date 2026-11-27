@@ -1,8 +1,9 @@
 //! File chooser contracts, filters, places and `xdg-open` launcher.
 
-pub mod filter;
+mod browse;
 pub mod open;
-pub mod places;
+
+pub use browse::{filter, places};
 
 pub use common::filedialog::{
     FileDialogMode, FileDialogOptions, FileDialogResult, FileFilter, QuickAccessPlace,

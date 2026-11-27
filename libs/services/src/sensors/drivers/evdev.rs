@@ -9,7 +9,7 @@ use std::fs::File;
 use std::os::fd::AsRawFd;
 use std::path::{Path, PathBuf};
 
-use crate::sensors::rotation::{Gravity, RotationDriver};
+use crate::sensors::{Gravity, RotationDriver};
 
 /// `_IOC_READ | _IOC_WRITE`: the direction value of an ioctl request code.
 const IOC_READ_WRITE: u64 = 2;

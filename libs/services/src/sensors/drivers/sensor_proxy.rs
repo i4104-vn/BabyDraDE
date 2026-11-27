@@ -1,6 +1,6 @@
 //! Generic `iio-sensor-proxy` accelerometer driver.
 
-use crate::sensors::rotation::{Gravity, RotationDriver};
+use crate::sensors::{Gravity, RotationDriver};
 
 use super::proxy::ProxyClient;
 

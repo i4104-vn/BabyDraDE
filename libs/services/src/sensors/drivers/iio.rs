@@ -9,7 +9,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use crate::sensors::rotation::{Gravity, RotationDriver};
+use crate::sensors::{Gravity, RotationDriver};
 
 /// Sysfs roots that may expose IIO accelerometer devices.
 const IIO_ROOTS: [&str; 2] = ["/sys/bus/iio/devices", "/sys/class/iio"];

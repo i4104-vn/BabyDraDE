@@ -85,7 +85,7 @@ mod tests {
     use std::sync::mpsc;
 
     use super::RotationWorker;
-    use crate::sensors::rotation::Gravity;
+    use crate::sensors::Gravity;
 
     fn worker_with(samples: Vec<Gravity>) -> RotationWorker {
         let (sender, receiver) = mpsc::channel();

@@ -1,15 +1,16 @@
 use std::collections::HashSet;
 
+use gio::glib::Variant;
 use gio::DBusConnection;
 
 use super::super::parse::normalize_menu_label;
 use super::super::{DbusMenuItem, MenuActionRef};
 use super::connection::{
-    accessible_children, connect_atspi, has_action, property_string, role_name, state_set,
+    accessible_children, call, connect_atspi, has_action, property_string, role_name, state_set,
 };
 use super::ids::{
-    classify_role, state_has, AccessibleRef, AccessibleRole, MAX_TREE_NODES, MENU_TREE_DEPTH,
-    STATE_DEFUNCT, STATE_HAS_POPUP, STATE_SENSITIVE,
+    classify_role, state_has, AccessibleRef, AccessibleRole, ACTION_IFACE, MAX_TREE_NODES,
+    MENU_TREE_DEPTH, STATE_DEFUNCT, STATE_HAS_POPUP, STATE_SENSITIVE,
 };
 
 /// Reads the full menu tree for an AT-SPI menu bar.
@@ -99,4 +100,19 @@ fn build_menu_items(
         });
     }
     items
+}
+
+/// Activates an AT-SPI menu item through `org.a11y.atspi.Action.DoAction`.
+pub(in crate::system::dbus_menu) fn activate_atspi_action(action: MenuActionRef) {
+    std::thread::spawn(move || {
+        let Some(conn) = connect_atspi() else {
+            return;
+        };
+        let target = AccessibleRef {
+            bus_name: action.bus_name,
+            object_path: action.object_path,
+        };
+        let params = Variant::from((0i32,));
+        let _ = call(&conn, &target, ACTION_IFACE, "DoAction", Some(&params));
+    });
 }

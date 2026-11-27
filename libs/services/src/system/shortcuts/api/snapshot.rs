@@ -8,8 +8,8 @@ use common::ShortcutManifest;
 
 use crate::protocol::Bus;
 
+use super::super::transport::{await_response, connect_bus, into_entries, io_error, WM_PEER};
 use super::error::ShortcutError;
-use super::transport::{await_response, connect_bus, into_entries, io_error, WM_PEER};
 
 /// Synthesized revision for bus snapshots: the compositor sends only a flat
 /// binding list, so there is no real revision to carry over.
