@@ -2,11 +2,46 @@
 
 use gtk4::cairo;
 
+/// Charging / healthy fill: green (#22c55e).
+const GREEN: (f64, f64, f64) = (0.13, 0.77, 0.36);
+/// Mid-level warning fill: amber (#f59e0b).
+const AMBER: (f64, f64, f64) = (0.96, 0.62, 0.04);
+/// Low-level warning fill: red (#ef4444).
+const RED: (f64, f64, f64) = (0.94, 0.27, 0.27);
+/// Normal (discharging) fill: white (#ffffff).
+const WHITE: (f64, f64, f64) = (1.0, 1.0, 1.0);
+/// Neutral foreground used on light themes (also used for the shell and tip).
+const LIGHT_INK: (f64, f64, f64) = (0.15, 0.15, 0.15);
+
+/// Battery fill color.
+///
+/// * Charging: always green, regardless of percentage (the lightning bolt is
+///   drawn separately in [`draw_cairo_battery`]).
+/// * Discharging: white when normal/high (`> 30%`), amber for mid
+///   (`16..=30%`), red when low (`<= 15%`).
 pub fn get_battery_rgb(percentage: u32, is_charging: bool) -> (f64, f64, f64) {
-    match true {
-        _ if is_charging || percentage > 30 => (0.13, 0.77, 0.36), // Green (#22c55e)
-        _ if percentage > 15 => (0.96, 0.62, 0.04),                // Amber (#f59e0b)
-        _ => (0.94, 0.27, 0.27),                                   // Red (#ef4444)
+    if is_charging {
+        return GREEN;
+    }
+
+    match percentage {
+        0..=15 => RED,
+        16..=30 => AMBER,
+        _ => WHITE,
+    }
+}
+
+/// Fill color actually painted, accounting for the theme.
+///
+/// Pure white would be invisible on a light panel, so the "normal" level uses
+/// the theme's neutral foreground instead (dark ink on light themes, white on
+/// dark themes). Charging green and the amber/red warnings stay untouched.
+fn fill_rgb(percentage: u32, is_charging: bool, is_dark: bool) -> (f64, f64, f64) {
+    let rgb = get_battery_rgb(percentage, is_charging);
+    if rgb == WHITE && !is_dark {
+        LIGHT_INK
+    } else {
+        rgb
     }
 }
 
@@ -18,13 +53,9 @@ pub fn draw_cairo_battery(
     is_charging: bool,
     is_dark: bool,
 ) {
-    let (fg_r, fg_g, fg_b) = if is_dark {
-        (1.0, 1.0, 1.0)
-    } else {
-        (0.15, 0.15, 0.15)
-    };
+    let (fg_r, fg_g, fg_b) = if is_dark { WHITE } else { LIGHT_INK };
 
-    let (fill_r, fill_g, fill_b) = get_battery_rgb(percentage, is_charging);
+    let (fill_r, fill_g, fill_b) = fill_rgb(percentage, is_charging, is_dark);
 
     let shell_x = 1.5;
     let shell_y = 1.5;
@@ -89,5 +120,66 @@ pub fn draw_cairo_battery(
 
         cr.set_source_rgba(1.0, 1.0, 1.0, 0.95);
         let _ = cr.fill();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn charging_is_always_green() {
+        for pct in [0, 15, 16, 30, 31, 50, 100, 120] {
+            assert_eq!(get_battery_rgb(pct, true), GREEN, "pct = {}", pct);
+        }
+    }
+
+    #[test]
+    fn discharging_colors_follow_thresholds() {
+        // Low: 0..=15% -> red.
+        for pct in [0, 1, 14, 15] {
+            assert_eq!(get_battery_rgb(pct, false), RED, "pct = {}", pct);
+        }
+        // Mid: 16..=30% -> amber.
+        for pct in [16, 17, 29, 30] {
+            assert_eq!(get_battery_rgb(pct, false), AMBER, "pct = {}", pct);
+        }
+        // Normal/high: > 30% -> white.
+        for pct in [31, 32, 50, 100, 120] {
+            assert_eq!(get_battery_rgb(pct, false), WHITE, "pct = {}", pct);
+        }
+    }
+
+    #[test]
+    fn threshold_boundaries_are_exact() {
+        assert_eq!(get_battery_rgb(15, false), RED);
+        assert_eq!(get_battery_rgb(16, false), AMBER);
+        assert_eq!(get_battery_rgb(30, false), AMBER);
+        assert_eq!(get_battery_rgb(31, false), WHITE);
+    }
+
+    #[test]
+    fn theme_only_adjusts_the_white_normal_level() {
+        assert_eq!(fill_rgb(80, false, true), WHITE);
+        assert_eq!(fill_rgb(80, false, false), LIGHT_INK);
+
+        for dark in [true, false] {
+            assert_eq!(fill_rgb(10, false, dark), RED);
+            assert_eq!(fill_rgb(20, false, dark), AMBER);
+            assert_eq!(fill_rgb(60, true, dark), GREEN);
+        }
+    }
+
+    #[test]
+    fn battery_colors_are_distinct_and_bounded() {
+        for color in [GREEN, AMBER, RED, WHITE] {
+            for channel in [color.0, color.1, color.2] {
+                assert!((0.0..=1.0).contains(&channel));
+            }
+        }
+        assert_ne!(GREEN, WHITE);
+        assert_ne!(AMBER, RED);
+        assert_ne!(AMBER, WHITE);
+        assert_ne!(RED, WHITE);
     }
 }
