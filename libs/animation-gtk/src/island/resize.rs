@@ -2,16 +2,10 @@
 
 //! Widget-side rendering for Dynamic Island capsule transitions.
 
-use std::cell::Cell;
-
 use super::gen::{current_anim_gen, next_anim_gen};
 use super::handler::interpolate;
 use animation::Easing;
 use gtk4::prelude::*;
-
-thread_local! {
-    static CURRENT_ANIM_GEN: Cell<u64> = const { Cell::new(0) };
-}
 
 pub fn island_animate_width<F>(
     widget: &gtk4::Widget,

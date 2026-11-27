@@ -2,16 +2,10 @@
 
 //! Widget-side rendering for Dynamic Island capsule transitions.
 
-use std::cell::Cell;
-
 use super::gen::{current_anim_gen, next_anim_gen};
 use super::handler::{child_collapse_opacity, collapse_opacity, interpolate, reveal_opacity};
 use animation::Easing;
 use gtk4::prelude::*;
-
-thread_local! {
-    static CURRENT_ANIM_GEN: Cell<u64> = const { Cell::new(0) };
-}
 
 pub fn island_zoom_in(
     widget: &gtk4::Widget,

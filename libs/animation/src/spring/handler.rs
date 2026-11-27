@@ -71,6 +71,9 @@ impl Spring {
         config: SpringConfig,
         started_at: Instant,
     ) -> Self {
+        // `SpringConfig` has public fields; a zero/NaN mass or stiffness would
+        // make the analytic solver produce NaNs that never settle.
+        let config = SpringConfig::new(config.stiffness, config.damping, config.mass);
         Self {
             started_at,
             from,
