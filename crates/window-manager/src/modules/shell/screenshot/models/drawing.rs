@@ -54,6 +54,9 @@ impl Drawing {
     pub(crate) fn bounds(&self) -> (f64, f64, f64, f64) {
         const STROKE_PAD: f64 = 8.0;
         match self {
+            // An empty stroke has no geometry; without this guard the
+            // min/max sentinels below would produce infinite bounds.
+            Drawing::Stroke { points, .. } if points.is_empty() => (0.0, 0.0, 0.0, 0.0),
             Drawing::Stroke { points, width, .. } => {
                 let pad = width.max(STROKE_PAD);
                 let mut min = (f64::MAX, f64::MAX);

@@ -56,7 +56,10 @@ pub(crate) fn save_cropped_surface(state: &EditorState) -> Option<cairo::ImageSu
 
     cr.set_source_pixbuf(&sub_pb, 0.0, 0.0);
     cr.source().set_filter(cairo::Filter::Nearest);
-    cr.paint().unwrap();
+    if let Err(err) = cr.paint() {
+        tracing::warn!("cannot paint crop background: {err}");
+        return None;
+    }
 
     cr.set_antialias(cairo::Antialias::Best);
 
@@ -71,18 +74,25 @@ pub(crate) fn save_cropped_surface(state: &EditorState) -> Option<cairo::ImageSu
                 let by = ((y - state.crop_y) * scale_y).floor();
                 let bw = (w * scale_x).ceil();
                 let bh = (h * scale_y).ceil();
-                let sx = (bx as i32).clamp(0, raw_w - 2);
-                let sy = (by as i32).clamp(0, raw_h - 2);
-                let sw = (bw as i32).clamp(2, raw_w - sx);
-                let sh = (bh as i32).clamp(2, raw_h - sy);
+                // `clamp` panics when min > max; a tiny crop makes these bounds
+                // smaller than the minimum mosaic size.
+                let sx = (bx as i32).clamp(0, (raw_w - 2).max(0));
+                let sy = (by as i32).clamp(0, (raw_h - 2).max(0));
+                let sw = (bw as i32).clamp(2, (raw_w - sx).max(2));
+                let sh = (bh as i32).clamp(2, (raw_h - sy).max(2));
                 draw_pixelated_rect(&cr, &sub_pb, (sx, sy, sw, sh), (bx, by, bw, bh));
             }
             other => {
-                cr.save().unwrap();
+                if let Err(err) = cr.save() {
+                    tracing::warn!("cannot save crop context: {err}");
+                    continue;
+                }
                 cr.translate(-tx, -ty);
                 cr.scale(scale_x, scale_y);
                 render_shape(&cr, &scale_drawing(other, line_scale));
-                cr.restore().unwrap();
+                if let Err(err) = cr.restore() {
+                    tracing::warn!("cannot restore crop context: {err}");
+                }
             }
         }
     }

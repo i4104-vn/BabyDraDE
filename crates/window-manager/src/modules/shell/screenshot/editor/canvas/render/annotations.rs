@@ -32,10 +32,12 @@ pub(super) fn draw_blur_on_canvas(
     let src_y = (y * sy).floor() as i32;
     let src_w = ((x + w) * sx).ceil() as i32 - src_x;
     let src_h = ((y + h) * sy).ceil() as i32 - src_y;
-    let src_x = src_x.clamp(0, bg_w - 2);
-    let src_y = src_y.clamp(0, bg_h - 2);
-    let src_w = src_w.clamp(2, bg_w - src_x);
-    let src_h = src_h.clamp(2, bg_h - src_y);
+    // `clamp` panics when min > max; tiny images can make the upper bound
+    // negative or smaller than the minimum mosaic size.
+    let src_x = src_x.clamp(0, (bg_w - 2).max(0));
+    let src_y = src_y.clamp(0, (bg_h - 2).max(0));
+    let src_w = src_w.clamp(2, (bg_w - src_x).max(2));
+    let src_h = src_h.clamp(2, (bg_h - src_y).max(2));
 
     draw_pixelated_rect(cr, &s.bg_pixbuf, (src_x, src_y, src_w, src_h), (x, y, w, h));
 }
@@ -57,7 +59,9 @@ pub(super) fn render_annotations(cr: &cairo::Context, s: &EditorState) {
             cr.set_line_width(1.5);
             cr.set_dash(&[6.0, 4.0], 0.0);
             cr.rectangle(bx, by, bw, bh);
-            cr.stroke().unwrap();
+            if let Err(err) = cr.stroke() {
+                tracing::warn!("cannot draw selection highlight: {err}");
+            }
             cr.set_dash(&[], 0.0);
         }
     }
