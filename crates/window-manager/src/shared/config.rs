@@ -99,7 +99,12 @@ pub(crate) mod keymap {
             }
         };
 
-        for (combo, command) in config.shortcuts {
+        // HashMap iteration is randomised; assign ids in a stable order so a
+        // reload produces the same table (and the same winner for two combos
+        // that normalise to the same keysym/modifiers).
+        let mut entries: Vec<_> = config.shortcuts.into_iter().collect();
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        for (combo, command) in entries {
             let Some((modifiers, key)) = parse_combo(&combo) else {
                 tracing::warn!("ignoring invalid keymap combo {:?}", combo);
                 continue;
@@ -148,7 +153,7 @@ pub(crate) mod keymap {
                     if current.is_some() && current != last_mtime {
                         last_mtime = current;
                         tracing::info!("keymap config changed, reloading shortcuts");
-                        *shared.write().unwrap() = load();
+                        *shared.write().unwrap_or_else(|e| e.into_inner()) = load();
                     }
                 }
             })

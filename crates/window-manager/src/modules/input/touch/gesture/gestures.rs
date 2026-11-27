@@ -54,12 +54,21 @@ pub(crate) fn on_touch_motion<C: InputContext>(
 
     // 3-finger horizontal drag: show the switcher and scrub its active entry
     // live with the fingers instead of switching focus at gesture end.
-    let snapshot: Vec<_> = state
+    let mut snapshot: Vec<_> = state
         .touch_gesture()
         .slots
         .values()
         .map(|data| (data.start, data.current))
         .collect();
+    // Slot storage is a HashMap; sort before taking the first three fingers so
+    // the same touch set always feeds the scrubber in the same order.
+    snapshot.sort_by(|a, b| {
+        a.0.x
+            .total_cmp(&b.0.x)
+            .then(a.0.y.total_cmp(&b.0.y))
+            .then(a.1.x.total_cmp(&b.1.x))
+            .then(a.1.y.total_cmp(&b.1.y))
+    });
     if snapshot.len() >= 3 {
         let (start_x, current_x, start_y, current_y) = {
             let first = &snapshot[..3];
@@ -122,7 +131,15 @@ fn try_fire_touch_gesture<C: InputContext>(
 ) -> bool {
     let intent = match finger_count {
         2 => {
-            let slots: Vec<_> = state.touch_gesture().slots.values().cloned().collect();
+            let mut slots: Vec<_> = state.touch_gesture().slots.values().cloned().collect();
+            slots.sort_by(|a, b| {
+                a.start_time_ms.cmp(&b.start_time_ms).then(
+                    a.start
+                        .x
+                        .total_cmp(&b.start.x)
+                        .then(a.start.y.total_cmp(&b.start.y)),
+                )
+            });
             if slots.len() < 2 {
                 return false;
             }
