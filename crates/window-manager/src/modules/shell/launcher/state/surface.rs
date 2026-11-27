@@ -53,14 +53,16 @@ pub(super) fn render_search(state: &mut LauncherState, ctx: &SurfaceContext<'_>)
         ) {
             if let Some(buffer) = state.search_panel_buffer.as_mut() {
                 let mut context = buffer.render();
-                let _ = context.draw(|dst| {
+                let uploaded = context.draw(|dst| {
                     if dst.len() != pixels.len() {
                         return Err(());
                     }
                     dst.copy_from_slice(&pixels);
                     Ok(search_buffer_damage(search_region.2, search_region.3))
                 });
-                state.search_panel_key = Some(panel_key);
+                if uploaded.is_ok() {
+                    state.search_panel_key = Some(panel_key);
+                }
             }
         }
     }
@@ -89,19 +91,21 @@ pub(super) fn render_search(state: &mut LauncherState, ctx: &SurfaceContext<'_>)
                 Transform::Normal,
                 None,
             );
-            {
+            let uploaded = {
                 let mut context = buffer.render();
-                let _ = context.draw(|dst| {
+                context.draw(|dst| {
                     if dst.len() != pixels.len() {
                         return Err(());
                     }
                     dst.copy_from_slice(&pixels);
                     Ok(search_buffer_damage(ctx.screen.0, ctx.screen.1))
-                });
+                })
+            };
+            if uploaded.is_ok() {
+                state.search_backdrop_buffer = Some(buffer);
+                state.search_backdrop_size = Some(search_backdrop_size);
+                state.search_backdrop_key = Some(search_backdrop_key);
             }
-            state.search_backdrop_buffer = Some(buffer);
-            state.search_backdrop_size = Some(search_backdrop_size);
-            state.search_backdrop_key = Some(search_backdrop_key);
         }
     }
 }

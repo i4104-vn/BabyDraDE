@@ -98,14 +98,18 @@ impl LauncherState {
             {
                 if let Some(buffer) = self.buffer.as_mut() {
                     let mut context = buffer.render();
-                    let _ = context.draw(|dst| {
+                    let uploaded = context.draw(|dst| {
                         if dst.len() != pixels.len() {
                             return Err(());
                         }
                         dst.copy_from_slice(&pixels);
                         Ok(buffer_damage(region.2, region.3))
                     });
-                    self.cache_key = Some(key);
+                    // Only remember pixels that actually reached the buffer;
+                    // otherwise a stale/blank frame would be cached as valid.
+                    if uploaded.is_ok() {
+                        self.cache_key = Some(key);
+                    }
                 }
             }
         }
@@ -136,19 +140,21 @@ impl LauncherState {
                     Transform::Normal,
                     None,
                 );
-                {
+                let uploaded = {
                     let mut context = buffer.render();
-                    let _ = context.draw(|dst| {
+                    context.draw(|dst| {
                         if dst.len() != pixels.len() {
                             return Err(());
                         }
                         dst.copy_from_slice(&pixels);
                         Ok(buffer_damage(backdrop_w, screen_h))
-                    });
+                    })
+                };
+                if uploaded.is_ok() {
+                    self.backdrop_buffer = Some(buffer);
+                    self.backdrop_size = Some(backdrop_size);
+                    self.backdrop_cache_key = Some(backdrop_key);
                 }
-                self.backdrop_buffer = Some(buffer);
-                self.backdrop_size = Some(backdrop_size);
-                self.backdrop_cache_key = Some(backdrop_key);
             }
         }
 

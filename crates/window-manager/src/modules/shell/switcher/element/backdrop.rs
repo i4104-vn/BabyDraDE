@@ -48,9 +48,9 @@ pub(super) fn update(
                 Transform::Normal,
                 None,
             );
-            {
+            let uploaded = {
                 let mut context = buffer.render();
-                let _ = context.draw(|dst| {
+                context.draw(|dst| {
                     if dst.len() != pixels.len() {
                         return Err(());
                     }
@@ -58,11 +58,13 @@ pub(super) fn update(
                     Ok(vec![Rectangle::<i32, Buffer>::from_size(
                         backdrop_size.into(),
                     )])
-                });
+                })
+            };
+            if uploaded.is_ok() {
+                overlay.backdrop_buffer = Some(buffer);
+                overlay.backdrop_size = Some(backdrop_size);
+                overlay.backdrop_tick = Some(presence_tick);
             }
-            overlay.backdrop_buffer = Some(buffer);
-            overlay.backdrop_size = Some(backdrop_size);
-            overlay.backdrop_tick = Some(presence_tick);
         }
     }
 

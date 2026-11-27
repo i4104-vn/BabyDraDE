@@ -53,27 +53,34 @@ pub(super) fn update(
     // skipping these frames made it jump in one step.
     if overlay.last_rendered != Some(render_key) {
         let (origin_x, origin_y, buffer_w, buffer_h) = region;
-        if let Some(fg_buf) = overlay.fg_buffer.as_mut() {
-            if let Some(pixels) =
-                render_pixels(buffer_w, buffer_h, scale, (origin_x, origin_y), |ctx| {
-                    draw_switcher_foreground(ctx, switcher, layout, slide_x, presence)
-                })
-            {
+        let uploaded = overlay
+            .fg_buffer
+            .as_mut()
+            .and_then(|fg_buf| {
+                let pixels =
+                    render_pixels(buffer_w, buffer_h, scale, (origin_x, origin_y), |ctx| {
+                        draw_switcher_foreground(ctx, switcher, layout, slide_x, presence)
+                    })?;
                 let mut context = fg_buf.render();
-                let _ = context.draw(|buf| {
-                    if buf.len() == pixels.len() {
-                        buf.copy_from_slice(&pixels);
-                        Ok(vec![Rectangle::<i32, Buffer>::from_size(
-                            (buffer_w, buffer_h).into(),
-                        )])
-                    } else {
-                        Err(())
-                    }
-                });
-            }
+                context
+                    .draw(|buf| {
+                        if buf.len() == pixels.len() {
+                            buf.copy_from_slice(&pixels);
+                            Ok(vec![Rectangle::<i32, Buffer>::from_size(
+                                (buffer_w, buffer_h).into(),
+                            )])
+                        } else {
+                            Err(())
+                        }
+                    })
+                    .ok()
+            })
+            .is_some();
+        // A failed render must leave the key unchanged so the next frame
+        // retries instead of caching a stale or blank dock.
+        if uploaded {
+            overlay.last_rendered = Some(render_key);
         }
-
-        overlay.last_rendered = Some(render_key);
     }
 }
 
