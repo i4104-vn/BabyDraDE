@@ -22,17 +22,56 @@ pub fn detect_audio_backend() -> AudioBackend {
     }
 }
 
-/// Parses `Volume: 0.50 [MUTED]` (or `Volume: 50%`) into a percentage.
-fn parse_wpctl_volume_percent(stdout: &str) -> Option<f64> {
-    let token = stdout.split_whitespace().nth(1)?;
-    let is_percent = token.ends_with('%');
-    let value = token.trim_end_matches('%').parse::<f64>().ok()?;
-    let percent = if is_percent { value } else { value * 100.0 };
+/// Extracts the device name from a `wpctl status` line.
+///
+/// Status lines look like ` │  *   43. Built-in Audio Stereo [vol: 0.25]`.
+/// The tree prefix, default marker, numeric id and trailing status metadata
+/// are dropped; only the sink name is kept.
+fn clean_output_name(line: &str) -> Option<String> {
+    let mut text = line.trim();
 
-    if percent.is_finite() {
-        Some(percent.clamp(0.0, 100.0))
-    } else {
+    // The `*` marks the default sink; other sinks are not the active output.
+    if !text.contains('*') {
+        return None;
+    }
+
+    text = text.trim_start_matches(|c: char| {
+        c.is_whitespace() || "│├└┌┐┬┴┼─*".contains(c)
+    });
+
+    // Drop the leading sink id, e.g. `43. `.
+    if let Some((id, rest)) = text.split_once('.') {
+        if !id.is_empty() && id.chars().all(|c| c.is_ascii_digit()) {
+            text = rest.trim_start();
+        }
+    }
+
+    // Drop trailing bracketed metadata, e.g. `[vol: 0.25] [MUTED]`.
+    while text.ends_with(']') {
+        match text.rfind('[') {
+            Some(start) => text = text[..start].trim_end(),
+            None => break,
+        }
+    }
+
+    // Drop bare trailing volume / mute annotations, if present.
+    let lower = text.to_ascii_lowercase();
+    for marker in [" vol:", " volume:", "\tvol:", "\tvolume:"] {
+        if let Some(pos) = lower.rfind(marker) {
+            text = text[..pos].trim_end();
+            break;
+        }
+    }
+    if text.to_ascii_lowercase().ends_with(" muted") {
+        let end = text.len() - " muted".len();
+        text = text[..end].trim_end();
+    }
+
+    let name = text.trim();
+    if name.is_empty() {
         None
+    } else {
+        Some(name.to_string())
     }
 }
 
@@ -50,7 +89,12 @@ pub fn get_volume_state() -> (f64, bool) {
             {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let is_muted = stdout.contains("[MUTED]");
-                let vol = parse_wpctl_volume_percent(&stdout).unwrap_or(80.0);
+                let mut vol = 80.0;
+                if let Some(vol_str) = stdout.split_whitespace().nth(1) {
+                    if let Ok(parsed) = vol_str.parse::<f64>() {
+                        vol = parsed * 100.0;
+                    }
+                }
                 return (vol, is_muted);
             }
             (80.0, false)
@@ -65,7 +109,7 @@ pub fn get_volume_state() -> (f64, bool) {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 if let Some(pct_str) = stdout.split('/').nth(1) {
                     if let Ok(val) = pct_str.trim().trim_end_matches('%').parse::<f64>() {
-                        vol = val.clamp(0.0, 100.0);
+                        vol = val;
                     }
                 }
             }
@@ -90,14 +134,12 @@ pub fn set_volume(pct: f64) {
     let clamped = pct.clamp(0.0, 150.0);
     match detect_audio_backend() {
         AudioBackend::Wpctl => {
-            // An explicit `VOL%` is an absolute target (without +/- it is
-            // never treated as a relative step).
-            let pct = clamped.round() as u64;
+            let frac = clamped / 100.0;
             let _ = Command::new("wpctl")
                 .args([
                     "set-volume",
                     "@DEFAULT_AUDIO_SINK@",
-                    &format!("{}%", pct),
+                    &format!("{:.2}", frac),
                 ])
                 .output();
         }
@@ -158,8 +200,7 @@ pub fn get_active_output_name() -> Option<String> {
                     || line.contains("HDMI")
                     || line.contains("Headset"))
             {
-                let trimmed = line.trim_start_matches([' ', '*', '.']);
-                return Some(trimmed.to_string());
+                return clean_output_name(line);
             }
         }
     }
@@ -171,13 +212,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parses_fraction_and_percent_volume() {
-        assert_eq!(parse_wpctl_volume_percent("Volume: 0.50"), Some(50.0));
+    fn strips_volume_suffix_from_wpctl_line() {
+        let line = " │  *   43. Built-in Audio Analog Stereo        [vol: 0.25]";
         assert_eq!(
-            parse_wpctl_volume_percent("Volume: 0.25 [MUTED]"),
-            Some(25.0)
+            clean_output_name(line).as_deref(),
+            Some("Built-in Audio Analog Stereo")
         );
-        assert_eq!(parse_wpctl_volume_percent("Volume: 50%"), Some(50.0));
-        assert_eq!(parse_wpctl_volume_percent("garbage"), None);
     }
+
+    #[test]
+    fn strips_percent_volume_and_mute_flags() {
+        let line = " │  *   12. HDMI Output [volume: 50%] [MUTED]";
+        assert_eq!(clean_output_name(line).as_deref(), Some("HDMI Output"));
+    }
+
+    #[test]
+    fn keeps_long_device_names() {
+        let name = "Very Long USB Audio Interface Name That Should Not Be Trimmed Here";
+        let line = format!("  *    7. {} [vol: 100%]", name);
+        assert_eq!(clean_output_name(&line).as_deref(), Some(name));
+    }
+
+    #[test]
+    fn strips_bare_volume_suffix() {
+        let line = " *  9. Headset vol: 80%";
+        assert_eq!(clean_output_name(line).as_deref(), Some("Headset"));
+    }
+
+    #[test]
+    fn ignores_lines_without_the_default_marker() {
+        let line = " │  43. Built-in Audio Analog Stereo [vol: 0.25]";
+        assert_eq!(clean_output_name(line), None);
+    }
+
 }
