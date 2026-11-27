@@ -67,6 +67,10 @@ pub(super) fn modal(popover: &gtk4::Popover, capsule: &gtk4::Box, content: &gtk4
         let focus_box = box_focus.clone();
         let focus_popover = pop_focus.clone();
         gtk4::glib::timeout_add_local_once(Duration::from_millis(40), move || {
+            // The popover may have been dismissed before the deferred focus ran.
+            if !focus_popover.is_visible() {
+                return;
+            }
             focus_popover.grab_focus();
             focus_box.grab_focus();
         });
@@ -80,9 +84,18 @@ pub(super) fn modal(popover: &gtk4::Popover, capsule: &gtk4::Box, content: &gtk4
 
     let capsule_unmap = capsule.clone();
     popover.connect_unmap(move |popover| {
-        if !other_popover_open(&capsule_unmap, popover) {
+        let other_open = other_popover_open(&capsule_unmap, popover);
+        if !other_open {
             capsule_unmap.remove_css_class("popover-open");
         }
-        set_layer_keyboard_mode(popover, KeyboardMode::OnDemand);
+        // Restore the panel's default "no keyboard" mode once the last modal
+        // closes; keep OnDemand when another modal is still open. Query through
+        // the capsule because the popover is already unmapped here.
+        let mode = if other_open {
+            KeyboardMode::OnDemand
+        } else {
+            KeyboardMode::None
+        };
+        set_layer_keyboard_mode(&capsule_unmap, mode);
     });
 }

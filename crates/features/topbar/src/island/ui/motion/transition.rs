@@ -32,14 +32,17 @@ pub(crate) fn apply_transition(
         }
     }
 
-    // Hide the previously displayed view.
+    // Hide the previously displayed view. On a direct feature switch remove its
+    // class now; when collapsing, the completion callback removes it.
     if let Some(prev) = engine.displayed {
+        if desired.is_some() {
+            if let Some(cls) = engine.displayed_class.take() {
+                engine.capsule.remove_css_class(cls);
+            }
+        }
         let view = &engine.views[prev];
         view.state.active.set(false);
         view.container.set_visible(false);
-        if let Some(cls) = view.feature.borrow().capsule_class() {
-            engine.capsule.remove_css_class(cls);
-        }
         if let Ok(mut feature) = view.feature.try_borrow_mut() {
             feature.on_hide();
         }
@@ -48,19 +51,23 @@ pub(crate) fn apply_transition(
 
     match desired {
         Some(w) => {
-            let view = &engine.views[w];
-            view.container.set_visible(true);
-            view.container.set_opacity(1.0);
-            engine.capsule.set_visible(true);
-            engine.capsule.set_opacity(1.0);
-            if let Some(cls) = view.feature.borrow().capsule_class() {
+            let (class, size) = {
+                let view = &engine.views[w];
+                view.container.set_visible(true);
+                view.container.set_opacity(1.0);
+                engine.capsule.set_visible(true);
+                engine.capsule.set_opacity(1.0);
+                if let Ok(mut feature) = view.feature.try_borrow_mut() {
+                    feature.on_show();
+                }
+                let feature = view.feature.borrow();
+                (feature.capsule_class(), feature.size())
+            };
+            if let Some(cls) = class {
                 engine.capsule.add_css_class(cls);
             }
-            if let Ok(mut feature) = view.feature.try_borrow_mut() {
-                feature.on_show();
-            }
-            let size = view.feature.borrow().size();
-            animate_expand(engine, size, true, engine_rc);
+            engine.displayed_class = class;
+            animate_expand(engine, size, class, engine_rc);
         }
         None => animate_collapse(engine, engine_rc),
     }
@@ -70,7 +77,7 @@ pub(crate) fn apply_transition(
 fn animate_expand(
     engine: &mut IslandEngine,
     target: (i32, i32),
-    active_music: bool,
+    feature_class: Option<&'static str>,
     engine_rc: &Rc<RefCell<IslandEngine>>,
 ) {
     engine.animating.set(true);
@@ -88,8 +95,8 @@ fn animate_expand(
         next = child.next_sibling();
         child.set_opacity(1.0);
     }
-    if active_music {
-        capsule.add_css_class("active-music");
+    if let Some(cls) = feature_class {
+        capsule.add_css_class(cls);
     }
 
     if cur_w <= 0 || cur_h <= 0 {
@@ -137,10 +144,14 @@ fn animate_collapse(engine: &mut IslandEngine, engine_rc: &Rc<RefCell<IslandEngi
         if current_anim_gen() != anim_gen {
             return;
         }
-        if let Ok(core) = rc2.try_borrow_mut() {
+        if let Ok(mut core) = rc2.try_borrow_mut() {
             // Only hide if the island state is STILL hidden.
             if core.displayed.is_none() {
                 core.animating.set(false);
+                if let Some(cls) = core.displayed_class.take() {
+                    core.capsule.remove_css_class(cls);
+                }
+                // Legacy classes may have been set before class tracking existed.
                 core.capsule.remove_css_class("active-music");
                 core.capsule.remove_css_class("notification-mode");
                 core.capsule.set_visible(false);

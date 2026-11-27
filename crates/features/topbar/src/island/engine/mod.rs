@@ -41,6 +41,8 @@ pub struct IslandEngine {
     self_weak: Weak<RefCell<IslandEngine>>,
     pub(crate) views: Vec<ViewRecord>,
     pub(crate) displayed: Option<usize>,
+    /// Capsule CSS class added for the currently displayed feature, if any.
+    pub(crate) displayed_class: Option<&'static str>,
     pub(crate) hovered: Cell<bool>,
     pub(crate) animating: Cell<bool>,
 }
@@ -57,6 +59,7 @@ impl IslandEngine {
             self_weak: Weak::new(),
             views: Vec::new(),
             displayed: None,
+            displayed_class: None,
             hovered: shell.hovered,
             animating: Cell::new(false),
         }
