@@ -122,3 +122,5 @@ Also require: `cargo fmt --check`, `cargo clippy --all-targets --all-features --
 ## 8. Workflow
 
 Plan the **target tree** on paper before touching files. Use `git mv` for every move. Make one commit per logical group so a bad stage can be reverted. See `rust-refactor-workflow`.
+
+After the tree is clean, run `rust-shared-extraction`: shared enums/constants go to `libs/common`, reusable UI components go to `libs/ui-kit/components` named after the component (not the service), and duplicates across crates get one owner.

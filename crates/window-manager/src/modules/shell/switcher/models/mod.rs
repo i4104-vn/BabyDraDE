@@ -7,3 +7,4 @@ pub(crate) use switcher::{step_target, AltTabEntry, AltTabSwitcher};
 pub(crate) mod geometry;
 pub(crate) mod overlay;
 pub(crate) mod switcher;
+mod switcher_tests;

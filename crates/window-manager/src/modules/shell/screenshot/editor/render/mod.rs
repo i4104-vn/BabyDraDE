@@ -1,5 +1,6 @@
 //! Editor window UI construction: overlay layout, glassmorphic toolbar, and canvas.
 
+mod buttons;
 mod color;
 mod toolbar;
 mod tools;

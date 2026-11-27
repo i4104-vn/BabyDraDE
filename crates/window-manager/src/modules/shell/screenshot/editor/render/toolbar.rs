@@ -3,46 +3,11 @@
 use animation_gtk::{slide_out_cb_cancelable, SlideDirection};
 use gtk4::prelude::*;
 
+use super::buttons::{append_separator, circle_action_button, toolbar_button};
 use super::{ToolbarContext, ToolbarParts};
 use crate::modules::shell::screenshot::editor::handle::clipboard::copy_to_clipboard;
 use crate::modules::shell::screenshot::editor::handle::drawing::trigger_save;
 use crate::modules::shell::screenshot::editor::models::Tool;
-
-/// Creates a flat toolbar button with the given icon.
-fn toolbar_button(icon: &str, tooltip: &str) -> gtk4::Button {
-    let btn = gtk4::Button::builder()
-        .child(&ui_kit::icons::get_icon(icon, 16))
-        .build();
-    btn.set_tooltip_text(Some(tooltip));
-    btn.add_css_class("flat");
-    btn.add_css_class("screenshot-toolbar-btn");
-    btn
-}
-
-/// Creates a circular standalone action button (e.g. Save, Close).
-fn circle_action_button(icon: &str, tooltip: &str, extra_class: &str) -> gtk4::Button {
-    let btn = gtk4::Button::builder()
-        .child(&ui_kit::icons::get_icon(icon, 18))
-        .width_request(44)
-        .height_request(44)
-        .build();
-    btn.set_tooltip_text(Some(tooltip));
-    btn.add_css_class("flat");
-    btn.add_css_class("screenshot-circle-btn");
-    btn.add_css_class(extra_class);
-    btn
-}
-
-/// Appends a styled capsule separator to a toolbar.
-///
-/// # Arguments
-///
-/// * `toolbar` - Toolbar box receiving the separator.
-fn append_separator(toolbar: &gtk4::Box) {
-    let separator = gtk4::Label::new(Some("│"));
-    separator.add_css_class("capsule-separator");
-    toolbar.append(&separator);
-}
 
 /// Wires the reset button that clears annotations and hides the toolbar.
 ///
@@ -175,7 +140,6 @@ pub(super) fn build(ctx: &ToolbarContext) -> ToolbarParts {
     let btn_cancel = circle_action_button("close", &services::trans("screenshot.cancel_tooltip"), "close");
     wire_actions(ctx, &btn_copy, &btn_save, &btn_cancel);
 
-    // Assemble tool capsule (left side)
     toolbar.append(&btn_reset);
     append_separator(&toolbar);
     for btn in [&btn_pen, &btn_shape, &btn_blur, &btn_eraser] {
@@ -188,7 +152,6 @@ pub(super) fn build(ctx: &ToolbarContext) -> ToolbarParts {
 
     action_bar.append(&toolbar);
 
-    // Right side: standalone 2 circular buttons (save, close)
     let right_actions = gtk4::Box::new(gtk4::Orientation::Horizontal, 8);
     right_actions.append(&btn_save);
     right_actions.append(&btn_cancel);

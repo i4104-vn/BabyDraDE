@@ -4,7 +4,7 @@ use crate::modules::shell::screenshot::editor::models::{Drawing, EditorState};
 use gtk4::gdk::prelude::GdkCairoContextExt;
 use services::screenshot::{get_screenshot_path, notify, save_png};
 
-use super::render::{draw_pixelated_rect, render_shape};
+use super::drawing_render::{draw_pixelated_rect, render_shape};
 
 /// Saves the edited crop and notifies the user after a successful write.
 pub(crate) fn trigger_save(state: &EditorState) -> bool {

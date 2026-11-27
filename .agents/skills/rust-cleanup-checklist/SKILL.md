@@ -102,3 +102,5 @@ const DEFAULT_CURSOR_SIZE: u32 = 24;
 ## 8. Verification
 
 Same gates as `rust-refactor-workflow`: fmt → clippy `-D warnings` → test count unchanged → doc clean → no pub globs → workspace check. Report suspicious code you deliberately kept.
+
+Final step: run `rust-shared-extraction` — shared enums/constants belong in `libs/common`, reusable UI components in `libs/ui-kit/components` named after the component, and duplicated definitions get one owner. Then clean comments/rustdoc again in both the donor and destination crates.

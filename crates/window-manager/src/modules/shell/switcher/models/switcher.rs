@@ -190,16 +190,3 @@ pub(crate) fn step_target(current: f64, direction: f64, count: usize) -> (f64, b
         (raw, false)
     }
 }
-
-mod tests {
-    #[allow(unused_imports)]
-    use super::*;
-
-    #[test]
-    fn dock_wraps_directly_to_the_first_or_last_icon() {
-        assert_eq!(step_target(0.0, -1.0, 5), (4.0, true));
-        assert_eq!(step_target(0.0, 1.0, 5), (1.0, false));
-        assert_eq!(step_target(4.0, 1.0, 5), (0.0, true));
-        assert_eq!(step_target(4.0, -1.0, 5), (3.0, false));
-    }
-}

@@ -18,5 +18,6 @@ pub(crate) use models::{BackdropKey, BufferRegion, CacheKey, LauncherApp, Launch
 pub(crate) mod backdrop;
 pub(crate) mod models;
 pub(crate) mod render;
+mod render_tests;
 pub(crate) mod search;
 pub(crate) mod state;
