@@ -143,7 +143,10 @@ where
                 if cr.set_source_surface(&raw_surface, 0.0, 0.0).is_err() {
                     return;
                 }
-                let _ = cr.paint();
+                if let Err(err) = cr.paint() {
+                    tracing::warn!("[screenshot] cannot composite rotated frame: {err}");
+                    return;
+                }
             }
 
             tracing::debug!("[screenshot] saving to {}", save_path.display());
