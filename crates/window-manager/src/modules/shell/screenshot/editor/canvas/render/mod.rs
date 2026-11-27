@@ -40,24 +40,31 @@ pub(crate) fn draw_editor_canvas(
     // Finished annotations, clipped to the crop selection when present.
     cr.set_antialias(cairo::Antialias::Best);
     if has_clip {
-        cr.save().unwrap();
+        if let Err(err) = cr.save() {
+            tracing::warn!("cannot save canvas context for annotations: {err}");
+            return;
+        }
         cr.rectangle(s.crop_x, s.crop_y, s.crop_w, s.crop_h);
         cr.clip();
     }
     render_annotations(cr, s);
-    if has_clip {
-        cr.restore().unwrap();
+    if has_clip && cr.restore().is_err() {
+        tracing::warn!("cannot restore canvas context after annotations");
+        return;
     }
 
     // Live preview of the shape currently being dragged.
     cr.set_antialias(cairo::Antialias::None);
     if has_clip {
-        cr.save().unwrap();
+        if let Err(err) = cr.save() {
+            tracing::warn!("cannot save canvas context for preview: {err}");
+            return;
+        }
         cr.rectangle(s.crop_x, s.crop_y, s.crop_w, s.crop_h);
         cr.clip();
     }
     render_preview(cr, s);
-    if has_clip {
-        cr.restore().unwrap();
+    if has_clip && cr.restore().is_err() {
+        tracing::warn!("cannot restore canvas context after preview");
     }
 }

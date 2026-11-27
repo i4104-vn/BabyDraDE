@@ -41,10 +41,15 @@ pub(super) fn build(
         }
         cr.arc(cx, cy, radius, 0.0, 2.0 * std::f64::consts::PI);
         cr.set_source_rgb(r, g, b);
-        cr.fill_preserve().unwrap();
+        if let Err(err) = cr.fill_preserve() {
+            tracing::warn!("cannot draw color indicator: {err}");
+            return;
+        }
         cr.set_source_rgba(1.0, 1.0, 1.0, 0.6);
         cr.set_line_width(1.5);
-        cr.stroke().unwrap();
+        if let Err(err) = cr.stroke() {
+            tracing::warn!("cannot outline color indicator: {err}");
+        }
     });
 
     let popover = create_color_popover(&color_btn, state.clone(), &color_dot, canvas);

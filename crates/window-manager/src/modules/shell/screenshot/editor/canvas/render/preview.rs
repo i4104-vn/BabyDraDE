@@ -16,7 +16,9 @@ pub(super) fn render_preview(cr: &cairo::Context, s: &EditorState) {
             for p in &points[1..] {
                 cr.line_to(p.0, p.1);
             }
-            cr.stroke().unwrap();
+            if let Err(err) = cr.stroke() {
+                tracing::warn!("cannot draw stroke preview: {err}");
+            }
         }
     }
 

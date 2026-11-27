@@ -3,6 +3,14 @@
 use crate::modules::shell::screenshot::editor::models::Drawing;
 use gtk4::gdk::prelude::GdkCairoContextExt;
 
+/// Cairo errors are recoverable inside a GTK draw callback: warn and skip the
+/// affected primitive rather than panicking the editor.
+fn stroke(cr: &cairo::Context, what: &str) {
+    if let Err(err) = cr.stroke() {
+        tracing::warn!("cannot draw {what}: {err}");
+    }
+}
+
 pub(crate) fn apply_stroke_style(cr: &cairo::Context, color: (f64, f64, f64), width: f64) {
     cr.set_source_rgb(color.0, color.1, color.2);
     cr.set_line_width(width);
@@ -28,7 +36,7 @@ pub(crate) fn render_shape(cr: &cairo::Context, drawing: &Drawing) {
             for p in &points[1..] {
                 cr.line_to(p.0, p.1);
             }
-            cr.stroke().unwrap();
+            stroke(cr, "annotation");
         }
         Drawing::Rect {
             x,
@@ -40,7 +48,7 @@ pub(crate) fn render_shape(cr: &cairo::Context, drawing: &Drawing) {
         } => {
             apply_stroke_style(cr, *color, *width);
             cr.rectangle(*x, *y, *w, *h);
-            cr.stroke().unwrap();
+            stroke(cr, "annotation");
         }
         Drawing::Ellipse {
             x,
@@ -69,7 +77,7 @@ pub(crate) fn render_shape(cr: &cairo::Context, drawing: &Drawing) {
                     cr.line_to(px, py);
                 }
             }
-            cr.stroke().unwrap();
+            stroke(cr, "annotation");
         }
         Drawing::Line {
             x1,
@@ -82,7 +90,7 @@ pub(crate) fn render_shape(cr: &cairo::Context, drawing: &Drawing) {
             apply_stroke_style(cr, *color, *width);
             cr.move_to(*x1, *y1);
             cr.line_to(*x2, *y2);
-            cr.stroke().unwrap();
+            stroke(cr, "annotation");
         }
         Drawing::Arrow {
             x1,
@@ -98,12 +106,12 @@ pub(crate) fn render_shape(cr: &cairo::Context, drawing: &Drawing) {
             let spread = std::f64::consts::PI / 7.0;
             cr.move_to(*x1, *y1);
             cr.line_to(x2 - head * angle.cos(), y2 - head * angle.sin());
-            cr.stroke().unwrap();
+            stroke(cr, "annotation");
             for dir in [-1.0, 1.0] {
                 let a = angle + std::f64::consts::PI + dir * spread;
                 cr.move_to(*x2, *y2);
                 cr.line_to(x2 + head * a.cos(), y2 + head * a.sin());
-                cr.stroke().unwrap();
+                stroke(cr, "annotation");
             }
         }
         Drawing::Blur { .. } => unreachable!("blur is rendered by the caller"),
@@ -123,7 +131,10 @@ pub(crate) fn draw_pixelated_rect(
         return;
     }
 
-    cr.save().unwrap();
+    if let Err(err) = cr.save() {
+        tracing::warn!("cannot save context for mosaic: {err}");
+        return;
+    }
     cr.rectangle(dest_x, dest_y, dest_w, dest_h);
     cr.clip();
 
@@ -138,8 +149,12 @@ pub(crate) fn draw_pixelated_rect(
         cr.scale(sx, sy);
         cr.set_source_pixbuf(&scaled_pb, dest_x / sx, dest_y / sy);
         cr.source().set_filter(cairo::Filter::Nearest);
-        cr.paint().unwrap();
+        if let Err(err) = cr.paint() {
+            tracing::warn!("cannot paint mosaic: {err}");
+        }
     }
 
-    cr.restore().unwrap();
+    if let Err(err) = cr.restore() {
+        tracing::warn!("cannot restore context after mosaic: {err}");
+    }
 }

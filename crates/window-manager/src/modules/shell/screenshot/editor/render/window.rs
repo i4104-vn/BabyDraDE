@@ -12,25 +12,14 @@ use crate::modules::shell::screenshot::editor::models::EditorState;
 use crate::modules::shell::screenshot::editor::setup_editor_keys;
 use ui_kit::layer_shell::{init_layer_window, LayerWindowConfig};
 
-/// Constructs the screenshot editor window, maps its overlay design,
-/// initializes the canvas, and builds the editing toolbars.
-///
-/// # Arguments
-///
-/// * `app` - Application that owns the editor window.
-/// * `temp_path` - File path of the captured screenshot.
-///
-/// # Returns
-///
-/// The configured editor window, or a bare window when the screenshot cannot be loaded.
-/// Builds and returns the screenshot editor window for a captured image.
+/// Builds the screenshot editor window: overlay layout, cached canvas and toolbars.
 ///
 /// # Arguments
 /// * `app` - GTK application that owns the window.
 /// * `temp_path` - Path to the captured image to annotate.
 ///
 /// # Returns
-/// The configured editor window, ready to be presented.
+/// The configured editor window, or a bare window when the image cannot be loaded.
 pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::ApplicationWindow {
     let pixbuf = match gdk_pixbuf::Pixbuf::from_file(temp_path) {
         Ok(pb) => pb,

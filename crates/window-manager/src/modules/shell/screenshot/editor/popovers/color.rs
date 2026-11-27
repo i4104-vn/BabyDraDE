@@ -96,7 +96,9 @@ pub(crate) fn create_color_popover(
                 2.0 * std::f64::consts::PI,
             );
             cr.set_source_rgba(0.5, 0.5, 0.5, 1.0);
-            cr.fill().unwrap();
+            if let Err(err) = cr.fill() {
+                tracing::warn!("cannot draw stroke-width preview: {err}");
+            }
         });
         let btn = gtk4::Button::new();
         btn.set_child(Some(&dot));
