@@ -126,17 +126,26 @@ pub(crate) fn init(
 
                     let render_damage = {
                         let age = backend.buffer_age().unwrap_or(0);
-                        let (renderer, mut framebuffer) =
-                            backend.bind().expect("failed to bind Winit framebuffer");
-                        let render_result = damage_tracker
-                            .render_output(
-                                renderer,
-                                &mut framebuffer,
-                                age,
-                                &render_elements,
-                                theme.background_color,
-                            )
-                            .expect("failed to render desktop frame");
+                        let (renderer, mut framebuffer) = match backend.bind() {
+                            Ok(pair) => pair,
+                            Err(err) => {
+                                tracing::warn!("failed to bind Winit framebuffer: {err}");
+                                return;
+                            }
+                        };
+                        let render_result = match damage_tracker.render_output(
+                            renderer,
+                            &mut framebuffer,
+                            age,
+                            &render_elements,
+                            theme.background_color,
+                        ) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                tracing::warn!("failed to render desktop frame: {err}");
+                                return;
+                            }
+                        };
                         render_result.damage.cloned()
                     };
 
@@ -145,6 +154,10 @@ pub(crate) fn init(
                         // context current *without* the window surface. Restore
                         // it or the following swap_buffers() fails with BadAlloc
                         // and takes down the compositor.
+                        // SAFETY: `backend` and its EGL surface outlive this callback. The
+                        // raw pointer only releases the immutable borrow so `renderer()`
+                        // can be borrowed mutably for the capture; no other EGL surface is
+                        // made current on this thread until the restore below.
                         let surface = backend.egl_surface() as *const _;
                         let _ = crate::modules::shell::screenshot::capture::capture_screen(
                             backend.renderer(),
@@ -152,15 +165,17 @@ pub(crate) fn init(
                             &output,
                         );
                         let renderer = backend.renderer();
-                        // SAFETY: Backend surface and renderer stay alive for this call.
+                        // SAFETY: `surface` points to the EGL surface owned by `backend`,
+                        // which stays alive for the whole callback. No other EGL surface is
+                        // made current on this thread between this restore and submit.
                         unsafe {
                             let _ = renderer.egl_context().make_current_with_surface(&*surface);
                         }
                     }
 
-                    backend
-                        .submit(render_damage.as_deref())
-                        .expect("failed to submit Winit frame");
+                    if let Err(err) = backend.submit(render_damage.as_deref()) {
+                        tracing::warn!("failed to submit Winit frame: {err}");
+                    }
                     crate::infra::frame_pacing::send_frames(state, &output);
                     crate::infra::frame_pacing::end_frame(state, display_handle);
                     backend.window().request_redraw();
