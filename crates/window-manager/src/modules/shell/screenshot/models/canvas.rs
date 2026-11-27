@@ -11,6 +11,8 @@ pub(crate) struct LayerCache {
     pub(crate) width: i32,
     pub(crate) height: i32,
     pub(crate) scale: i32,
+    /// Editor state generation this background was rendered for.
+    pub(crate) version: u64,
     pub(crate) surface: cairo::ImageSurface,
 }
 
