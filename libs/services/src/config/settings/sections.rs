@@ -2,7 +2,11 @@
 
 use std::path::Path;
 
-use super::paths::*;
+use super::paths::{
+    get_blur_config_path, get_clipboard_config_path, get_conf_path, get_cursor_config_path,
+    get_desktop_config_path, get_display_config_path, get_input_config_path,
+    get_lockscreen_config_path,
+};
 use super::setup::{save_root_or_log, save_section_or_log};
 use crate::config::store;
 use crate::models::{

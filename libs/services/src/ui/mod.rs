@@ -1,4 +1,5 @@
-//! UI support services: translations, theme/cursor discovery and tray host.
+//! UI support services: locale translations, GTK theme and cursor discovery,
+//! and the status-notifier tray host.
 
 /// Internationalization and translation.
 pub mod i18n;

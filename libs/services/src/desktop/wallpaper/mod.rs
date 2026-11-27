@@ -20,7 +20,7 @@ impl WallpaperMode {
     /// Returns the mode identifier used by desktop settings.
     ///
     /// # Returns
-    /// One of `"fill"`, `"fit"`, `"stretch"`, `"center"`, `"tile"` or `"zoom"`.
+    /// `"static"` for [`WallpaperMode::Static`] or `"live"` for [`WallpaperMode::Live`].
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Static => "static",

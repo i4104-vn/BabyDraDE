@@ -9,6 +9,10 @@ use std::path::Path;
 mod categories;
 use categories::category;
 
+/// Maximum number of grouped readings returned; matches the category order
+/// below, so it bounds the tooltip length as categories grow.
+const MAX_IMPORTANT_READINGS: usize = 6;
+
 /// Kernel subsystem that reported a temperature reading.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TemperatureSource {
@@ -42,7 +46,7 @@ fn thermal_zones() -> Vec<TemperatureReading> {
         }
         let path = entry.path();
         let label = fs::read_to_string(path.join("type"))
-            .unwrap_or_else(|_| name.clone())
+            .unwrap_or(name)
             .trim()
             .to_string();
         if let Some(celsius) = read_celsius(&path.join("temp"), true) {
@@ -141,7 +145,7 @@ pub fn get_important_temperatures() -> Vec<TemperatureReading> {
                     source: reading.source,
                 })
         })
-        .take(6)
+        .take(MAX_IMPORTANT_READINGS)
         .collect()
 }
 

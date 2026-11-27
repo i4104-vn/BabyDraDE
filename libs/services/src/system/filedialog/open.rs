@@ -19,6 +19,12 @@ const MEDIA_EXTENSIONS: &[&str] = &[
     "png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "ico", "mp4", "mkv", "webm", "avi", "mov",
     "flv",
 ];
+/// How many GLib main-context iterations drain launch side effects; a higher
+/// value only delays the launcher, it does not change which app is used.
+const MAIN_CONTEXT_ITERATIONS: usize = 15;
+/// Files at most this small are treated as text when no handler is configured;
+/// raising it risks opening binary files in the notepad.
+const SMALL_TEXT_FILE_LIMIT: u64 = 10 * 1024 * 1024;
 
 /// Opens a path or URI with the desktop's default application; returns `true` on success.
 pub fn open_target(target: &str) -> bool {
@@ -66,7 +72,7 @@ fn launch_uri(uri: &str) -> bool {
     let ok = AppInfo::launch_default_for_uri(uri, None::<&gio::AppLaunchContext>).is_ok();
     if ok {
         let ctx = glib::MainContext::default();
-        for _ in 0..15 {
+        for _ in 0..MAIN_CONTEXT_ITERATIONS {
             if !ctx.iteration(false) {
                 break;
             }
@@ -121,7 +127,7 @@ fn fallback_open_file(path: &Path, uri: &str) -> bool {
     }
     // Last resort: small files are almost certainly text documents.
     let small = std::fs::metadata(path)
-        .map(|m| m.len() < 10 * 1024 * 1024)
+        .map(|m| m.len() < SMALL_TEXT_FILE_LIMIT)
         .unwrap_or(false);
     small && launch("babydra-notepad", &[path.as_os_str()])
 }
@@ -170,10 +176,7 @@ fn launch_desktop_entry(id: &str, path: &Path, uri: &str) -> bool {
             .file_name()
             .and_then(OsStr::to_str)
             .unwrap_or(&binary);
-        if matches!(
-            bin_name,
-            "xdg-open" | "BabyDra" | "babydra-filedialog"
-        ) {
+        if matches!(bin_name, "xdg-open" | "BabyDra" | "babydra-filedialog") {
             continue;
         }
         if is_terminal {

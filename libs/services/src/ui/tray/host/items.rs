@@ -1,7 +1,13 @@
 //! Tray host items.
 
+use std::collections::BTreeSet;
+
+use gio::glib::{Variant, VariantDict};
+
+use crate::tray::TrayItem;
+
 use super::watcher::state;
-use super::*;
+use super::{snapshot, ItemKey, ITEM_IFACE, PROPERTIES_IFACE, WATCHER_IFACE, WATCHER_PATH};
 
 pub(super) fn publish_snapshot(connection: &gio::DBusConnection) {
     let keys: BTreeSet<ItemKey> =

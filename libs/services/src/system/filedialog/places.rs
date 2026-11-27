@@ -16,7 +16,9 @@ pub fn default_places() -> Vec<QuickAccessPlace> {
         return vec![root_place()];
     };
 
-    places.push(place("file_dialog.place_home", home.clone(), "user-home"));
+    // Derive the trash path before moving `home` into the bookmark below.
+    let trash = home.join(".local/share/Trash/files");
+    places.push(place("file_dialog.place_home", home, "user-home"));
 
     let candidates = [
         (
@@ -47,13 +49,11 @@ pub fn default_places() -> Vec<QuickAccessPlace> {
         ),
     ];
     for (key, path, icon) in candidates {
-        match path {
-            Some(path) if path.exists() => places.push(place(key, path, icon)),
-            _ => {}
+        if let Some(path) = path.filter(|path| path.exists()) {
+            places.push(place(key, path, icon));
         }
     }
 
-    let trash = home.join(".local/share/Trash/files");
     if trash.exists() {
         places.push(place("file_dialog.place_trash", trash, "user-trash"));
     }

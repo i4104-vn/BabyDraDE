@@ -11,7 +11,7 @@ use std::collections::HashSet;
 use gio::glib::Variant;
 use gio::DBusConnection;
 
-use super::discovery_helpers::{get_connection_process_id, service_matches_app_id, variant_string};
+use super::discovery_helpers::{connection_process_id, service_matches_app_id, variant_string};
 use super::models::{DbusMenuItem, MenuActionRef};
 use super::parse::normalize_menu_label;
 
@@ -79,7 +79,7 @@ pub(super) fn find_atspi_menubar(
     let mut best: Option<(u8, AccessibleRef)> = None;
 
     for app in accessible_children(&conn, &desktop) {
-        let app_pid = get_connection_process_id(&conn, &app.bus_name);
+        let app_pid = connection_process_id(&conn, &app.bus_name);
         if app_pid == Some(std::process::id()) {
             continue;
         }
@@ -364,10 +364,16 @@ fn build_menu_items(
             continue;
         }
 
-        let action = has_action(conn, &target).then(|| MenuActionRef {
-            bus_name: target.bus_name.clone(),
-            object_path: target.object_path.clone(),
-        });
+        // `target` is owned by this loop iteration and is not used afterwards,
+        // so move its fields into the action instead of cloning them.
+        let action = if has_action(conn, &target) {
+            Some(MenuActionRef {
+                bus_name: target.bus_name,
+                object_path: target.object_path,
+            })
+        } else {
+            None
+        };
         let id = context.next_id;
         context.next_id += 1;
 

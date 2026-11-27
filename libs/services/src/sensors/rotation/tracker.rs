@@ -43,7 +43,7 @@ impl Orientation {
 }
 
 /// Debounces gravity samples relative to the orientation seen at startup.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct RotationTracker {
     baseline: Option<Orientation>,
     candidate: Option<Orientation>,

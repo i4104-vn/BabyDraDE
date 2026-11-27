@@ -1,12 +1,8 @@
 //! Status Notifier Host internals: watcher D-Bus object, item discovery and
 //! property polling. Everything here runs on the tray host thread only.
 
-use super::{snapshot, HostState, ItemKey, TrayItem, HOST_STATE};
-use gio::glib::{Variant, VariantDict};
-use std::collections::BTreeSet;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use super::{snapshot, HostState, ItemKey, HOST_STATE};
+use std::time::Duration;
 
 pub(super) const ITEM_IFACE: &str = "org.kde.StatusNotifierItem";
 
@@ -31,8 +27,9 @@ pub(super) use watcher::run;
 
 #[cfg(test)]
 mod tests {
+    use gio::glib::{Variant, VariantDict};
+
     use super::registration::{first_interface, normalize_identifier};
-    use super::*;
 
     #[test]
     fn empty_dbus_node_has_no_interface() {

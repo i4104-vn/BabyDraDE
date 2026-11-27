@@ -191,11 +191,15 @@ fn start_probe(state: &mut ActiveState, now: Instant) {
 /// process is spawned at all; otherwise `wlrctl` runs at most once per
 /// `FALLBACK_INTERVAL` (and much more rarely when the tool is unavailable).
 /// Every caller sees the same cached snapshot between probes.
+///
+/// # Panics
+/// Panics with `"active window state lock poisoned"` when another thread
+/// panicked while holding the lock.
 pub fn get_active_window() -> Option<ActiveWindowInfo> {
     let now = Instant::now();
-    let Ok(mut state) = active_state().lock() else {
-        return None;
-    };
+    let mut state = active_state()
+        .lock()
+        .expect("active window state lock poisoned");
     collect_probe_result(&mut state, now);
     ensure_active_watcher(&mut state, now);
 
@@ -269,9 +273,10 @@ fn watcher_loop() {
         match bus.recv_timeout(Duration::from_secs(1)) {
             Some(Incoming::Event(message)) if message.topic.as_deref() == Some("window.active") => {
                 if let Ok(Event::ActiveWindowChanged { info }) = message.decode::<Event>() {
-                    if let Ok(mut state) = active_state().lock() {
-                        state.bus_info = Some(info);
-                    }
+                    let mut state = active_state()
+                        .lock()
+                        .expect("active window state lock poisoned");
+                    state.bus_info = Some(info);
                 }
             }
             Some(Incoming::Disconnected) => {
@@ -285,10 +290,11 @@ fn watcher_loop() {
 
 /// Marks the watcher as gone so throttled fallback probing can resume.
 fn watcher_stopped() {
-    if let Ok(mut state) = active_state().lock() {
-        state.watcher_pending = false;
-        state.bus_info = None;
-    }
+    let mut state = active_state()
+        .lock()
+        .expect("active window state lock poisoned");
+    state.watcher_pending = false;
+    state.bus_info = None;
 }
 
 /// Sends one request to the compositor's `wm` peer, ignoring transport errors.

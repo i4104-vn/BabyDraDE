@@ -5,9 +5,14 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_void};
 use std::sync::OnceLock;
 
+/// Prompts for a secret without echoing the user's input.
 const PAM_PROMPT_ECHO_OFF: c_int = 1;
+/// Prompts for input with echo enabled.
 const PAM_PROMPT_ECHO_ON: c_int = 2;
+/// PAM call completed successfully.
 const PAM_SUCCESS: c_int = 0;
+/// `PAM_BUF_ERR`: memory allocation failed inside the conversation callback.
+const PAM_BUF_ERR: c_int = 4;
 
 #[repr(C)]
 struct pam_message {
@@ -60,7 +65,7 @@ unsafe impl Sync for PamLib {}
 
 static PAM: OnceLock<Option<PamLib>> = OnceLock::new();
 
-fn get_pam() -> Option<&'static PamLib> {
+fn pam() -> Option<&'static PamLib> {
     PAM.get_or_init(|| {
         // SAFETY: PAM handle and callback pointers stay valid for this call.
         unsafe {
@@ -127,7 +132,7 @@ unsafe extern "C" fn pam_conversation_fn(
         let resps = libc::malloc(num_msg as usize * std::mem::size_of::<pam_response>())
             as *mut pam_response;
         if resps.is_null() {
-            return 4; // PAM_BUF_ERR
+            return PAM_BUF_ERR;
         }
         std::ptr::write_bytes(resps, 0, num_msg as usize);
 
@@ -151,7 +156,7 @@ unsafe extern "C" fn pam_conversation_fn(
 
 /// Verifies user credentials using the system PAM "login" service.
 pub fn verify_password(username: &str, password: &str) -> bool {
-    let Some(pam) = get_pam() else {
+    let Some(pam) = pam() else {
         tracing::error!("PAM dynamic library is not available; password verification aborted");
         return false;
     };
@@ -185,4 +190,3 @@ pub fn verify_password(username: &str, password: &str) -> bool {
         auth_status == PAM_SUCCESS
     }
 }
-

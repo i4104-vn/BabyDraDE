@@ -4,7 +4,10 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use super::paths::*;
+use super::paths::{
+    get_babydra_dir, get_conf_path, get_config_dir, get_cursor_dir, get_keymap_path,
+    get_legacy_keymap_path, get_logs_dir, get_wallpaper_dir,
+};
 use crate::config::store;
 use crate::models::{
     BabyDraConfig, BlurConfig, ClipboardConfig, CursorConfig, DesktopConfig, DisplayConfig,

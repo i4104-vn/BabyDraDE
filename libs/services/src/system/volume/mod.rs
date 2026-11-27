@@ -2,6 +2,11 @@
 
 use std::process::Command;
 
+/// Volume used when no backend reports a value; a conservative audible level.
+const DEFAULT_VOLUME_PERCENT: f64 = 80.0;
+/// Upper bound accepted by `set_volume`; some backends allow boosting above 100.
+const MAX_VOLUME_PERCENT: f64 = 150.0;
+
 /// Audio control utility available on the system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AudioBackend {
@@ -34,7 +39,11 @@ fn command_succeeds(program: &str, args: &[&str]) -> bool {
 fn backend_order() -> Vec<AudioBackend> {
     let primary = detect_audio_backend();
     let mut order = vec![primary];
-    for backend in [AudioBackend::Wpctl, AudioBackend::Pactl, AudioBackend::Amixer] {
+    for backend in [
+        AudioBackend::Wpctl,
+        AudioBackend::Pactl,
+        AudioBackend::Amixer,
+    ] {
         if !order.contains(&backend) && command_succeeds(backend.program(), &["--version"]) {
             order.push(backend);
         }
@@ -65,9 +74,7 @@ fn clean_output_name(line: &str) -> Option<String> {
         return None;
     }
 
-    text = text.trim_start_matches(|c: char| {
-        c.is_whitespace() || "│├└┌┐┬┴┼─*".contains(c)
-    });
+    text = text.trim_start_matches(|c: char| c.is_whitespace() || "│├└┌┐┬┴┼─*".contains(c));
 
     // Drop the leading sink id, e.g. `43. `.
     if let Some((id, rest)) = text.split_once('.') {
@@ -128,13 +135,13 @@ pub fn get_volume_state() -> (f64, bool) {
             {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let is_muted = stdout.contains("[MUTED]");
-                let vol = parse_wpctl_volume_percent(&stdout).unwrap_or(80.0);
+                let vol = parse_wpctl_volume_percent(&stdout).unwrap_or(DEFAULT_VOLUME_PERCENT);
                 return (vol, is_muted);
             }
-            (80.0, false)
+            (DEFAULT_VOLUME_PERCENT, false)
         }
         AudioBackend::Pactl => {
-            let mut vol = 80.0;
+            let mut vol = DEFAULT_VOLUME_PERCENT;
             let mut is_muted = false;
             if let Ok(output) = Command::new("pactl")
                 .args(["get-sink-volume", "@DEFAULT_SINK@"])
@@ -156,7 +163,7 @@ pub fn get_volume_state() -> (f64, bool) {
             }
             (vol, is_muted)
         }
-        AudioBackend::Amixer => (80.0, false),
+        AudioBackend::Amixer => (DEFAULT_VOLUME_PERCENT, false),
     }
 }
 
@@ -165,7 +172,7 @@ pub fn get_volume_state() -> (f64, bool) {
 /// # Arguments
 /// * `pct` - Target volume percentage (clamped by the backend).
 pub fn set_volume(pct: f64) {
-    let clamped = pct.clamp(0.0, 150.0);
+    let clamped = pct.clamp(0.0, MAX_VOLUME_PERCENT);
     let percent = format!("{:.0}%", clamped);
     for backend in backend_order() {
         let ok = match backend {
@@ -173,15 +180,16 @@ pub fn set_volume(pct: f64) {
             // never treated as a relative step).
             AudioBackend::Wpctl => command_succeeds(
                 "wpctl",
-                &["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{}%", clamped.round() as u64)],
+                &[
+                    "set-volume",
+                    "@DEFAULT_AUDIO_SINK@",
+                    &format!("{}%", clamped.round() as u64),
+                ],
             ),
-            AudioBackend::Pactl => command_succeeds(
-                "pactl",
-                &["set-sink-volume", "@DEFAULT_SINK@", &percent],
-            ),
-            AudioBackend::Amixer => {
-                command_succeeds("amixer", &["set", "Master", &percent])
+            AudioBackend::Pactl => {
+                command_succeeds("pactl", &["set-sink-volume", "@DEFAULT_SINK@", &percent])
             }
+            AudioBackend::Amixer => command_succeeds("amixer", &["set", "Master", &percent]),
         };
         if ok {
             return;

@@ -16,6 +16,11 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+/// One MiB in bytes: rates at or above this are shown as MB/s.
+const BYTES_PER_MIB: f64 = 1_048_576.0;
+/// One KiB in bytes: rates at or above this are shown as KB/s.
+const BYTES_PER_KIB: f64 = 1024.0;
+
 /// Kind of the active network connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActiveNetworkType {
@@ -43,10 +48,12 @@ pub struct ActiveNetworkInfo {
 /// A string such as `"1.5 MB/s"`, `"512 KB/s"` or `"64 B/s"`.
 pub fn format_speed(bytes_per_sec: f64) -> String {
     match true {
-        _ if bytes_per_sec >= 1_048_576.0 => {
-            format!("{:.1} MB/s", bytes_per_sec / 1_048_576.0)
+        _ if bytes_per_sec >= BYTES_PER_MIB => {
+            format!("{:.1} MB/s", bytes_per_sec / BYTES_PER_MIB)
         }
-        _ if bytes_per_sec >= 1024.0 => format!("{:.0} KB/s", bytes_per_sec / 1024.0),
+        _ if bytes_per_sec >= BYTES_PER_KIB => {
+            format!("{:.0} KB/s", bytes_per_sec / BYTES_PER_KIB)
+        }
         _ => format!("{:.0} B/s", bytes_per_sec),
     }
 }
@@ -103,9 +110,9 @@ pub fn get_active_network_info() -> ActiveNetworkInfo {
         };
     };
 
-    let ip = get_interface_ip(&iface).unwrap_or_else(|| "127.0.0.1".to_string());
+    let ip = interface_ip(&iface).unwrap_or_else(|| "127.0.0.1".to_string());
     if is_wifi {
-        let ssid = get_wifi_ssid(&iface).unwrap_or_else(|| "Wi-Fi".to_string());
+        let ssid = wifi_ssid(&iface).unwrap_or_else(|| "Wi-Fi".to_string());
         ActiveNetworkInfo {
             network_type: ActiveNetworkType::Wifi,
             name: ssid,
@@ -149,7 +156,7 @@ fn is_wifi_interface(path: &Path, name: &str) -> bool {
 }
 
 /// Reads the IPv4 address assigned to `iface`.
-fn get_interface_ip(iface: &str) -> Option<String> {
+fn interface_ip(iface: &str) -> Option<String> {
     if let Ok(output) = Command::new("ip")
         .args(["-4", "addr", "show", iface])
         .output()
@@ -249,7 +256,7 @@ fn parse_nmcli_active_ssid(output: &str) -> Option<String> {
 /// 2. `iw dev <iface> link` — parses the `SSID:` line of the associated link.
 /// 3. `nmcli -t -f active,ssid dev wifi` — NetworkManager's active Wi-Fi
 ///    network, used only when neither interface-scoped command works.
-fn get_wifi_ssid(iface: &str) -> Option<String> {
+fn wifi_ssid(iface: &str) -> Option<String> {
     if let Some(ssid) = run_ssid_command("iwgetid", &["-r", iface], parse_iwgetid_output) {
         return Some(ssid);
     }

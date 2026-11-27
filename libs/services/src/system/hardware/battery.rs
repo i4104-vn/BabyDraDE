@@ -58,17 +58,15 @@ impl BatteryReader {
     /// # Returns
     /// The battery snapshot, or `None` when no readable battery exists.
     pub fn read(&mut self) -> Option<BatteryInfo> {
-        // Re-check path if not cached or verify it still exists
-        let path = match self.device_path {
-            Some(ref p) if p.exists() => p.clone(),
-            _ => {
-                let found = Self::find_battery_device()?;
-                self.device_path = Some(found.clone());
-                found
-            }
-        };
-
-        Self::read_battery(&path)
+        // Reuse the cached device only while it still exists; otherwise probe
+        // again and cache the new path after reading it.
+        if let Some(path) = self.device_path.as_ref().filter(|path| path.exists()) {
+            return Self::read_battery(path);
+        }
+        let found = Self::find_battery_device()?;
+        let info = Self::read_battery(&found);
+        self.device_path = Some(found);
+        info
     }
 
     fn find_battery_device() -> Option<PathBuf> {

@@ -1,5 +1,8 @@
-//! Aggregated access to system monitoring: CPU, memory, battery, thermal,
-//! disk, network, uptime, volume, window state and file chooser services.
+//! Aggregated system monitoring and control: CPU, memory, battery, thermal,
+//! disk, network, uptime, volume, window state, clipboard and file chooser
+//! services, with commonly used types re-exported at this level.
+
+/// Persistent clipboard cache and selection history.
 pub mod clipboard;
 /// D-Bus application menu discovery and activation.
 pub mod dbus_menu;

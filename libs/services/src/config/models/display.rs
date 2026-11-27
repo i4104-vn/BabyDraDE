@@ -207,8 +207,14 @@ mod tests {
             MonitorOrientation::parse("  FLIPPED-90 "),
             Some(MonitorOrientation::Flipped90)
         );
-        assert_eq!(MonitorOrientation::parse("0"), Some(MonitorOrientation::Normal));
-        assert_eq!(MonitorOrientation::parse("270"), Some(MonitorOrientation::Rotate270));
+        assert_eq!(
+            MonitorOrientation::parse("0"),
+            Some(MonitorOrientation::Normal)
+        );
+        assert_eq!(
+            MonitorOrientation::parse("270"),
+            Some(MonitorOrientation::Rotate270)
+        );
         assert_eq!(MonitorOrientation::parse("sideways"), None);
     }
 

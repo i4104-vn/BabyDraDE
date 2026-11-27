@@ -12,6 +12,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+/// Maximum number of characters kept in a text preview; longer previews are
+/// truncated so the history file stays small.
+const PREVIEW_CHAR_LIMIT: usize = 240;
+
 /// One entry in the clipboard history.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClipboardEntry {
@@ -64,7 +68,10 @@ pub fn ensure_dir() {
 
 fn preview_for(mime: &str, data: &[u8]) -> String {
     if common::constants::is_text_mime(mime) {
-        String::from_utf8_lossy(data).chars().take(240).collect()
+        String::from_utf8_lossy(data)
+            .chars()
+            .take(PREVIEW_CHAR_LIMIT)
+            .collect()
     } else {
         format!("<{} bytes>", data.len())
     }

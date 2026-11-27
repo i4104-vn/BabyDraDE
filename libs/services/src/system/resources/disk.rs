@@ -1,5 +1,9 @@
 use std::path::Path;
 
+/// Bytes in one GiB, used by the `*_gb()` helpers on [`DiskInfo`].
+/// Changing it changes the units reported by those helpers.
+const BYTES_PER_GIB: f64 = 1024.0 * 1024.0 * 1024.0;
+
 /// Filesystem usage snapshot for a mount point.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct DiskInfo {
@@ -18,7 +22,7 @@ impl DiskInfo {
     /// # Returns
     /// `total_bytes` converted to GiB.
     pub fn total_gb(&self) -> f64 {
-        self.total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
+        self.total_bytes as f64 / BYTES_PER_GIB
     }
 
     /// Returns used space in gibibytes.
@@ -26,7 +30,7 @@ impl DiskInfo {
     /// # Returns
     /// `used_bytes` converted to GiB.
     pub fn used_gb(&self) -> f64 {
-        self.used_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
+        self.used_bytes as f64 / BYTES_PER_GIB
     }
 
     /// Returns available space in gibibytes.
@@ -34,7 +38,7 @@ impl DiskInfo {
     /// # Returns
     /// `available_bytes` converted to GiB.
     pub fn available_gb(&self) -> f64 {
-        self.available_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
+        self.available_bytes as f64 / BYTES_PER_GIB
     }
 }
 
@@ -86,11 +90,15 @@ impl DiskReader {
         let c_path = CString::new(path.as_os_str().as_bytes()).ok()?;
         let mut stat = MaybeUninit::<libc::statvfs>::uninit();
 
+        // SAFETY: `c_path` is a valid NUL-terminated C string that outlives the
+        // call, and `stat` points to writable, suitably aligned memory for a
+        // `libc::statvfs`; the return code is checked before the value is read.
         let ret = unsafe { libc::statvfs(c_path.as_ptr(), stat.as_mut_ptr()) };
         if ret != 0 {
             return None;
         }
 
+        // SAFETY: `statvfs` returned 0, so it initialized the struct.
         let stat = unsafe { stat.assume_init() };
         let block_size = stat.f_frsize as u64;
         let total_bytes = (stat.f_blocks as u64) * block_size;

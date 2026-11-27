@@ -1,6 +1,9 @@
 //! Cached TOML document I/O.
 
-use super::*;
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use super::{cache, empty_doc, file_mtime, CacheEntry};
 
 pub(crate) fn read_doc(path: &Path) -> toml::Value {
     let mtime = file_mtime(path);

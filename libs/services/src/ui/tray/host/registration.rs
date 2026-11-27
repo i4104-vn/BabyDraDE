@@ -1,12 +1,21 @@
 //! Tray host registration.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+use gio::glib::Variant;
+
 use super::watcher::{state, WATCHER_XML};
-use super::*;
+use super::{ItemKey, DBUS_IFACE, DBUS_NAME, DBUS_PATH, WATCHER_IFACE, WATCHER_NAME, WATCHER_PATH};
+
+/// `DBUS_REQUEST_NAME_FLAG_DO_NOT_QUEUE`: never steal the watcher name from an
+/// already running panel (e.g. after a restart of the topbar).
+const DO_NOT_QUEUE: u32 = 4;
+/// Status Notifier protocol version reported to clients.
+const PROTOCOL_VERSION: i32 = 0;
 
 pub(super) fn request_watcher_name(connection: &gio::DBusConnection) -> bool {
-    // 4 = DBUS_REQUEST_NAME_FLAG_DO_NOT_QUEUE: never steal a name from an
-    // already running panel (e.g. after a restart of the topbar).
-    let parameters = Variant::from((WATCHER_NAME, 4u32));
+    let parameters = Variant::from((WATCHER_NAME, DO_NOT_QUEUE));
     let reply = connection.call_sync(
         Some(DBUS_NAME),
         DBUS_PATH,
@@ -122,8 +131,8 @@ pub(super) fn register_watcher(connection: &gio::DBusConnection) -> Result<(), g
                 "IsStatusNotifierHostRegistered" => {
                     Variant::from(registered_for_property.load(Ordering::Relaxed))
                 }
-                "ProtocolVersion" => Variant::from(0i32),
-                _ => Variant::from(0i32),
+                "ProtocolVersion" => Variant::from(PROTOCOL_VERSION),
+                _ => Variant::from(PROTOCOL_VERSION),
             },
         )
         // `RegistrationId` has no Drop implementation; dropping it does not

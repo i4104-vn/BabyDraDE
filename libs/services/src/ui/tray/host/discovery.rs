@@ -1,8 +1,10 @@
 //! Tray host discovery.
 
+use std::time::Instant;
+
 use super::items::publish_snapshot;
 use super::watcher::state;
-use super::*;
+use super::{DBUS_IFACE, DBUS_NAME, DBUS_PATH, ITEM_IFACE, MAX_PROBES_PER_CYCLE, RESCAN_INTERVAL};
 
 pub(super) fn refresh(connection: &gio::DBusConnection) {
     let rescan = state()
@@ -112,10 +114,12 @@ pub(super) fn find_sni_path(connection: &gio::DBusConnection, service: &str) -> 
         if depth < MAX_DEPTH {
             for child in node.nodes() {
                 if let Some(child_path) = child.path() {
-                    let child_path = match true {
-                        _ if child_path.starts_with('/') => child_path.to_string(),
-                        _ if path == "/" => format!("/{child_path}"),
-                        _ => format!("{path}/{child_path}"),
+                    let child_path = if child_path.starts_with('/') {
+                        child_path.to_string()
+                    } else if path == "/" {
+                        format!("/{child_path}")
+                    } else {
+                        format!("{path}/{child_path}")
                     };
                     pending.push((child_path, depth + 1));
                 }

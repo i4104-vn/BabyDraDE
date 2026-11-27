@@ -98,13 +98,12 @@ impl NetworkReader {
         let mut list = Vec::new();
 
         for line in content.lines().skip(2) {
-            let parts: Vec<&str> = line.split(':').collect();
-            if parts.len() != 2 {
+            let Some((name, counters)) = line.split_once(':') else {
                 continue;
-            }
+            };
 
-            let name = parts[0].trim().to_string();
-            let values: Vec<u64> = parts[1]
+            let name = name.trim().to_string();
+            let values: Vec<u64> = counters
                 .split_whitespace()
                 .filter_map(|s| s.parse::<u64>().ok())
                 .collect();

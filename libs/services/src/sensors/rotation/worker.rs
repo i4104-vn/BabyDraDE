@@ -20,6 +20,7 @@ use super::{DriverManager, Gravity, RotationDriver};
 const DRAIN_INTERVAL: Duration = Duration::from_millis(100);
 
 /// Polls a rotation driver off-thread and publishes its readings.
+#[derive(Debug)]
 pub struct RotationWorker {
     name: String,
     samples: Receiver<Gravity>,

@@ -2,6 +2,13 @@
 
 use gio::glib::Variant;
 
+/// Timeout for the registrar `GetMenus` call, in milliseconds.
+const REGISTRAR_TIMEOUT_MS: i32 = 250;
+/// Timeout for a `GetConnectionUnixProcessID` call, in milliseconds.
+const PROCESS_ID_TIMEOUT_MS: i32 = 100;
+/// Timeout for an `Introspect` call, in milliseconds.
+const INTROSPECT_TIMEOUT_MS: i32 = 200;
+
 /// Reads a string-like variant. Object paths have type `o`, so `get::<String>()`
 /// cannot be used for them; `str()` accepts `s`, `o` and `g`.
 pub(super) fn variant_string(var: &Variant) -> Option<String> {
@@ -38,7 +45,7 @@ pub(super) fn find_registered_appmenus(conn: &gio::DBusConnection) -> Vec<(Strin
         None,
         None,
         gio::DBusCallFlags::NONE,
-        250,
+        REGISTRAR_TIMEOUT_MS,
         gio::Cancellable::NONE,
     ) {
         Ok(reply) => reply,
@@ -112,7 +119,8 @@ pub(super) fn service_matches_app_id(service: &str, app_id: &str) -> bool {
     })
 }
 
-pub(super) fn get_connection_process_id(conn: &gio::DBusConnection, name: &str) -> Option<u32> {
+/// Returns the Unix process id registered for a bus name, when available.
+pub(super) fn connection_process_id(conn: &gio::DBusConnection, name: &str) -> Option<u32> {
     let params = Variant::from((name,));
     conn.call_sync(
         Some("org.freedesktop.DBus"),
@@ -122,7 +130,7 @@ pub(super) fn get_connection_process_id(conn: &gio::DBusConnection, name: &str) 
         Some(&params),
         None,
         gio::DBusCallFlags::NONE,
-        100,
+        PROCESS_ID_TIMEOUT_MS,
         gio::Cancellable::NONE,
     )
     .ok()?
@@ -157,7 +165,7 @@ pub(super) fn find_dbusmenu_paths(
             None,
             None,
             gio::DBusCallFlags::NONE,
-            200,
+            INTROSPECT_TIMEOUT_MS,
             gio::Cancellable::NONE,
         ) {
             Ok(reply) => reply,

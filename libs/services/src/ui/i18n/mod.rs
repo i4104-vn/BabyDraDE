@@ -37,14 +37,12 @@ fn default_locale() -> String {
                 }
             }
             if trimmed.starts_with("LANG=") || trimmed.starts_with("LANGUAGE=") {
-                match true {
-                    _ if trimmed.to_lowercase().contains("vi") => {
-                        return "vi".to_string();
-                    }
-                    _ if trimmed.to_lowercase().contains("en") => {
-                        return "en".to_string();
-                    }
-                    _ => {}
+                let lowered = trimmed.to_lowercase();
+                if lowered.contains("vi") {
+                    return "vi".to_string();
+                }
+                if lowered.contains("en") {
+                    return "en".to_string();
                 }
             }
         }
@@ -134,7 +132,6 @@ pub fn watch_locale_changes() -> mpsc::Receiver<String> {
         let _ = std::fs::write(&path, "LANG=en_US.UTF-8\nLANGUAGE=en_US.UTF-8\nLOCALE=en\n");
     }
 
-    let tx = tx.clone();
     std::thread::Builder::new()
         .name("babydra-locale-watcher".into())
         .spawn(move || {

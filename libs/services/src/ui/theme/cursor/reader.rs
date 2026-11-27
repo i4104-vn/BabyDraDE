@@ -1,6 +1,9 @@
 use std::fs;
 use std::path::PathBuf;
 
+/// Cursor size used when neither `XCURSOR_SIZE` nor the theme config supplies one.
+const DEFAULT_CURSOR_SIZE: u32 = 24;
+
 /// Resolved cursor theme name, size and directory.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CursorThemeInfo {
@@ -29,7 +32,7 @@ pub fn read_active_cursor_theme() -> CursorThemeInfo {
         .or(file_theme)
         .unwrap_or_else(|| "Adwaita".to_string());
 
-    let size = env_size.unwrap_or(24);
+    let size = env_size.unwrap_or(DEFAULT_CURSOR_SIZE);
     let path = find_cursor_theme_path(&name);
 
     CursorThemeInfo { name, size, path }
@@ -71,7 +74,7 @@ pub fn read_default_index_theme() -> Option<String> {
 /// # Returns
 /// The theme directory, or `None` if not found.
 pub fn find_cursor_theme_path(name: &str) -> Option<PathBuf> {
-    let search_paths = get_icon_search_paths();
+    let search_paths = cursor_theme_search_paths();
     for base in search_paths {
         let candidate = base.join(name).join("cursors");
         if candidate.is_dir() {
@@ -87,7 +90,7 @@ pub fn find_cursor_theme_path(name: &str) -> Option<PathBuf> {
 /// Sorted, deduplicated cursor theme names.
 pub fn list_available_cursor_themes() -> Vec<String> {
     let mut themes = Vec::new();
-    let search_paths = get_icon_search_paths();
+    let search_paths = cursor_theme_search_paths();
 
     for base in search_paths {
         let entries = match fs::read_dir(base) {
@@ -115,7 +118,7 @@ pub fn list_available_cursor_themes() -> Vec<String> {
 ///
 /// `~/.babydra/cursor` takes priority so locally installed themes can override
 /// system-wide ones with the same name.
-pub(crate) fn get_cursor_theme_search_paths() -> Vec<PathBuf> {
+pub(crate) fn cursor_theme_search_paths() -> Vec<PathBuf> {
     let mut paths = vec![crate::config::get_cursor_dir()];
 
     if let Ok(home) = std::env::var("HOME") {
@@ -128,8 +131,4 @@ pub(crate) fn get_cursor_theme_search_paths() -> Vec<PathBuf> {
     paths.push(PathBuf::from("/usr/local/share/icons"));
 
     paths
-}
-
-fn get_icon_search_paths() -> Vec<PathBuf> {
-    get_cursor_theme_search_paths()
 }

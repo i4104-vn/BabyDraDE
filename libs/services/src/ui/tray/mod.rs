@@ -30,6 +30,9 @@ pub struct TrayItem {
     pub menu_path: String,
 }
 
+/// Maximum time in milliseconds to wait for a tray item activation reply.
+const ITEM_ACTIVATION_TIMEOUT_MS: i32 = 1000;
+
 pub(super) type ItemKey = (String, String);
 
 #[derive(Default)]
@@ -114,7 +117,7 @@ pub fn activate_item(item: &TrayItem, x: i32, y: i32, button: u32) {
             Some(&parameters),
             None,
             gio::DBusCallFlags::NONE,
-            1000,
+            ITEM_ACTIVATION_TIMEOUT_MS,
             gio::Cancellable::NONE,
         ) {
             tracing::debug!("tray item {service}{path} did not handle {method}: {err}");

@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 use std::io;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use common::protocol::{Incoming, Message, MessageId, ProtocolError, Response};
@@ -27,15 +27,19 @@ pub(crate) struct ClientState {
     pub(crate) deferred: VecDeque<Incoming>,
 }
 
-/// Locks the client state, recovering from a poisoned mutex.
+/// Locks the client state for one request.
 ///
 /// # Arguments
 /// * `state` - Mutex guarding the client state.
 ///
 /// # Returns
 /// A guard for the client state.
+///
+/// # Panics
+/// Panics with `"client state lock poisoned"` when another thread panicked
+/// while holding the lock; a poisoned state cannot be trusted.
 pub(crate) fn lock_state(state: &Mutex<ClientState>) -> MutexGuard<'_, ClientState> {
-    state.lock().unwrap_or_else(PoisonError::into_inner)
+    state.lock().expect("client state lock poisoned")
 }
 
 /// Returns whether an owner id can be sent to the compositor.

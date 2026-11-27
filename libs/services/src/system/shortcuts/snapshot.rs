@@ -11,6 +11,10 @@ use crate::protocol::Bus;
 use super::error::ShortcutError;
 use super::transport::{await_response, connect_bus, into_entries, io_error, WM_PEER};
 
+/// Synthesized revision for bus snapshots: the compositor sends only a flat
+/// binding list, so there is no real revision to carry over.
+const SYNTHESIZED_REVISION: u64 = 1;
+
 /// Reads all registered bindings and synthesizes one manifest per owner.
 ///
 /// # Returns
@@ -96,7 +100,7 @@ pub(crate) fn group_manifests(
         .into_iter()
         .map(|(owner, bindings)| ShortcutManifest {
             owner,
-            revision: 1,
+            revision: SYNTHESIZED_REVISION,
             bindings,
         })
         .collect()

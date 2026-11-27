@@ -110,7 +110,7 @@ impl ThermalReader {
                         let label_file = file_name.replace("_input", "_label");
                         let label = fs::read_to_string(path.join(&label_file))
                             .map(|s| s.trim().to_string())
-                            .unwrap_or_else(|_| format!("{}_{}", hwmon_name, file_name));
+                            .unwrap_or_else(|_| format!("{hwmon_name}_{file_name}"));
 
                         if let Ok(temp_str) = fs::read_to_string(hw_entry.path()) {
                             if let Ok(m_deg) = temp_str.trim().parse::<f32>() {

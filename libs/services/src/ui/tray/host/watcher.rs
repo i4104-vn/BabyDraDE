@@ -1,8 +1,10 @@
 //! Tray host watcher.
 
+use std::sync::Mutex;
+
 use super::discovery::refresh;
 use super::registration::{register_watcher, request_watcher_name};
-use super::*;
+use super::{HostState, HOST_STATE, REFRESH_INTERVAL};
 
 pub(super) const WATCHER_XML: &str = r#"
 <node>

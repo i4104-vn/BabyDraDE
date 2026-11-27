@@ -6,8 +6,8 @@
 use std::fs;
 
 use super::{
-    is_virtual_interface, is_wifi_interface, parse_iw_link_ssid, parse_nmcli_active_ssid,
-    parse_iwgetid_output, sanitize_ssid,
+    is_virtual_interface, is_wifi_interface, parse_iw_link_ssid, parse_iwgetid_output,
+    parse_nmcli_active_ssid, sanitize_ssid,
 };
 
 #[test]
@@ -42,7 +42,10 @@ fn nmcli_only_uses_the_active_row() {
 #[test]
 fn nmcli_handles_colons_and_escaped_colons_in_ssids() {
     let output = "no:Other\nyes:Cafe\\: Wifi:5G\n";
-    assert_eq!(parse_nmcli_active_ssid(output), Some("Cafe: Wifi:5G".into()));
+    assert_eq!(
+        parse_nmcli_active_ssid(output),
+        Some("Cafe: Wifi:5G".into())
+    );
     assert_eq!(parse_nmcli_active_ssid("no:Only inactive\n"), None);
 }
 

@@ -3,7 +3,9 @@
 use std::collections::HashSet;
 
 use super::catalogue::{basename, push_unique, AppEntry};
-use super::resolve::{entry_for_executable_hints, entry_identity, resolve_identity, WindowIdentity};
+use super::resolve::{
+    entry_for_executable_hints, entry_identity, resolve_identity, WindowIdentity,
+};
 
 /// Do not follow an unbounded (or cyclic) `/proc/<pid>/status` PPid chain.
 const MAX_PARENT_DEPTH: usize = 8;

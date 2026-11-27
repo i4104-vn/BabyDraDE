@@ -11,8 +11,12 @@ use std::path::{Path, PathBuf};
 
 use crate::sensors::rotation::{Gravity, RotationDriver};
 
+/// Sysfs roots that may expose IIO accelerometer devices.
 const IIO_ROOTS: [&str; 2] = ["/sys/bus/iio/devices", "/sys/class/iio"];
+/// Standard gravity in m/s², used to normalize scaled `_raw` samples.
 const EARTH_GRAVITY: f64 = 9.80665;
+/// Row-major identity matrix used when the device exposes no mount matrix.
+const IDENTITY_MATRIX: [f64; 9] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
 
 /// Reads a numeric sysfs attribute.
 fn read_number(path: &Path) -> Option<f64> {
@@ -64,7 +68,7 @@ fn read_mount_matrix(path: &Path) -> [f64; 9] {
         .iter()
         .find_map(|name| std::fs::read_to_string(path.join(name)).ok())
         .and_then(|raw| parse_mount_matrix(&raw))
-        .unwrap_or([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
+        .unwrap_or(IDENTITY_MATRIX)
 }
 
 /// Applies a row-major 3x3 mount matrix to a 3-axis acceleration vector.

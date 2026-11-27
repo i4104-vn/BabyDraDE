@@ -1,5 +1,11 @@
 use std::fs;
 
+/// Conversion for the kB fields in `/proc/meminfo`, which are kibibytes.
+/// Changing it scales every byte count in [`MemoryInfo`].
+const BYTES_PER_KIB: u64 = 1024;
+/// Bytes in one MiB, used by the `*_mb()` helpers on [`MemoryInfo`].
+const BYTES_PER_MIB: u64 = 1024 * 1024;
+
 /// Memory and swap usage snapshot, in bytes and percentages.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct MemoryInfo {
@@ -23,7 +29,7 @@ impl MemoryInfo {
     /// # Returns
     /// `total_bytes` converted to MiB.
     pub fn total_mb(&self) -> u64 {
-        self.total_bytes / (1024 * 1024)
+        self.total_bytes / BYTES_PER_MIB
     }
 
     /// Returns used memory in megabytes.
@@ -31,7 +37,7 @@ impl MemoryInfo {
     /// # Returns
     /// `used_bytes` converted to MiB.
     pub fn used_mb(&self) -> u64 {
-        self.used_bytes / (1024 * 1024)
+        self.used_bytes / BYTES_PER_MIB
     }
 
     /// Returns available memory in megabytes.
@@ -39,7 +45,7 @@ impl MemoryInfo {
     /// # Returns
     /// `available_bytes` converted to MiB.
     pub fn available_mb(&self) -> u64 {
-        self.available_bytes / (1024 * 1024)
+        self.available_bytes / BYTES_PER_MIB
     }
 
     /// Returns total swap in megabytes.
@@ -47,7 +53,7 @@ impl MemoryInfo {
     /// # Returns
     /// `swap_total_bytes` converted to MiB.
     pub fn swap_total_mb(&self) -> u64 {
-        self.swap_total_bytes / (1024 * 1024)
+        self.swap_total_bytes / BYTES_PER_MIB
     }
 
     /// Returns used swap in megabytes.
@@ -55,7 +61,7 @@ impl MemoryInfo {
     /// # Returns
     /// `swap_used_bytes` converted to MiB.
     pub fn swap_used_mb(&self) -> u64 {
-        self.swap_used_bytes / (1024 * 1024)
+        self.swap_used_bytes / BYTES_PER_MIB
     }
 }
 
@@ -135,15 +141,15 @@ impl MemoryReader {
         };
 
         Some(MemoryInfo {
-            total_bytes: total_kb * 1024,
-            available_bytes: avail_kb * 1024,
-            used_bytes: used_kb * 1024,
-            free_bytes: free_kb * 1024,
-            buffers_bytes: buffers_kb * 1024,
-            cached_bytes: cached_kb * 1024,
-            swap_total_bytes: swap_total_kb * 1024,
-            swap_used_bytes: swap_used_kb * 1024,
-            swap_free_bytes: swap_free_kb * 1024,
+            total_bytes: total_kb * BYTES_PER_KIB,
+            available_bytes: avail_kb * BYTES_PER_KIB,
+            used_bytes: used_kb * BYTES_PER_KIB,
+            free_bytes: free_kb * BYTES_PER_KIB,
+            buffers_bytes: buffers_kb * BYTES_PER_KIB,
+            cached_bytes: cached_kb * BYTES_PER_KIB,
+            swap_total_bytes: swap_total_kb * BYTES_PER_KIB,
+            swap_used_bytes: swap_used_kb * BYTES_PER_KIB,
+            swap_free_bytes: swap_free_kb * BYTES_PER_KIB,
             used_percent: used_percent.clamp(0.0, 100.0),
             swap_percent: swap_percent.clamp(0.0, 100.0),
         })

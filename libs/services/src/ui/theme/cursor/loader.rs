@@ -16,9 +16,10 @@ mod png;
 
 use cursor_icon::CursorIcon;
 
-use super::{reader::get_cursor_theme_search_paths, xcursor::parse_xcursor, CursorImage};
+use super::{reader::cursor_theme_search_paths, xcursor::parse_xcursor, CursorImage};
 use png::parse_png;
 
+/// Maximum number of inherited themes followed while looking for a cursor image.
 const MAX_INHERIT_DEPTH: usize = 8;
 
 /// Loads the default pointer image for `theme`.
@@ -84,7 +85,7 @@ fn load_from_theme(
     hotspot_x: u32,
     hotspot_y: u32,
 ) -> Option<CursorImage> {
-    for dir in get_cursor_theme_search_paths()
+    for dir in cursor_theme_search_paths()
         .into_iter()
         .map(|base| base.join(theme).join("cursors"))
         .filter(|path| path.is_dir())
@@ -111,7 +112,7 @@ fn load_from_theme(
 
 /// Reads `Inherits=` from a theme's `index.theme` `[Icon Theme]` section.
 fn read_inherits(theme: &str) -> Vec<String> {
-    for base in get_cursor_theme_search_paths() {
+    for base in cursor_theme_search_paths() {
         let path = base.join(theme).join("index.theme");
         let Ok(content) = fs::read_to_string(path) else {
             continue;

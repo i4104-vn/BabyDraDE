@@ -11,7 +11,19 @@ use std::path::{Path, PathBuf};
 
 use crate::sensors::rotation::{Gravity, RotationDriver};
 
+/// `_IOC_READ | _IOC_WRITE`: the direction value of an ioctl request code.
+const IOC_READ_WRITE: u64 = 2;
+/// Bit position of the direction field in an ioctl request code.
+const IOC_DIR_SHIFT: u32 = 30;
+/// Bit position of the buffer-size field in an ioctl request code.
+const IOC_SIZE_SHIFT: u32 = 16;
+/// Bit position of the type field in an ioctl request code.
+const IOC_TYPE_SHIFT: u32 = 8;
+/// Base request number of the `EVIOCGABS(abs)` ioctl family.
+const EVIOCGABS_BASE: u16 = 0x40;
+
 const INPUT_CLASS_DIR: &str = "/sys/class/input";
+/// `INPUT_PROP_ACCELEROMETER` bit in a sysfs `properties` bitmask.
 const INPUT_PROP_ACCELEROMETER: u64 = 1 << 6;
 const ABS_X: u16 = 0x00;
 const ABS_Y: u16 = 0x01;
@@ -30,7 +42,10 @@ fn has_accelerometer_prop(raw: &str) -> bool {
 /// Computes the Linux `EVIOCGABS(abs)` ioctl request code.
 fn eviocgabs(abs: u16) -> libc::Ioctl {
     let size = std::mem::size_of::<libc::input_absinfo>() as libc::c_ulong;
-    let req = (2_u64 << 30) | (u64::from(size as u32) << 16) | (u64::from(b'E') << 8) | u64::from(0x40 + abs);
+    let req = (IOC_READ_WRITE << IOC_DIR_SHIFT)
+        | (u64::from(size as u32) << IOC_SIZE_SHIFT)
+        | (u64::from(b'E') << IOC_TYPE_SHIFT)
+        | u64::from(EVIOCGABS_BASE + abs);
     req as libc::Ioctl
 }
 

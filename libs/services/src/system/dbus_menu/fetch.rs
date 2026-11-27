@@ -1,10 +1,23 @@
 //! Fetching and activating D-Bus menu items.
 
+use std::borrow::Cow;
+
 use gio::glib::Variant;
 
 use super::atspi::{activate_atspi_action, atspi_bus_name, fetch_atspi_menu};
 use super::parse::parse_layout_variant;
 use super::{DbusMenuItem, MenuActionRef};
+
+/// How many lazy submenus are prepared before a fetch; bounds work on large menus.
+const SUBMENU_PREPARE_LIMIT: usize = 48;
+/// Timeout for the cheap layout probe used by discovery, in milliseconds.
+const PROBE_TIMEOUT_MS: i32 = 180;
+/// Timeout for a full layout fetch, in milliseconds.
+const FETCH_TIMEOUT_MS: i32 = 400;
+/// Timeout for an `AboutToShow` call, in milliseconds.
+const ABOUT_TO_SHOW_TIMEOUT_MS: i32 = 300;
+/// Timeout for an `Event` activation call, in milliseconds.
+const ACTIVATE_TIMEOUT_MS: i32 = 500;
 
 /// Fetches the hierarchical DBus menu from an application exporting `com.canonical.dbusmenu`
 pub fn fetch_dbus_menu(service: &str, path: &str) -> Option<Vec<DbusMenuItem>> {
@@ -28,7 +41,7 @@ pub fn fetch_dbus_menu_with_prepared_submenus(
 
     let mut submenu_ids = Vec::new();
     collect_submenu_ids(&initial_items, &mut submenu_ids);
-    for item_id in submenu_ids.into_iter().take(48) {
+    for item_id in submenu_ids.into_iter().take(SUBMENU_PREPARE_LIMIT) {
         // A few exporters do not implement AboutToShow. Their static layout remains usable.
         let _ = about_to_show_with_connection(&conn, service, path, item_id);
     }
@@ -41,7 +54,7 @@ pub fn fetch_dbus_menu_with_prepared_submenus(
 /// whole discovery pass.
 pub(super) fn probe_dbus_menu(service: &str, path: &str) -> Option<Vec<DbusMenuItem>> {
     let conn = gio::bus_get_sync(gio::BusType::Session, gio::Cancellable::NONE).ok()?;
-    let reply = get_layout(&conn, service, path, 180)?;
+    let reply = get_layout(&conn, service, path, PROBE_TIMEOUT_MS)?;
     parse_layout_reply(&reply)
 }
 
@@ -50,7 +63,7 @@ fn fetch_dbus_menu_with_connection(
     service: &str,
     path: &str,
 ) -> Option<Vec<DbusMenuItem>> {
-    let reply = get_layout(conn, service, path, 400)?;
+    let reply = get_layout(conn, service, path, FETCH_TIMEOUT_MS)?;
     parse_layout_reply(&reply)
 }
 
@@ -91,12 +104,12 @@ fn get_layout(
 
 fn parse_layout_reply(reply: &Variant) -> Option<Vec<DbusMenuItem>> {
     // Signature is (u(ia{sv}av)). A few exporters omit the revision argument.
-    let root_layout = match reply.n_children() {
+    let root_layout: Cow<'_, Variant> = match reply.n_children() {
         0 => return None,
-        1 => reply.child_value(0),
-        2 => reply.child_value(1),
-        _ if reply.child_value(0).get::<i32>().is_some() => reply.clone(),
-        _ => reply.child_value(1),
+        1 => Cow::Owned(reply.child_value(0)),
+        2 => Cow::Owned(reply.child_value(1)),
+        _ if reply.child_value(0).get::<i32>().is_some() => Cow::Borrowed(reply),
+        _ => Cow::Owned(reply.child_value(1)),
     };
     let root_item = parse_layout_variant(&root_layout)?;
     Some(root_item.children)
@@ -142,7 +155,7 @@ fn about_to_show_with_connection(
         Some(&params),
         None,
         gio::DBusCallFlags::NONE,
-        300,
+        ABOUT_TO_SHOW_TIMEOUT_MS,
         gio::Cancellable::NONE,
     )
     .is_ok()
@@ -178,7 +191,7 @@ pub fn activate_dbus_menu_item(service: &str, path: &str, item_id: i32) {
                 Some(&params),
                 None,
                 gio::DBusCallFlags::NONE,
-                500,
+                ACTIVATE_TIMEOUT_MS,
                 gio::Cancellable::NONE,
             );
         }

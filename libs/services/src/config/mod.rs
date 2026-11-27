@@ -3,6 +3,7 @@
 //! Main settings are kept in `~/.babydra/babydra.conf`. Subsystem settings are
 //! split into small files under `~/.babydra/configs/` (see [`settings`]).
 
+/// Cached icon positions with debounced writes to `configs/desktop.json`.
 pub mod desktop_layout;
 /// Serializable configuration models.
 pub mod models;
@@ -18,10 +19,9 @@ pub use settings::{
     invalidate_cache, load_autostart_config, load_babydra_config, load_blur_config,
     load_clipboard_config, load_cursor_config, load_desktop_config, load_display_config,
     load_display_config_from, load_gesture_config, load_lockscreen_config, load_mouse_config,
-    load_notification_config,
-    load_power_config, load_touchpad_config, load_wallpaper_config, save_autostart_config,
-    save_babydra_config, save_blur_config, save_clipboard_config, save_cursor_config,
-    save_desktop_config, save_display_config, save_gesture_config, save_lockscreen_config,
-    save_mouse_config, save_notification_config, save_power_config, save_touchpad_config,
-    save_wallpaper_config,
+    load_notification_config, load_power_config, load_touchpad_config, load_wallpaper_config,
+    save_autostart_config, save_babydra_config, save_blur_config, save_clipboard_config,
+    save_cursor_config, save_desktop_config, save_display_config, save_gesture_config,
+    save_lockscreen_config, save_mouse_config, save_notification_config, save_power_config,
+    save_touchpad_config, save_wallpaper_config,
 };

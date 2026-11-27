@@ -4,8 +4,7 @@ use std::collections::HashSet;
 
 use super::atspi::{encode_atspi_source, find_atspi_menubar};
 use super::discovery_helpers::{
-    find_dbusmenu_paths, find_registered_appmenus, get_connection_process_id,
-    service_matches_app_id,
+    connection_process_id, find_dbusmenu_paths, find_registered_appmenus, service_matches_app_id,
 };
 use super::fetch::probe_dbus_menu;
 use super::DbusMenuItem;
@@ -29,6 +28,8 @@ const CANDIDATE_PATHS: &[&str] = &[
 ];
 const MAX_SERVICES: usize = 18;
 const MAX_PATHS: usize = 16;
+/// Timeout for the `ListNames` call, in milliseconds.
+const LIST_NAMES_TIMEOUT_MS: i32 = 400;
 
 #[derive(Debug, Clone)]
 struct Candidate {
@@ -92,7 +93,7 @@ pub fn find_app_menu_service(app_id: &str, process_id: Option<u32>) -> Option<(S
             if result.is_better_than(best) {
                 best = Some(result);
                 best_service.clone_from(&candidate.service);
-                best_path = (*path).to_string();
+                best_path = path.to_string();
             }
         }
     }
@@ -142,7 +143,7 @@ fn list_bus_names(conn: &gio::DBusConnection) -> Vec<String> {
         None,
         None,
         gio::DBusCallFlags::NONE,
-        400,
+        LIST_NAMES_TIMEOUT_MS,
         gio::Cancellable::NONE,
     ) {
         Ok(reply) => reply,
@@ -182,7 +183,7 @@ fn build_candidates(
     // Unrelated registrations are excluded so an empty/wrong menu cannot win.
     for (service, path) in registered {
         let belongs_to_app = service_matches_app_id(service, app_id)
-            || process_id.is_some_and(|pid| get_connection_process_id(conn, service) == Some(pid));
+            || process_id.is_some_and(|pid| connection_process_id(conn, service) == Some(pid));
         if belongs_to_app {
             push(service.clone(), path.clone(), 0);
         }
@@ -212,7 +213,7 @@ fn build_candidates(
 
     if let Some(pid) = process_id {
         for name in names {
-            if get_connection_process_id(conn, name) == Some(pid) {
+            if connection_process_id(conn, name) == Some(pid) {
                 let priority = if name.starts_with(':') { 2 } else { 1 };
                 push(name.clone(), String::new(), priority);
             }

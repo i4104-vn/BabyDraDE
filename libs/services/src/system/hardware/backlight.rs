@@ -13,7 +13,6 @@ pub struct BacklightInfo {
 }
 
 /// Discovers and reads the system backlight device.
-/// Discovers and reads the system backlight device.
 #[derive(Debug, Default, Clone)]
 pub struct BacklightReader {
     device_path: Option<PathBuf>,
@@ -36,10 +35,6 @@ impl BacklightReader {
     ///
     /// # Returns
     /// A reader with the detected device cached, if any.
-    /// Creates a reader, probing `/sys/class/backlight` for a device.
-    ///
-    /// # Returns
-    /// A reader with the detected device cached, if any.
     pub fn new() -> Self {
         let device_path = Self::find_backlight_device();
         Self { device_path }
@@ -49,31 +44,16 @@ impl BacklightReader {
     ///
     /// # Returns
     /// The brightness snapshot, or `None` when no readable device exists.
-    /// Reads current brightness, re-probing if the cached device disappeared.
-    ///
-    /// # Returns
-    /// The brightness snapshot, or `None` when no readable device exists.
     pub fn read(&mut self) -> Option<BacklightInfo> {
-        let path = match self.device_path {
-            Some(ref p) if p.exists() => p.clone(),
-            _ => {
-                let found = Self::find_backlight_device()?;
-                self.device_path = Some(found.clone());
-                found
-            }
-        };
-
-        Self::read_device(&path)
+        if let Some(path) = self.device_path.as_ref().filter(|path| path.exists()) {
+            return Self::read_device(path);
+        }
+        let found = Self::find_backlight_device()?;
+        let info = Self::read_device(&found);
+        self.device_path = Some(found);
+        info
     }
 
-    /// Sets brightness to a percentage of the device maximum.
-    ///
-    /// # Arguments
-    /// * `target_percent` - Desired percentage, clamped to `0..=100`.
-    ///
-    /// # Errors
-    /// Returns an error when no device exists, sysfs cannot be read/written,
-    /// or `max_brightness` is zero.
     /// Sets brightness to a percentage of the device maximum.
     ///
     /// # Arguments
@@ -109,26 +89,26 @@ impl BacklightReader {
 
         tracing::warn!(
             "could not set brightness: sysfs and userspace tools all failed ({})",
-            sysfs_result.as_ref().err().map_or_else(
-                || "unknown error".to_string(),
-                |err| err.to_string()
-            )
+            sysfs_result
+                .as_ref()
+                .err()
+                .map_or_else(|| "unknown error".to_string(), |err| err.to_string())
         );
         sysfs_result
     }
 
     fn write_sysfs_brightness(&mut self, target_percent: u8) -> io::Result<()> {
-        let path = match self.device_path {
-            Some(ref p) if p.exists() => p.clone(),
-            _ => {
-                let found = Self::find_backlight_device().ok_or_else(|| {
-                    io::Error::new(io::ErrorKind::NotFound, "No backlight device found")
-                })?;
-                self.device_path = Some(found.clone());
-                found
-            }
-        };
+        if let Some(path) = self.device_path.as_ref().filter(|path| path.exists()) {
+            return Self::write_sysfs_brightness_at(path, target_percent);
+        }
+        let found = Self::find_backlight_device()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No backlight device found"))?;
+        let result = Self::write_sysfs_brightness_at(&found, target_percent);
+        self.device_path = Some(found);
+        result
+    }
 
+    fn write_sysfs_brightness_at(path: &Path, target_percent: u8) -> io::Result<()> {
         let max_str = fs::read_to_string(path.join("max_brightness"))?;
         let max_brightness: u64 = max_str
             .trim()

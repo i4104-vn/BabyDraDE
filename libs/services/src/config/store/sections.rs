@@ -1,9 +1,11 @@
 //! Typed section load/save helpers.
 
+use std::path::Path;
+
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::io::{read_doc, write_doc};
-use super::*;
+use super::{empty_doc, table_mut};
 
 /// Checks whether a TOML document contains the named section.
 ///

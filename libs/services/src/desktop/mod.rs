@@ -1,4 +1,5 @@
-//! Desktop shell data, file indexing, wallpaper and screenshots.
+//! Desktop shell data: application entries, bounded home indexing, screenshots,
+//! and wallpaper configuration, with the common paths re-exported here.
 
 /// Bounded home-directory index used by launcher search.
 pub mod files;
@@ -12,7 +13,10 @@ pub use crate::models::DesktopConfig;
 pub use files::{scan_home, FileEntry, MAX_DEPTH, MAX_ENTRIES, SKIP_DIRS};
 pub use screenshot::{copy_to_clipboard, get_screenshot_path, notify, save_png};
 use std::path::PathBuf;
-pub use wallpaper::*;
+pub use wallpaper::{
+    get_default_wallpaper_bytes, get_wallpaper, get_wallpaper_dir, set_wallpaper, WallpaperMode,
+    DEFAULT_WALLPAPER_BYTES,
+};
 
 /// Parsed `.desktop` application entry.
 #[derive(Debug, Clone, PartialEq)]

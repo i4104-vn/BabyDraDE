@@ -1,5 +1,12 @@
 use std::fs;
 
+/// Seconds in a civil day (24 × 60 × 60); changes the day component of labels.
+const SECONDS_PER_DAY: u64 = 86_400;
+/// Seconds in an hour; changes the hour component of uptime labels.
+const SECONDS_PER_HOUR: u64 = 3_600;
+/// Seconds in a minute; changes the minute component of uptime labels.
+const SECONDS_PER_MINUTE: u64 = 60;
+
 /// System uptime and hostname information.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UptimeInfo {
@@ -71,9 +78,9 @@ impl UptimeReader {
     /// # Returns
     /// A string such as `"2d 3h 4m"`, `"3h 4m"` or `"4m"`.
     pub fn format_uptime(total_seconds: u64) -> String {
-        let days = total_seconds / 86400;
-        let hours = (total_seconds % 86400) / 3600;
-        let minutes = (total_seconds % 3600) / 60;
+        let days = total_seconds / SECONDS_PER_DAY;
+        let hours = (total_seconds % SECONDS_PER_DAY) / SECONDS_PER_HOUR;
+        let minutes = (total_seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE;
 
         match (days, hours) {
             (d, h) if d > 0 => format!("{d}d {h}h {minutes}m"),

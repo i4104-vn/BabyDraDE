@@ -1,5 +1,6 @@
 //! Parsing raw D-Bus menu layout variants.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use gio::glib::Variant;
@@ -57,10 +58,10 @@ pub(super) fn is_submenu_display(value: &str) -> bool {
 }
 
 pub(super) fn parse_layout_variant(var: &Variant) -> Option<DbusMenuItem> {
-    let actual_var = if var.is_container() && var.type_().as_str() == "v" {
-        var.child_value(0)
+    let actual_var: Cow<'_, Variant> = if var.is_container() && var.type_().as_str() == "v" {
+        Cow::Owned(var.child_value(0))
     } else {
-        var.clone()
+        Cow::Borrowed(var)
     };
 
     if actual_var.n_children() < 3 {
