@@ -22,6 +22,24 @@ pub struct Bus {
     pub(crate) reader: Mutex<Option<JoinHandle<()>>>,
 }
 
+impl std::fmt::Debug for Bus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Bus")
+            .field("name", &self.name)
+            .field(
+                "reader_active",
+                &self.reader.lock().is_ok_and(|guard| guard.is_some()),
+            )
+            .finish_non_exhaustive()
+    }
+}
+
+impl Drop for Bus {
+    fn drop(&mut self) {
+        self.shutdown();
+    }
+}
+
 impl Bus {
     /// Connects to the router, completes the handshake and starts the reader.
     ///
