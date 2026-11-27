@@ -3,7 +3,7 @@
 //! GPU device opening, DRM/GBM setup, EGL and renderer creation.
 
 use std::error::Error;
-use std::path::PathBuf;
+use std::path::Path;
 
 use smithay::{
     backend::{
@@ -34,7 +34,7 @@ use crate::infra::models::{GpuActivation, GpuContext, GpuInitResult, SurfaceData
 ///
 /// # Returns
 /// `Some(GpuContext)` when every initialization stage succeeds, `None` otherwise.
-pub(crate) fn open_gpu(path: &PathBuf, session: &mut LibSeatSession) -> Option<GpuContext> {
+pub(crate) fn open_gpu(path: &Path, session: &mut LibSeatSession) -> Option<GpuContext> {
     let owned_fd = match session.open(path, OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOCTTY) {
         Ok(fd) => fd,
         Err(err) => {
@@ -66,7 +66,9 @@ pub(crate) fn open_gpu(path: &PathBuf, session: &mut LibSeatSession) -> Option<G
     let allocator = GbmAllocator::new(gbm_device.clone(), GbmBufferFlags::RENDERING);
     let exporter = GbmFramebufferExporter::new(gbm_device.clone(), None);
 
-    // SAFETY: Backend surface and renderer stay alive for this call.
+    // SAFETY: `gbm_device` is kept alive by the local binding and by
+    // `GpuContext` for as long as the returned EGLDisplay uses it, and this
+    // thread is the only one making the new context current here.
     let egl_display = match unsafe { EGLDisplay::new(gbm_device.clone()) } {
         Ok(disp) => disp,
         Err(err) => {
@@ -85,7 +87,8 @@ pub(crate) fn open_gpu(path: &PathBuf, session: &mut LibSeatSession) -> Option<G
         }
     };
 
-    // SAFETY: Backend surface and renderer stay alive for this call.
+    // SAFETY: `egl_context` is moved into the renderer, which keeps it alive;
+    // GL calls happen on the thread that owns the current EGL context.
     let renderer = match unsafe { GlowRenderer::new(egl_context) } {
         Ok(ren) => ren,
         Err(err) => {
@@ -100,7 +103,7 @@ pub(crate) fn open_gpu(path: &PathBuf, session: &mut LibSeatSession) -> Option<G
         .collect();
 
     Some(GpuContext {
-        path: path.clone(),
+        path: path.to_path_buf(),
         drm_device,
         drm_notifier,
         gbm_device,
@@ -121,7 +124,7 @@ pub(crate) fn open_gpu(path: &PathBuf, session: &mut LibSeatSession) -> Option<G
 /// # Returns
 /// `Some(GpuActivation)` when at least one display surface was created, `None` otherwise.
 pub(crate) fn try_init_gpu(
-    path: &PathBuf,
+    path: &Path,
     session: &mut LibSeatSession,
     data: &mut CalloopData,
 ) -> Option<GpuActivation> {

@@ -43,8 +43,10 @@ fn sample_dmabuf_color(window: &Window) -> Option<[f64; 3]> {
                 smithay::backend::allocator::dmabuf::DmabufMappingMode::READ,
             )
             .ok()?;
+        // SAFETY: `mapping` owns the mmap for plane 0; `ptr` is non-null and
+        // `length()` bytes remain readable until `mapping` is dropped at the
+        // end of this closure, which outlives the `pixels` slice below.
         let pixels =
-            // SAFETY: Pointer and lifetime invariants were verified at this call site.
             unsafe { std::slice::from_raw_parts(mapping.ptr() as *const u8, mapping.length()) };
         representative_color(pixels, size.w, size.h, stride, format)
     })
@@ -61,7 +63,9 @@ fn sample_shm_color(window: &Window) -> Option<[f64; 3]> {
         let buffer = state.buffer()?;
         smithay::wayland::shm::with_buffer_contents(buffer, |ptr, len, data| {
             let format = smithay::wayland::shm::shm_format_to_fourcc(data.format)?;
-            // SAFETY: Pointer and lifetime invariants were verified at this call site.
+            // SAFETY: Smithay's `with_buffer_contents` keeps the SHM mapping
+            // alive and guarantees `ptr[..len]` is valid for this closure only;
+            // `pixels` does not escape it.
             let pixels = unsafe { std::slice::from_raw_parts(ptr, len) };
             representative_color(
                 pixels,

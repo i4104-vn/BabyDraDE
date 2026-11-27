@@ -1,4 +1,6 @@
-// calloop's level event source requires an unsafe callback signature.
+// The OpenGL blur helpers in `modules::blur` use `unsafe fn` bodies that bundle
+// several glow calls; keep the lint relaxed until those helpers are migrated.
+// Narrowing this attribute requires editing those out-of-scope modules.
 #![allow(unsafe_op_in_unsafe_fn)]
 #![allow(clippy::items_after_test_module, clippy::module_inception)]
 //! BabyDraDE compositor library.
