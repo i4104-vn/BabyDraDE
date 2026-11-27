@@ -4,7 +4,13 @@
 //! that does not exist in the BabyDraDE workspace yet. This module keeps the
 //! exact API surface used by the island feature/UI so the full recorder
 //! controls are present; until a backend is wired in it reports an idle
-//! session and the action calls are safe no-ops.
+//! session and the action calls are safe, explicit failures.
+//!
+//! The idle results are deliberate placeholders, not runtime failures: every
+//! reader returns "not recording" and every mutating action returns
+//! [`RecordingError`]. The background poller (`super::polling`) therefore
+//! publishes an idle snapshot forever. When a recorder backend is added, only
+//! this adapter needs to change; the feature and UI can stay as they are.
 
 use std::path::PathBuf;
 

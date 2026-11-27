@@ -135,6 +135,10 @@ impl IslandFeature for RecordingFeature {
     }
 
     fn tick(&mut self, ctx: &IslandCtx) {
+        // The recorder backend is still a stub (see `service::recording`), so
+        // this direct check is currently constant-time. Once a real backend
+        // exists, prefer the polled `self.state` snapshot to avoid doing IPC
+        // work on every 250 ms arbitration tick.
         let is_recording = service::is_recording();
         let mut state = self.state.borrow().clone();
         if !is_recording {

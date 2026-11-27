@@ -1,4 +1,10 @@
-//! Calendar & Notifications dropdown window controller
+//! Calendar & Notifications dropdown window controller.
+//!
+//! The notifications drawer is intentionally a placeholder for now: no
+//! notification store is wired into the topbar yet, so it always renders the
+//! "no notifications" label and "Clear All" simply re-renders that empty
+//! state. The date header uses the current locale keys when available and a
+//! fixed `chrono` fallback otherwise.
 
 pub mod render {
     //! UI construction for the dropdown calendar window.
@@ -144,6 +150,9 @@ fn format_current_date() -> String {
 }
 
 /// Sets up notifications list inside the drawer.
+///
+/// Placeholder implementation: until a notification source exists the list
+/// only shows the empty-state label, and the clear button restores that state.
 fn setup_notifications_list(notif_stack: &gtk4::Box, clear_btn: &gtk4::Button) {
     let stack_c = notif_stack.clone();
 
