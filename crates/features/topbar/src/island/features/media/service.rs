@@ -25,7 +25,9 @@ pub fn format_time(secs: f64) -> String {
 /// Spawns the polling thread and returns the shared main-thread cache.
 pub fn spawn_playerctl_polling() -> Rc<RefCell<Option<String>>> {
     let cache = Rc::new(RefCell::new(None));
-    let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel::<Option<String>>();
+    // Bounded: only one pending sample, so a stalled main loop cannot accumulate
+    // one `playerctl` result per second indefinitely.
+    let (sender, mut receiver) = tokio::sync::mpsc::channel::<Option<String>>(1);
 
     std::thread::Builder::new()
         .name("island-playerctl-poll".into())
@@ -39,7 +41,7 @@ pub fn spawn_playerctl_polling() -> Rc<RefCell<Option<String>>> {
                     let line = String::from_utf8_lossy(&out.stdout).trim().to_string();
                     (!line.is_empty()).then_some(line)
                 });
-            if sender.send(metadata).is_err() {
+            if sender.try_send(metadata).is_err() && sender.is_closed() {
                 break;
             }
             std::thread::sleep(Duration::from_millis(1000));
@@ -49,7 +51,11 @@ pub fn spawn_playerctl_polling() -> Rc<RefCell<Option<String>>> {
     let main_cache = cache.clone();
     glib::MainContext::default().spawn_local(async move {
         while let Some(metadata) = receiver.recv().await {
-            *main_cache.borrow_mut() = metadata;
+            let mut latest = metadata;
+            while let Ok(newer) = receiver.try_recv() {
+                latest = newer;
+            }
+            *main_cache.borrow_mut() = latest;
         }
     });
 
