@@ -30,7 +30,14 @@ pub(crate) fn spawn(event_loop: &mut EventLoop<'_, CalloopData>) {
     }
     // Reading a sensor can block for seconds on a stalled proxy; keep it off
     // the event loop so input and rendering stay responsive.
-    let mut controller = AutoRotate::new(RotationWorker::spawn(manager));
+    let worker = match RotationWorker::spawn(manager) {
+        Ok(worker) => worker,
+        Err(err) => {
+            tracing::warn!("cannot start auto-rotate worker: {err}");
+            return;
+        }
+    };
+    let mut controller = AutoRotate::new(worker);
     tracing::info!(driver = controller.driver_name(), "auto-rotate enabled");
 
     if let Err(err) = event_loop.handle().insert_source(

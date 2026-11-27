@@ -76,6 +76,7 @@ mod tests {
     use super::{AutoRotate, RotationDriver, RotationTarget, Transform};
     use services::sensors::rotation::Gravity;
 
+    #[derive(Debug)]
     struct Source {
         readings: Vec<Option<Gravity>>,
         index: usize,
