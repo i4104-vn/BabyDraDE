@@ -121,6 +121,9 @@ impl std::error::Error for CodecError {}
 #[derive(Debug, Default)]
 pub struct LineBuffer {
     pending: Vec<u8>,
+    /// Set after an oversized unterminated prefix: bytes are skipped until the
+    /// next newline so the connection can resynchronise with the next frame.
+    discarding: bool,
 }
 
 impl LineBuffer {
@@ -136,17 +139,56 @@ impl LineBuffer {
     ///
     /// # Errors
     /// Returns [`CodecError::TooLarge`] when the buffer would exceed the frame
-    /// limit. The buffer is left unchanged in that case.
+    /// limit. Buffered complete lines are preserved; an oversized unterminated
+    /// prefix is skipped up to the next newline so later frames can still be read.
     pub fn push(&mut self, bytes: &[u8]) -> Result<(), CodecError> {
-        let size = self.pending.len().saturating_add(bytes.len());
-        if size > MAX_FRAME_BYTES {
-            return Err(CodecError::TooLarge {
-                size,
-                limit: MAX_FRAME_BYTES,
-            });
+        let mut rest = bytes;
+        let mut result = Ok(());
+
+        while !rest.is_empty() {
+            if self.discarding {
+                // Skip the remainder of the oversized frame, including its newline.
+                match rest.iter().position(|byte| *byte == b'\n') {
+                    Some(end) => {
+                        self.discarding = false;
+                        rest = &rest[end + 1..];
+                    }
+                    None => return result,
+                }
+                continue;
+            }
+
+            // Work one newline at a time so a rejected frame cannot poison the
+            // complete lines that follow it in the same read.
+            let (chunk, tail) = match rest.iter().position(|byte| *byte == b'\n') {
+                Some(end) => (&rest[..=end], &rest[end + 1..]),
+                None => (rest, &[][..]),
+            };
+            let size = self.pending.len().saturating_add(chunk.len());
+            if size > MAX_FRAME_BYTES {
+                result = Err(CodecError::TooLarge {
+                    size,
+                    limit: MAX_FRAME_BYTES,
+                });
+                if chunk.last() == Some(&b'\n') {
+                    // The oversized line is complete: drop it and keep reading.
+                    // An unterminated prefix already in the buffer belongs to
+                    // that same frame; complete lines queued before it stay.
+                    if !self.pending.contains(&b'\n') {
+                        self.pending.clear();
+                    }
+                    rest = tail;
+                    continue;
+                }
+                // Unterminated oversized prefix: wait for its newline in a
+                // later read before accepting any new bytes.
+                self.discarding = true;
+                return result;
+            }
+            self.pending.extend_from_slice(chunk);
+            rest = tail;
         }
-        self.pending.extend_from_slice(bytes);
-        Ok(())
+        result
     }
 
     /// Removes and returns the next complete line, without its terminator.
@@ -246,5 +288,47 @@ mod tests {
         let chunk = vec![b'x'; MAX_FRAME_BYTES];
         let _ = buffer.push(&chunk);
         assert_eq!(buffer.take_line(), Some(b"ok".to_vec()));
+    }
+
+    #[test]
+    fn resynchronises_after_an_oversized_unterminated_frame() {
+        let mut buffer = LineBuffer::new();
+        let oversized = vec![b'x'; MAX_FRAME_BYTES + 1];
+        assert!(matches!(
+            buffer.push(&oversized),
+            Err(CodecError::TooLarge { .. })
+        ));
+        // The terminator of the rejected frame must not poison the next one.
+        assert_eq!(buffer.push(b"\n"), Ok(()));
+        assert_eq!(buffer.take_line(), None);
+        assert_eq!(buffer.push(b"next\n"), Ok(()));
+        assert_eq!(buffer.take_line(), Some(b"next".to_vec()));
+    }
+
+    #[test]
+    fn terminator_after_a_full_buffer_does_not_stall_the_stream() {
+        let mut buffer = LineBuffer::new();
+        // A frame exactly at the buffer limit leaves no room for its newline.
+        let full = vec![b'x'; MAX_FRAME_BYTES];
+        assert_eq!(buffer.push(&full), Ok(()));
+        assert!(matches!(
+            buffer.push(b"\n"),
+            Err(CodecError::TooLarge { .. })
+        ));
+        assert_eq!(buffer.push(b"good\n"), Ok(()));
+        assert_eq!(buffer.take_line(), Some(b"good".to_vec()));
+    }
+
+    #[test]
+    fn resynchronises_when_an_oversized_frame_arrives_with_its_newline() {
+        let mut buffer = LineBuffer::new();
+        let mut oversized = vec![b'x'; MAX_MESSAGE_BYTES + 1];
+        oversized.push(b'\n');
+        assert!(matches!(
+            buffer.push(&oversized),
+            Err(CodecError::TooLarge { .. })
+        ));
+        assert_eq!(buffer.push(b"good\n"), Ok(()));
+        assert_eq!(buffer.take_line(), Some(b"good".to_vec()));
     }
 }

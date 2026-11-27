@@ -49,22 +49,27 @@ impl PowerAction {
     /// Uses `systemctl` for shutdown, reboot and suspend. Logout terminates the
     /// current `XDG_SESSION_ID`, falling back to `pkill -f babydrade` when no
     /// session id is available.
-    pub fn execute(self) {
+    ///
+    /// # Errors
+    /// Returns the spawn error when the corresponding system command cannot be
+    /// started, so callers can log or report the failure.
+    pub fn execute(self) -> std::io::Result<()> {
         if let Some(arg) = self.systemctl_arg() {
-            let _ = std::process::Command::new("systemctl").arg(arg).spawn();
-            return;
+            std::process::Command::new("systemctl").arg(arg).spawn()?;
+            return Ok(());
         }
 
         let session = std::env::var("XDG_SESSION_ID").unwrap_or_default();
         if session.is_empty() {
-            let _ = std::process::Command::new("pkill")
+            std::process::Command::new("pkill")
                 .args(["-f", "babydrade"])
-                .spawn();
+                .spawn()?;
         } else {
-            let _ = std::process::Command::new("loginctl")
+            std::process::Command::new("loginctl")
                 .args(["terminate-session", &session])
-                .spawn();
+                .spawn()?;
         }
+        Ok(())
     }
 }
 

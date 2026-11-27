@@ -3,7 +3,7 @@
 //! This module stays presentation-agnostic; translated labels are added at the
 //! call site.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -196,12 +196,12 @@ impl FileDialogResult {
         }
     }
 
-    /// Returns the first chosen path, if any.
-    pub fn single_path(&self) -> Option<&PathBuf> {
+    /// Returns the first chosen path, if any, without exposing the storage type.
+    pub fn single_path(&self) -> Option<&Path> {
         if self.cancelled {
             None
         } else {
-            self.paths.first()
+            self.paths.first().map(PathBuf::as_path)
         }
     }
 }

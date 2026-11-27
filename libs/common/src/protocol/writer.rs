@@ -21,15 +21,20 @@ static WRITER_SEED: AtomicU64 = AtomicU64::new(0);
 
 /// Locks a mutex, recovering from a poisoned lock instead of panicking.
 ///
+/// Recovery matters for the shared socket writer: a panic while holding it
+/// must not deadlock every later frame. The event is reported so the upstream
+/// panic remains visible.
+///
 /// # Arguments
 /// * `mutex` - Mutex to acquire.
 ///
 /// # Returns
 /// A guard for the locked value.
 pub fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
+    mutex.lock().unwrap_or_else(|poisoned| {
+        eprintln!("recovering a poisoned bus writer mutex after a panic");
+        poisoned.into_inner()
+    })
 }
 
 /// Serializes a message body into the JSON payload of an envelope.

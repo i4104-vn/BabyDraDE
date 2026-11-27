@@ -60,19 +60,6 @@ impl From<String> for Target {
     }
 }
 
-impl From<&String> for Target {
-    /// Clones a borrowed name into a direct peer target.
-    ///
-    /// # Arguments
-    /// * `name` - Name of the target peer.
-    ///
-    /// # Returns
-    /// A [`Target::Peer`] address.
-    fn from(name: &String) -> Self {
-        Self::Peer(name.clone())
-    }
-}
-
 /// Semantic class of one envelope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
