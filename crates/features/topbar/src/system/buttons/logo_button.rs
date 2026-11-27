@@ -38,8 +38,16 @@ impl LogoButton {
                 .item("About BabyDraDE", "info", || {})
                 .item("System Settings", "settings", || {})
                 .separator()
-                .item("Restart", "refresh", || PowerAction::Reboot.execute())
-                .item("Shut Down...", "power", || PowerAction::Shutdown.execute()),
+                .item("Restart", "refresh", || {
+                    if let Err(error) = PowerAction::Reboot.execute() {
+                        tracing::warn!("cannot restart: {error}");
+                    }
+                })
+                .item("Shut Down...", "power", || {
+                    if let Err(error) = PowerAction::Shutdown.execute() {
+                        tracing::warn!("cannot shut down: {error}");
+                    }
+                }),
         );
 
         let click = GestureClick::new();

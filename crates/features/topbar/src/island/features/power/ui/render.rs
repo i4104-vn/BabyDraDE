@@ -20,6 +20,8 @@ pub fn highlight_selection(popover: &PowerPopover, selected_index: usize) {
 pub fn execute_power_action(index: usize, popover: &PowerPopover) {
     popover.popdown();
     if let Some(action) = PowerAction::from_index(index) {
-        action.execute();
+        if let Err(error) = action.execute() {
+            tracing::warn!("cannot execute power action {index}: {error}");
+        }
     }
 }
