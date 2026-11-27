@@ -3,7 +3,7 @@
 pub mod builder;
 pub mod items;
 
-pub use builder::{dismiss_all, set_visibility_hook, ContextMenu, ContextMenuBuilder};
+pub use builder::{any_open, dismiss_all, set_visibility_hook, ContextMenu, ContextMenuBuilder};
 pub use items::{
     create_danger_btn, create_danger_item, create_footer_box, create_footer_btn,
     create_group_header, create_menu_box, create_menu_for, create_menu_full, create_menu_item,

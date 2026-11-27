@@ -6,7 +6,8 @@ use services::system::volume::{get_active_output_name, get_volume_state, set_mut
 use std::cell::Cell;
 use std::rc::Rc;
 use ui_kit::components::overlay::{
-    fit_popover, max_popover_height, max_popover_width, CrossAlign, ANCHOR_GAP, EDGE_MARGIN,
+    fit_popover_with_policy, max_popover_height, max_popover_width, CrossAlign, FitPolicy,
+    ANCHOR_GAP, EDGE_MARGIN,
 };
 use ui_kit::components::{create_popover, create_slider_header, PillSlider};
 use ui_kit::icons::{get_icon, get_icon_colored, set_image_from_icon};
@@ -109,7 +110,9 @@ pub fn create_volume_row(
     // Audio devices popover. The button sits at the right edge of the panel,
     // so start with a right-side preference; the fitter flips it to the left
     // when there is not enough room. `End` alignment makes it grow upwards
-    // from the button, leaving the sliders below uncovered.
+    // from the button, leaving the sliders below uncovered. The fitter's
+    // pointing-rect math keeps the popup beside the button (never on top of
+    // its icon) and clamps it to the monitor on either side.
     let popover = create_popover(&menu_btn, gtk4::PositionType::Right, "audio-menu-popover");
     let side_padding = 8;
     let max_width = max_popover_width(menu_btn.upcast_ref::<gtk4::Widget>(), EDGE_MARGIN)
@@ -174,12 +177,13 @@ pub fn create_volume_row(
             scrolled_c.set_max_content_width(width.min(max_width));
             dev_box_c.set_size_request(width.saturating_sub(side_padding).min(240).max(1), -1);
         }
-        fit_popover(
+        fit_popover_with_policy(
             &popover_c,
             gtk4::PositionType::Right,
             CrossAlign::End,
             EDGE_MARGIN,
             ANCHOR_GAP,
+            FitPolicy::Flip,
         );
         popover_c.popup();
         if let Some(ref cb) = on_popover_toggled_c {

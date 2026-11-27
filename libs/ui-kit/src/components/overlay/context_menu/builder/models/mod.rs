@@ -36,6 +36,29 @@ pub fn dismiss_all() {
     }
 }
 
+/// Returns whether any registered context menu is currently visible.
+///
+/// Read-only and side-effect free: consumers (for example an expanded tray)
+/// can keep their own surface open while a menu is active. This never pops
+/// menus down or mutates the registry.
+pub fn any_open() -> bool {
+    OPEN_MENUS.with(|menus| menus.borrow().iter().any(|menu| menu.is_visible()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn any_open_reads_registry_without_mutating_it() {
+        let before = OPEN_MENUS.with(|menus| menus.borrow().len());
+        let expected = OPEN_MENUS.with(|menus| menus.borrow().iter().any(|m| m.is_visible()));
+        assert_eq!(any_open(), expected);
+        assert_eq!(any_open(), expected);
+        assert_eq!(OPEN_MENUS.with(|menus| menus.borrow().len()), before);
+    }
+}
+
 /// Adds the shared hover highlight to a menu row. The CSS class works even
 /// when a system theme overrides the `:hover` pseudo-class.
 pub(super) fn wire_row_hover(btn: &Button) {
@@ -62,6 +85,9 @@ pub struct ContextMenu {
     pub(super) footer_box: Option<Box>,
     pub(super) active_subpopover: Rc<RefCell<Option<Popover>>>,
     pub(super) ancestor_popovers: Vec<Popover>,
+    /// Pointer coordinates (parent-widget space) for menus opened at `(x, y)`
+    /// instead of at a whole widget. `popup()` fits around this point when set.
+    pub(super) pointer_point: Option<(f64, f64)>,
 }
 
 pub type ContextMenuBuilder = ContextMenu;

@@ -93,6 +93,7 @@ impl ContextMenu {
             footer_box: None,
             active_subpopover: Rc::new(RefCell::new(None)),
             ancestor_popovers: all_ancestors,
+            pointer_point: None,
         };
 
         let sub_built = build_sub(sub_builder);

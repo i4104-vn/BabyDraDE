@@ -2,7 +2,10 @@
 
 use super::models::{notify_visibility, wire_row_hover};
 use super::*;
-use crate::components::overlay::popup_fit;
+use crate::components::overlay::{
+    fit_popover_at_point, popup_fit_below, CrossAlign, FitPolicy, ScreenRect, ANCHOR_GAP,
+    EDGE_MARGIN,
+};
 
 impl ContextMenu {
     /// Appends an arbitrary widget into the menu container.
@@ -17,9 +20,27 @@ impl ContextMenu {
     pub fn container(&self) -> &Box {
         &self.vbox
     }
-    /// Displays the context menu immediately, keeping it inside the monitor.
+    /// Displays the context menu immediately.
+    ///
+    /// Widget-anchored menus (topbar/tray/app icons) open strictly below their
+    /// anchor and are clamped/shrunk instead of flipping over the icon. Menus
+    /// opened at pointer coordinates are fitted around that point with the
+    /// usual flip policy.
     pub fn popup(&self) {
-        popup_fit(&self.popover, self.popover.position());
+        if let Some((x, y)) = self.pointer_point {
+            fit_popover_at_point(
+                &self.popover,
+                ScreenRect::new(x as i32, y as i32, 1, 1),
+                gtk4::PositionType::Bottom,
+                CrossAlign::Start,
+                EDGE_MARGIN,
+                ANCHOR_GAP,
+                FitPolicy::Flip,
+            );
+            self.popover.popup();
+        } else {
+            popup_fit_below(&self.popover);
+        }
         notify_visibility(true);
     }
     /// Dismisses the context menu.

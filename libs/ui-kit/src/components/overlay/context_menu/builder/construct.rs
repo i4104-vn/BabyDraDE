@@ -7,7 +7,11 @@ use crate::components::overlay::{max_popover_height, max_popover_width, EDGE_MAR
 impl ContextMenu {
     /// Starts building a context menu attached to `parent`.
     pub fn new(parent: &impl IsA<gtk4::Widget>) -> Self {
-        let popover = Popover::builder().has_arrow(false).autohide(true).build();
+        let popover = Popover::builder()
+            .has_arrow(false)
+            .autohide(true)
+            .position(PositionType::Bottom)
+            .build();
         popover.set_parent(parent.as_ref());
         popover.add_css_class("context-menu-popover");
         popover.add_css_class("explore-popover");
@@ -62,12 +66,14 @@ impl ContextMenu {
             footer_box: None,
             active_subpopover,
             ancestor_popovers: Vec::new(),
+            pointer_point: None,
         }
     }
     /// Positions the popover at exact pointer `(x, y)` coordinates.
     pub fn at_coords(parent: &impl IsA<gtk4::Widget>, x: f64, y: f64) -> Self {
-        let menu = Self::new(parent);
+        let mut menu = Self::new(parent);
         menu.popover.set_has_arrow(false);
+        menu.pointer_point = Some((x, y));
         let rect = gtk4::gdk::Rectangle::new(x as i32, y as i32, 1, 1);
         menu.popover.set_pointing_to(Some(&rect));
         menu

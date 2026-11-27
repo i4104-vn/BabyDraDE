@@ -11,4 +11,4 @@ mod items;
 mod models;
 mod widget;
 
-pub use models::{dismiss_all, set_visibility_hook, ContextMenu, ContextMenuBuilder};
+pub use models::{any_open, dismiss_all, set_visibility_hook, ContextMenu, ContextMenuBuilder};
