@@ -7,7 +7,7 @@ use super::paths::{
     get_desktop_config_path, get_display_config_path, get_input_config_path,
     get_lockscreen_config_path,
 };
-use super::setup::{save_root_or_log, save_section_or_log};
+use super::setup::{save_root, save_root_or_log, save_section_or_log};
 use crate::config::store;
 use crate::models::{
     AutostartConfig, BabyDraConfig, BlurConfig, ClipboardConfig, CursorConfig, DesktopConfig,
@@ -153,10 +153,15 @@ pub fn load_wallpaper_config() -> WallpaperConfig {
 }
 
 /// Persists `[wallpaper]` into the main config.
-pub fn save_wallpaper_config(wallpaper: &WallpaperConfig) {
+///
+/// # Errors
+/// Returns an error when the main config cannot be written; unlike the other
+/// `save_*` helpers this one is fallible because callers may promise that the
+/// change has been persisted.
+pub fn save_wallpaper_config(wallpaper: &WallpaperConfig) -> std::io::Result<()> {
     let mut config = load_babydra_config();
     config.wallpaper = wallpaper.clone();
-    save_babydra_config(&config);
+    save_root(&get_conf_path(), &config)
 }
 
 /// Loads `[notification]` from the main config.

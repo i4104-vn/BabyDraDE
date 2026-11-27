@@ -164,9 +164,17 @@ fn ensure_section<T: Serialize>(path: &Path, section: &str, default: &T) {
 }
 
 pub(super) fn save_root_or_log<T: Serialize>(path: &Path, value: &T, label: &str) {
-    if let Err(err) = store::save_root_preserving_unknown(path, value) {
+    if let Err(err) = save_root(path, value) {
         eprintln!("failed to save {label} config {}: {err}", path.display());
     }
+}
+
+/// Persists a typed root document without discarding unknown keys.
+///
+/// Unlike [`save_root_or_log`], this returns the I/O result so callers that
+/// promise persistence can propagate failures.
+pub(super) fn save_root<T: Serialize>(path: &Path, value: &T) -> std::io::Result<()> {
+    store::save_root_preserving_unknown(path, value)
 }
 
 pub(super) fn save_section_or_log<T: Serialize>(path: &Path, section: &str, value: &T) {

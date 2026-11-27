@@ -98,7 +98,7 @@ pub fn set_wallpaper(source_path: &Path) -> Result<PathBuf, std::io::Error> {
     let mut wallpaper = crate::config::load_wallpaper_config();
     wallpaper.current = target_path.to_string_lossy().to_string();
     wallpaper.mode = mode.to_string();
-    crate::config::save_wallpaper_config(&wallpaper);
+    crate::config::save_wallpaper_config(&wallpaper)?;
 
     Ok(target_path)
 }
