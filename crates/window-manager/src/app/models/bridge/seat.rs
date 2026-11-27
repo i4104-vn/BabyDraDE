@@ -18,8 +18,8 @@ use smithay::{
     utils::{Logical, Point, Serial},
 };
 
-use crate::shared::ports::SeatSink;
 use crate::app::models::runtime::BabydraState;
+use crate::shared::ports::SeatSink;
 
 impl SeatSink for BabydraState {
     fn has_keyboard(&self) -> bool {

@@ -8,8 +8,8 @@ use smithay::{
     utils::{Buffer, Physical, Point, Rectangle, Scale, Transform},
 };
 
-use std::borrow::Borrow;
 use smithay::backend::renderer::gles::GlesFrame;
+use std::borrow::Borrow;
 
 pub(crate) use super::models::BlurRenderElement;
 

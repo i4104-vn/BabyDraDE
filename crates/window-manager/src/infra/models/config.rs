@@ -2,13 +2,11 @@
 
 use std::cell::RefMut;
 
-use smithay::{
-    backend::{
-        allocator::gbm::GbmDevice,
-        drm::{DrmDevice, DrmDeviceFd, DrmDeviceNotifier},
-        renderer::glow::GlowRenderer,
-        udev::UdevBackend,
-    },
+use smithay::backend::{
+    allocator::gbm::GbmDevice,
+    drm::{DrmDevice, DrmDeviceFd, DrmDeviceNotifier},
+    renderer::glow::GlowRenderer,
+    udev::UdevBackend,
 };
 
 use crate::{app::state::CalloopData, modules::shell::SwitcherOverlay};

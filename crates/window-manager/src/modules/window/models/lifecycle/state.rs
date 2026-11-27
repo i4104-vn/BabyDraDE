@@ -2,7 +2,6 @@ use smithay::utils::{Logical, Point, Size};
 
 use super::animation::WindowAnimation;
 
-
 /// Per-window persistent state attached to [`smithay::desktop::Window`]'s user_data.
 #[derive(Default, Debug, Clone)]
 pub(crate) struct WindowStateData {

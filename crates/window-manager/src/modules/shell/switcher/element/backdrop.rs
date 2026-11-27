@@ -13,8 +13,8 @@ use smithay::{
     utils::{Buffer, Physical, Point, Rectangle, Scale, Transform},
 };
 
-use crate::modules::shell::launcher::backdrop::render_backdrop;
 use crate::modules::render::CustomRenderElements;
+use crate::modules::shell::launcher::backdrop::render_backdrop;
 
 use super::SwitcherOverlay;
 

@@ -99,9 +99,7 @@ pub(super) fn handle_overlay_up<C: InputContext>(state: &mut C, slot: TouchSlot)
 
                     if let Some(window) = tapped {
                         state.unminimize_window(&window);
-                        crate::modules::input::keyboard::focus::focus_window(
-                            state, window, serial,
-                        );
+                        crate::modules::input::keyboard::focus::focus_window(state, window, serial);
                     }
                     state.switcher_begin_close();
                 } else if state.launcher_is_visible() {

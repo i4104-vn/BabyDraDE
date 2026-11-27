@@ -17,8 +17,7 @@ use super::shared;
 /// * `ctx` - Mutable button context.
 pub(super) fn handle<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
     let clicked_layer = ctx.state.layer_under(ctx.state.pointer_location());
-    let is_top_or_overlay =
-        matches!(clicked_layer, Some(Layer::Top) | Some(Layer::Overlay));
+    let is_top_or_overlay = matches!(clicked_layer, Some(Layer::Top) | Some(Layer::Overlay));
     // Popups and panel surfaces are clients and must keep receiving their
     // own button events. An empty spot only dismisses popups, so it belongs
     // to the compositor.

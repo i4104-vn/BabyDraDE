@@ -1,7 +1,7 @@
 //! Dual Kawase blur render passes.
 
-use glow::HasContext;
 use common::constants::MAX_BLUR_PASSES;
+use glow::HasContext;
 
 use super::super::config::BlurParams;
 use super::{BlurCache, BlurPipeline};

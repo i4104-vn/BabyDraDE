@@ -11,14 +11,14 @@ use smithay::utils::{Physical, Point, Transform};
 
 use super::context::SurfaceContext;
 use super::LauncherState;
+use crate::modules::render::buffer::render_pixels;
+use crate::modules::render::CustomRenderElements;
 use crate::modules::shell::launcher::search::buffer::{
     buffer_damage as search_buffer_damage, panel_region,
     render_backdrop_pixels as render_search_backdrop,
 };
 use crate::modules::shell::launcher::search::draw::draw_panel;
 use crate::modules::shell::launcher::search::layout::SearchLayout;
-use crate::modules::render::buffer::render_pixels;
-use crate::modules::render::CustomRenderElements;
 use common::constants::launcher::SEARCH_BACKDROP_ALPHA;
 
 /// Builds (or refreshes) the search panel and dimmer buffers.

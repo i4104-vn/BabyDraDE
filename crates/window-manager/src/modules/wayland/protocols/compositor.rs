@@ -15,8 +15,8 @@ use smithay::{
     },
 };
 
-use crate::app::state::{BabydraState, ClientState};
 use super::{layer_shell, xdg_shell};
+use crate::app::state::{BabydraState, ClientState};
 
 impl CompositorHandler for BabydraState {
     fn compositor_state(&mut self) -> &mut CompositorState {

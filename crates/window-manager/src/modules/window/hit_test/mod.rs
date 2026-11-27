@@ -1,7 +1,6 @@
 //! Pointer hit testing across windows, borders and layer surfaces.
 
-mod surface;
-
+pub(crate) mod frame;
 mod window;
 
-pub(crate) mod titlebar;
+pub(crate) use frame::titlebar;

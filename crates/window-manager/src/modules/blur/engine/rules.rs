@@ -1,24 +1,36 @@
-//! GPU blur engine facade, rule matching and frame rendering.
+//! Blur engine construction, configuration and rule matching.
 
 use std::collections::HashMap;
 
-use smithay::{backend::renderer::element::Id, desktop::Window};
-use smithay::utils::{Physical, Rectangle};
-use tracing::error;
+use smithay::desktop::Window;
 
 #[cfg(test)]
 use tracing::info;
 
-use common::constants::{BLUR_CACHE_LIFETIME, MAX_BLUR_CACHE_BYTES};
-
-use super::config;
-use super::pipeline::{BlurCache, BlurPipeline};
-
-pub(crate) use super::models::BlurEngine;
+use super::super::config;
+use super::BlurEngine;
 
 impl BlurEngine {
-    // Blur rule matching for windows, layers and app titles.
-pub(crate) fn sync_rules(&mut self) {
+    /// Creates the engine from the persisted configuration.
+    pub(crate) fn new() -> Self {
+        let params = config::load();
+        let rules_lower = params
+            .app_rules
+            .iter()
+            .map(|r| r.trim().to_lowercase())
+            .filter(|r| !r.is_empty())
+            .collect();
+        Self {
+            params,
+            rules_lower,
+            pipeline: None,
+            pipeline_failed: false,
+            backdrops: HashMap::new(),
+            frame: 0,
+        }
+    }
+
+    pub(crate) fn sync_rules(&mut self) {
         self.rules_lower = self
             .params
             .app_rules
@@ -130,162 +142,6 @@ pub(crate) fn sync_rules(&mut self) {
     pub(crate) fn get_window_title(&self, window: &Window) -> Option<String> {
         crate::modules::window::metadata::get(window).map(|metadata| metadata.title)
     }
-}
-
-impl BlurEngine {
-    // GPU blur pipeline setup and frame rendering.
-pub(crate) fn init_pipeline(&mut self, gl: &glow::Context) {
-        if self.pipeline.is_some() || self.pipeline_failed {
-            return;
-        }
-        // SAFETY: GL context is current and object names come from this pipeline.
-        unsafe {
-            match BlurPipeline::new(gl) {
-                Ok(p) => self.pipeline = Some(p),
-                Err(err) => {
-                    error!("Failed to initialize BabyDraDE BlurPipeline: {err}");
-                    self.pipeline_failed = true;
-                }
-            }
-        }
-    }
-
-    /// Render Dual Kawase blur over the destination physical rectangle.
-    ///
-    /// Captures the framebuffer background, blurs it, and composites the result
-    /// on every call. GPU texture objects are cached per element Id so that the
-    /// allocation cost is paid only once per blurred window.
-    pub(crate) fn render_blur(
-        &mut self,
-        gl: &glow::Context,
-        id: &Id,
-        dst: Rectangle<i32, Physical>,
-        corner_radius: f32,
-        projection: [f32; 9],
-    ) {
-        if !self.params.enabled || self.pipeline_failed {
-            return;
-        }
-
-        if self.pipeline.is_none() {
-            self.init_pipeline(gl);
-            if self.pipeline.is_none() {
-                return;
-            }
-        }
-
-        // Take the pipeline out of the struct so that the caches can be borrowed
-        // at the same time.
-        let Some(mut pipeline) = self.pipeline.take() else {
-            return;
-        };
-
-        let frame = self.frame;
-        self.frame = self.frame.wrapping_add(1);
-
-        if !self.backdrops.contains_key(id) {
-            // SAFETY: GL context is current and object names come from this pipeline.
-            let cache = match unsafe { BlurCache::new(gl) } {
-                Ok(cache) => Some(cache),
-                Err(err) => {
-                    error!("Failed to create the BabyDraDE blur cache: {err}");
-                    None
-                }
-            };
-            self.backdrops.insert(id.clone(), cache);
-        }
-
-        let Some(Some(cache)) = self.backdrops.get_mut(id) else {
-            self.pipeline = Some(pipeline);
-            return;
-        };
-        cache.last_used = frame;
-
-        // SAFETY: GL context is current and object names come from this pipeline.
-        unsafe {
-            pipeline.render_blur(gl, dst, corner_radius, projection, &self.params, cache);
-        }
-
-        self.pipeline = Some(pipeline);
-
-        self.prune_caches(gl, id, frame);
-    }
-
-    /// Drops the caches of elements that are gone and keeps the memory usage
-    /// of the remaining ones bounded.
-    fn prune_caches(&mut self, gl: &glow::Context, keep: &Id, frame: u64) {
-        let mut expired = Vec::new();
-        self.backdrops.retain(|id, cache| {
-            let last_used = cache.as_ref().map(|cache| cache.last_used).unwrap_or(0);
-            if frame.saturating_sub(last_used) >= BLUR_CACHE_LIFETIME {
-                expired.push(id.clone());
-                false
-            } else {
-                true
-            }
-        });
-
-        for id in expired {
-            if let Some(Some(mut cache)) = self.backdrops.remove(&id) {
-                // SAFETY: GL context is current and object names come from this pipeline.
-                unsafe { cache.release(gl) };
-            }
-        }
-
-        let mut total: usize = self
-            .backdrops
-            .values()
-            .filter_map(|cache| cache.as_ref())
-            .map(|cache| cache.bytes)
-            .sum();
-        if total <= MAX_BLUR_CACHE_BYTES {
-            return;
-        }
-
-        // Drop the least recently used caches until the memory usage is back
-        // below the limit.
-        let mut entries: Vec<(u64, Id)> = self
-            .backdrops
-            .iter()
-            .filter_map(|(id, cache)| cache.as_ref().map(|cache| (cache.last_used, id.clone())))
-            .collect();
-        entries.sort_by_key(|(last_used, _)| *last_used);
-
-        for (_, id) in entries {
-            if total <= MAX_BLUR_CACHE_BYTES {
-                break;
-            }
-            if id == *keep {
-                continue;
-            }
-            if let Some(Some(mut cache)) = self.backdrops.remove(&id) {
-                total = total.saturating_sub(cache.bytes);
-                // SAFETY: GL context is current and object names come from this pipeline.
-                unsafe { cache.release(gl) };
-            }
-        }
-    }
-}
-
-impl BlurEngine {
-    // Blur rule matching and per-app toggles.
-pub(crate) fn new() -> Self {
-        let params = config::load();
-        let rules_lower = params
-            .app_rules
-            .iter()
-            .map(|r| r.trim().to_lowercase())
-            .filter(|r| !r.is_empty())
-            .collect();
-        Self {
-            params,
-            rules_lower,
-            pipeline: None,
-            pipeline_failed: false,
-            backdrops: HashMap::new(),
-            frame: 0,
-        }
-    }
 
     /// Add an app rule to the blur engine and persist configuration
     #[cfg(test)]
@@ -341,66 +197,5 @@ pub(crate) fn new() -> Self {
         self.params.blur_all = blur_all;
         config::save(&self.params);
         info!("BabyDraDE BlurEngine: blur_all set to {}", blur_all);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_blur_engine_rules_and_matching() {
-        let mut engine = BlurEngine::new();
-        engine.params.blur_all = false;
-        engine.params.app_rules = vec![
-            "foot".to_string(),
-            "alacritty".to_string(),
-            "kitty".to_string(),
-            "babydra-panel".to_string(),
-        ];
-
-        // Direct matching
-        assert!(engine.matches_app_or_title(Some("foot"), None));
-        assert!(engine.matches_app_or_title(Some("alacritty"), None));
-        assert!(engine.matches_app_or_title(Some("Kitty"), None)); // case insensitive
-        assert!(engine.matches_app_or_title(None, Some("foot terminal")));
-        assert!(!engine.matches_app_or_title(Some("unknown-app"), Some("game")));
-
-        // Add custom app
-        engine.add_app("my-custom-terminal");
-        assert!(engine.matches_app_or_title(Some("my-custom-terminal"), None));
-
-        // Remove app
-        engine.remove_app("my-custom-terminal");
-        assert!(!engine.matches_app_or_title(Some("my-custom-terminal"), None));
-
-        // Toggle app
-        let toggled_on = engine.toggle_app("my-custom-terminal");
-        assert!(toggled_on);
-        assert!(engine.matches_app_or_title(Some("my-custom-terminal"), None));
-
-        let toggled_off = engine.toggle_app("my-custom-terminal");
-        assert!(!toggled_off);
-        assert!(!engine.matches_app_or_title(Some("my-custom-terminal"), None));
-
-        // Blur all toggle
-        engine.set_blur_all(true);
-        assert!(!engine.matches_layer("random-layer"));
-        assert!(!engine.matches_layer("babydra-topbar"));
-        engine.set_blur_all(false);
-        assert!(engine.matches_layer("babydra-panel"));
-        assert!(!engine.matches_layer("babydra-topbar"));
-        assert!(!engine.matches_layer("random-layer"));
-    }
-
-    #[test]
-    fn blur_all_matches_every_app() {
-        let mut engine = BlurEngine::new();
-        engine.params.blur_all = true;
-        assert!(engine.matches_app_or_title(Some("unknown-app"), Some("anything")));
-        assert!(engine.matches_app_or_title(None, None));
-
-        engine.params.blur_all = false;
-        assert!(!engine.matches_app_or_title(Some("unknown-app"), Some("anything")));
     }
 }

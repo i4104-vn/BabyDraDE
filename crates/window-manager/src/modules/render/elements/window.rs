@@ -10,8 +10,8 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale},
 };
 
-use crate::modules::window::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::modules::blur::{BlurEngine, BlurRenderElement};
+use crate::modules::window::animation::{render_animated_window, WindowAnimationRenderParams};
 use crate::modules::window::titlebar;
 use crate::shared::types::geometry::Rectangle as PureRectangle;
 use crate::shared::types::WindowVisualState;

@@ -25,10 +25,8 @@ pub(crate) fn init(
 ) -> Result<(), Box<dyn Error>> {
     info!("Initializing BabyDraDE Udev/DRM backend for bare TTY/hardware scanout...");
 
-    // 1. Establish LibSeat session & Libinput input backend
     let mut udev_session = UdevSession::new(event_loop)?;
 
-    // 2. Scan DRM GPU and setup displays & renderers
     let gpu_result = scan_and_init_gpu(&mut udev_session.session, &udev_session.seat_name, data)?;
 
     let theme = DesktopTheme::default();
@@ -44,7 +42,6 @@ pub(crate) fn init(
         _session: udev_session.session,
     }));
 
-    // 3. Setup Session Notifier, DRM Event Notifier, Udev Event Monitor, and Frame Render Loop
     setup_render_loop(
         event_loop,
         state,

@@ -4,8 +4,10 @@
 //! components are in [`state`]; port implementations are in [`bridge`].
 
 pub(crate) mod bridge;
-pub(crate) mod runtime;
-pub(crate) mod state;
+pub(crate) mod facade;
+
+// Keep `models::runtime` and `models::state` resolvable for existing callers.
+pub(crate) use facade::{runtime, state};
 
 pub(crate) use runtime::{BabydraState, CalloopData, ClientState, RuntimeResources};
 pub(crate) use state::{

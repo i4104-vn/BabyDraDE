@@ -1,8 +1,7 @@
 //! Pointer release handling.
 
+use crate::modules::input::pointer::button::{focus, ButtonContext};
 use crate::modules::input::InputContext;
-
-use super::{focus, ButtonContext};
 
 pub(super) fn release<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
     ctx.state

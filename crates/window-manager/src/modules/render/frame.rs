@@ -3,10 +3,7 @@
 //! Both the Winit and Udev backends build the same ordered list of render
 //! elements; only output binding and presentation differ.
 
-use smithay::{
-    backend::renderer::glow::GlowRenderer,
-    wayland::shell::wlr_layer::Layer,
-};
+use smithay::{backend::renderer::glow::GlowRenderer, wayland::shell::wlr_layer::Layer};
 
 use super::elements::{render_layer_surfaces, render_window, CustomRenderElements};
 

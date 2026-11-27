@@ -16,9 +16,7 @@ use smithay::{
 };
 
 use crate::modules::blur::{BlurEngine, BlurRenderElement};
-use crate::modules::render::elements::{
-    ConstrainedSurface, CustomRenderElements, WindowBlurId,
-};
+use crate::modules::render::elements::{ConstrainedSurface, CustomRenderElements, WindowBlurId};
 
 pub(crate) use crate::modules::window::models::animation::{
     GeometryTransition, WindowAnimation, WindowAnimationRenderParams,

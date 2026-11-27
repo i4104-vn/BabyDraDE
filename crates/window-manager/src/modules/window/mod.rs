@@ -4,9 +4,9 @@
 //! state without importing one another.
 
 pub(crate) mod animation;
-pub(crate) mod models;
 pub(crate) mod hit_test;
 pub(crate) mod interaction;
+pub(crate) mod models;
 pub(crate) mod ops;
 pub(crate) mod registry;
 pub(crate) mod sizing;

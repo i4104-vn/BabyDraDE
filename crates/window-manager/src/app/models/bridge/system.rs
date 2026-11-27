@@ -2,10 +2,10 @@
 
 use common::ShortcutTarget;
 
-use crate::core::shortcuts::Mods;
-use crate::shared::ports::{GesturePolicy, QueryText, SystemActions};
-use crate::modules::shell::launcher::search::SearchText;
 use crate::app::models::runtime::BabydraState;
+use crate::core::shortcuts::Mods;
+use crate::modules::shell::launcher::search::SearchText;
+use crate::shared::ports::{GesturePolicy, QueryText, SystemActions};
 
 impl QueryText for SearchText {
     fn insert(&mut self, text: &str) {

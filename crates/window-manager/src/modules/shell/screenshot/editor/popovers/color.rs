@@ -24,7 +24,6 @@ pub(crate) fn create_color_popover(
     container.set_margin_top(6);
     container.set_margin_bottom(6);
 
-    // --- Color palette ---
     let grid = gtk4::Grid::new();
     grid.set_column_spacing(6);
     grid.set_row_spacing(6);
@@ -80,7 +79,6 @@ pub(crate) fn create_color_popover(
     }
     container.append(&grid);
 
-    // --- Stroke width selector ---
     let width_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
     width_box.set_halign(gtk4::Align::Center);
 
@@ -123,7 +121,6 @@ pub(crate) fn create_color_popover(
     }
     container.append(&width_box);
 
-    // --- Delete selected drawing ---
     let delete_btn = gtk4::Button::builder()
         .child(&ui_kit::icons::get_icon("trash", 16))
         .build();

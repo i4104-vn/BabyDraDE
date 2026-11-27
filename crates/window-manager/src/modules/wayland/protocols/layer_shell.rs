@@ -4,7 +4,9 @@ use smithay::{
     output::Output,
     reexports::wayland_server::protocol::{wl_output::WlOutput, wl_surface::WlSurface},
     utils::SERIAL_COUNTER,
-    wayland::shell::wlr_layer::{KeyboardInteractivity, Layer, WlrLayerShellHandler, WlrLayerShellState},
+    wayland::shell::wlr_layer::{
+        KeyboardInteractivity, Layer, WlrLayerShellHandler, WlrLayerShellState,
+    },
 };
 use tracing::{info, warn};
 
@@ -67,7 +69,8 @@ pub(crate) fn handle_commit(state: &mut BabydraState, surface: &WlSurface) {
             // If the layer surface requests Exclusive keyboard interaction (e.g. screenshot editor, lock screen),
             // record that we need to assign keyboard focus.
             if layer.can_receive_keyboard_focus() {
-                let is_exclusive = layer.cached_state().keyboard_interactivity == KeyboardInteractivity::Exclusive;
+                let is_exclusive =
+                    layer.cached_state().keyboard_interactivity == KeyboardInteractivity::Exclusive;
                 if is_exclusive {
                     should_focus = true;
                 }

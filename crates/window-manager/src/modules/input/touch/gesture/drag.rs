@@ -2,7 +2,7 @@
 
 use smithay::utils::Point;
 
-use super::super::InputContext;
+use crate::modules::input::InputContext;
 
 /// Processes active interactive window movement driven by touchscreen dragging.
 pub(crate) fn handle_touch_drag<C: InputContext>(

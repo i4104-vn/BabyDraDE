@@ -47,8 +47,9 @@ impl BabydraState {
         if count == 0 {
             return;
         }
-        let index =
-            crate::modules::shell::switcher::app::scrub_index(start_x, current_x, base_index, count);
+        let index = crate::modules::shell::switcher::app::scrub_index(
+            start_x, current_x, base_index, count,
+        );
         switcher.hovered = None;
         switcher.selected_index = index;
         switcher.scroll.snap_to(index as f64);

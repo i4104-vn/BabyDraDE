@@ -40,4 +40,3 @@ impl Default for BlurEngine {
         Self::new()
     }
 }
-

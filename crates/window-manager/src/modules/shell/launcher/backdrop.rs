@@ -4,9 +4,7 @@
 use cairo::{Context, Format, ImageSurface};
 use smithay::utils::{Buffer, Rectangle, Scale};
 
-use common::constants::launcher::{
-    LABEL_GAP, LABEL_MAX_WIDTH, PANEL_FILLET_RADIUS, SHADOW_PAD,
-};
+use common::constants::launcher::{LABEL_GAP, LABEL_MAX_WIDTH, PANEL_FILLET_RADIUS, SHADOW_PAD};
 use ui_kit::components::dock::DockLayout;
 
 pub(crate) use crate::modules::shell::launcher::models::BufferRegion;

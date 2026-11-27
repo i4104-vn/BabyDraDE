@@ -33,4 +33,3 @@ pub(crate) struct WindowMetadata {
     pub(crate) title: String,
     pub(crate) app_name: String,
 }
-

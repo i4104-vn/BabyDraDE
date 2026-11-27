@@ -1,12 +1,9 @@
 //! Composes the switcher overlay out of its foreground, preview and backdrop layers.
 
-use smithay::{
-    backend::renderer::glow::GlowRenderer,
-    utils::Scale,
-};
+use smithay::{backend::renderer::glow::GlowRenderer, utils::Scale};
 
-use crate::modules::shell::switcher::{render::compute_layout, AltTabSwitcher};
 use crate::modules::render::CustomRenderElements;
+use crate::modules::shell::switcher::{render::compute_layout, AltTabSwitcher};
 
 pub(crate) use crate::modules::shell::switcher::models::SwitcherOverlay;
 
@@ -87,8 +84,8 @@ impl SwitcherOverlay {
 mod tests {
     use super::super::draw::Rect;
     use super::foreground::overlay_region;
-    use crate::modules::shell::switcher::render::SwitcherLayout;
     use crate::modules::render::buffer::render_pixels;
+    use crate::modules::shell::switcher::render::SwitcherLayout;
     use smithay::utils::Scale;
 
     fn test_layout(panel: Rect, preview: Rect) -> SwitcherLayout {

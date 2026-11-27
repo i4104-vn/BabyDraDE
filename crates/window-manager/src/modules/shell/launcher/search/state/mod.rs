@@ -5,7 +5,6 @@
 //! dimmer and stagger come from one timeline, and the cache key is built from
 //! the values that are actually read while drawing.
 
-
 pub(crate) use models::SearchState;
 
 mod handler;

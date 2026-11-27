@@ -14,10 +14,10 @@ use smithay::{
     wayland::shell::wlr_layer::Layer,
 };
 
-use crate::shared::ports::{HitTestQuery, InteractionBuffer, WindowControl};
+use crate::app::models::runtime::BabydraState;
 use crate::modules::window::hit_test::titlebar;
 use crate::modules::window::state_data::lock_window_state;
-use crate::app::models::runtime::BabydraState;
+use crate::shared::ports::{HitTestQuery, InteractionBuffer, WindowControl};
 
 impl WindowControl for BabydraState {
     fn space(&self) -> &Space<Window> {
@@ -124,7 +124,9 @@ impl InteractionBuffer for BabydraState {
         &mut self.input.move_state
     }
 
-    fn resize_state_mut(&mut self) -> &mut Option<crate::modules::window::interaction::ResizeState> {
+    fn resize_state_mut(
+        &mut self,
+    ) -> &mut Option<crate::modules::window::interaction::ResizeState> {
         &mut self.input.resize_state
     }
 
@@ -136,7 +138,9 @@ impl InteractionBuffer for BabydraState {
         self.input.trackpad_swipe.as_ref()
     }
 
-    fn trackpad_swipe_mut(&mut self) -> &mut Option<crate::modules::window::interaction::TrackpadSwipeBuffer> {
+    fn trackpad_swipe_mut(
+        &mut self,
+    ) -> &mut Option<crate::modules::window::interaction::TrackpadSwipeBuffer> {
         &mut self.input.trackpad_swipe
     }
 
@@ -144,11 +148,15 @@ impl InteractionBuffer for BabydraState {
         &self.input.touch_gesture
     }
 
-    fn touch_gesture_mut(&mut self) -> &mut crate::modules::window::interaction::TouchGestureBuffer {
+    fn touch_gesture_mut(
+        &mut self,
+    ) -> &mut crate::modules::window::interaction::TouchGestureBuffer {
         &mut self.input.touch_gesture
     }
 
-    fn overlay_touch_mut(&mut self) -> &mut Option<crate::modules::window::interaction::OverlayTouchState> {
+    fn overlay_touch_mut(
+        &mut self,
+    ) -> &mut Option<crate::modules::window::interaction::OverlayTouchState> {
         &mut self.input.overlay_touch
     }
 

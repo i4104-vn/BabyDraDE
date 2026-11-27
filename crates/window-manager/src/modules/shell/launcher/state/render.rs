@@ -7,6 +7,8 @@ use smithay::{
 
 use super::context::SurfaceContext;
 use super::LauncherState;
+use crate::modules::render::buffer::render_pixels;
+use crate::modules::render::CustomRenderElements;
 use crate::modules::shell::launcher::backdrop::{
     buffer_damage, physical_region, render_backdrop_pixels,
 };
@@ -14,8 +16,6 @@ use crate::modules::shell::launcher::render::draw_scene;
 use crate::modules::shell::launcher::search::buffer::panel_region;
 use crate::modules::shell::launcher::search::layout::SearchLayout;
 use crate::modules::shell::launcher::{BACKDROP_WIDTH_MIN, BACKDROP_WIDTH_RATIO};
-use crate::modules::render::buffer::render_pixels;
-use crate::modules::render::CustomRenderElements;
 
 impl LauncherState {
     pub(crate) fn render(

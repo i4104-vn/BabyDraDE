@@ -11,10 +11,7 @@ use smithay::{
             gbm::{GbmAllocator, GbmBufferFlags, GbmDevice},
             Format,
         },
-        drm::{
-            exporter::gbm::GbmFramebufferExporter, DrmDevice, DrmDeviceFd,
-            DrmNode, NodeType,
-        },
+        drm::{exporter::gbm::GbmFramebufferExporter, DrmDevice, DrmDeviceFd, DrmNode, NodeType},
         egl::{EGLContext, EGLDisplay},
         renderer::{glow::GlowRenderer, ImportDma},
         session::{libseat::LibSeatSession, Session},
@@ -28,7 +25,6 @@ use tracing::{info, warn};
 use crate::app::state::CalloopData;
 
 use crate::infra::models::{GpuActivation, GpuContext, GpuInitResult, SurfaceData};
-
 
 /// Opens a GPU device and builds the DRM/GBM/EGL state used for rendering.
 ///
@@ -214,8 +210,6 @@ pub(crate) fn scan_and_init_gpu(
         "Could not activate any DRM GPU with connected displays. Check GPU drivers and monitor cables.",
     )))
 }
-
-// Connector scanning and DRM surface construction.
 
 use smithay::{
     backend::{allocator::Fourcc, drm::compositor::DrmCompositor},

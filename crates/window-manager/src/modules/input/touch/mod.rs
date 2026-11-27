@@ -6,7 +6,6 @@ pub(crate) use dispatch::{
 };
 
 pub(crate) mod dispatch;
+pub(crate) mod gesture;
 
-pub(crate) mod drag;
-
-pub(crate) mod gestures;
+pub(crate) use gesture::{drag, gestures};

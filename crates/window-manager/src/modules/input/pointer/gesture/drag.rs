@@ -5,7 +5,7 @@ use smithay::{
     utils::{Point, SERIAL_COUNTER},
 };
 
-use super::super::InputContext;
+use crate::modules::input::InputContext;
 
 /// Processes active interactive window movement while a pointer button is held down.
 pub(crate) fn handle_window_drag<C: InputContext>(

@@ -11,7 +11,7 @@ use smithay::{
     utils::{Point, SERIAL_COUNTER},
 };
 
-use super::super::InputContext;
+use crate::modules::input::InputContext;
 use crate::modules::input::{execute_window_intent, TouchSlotData};
 use crate::{
     modules::input::gestures::{

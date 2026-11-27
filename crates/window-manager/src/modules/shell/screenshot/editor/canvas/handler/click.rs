@@ -13,7 +13,6 @@ pub(super) fn setup_click(
     state: Rc<RefCell<EditorState>>,
     style_popover: &gtk4::Popover,
 ) {
-    // Right-click opens the style popover bound to the drawing under the cursor
     let click_gesture = gtk4::GestureClick::new();
     click_gesture.set_button(3);
     let canvas_click = drawing_area.clone();

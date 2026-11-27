@@ -12,12 +12,12 @@ use smithay::{
     utils::{Buffer, Physical, Point, Rectangle, Scale, Transform},
 };
 
+use crate::modules::render::buffer::render_pixels;
+use crate::modules::render::CustomRenderElements;
 use crate::modules::shell::switcher::{
     render::{draw_switcher_foreground, SwitcherLayout},
     AltTabSwitcher,
 };
-use crate::modules::render::buffer::render_pixels;
-use crate::modules::render::CustomRenderElements;
 
 use super::SwitcherOverlay;
 use crate::modules::shell::switcher::models::RenderKey;

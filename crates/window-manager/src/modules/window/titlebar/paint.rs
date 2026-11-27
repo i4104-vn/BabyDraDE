@@ -21,7 +21,6 @@ pub(crate) fn to_pure_location(location: Point<i32, Logical>) -> PurePoint<i32> 
     PurePoint::from((location.x, location.y))
 }
 
-
 // Titlebar background fill and bottom separator.
 /// Paints the titlebar background and its adaptive bottom separator.
 ///

@@ -6,10 +6,10 @@ use smithay::{
     utils::SERIAL_COUNTER,
 };
 
+use crate::modules::input::pointer::button::{press, ButtonContext};
 use crate::modules::input::InputContext;
 
-use super::ButtonContext;
-use super::{press, release};
+use super::release;
 
 /// Handles pointer button clicks, focus switching, window raising, and Super+Drag initiation.
 pub(crate) fn handle_pointer_button<B: InputBackend, P: PointerButtonEvent<B>>(

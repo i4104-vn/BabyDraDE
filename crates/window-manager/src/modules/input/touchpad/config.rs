@@ -142,4 +142,3 @@ pub(crate) fn configure_touchpad(
 pub(crate) mod models {
     pub(crate) use crate::modules::input::models::TouchpadConfig;
 }
-

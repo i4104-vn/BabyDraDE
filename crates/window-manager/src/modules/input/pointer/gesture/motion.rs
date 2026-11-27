@@ -6,9 +6,9 @@ use smithay::{
     utils::{Logical, Point, SERIAL_COUNTER},
 };
 
-use super::super::InputContext;
 use super::drag::{handle_window_drag, handle_window_resize};
 use crate::modules::input::transform::transform_absolute_position;
+use crate::modules::input::InputContext;
 
 fn update_overlay_hover<C: InputContext>(state: &mut C, position: Point<f64, Logical>) {
     if !state.switcher_is_active() {

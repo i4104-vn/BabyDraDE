@@ -1,9 +1,8 @@
 //! Pointer button press/release handling.
 
+mod flow;
 mod focus;
-mod handler;
 mod press;
-mod release;
 
-pub(crate) use handler::handle_pointer_button;
 pub(super) use crate::modules::input::models::ButtonContext;
+pub(crate) use flow::handler::handle_pointer_button;

@@ -12,9 +12,9 @@ use smithay::{
     utils::{Logical, Physical, Point, Rectangle, Scale, Size},
 };
 
-use crate::modules::shell::switcher::{render::SwitcherLayout, AltTabSwitcher};
 use crate::modules::render::elements::ConstrainedSurface;
 use crate::modules::render::CustomRenderElements;
+use crate::modules::shell::switcher::{render::SwitcherLayout, AltTabSwitcher};
 
 use super::super::draw::Rect;
 

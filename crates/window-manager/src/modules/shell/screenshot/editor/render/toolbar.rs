@@ -103,11 +103,9 @@ fn wire_actions(
 ///
 /// The assembled action bar container plus the widgets needed by canvas gestures.
 pub(super) fn build(ctx: &ToolbarContext) -> ToolbarParts {
-    // Action bar container with 12px gap between main capsule and right buttons
     let action_bar = gtk4::Box::new(gtk4::Orientation::Horizontal, 12);
     action_bar.add_css_class("screenshot-action-bar");
 
-    // Left capsule containing selection indicator/reset, drawing tools, and color
     let toolbar = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
     toolbar.add_css_class("screenshot-toolbar");
 
@@ -136,8 +134,16 @@ pub(super) fn build(ctx: &ToolbarContext) -> ToolbarParts {
     );
 
     let btn_copy = toolbar_button("copy", &services::trans("screenshot.copy_tooltip"));
-    let btn_save = circle_action_button("download", &services::trans("screenshot.save_tooltip"), "save");
-    let btn_cancel = circle_action_button("close", &services::trans("screenshot.cancel_tooltip"), "close");
+    let btn_save = circle_action_button(
+        "download",
+        &services::trans("screenshot.save_tooltip"),
+        "save",
+    );
+    let btn_cancel = circle_action_button(
+        "close",
+        &services::trans("screenshot.cancel_tooltip"),
+        "close",
+    );
     wire_actions(ctx, &btn_copy, &btn_save, &btn_cancel);
 
     toolbar.append(&btn_reset);

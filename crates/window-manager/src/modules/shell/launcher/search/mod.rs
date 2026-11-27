@@ -11,7 +11,6 @@
 //! hit-testing, [`draw`] owns Cairo drawing and [`buffer`] owns the off-screen
 //! pixel work.
 
-
 use std::path::PathBuf;
 
 use gtk4::gdk_pixbuf::Pixbuf;

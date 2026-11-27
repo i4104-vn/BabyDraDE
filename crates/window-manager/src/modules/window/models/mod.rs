@@ -1,10 +1,9 @@
-
 //! Shared model types owned by the window module.
 
-pub(crate) mod animation;
-pub(crate) mod interaction;
+pub(crate) mod controls;
+pub(crate) mod lifecycle;
 pub(crate) mod registry;
-pub(crate) mod state;
 pub(crate) mod titlebar;
-pub(crate) mod windows;
 
+pub(crate) use controls::{interaction, windows};
+pub(crate) use lifecycle::{animation, state};

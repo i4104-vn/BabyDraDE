@@ -8,10 +8,10 @@ use smithay::{
 };
 
 use super::super::InputContext;
-use crate::modules::input::{execute_window_intent, TrackpadSwipeBuffer};
 use crate::modules::input::gestures::{
     is_compositor_swipe, should_start_scrub, touchpad_swipe_intent,
 };
+use crate::modules::input::{execute_window_intent, TrackpadSwipeBuffer};
 
 use common::constants::SWIPE_THREE_FINGERS;
 

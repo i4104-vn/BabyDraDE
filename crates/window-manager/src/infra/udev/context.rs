@@ -5,7 +5,10 @@ use std::error::Error;
 use smithay::{
     backend::{
         libinput::{LibinputInputBackend, LibinputSessionInterface},
-        session::{libseat::{LibSeatSession, LibSeatSessionNotifier}, Session},
+        session::{
+            libseat::{LibSeatSession, LibSeatSessionNotifier},
+            Session,
+        },
     },
     reexports::{calloop::EventLoop, input::Libinput},
 };
@@ -19,7 +22,6 @@ use crate::app::state::CalloopData;
 pub(crate) fn claim_seat(
     event_loop: &mut EventLoop<'_, CalloopData>,
 ) -> Result<(LibSeatSession, LibSeatSessionNotifier, String), Box<dyn Error>> {
-    // Claim seat via LibSeat (logind / seatd)
     let (session, notifier) = LibSeatSession::new().map_err(|err| {
         std::io::Error::new(
             std::io::ErrorKind::PermissionDenied,
@@ -33,7 +35,6 @@ pub(crate) fn claim_seat(
     let seat_name = session.seat();
     info!("LibSeat session established on seat '{}'", seat_name);
 
-    // Setup Libinput for keyboard, pointer, and touch inputs on bare TTY
     let mut libinput_context =
         Libinput::new_with_udev(LibinputSessionInterface::from(session.clone()));
     libinput_context.udev_assign_seat(&seat_name).map_err(|_| {
@@ -47,13 +48,7 @@ pub(crate) fn claim_seat(
         .insert_source(libinput_backend, move |event, _, data| {
             data.state.process_input_event(event);
         })
-        .map_err(|err| {
-            std::io::Error::other(format!("Failed to insert Libinput source: {err}"))
-        })?;
+        .map_err(|err| std::io::Error::other(format!("Failed to insert Libinput source: {err}")))?;
 
-    Ok((
-        session,
-        notifier,
-        seat_name,
-    ))
+    Ok((session, notifier, seat_name))
 }

@@ -25,8 +25,7 @@ fn fit_text_adds_an_ellipsis_when_too_wide() {
 
 #[test]
 fn draws_shared_dock_surface() {
-    let surface =
-        cairo::ImageSurface::create(cairo::Format::ARgb32, 200, 600).expect("surface");
+    let surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 200, 600).expect("surface");
     let context = Context::new(&surface).expect("context");
     let panel = DockLayout::new(7, 300.0, 200.0, DockSide::Left);
     assert!(draw_dock(

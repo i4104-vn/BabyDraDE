@@ -5,8 +5,8 @@ use gtk4_layer_shell::{Edge, KeyboardMode, Layer};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use super::ToolbarContext;
 use super::toolbar;
+use super::ToolbarContext;
 use crate::modules::shell::screenshot::editor::canvas::{draw_editor_canvas, setup_editor_gest};
 use crate::modules::shell::screenshot::editor::models::EditorState;
 use crate::modules::shell::screenshot::editor::setup_editor_keys;
@@ -40,7 +40,6 @@ pub fn build_editor_ui(app: &gtk4::Application, temp_path: &str) -> gtk4::Applic
     let state = Rc::new(RefCell::new(EditorState::new(pixbuf)));
     let window = gtk4::ApplicationWindow::new(app);
 
-    // Stretch across the entire screen, ignoring panel exclusive zones
     init_layer_window(
         &window,
         &LayerWindowConfig {

@@ -5,9 +5,9 @@ use smithay::{
     utils::{Logical, Point, Scale},
 };
 
-use crate::shared::ports::{OverlayBridge, QueryText};
-use crate::modules::shell::switcher::render::compute_layout;
 use crate::app::models::runtime::BabydraState;
+use crate::modules::shell::switcher::render::compute_layout;
+use crate::shared::ports::{OverlayBridge, QueryText};
 
 impl OverlayBridge for BabydraState {
     fn launcher_is_visible(&self) -> bool {

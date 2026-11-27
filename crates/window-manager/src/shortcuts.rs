@@ -1,8 +1,8 @@
 //! Public in-process shortcut registration API.
 //!
 //! The composition root publishes the live registry at startup. Any component
-//! linked into this crate can then call [`register`] (or [`bind`]) to add a
-//! shortcut, [`unregister`] to remove one, and [`bindings`] to inspect the
+//! linked into this crate can then call `register` (or `bind`) to add a
+//! shortcut, `unregister` to remove one, and `bindings` to inspect the
 //! current table. Apps in other processes should use the file-based client in
 //! `services::system::shortcuts` instead.
 

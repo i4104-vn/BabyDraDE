@@ -19,9 +19,7 @@ pub(super) fn switcher<C: InputContext>(ctx: &mut ButtonContext<'_, C>) -> bool 
         if let Some(clicked_idx) = ctx.state.switcher_index_at((px, py), 0.0) {
             if let Some(window) = ctx.state.switcher_window_at(clicked_idx) {
                 ctx.state.unminimize_window(&window);
-                crate::modules::input::keyboard::focus::focus_window(
-                    ctx.state, window, ctx.serial,
-                );
+                crate::modules::input::keyboard::focus::focus_window(ctx.state, window, ctx.serial);
             }
             ctx.state.switcher_begin_close();
             return true;

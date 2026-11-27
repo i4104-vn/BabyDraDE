@@ -8,8 +8,8 @@ use smithay::{
     utils::SERIAL_COUNTER,
 };
 
-use crate::shared::ports::InputContext;
 use crate::modules::input::gestures::WindowIntent;
+use crate::shared::ports::InputContext;
 
 use super::{keyboard, pointer, touch, touchpad};
 

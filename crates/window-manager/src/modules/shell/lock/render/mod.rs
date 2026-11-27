@@ -1,6 +1,5 @@
 //! Lock screen UI components, window creation, and blur transitions.
 
-
 pub(crate) use transition::{reverse_lock_transition, LockTransition};
 pub(crate) use wallpaper::{build_avatar_widget, build_wallpaper_img, capture_transition_images};
 pub(crate) use widgets::{build_clock_labels, build_primary_card, PrimaryCard};

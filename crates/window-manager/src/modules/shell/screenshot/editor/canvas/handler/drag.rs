@@ -67,7 +67,6 @@ fn begin_drag(
         }
     }
 
-    // Any left-drag clears the current selection
     if s.selected_drawing.take().is_some() {
         s.invalidate();
     }

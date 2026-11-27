@@ -7,9 +7,7 @@
 //! [`crate::modules::input::keyboard`] calls the matcher from this module for
 //! every key press.
 
-pub(crate) 
-
-use super::InputContext;
+pub(crate) use super::InputContext;
 
 /// Hands a matched command to the injected launcher port.
 pub(crate) fn spawn_command(state: &impl InputContext, command: String) {

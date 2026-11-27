@@ -7,7 +7,6 @@
 //! walk itself lives in `services::files::index`; this module only scores the
 //! snapshot and maps matches into result rows.
 
-
 pub(crate) use handler::{build_results, url_encode};
 pub(crate) use models::FileIndex;
 

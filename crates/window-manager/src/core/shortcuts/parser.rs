@@ -131,7 +131,10 @@ mod tests {
             parse_combo("W-S-t"),
             Some(("W-S".to_string(), "t".to_string()))
         );
-        assert_eq!(parse_combo("A-F4"), Some(("A".to_string(), "F4".to_string())));
+        assert_eq!(
+            parse_combo("A-F4"),
+            Some(("A".to_string(), "F4".to_string()))
+        );
         assert_eq!(parse_combo("t"), None);
         assert_eq!(parse_combo("-t"), None);
         assert_eq!(parse_combo("W-"), None);
