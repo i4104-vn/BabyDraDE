@@ -16,9 +16,11 @@ use services::system::{get_active_window, get_app_display_name, ActiveWindowInfo
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
+use ui_kit::VerticalSeparator;
 
 pub struct AppMenu {
     container: Box,
+    sep: VerticalSeparator,
     menubar_box: Box,
     app_title_icon: gtk4::Image,
     app_title_label: Label,
@@ -81,6 +83,14 @@ impl AppMenu {
         app_title_btn.set_child(Some(&app_title_content));
         container.append(&app_title_btn);
 
+        // 2b. Divider between the app title and its menu bar. Hidden until the
+        // D-Bus menubar actually has entries, so no dangling "|" is rendered.
+        let sep = VerticalSeparator::new();
+        sep.widget().set_label("|");
+        sep.widget().add_css_class("app-menu-sep");
+        sep.widget().set_visible(false);
+        container.append(sep.widget());
+
         // 3. Dynamic Application Title Context Menu (Real Window Operations)
         let app_info_click = current_app_info.clone();
         let title_btn_ref = app_title_btn.clone();
@@ -99,6 +109,15 @@ impl AppMenu {
             .valign(gtk4::Align::Center)
             .build();
         container.append(&menubar_box);
+
+        // GTK4 has no child-added/child-removed signals on Box, so keep the
+        // separator in sync with the asynchronously populated menubar cheaply.
+        let sep_sync = sep.widget().clone();
+        let menubar_sync = menubar_box.clone();
+        glib::timeout_add_local(Duration::from_millis(50), move || {
+            sep_sync.set_visible(menubar_sync.first_child().is_some());
+            glib::ControlFlow::Continue
+        });
 
         // 5. Setup periodic polling for real-time active window detection
         let container_poll = container.clone();
@@ -196,6 +215,7 @@ impl AppMenu {
 
         Self {
             container,
+            sep,
             menubar_box,
             app_title_icon,
             app_title_label,
@@ -225,6 +245,7 @@ impl AppMenu {
         }
         let next_gen = *self.generation.borrow() + 1;
         *self.generation.borrow_mut() = next_gen;
+        self.sync_separator();
     }
 
     /// Returns the currently active window information
@@ -237,6 +258,7 @@ impl AppMenu {
         *self.current_service.borrow_mut() = Some(service.to_string());
         *self.current_menu_path.borrow_mut() = Some(path.to_string());
         load_and_render_dbus_menu(&self.menubar_box, service, path);
+        self.sync_separator();
     }
 
     /// Clears any dynamic D-Bus menubar buttons
@@ -246,10 +268,18 @@ impl AppMenu {
             &self.current_service,
             &self.current_menu_path,
         );
+        self.sync_separator();
     }
 
     pub fn widget(&self) -> &Box {
         &self.container
+    }
+
+    /// Only show the divider when the D-Bus menubar actually has entries.
+    fn sync_separator(&self) {
+        self.sep
+            .widget()
+            .set_visible(self.menubar_box.first_child().is_some());
     }
 }
 

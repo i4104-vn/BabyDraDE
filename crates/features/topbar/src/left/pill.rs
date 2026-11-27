@@ -1,42 +1,46 @@
+//! Left topbar cluster: a circular logo button and a separate app menu pill.
+
 use gtk4::prelude::*;
-use ui_kit::{PillBox, VerticalSeparator};
+use gtk4::{Box, Orientation};
+use ui_kit::PillBox;
 
 use super::app_menu::AppMenu;
 use super::logo_button::LogoButton;
 
 pub struct LeftPill {
-    pill: PillBox,
-    _sep: VerticalSeparator,
+    container: Box,
     app_menu: AppMenu,
 }
 
 impl LeftPill {
     pub fn new() -> Self {
-        let pill = PillBox::with_extra_class(4, "left-pill");
+        let container = Box::builder()
+            .css_classes(["left-cluster"])
+            .orientation(Orientation::Horizontal)
+            .spacing(6)
+            .valign(gtk4::Align::Center)
+            .build();
 
-        // 1. Logo button
+        // 1. Circular logo button — always visible, independent from the app pill.
         let logo_button = LogoButton::new();
-        pill.append(logo_button.widget());
+        container.append(logo_button.widget());
 
-        // 2. Vertical separator
-        let sep = VerticalSeparator::new();
-        pill.append(sep.widget());
-
-        // 3. Standard AppMenu
+        // 2. Separate rounded pill holding the active app title and its menu bar.
+        let app_pill = PillBox::with_extra_class(0, "left-app-pill");
         let app_menu = AppMenu::new();
-        pill.append(app_menu.widget());
+        app_pill.append(app_menu.widget());
+        container.append(app_pill.widget());
 
-        // Bind separator visibility directly to app_menu visibility:
-        // When no app is focused, both AppMenu and separator are completely hidden!
+        // Hide the whole app pill when there is no active window, so an empty
+        // capsule never lingers next to the logo.
         app_menu
             .widget()
-            .bind_property("visible", sep.widget(), "visible")
+            .bind_property("visible", app_pill.widget(), "visible")
             .sync_create()
             .build();
 
         Self {
-            pill,
-            _sep: sep,
+            container,
             app_menu,
         }
     }
@@ -46,7 +50,7 @@ impl LeftPill {
     }
 
     pub fn widget(&self) -> &gtk4::Box {
-        self.pill.widget()
+        &self.container
     }
 }
 

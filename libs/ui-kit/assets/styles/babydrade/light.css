@@ -52,6 +52,74 @@ button.func-btn,
 }
 
 
+/* ── Left Cluster (Light) ───────────────────────────────────────────── */
+.left-cluster button.panel-logo-btn
+{
+    background-color: rgb(28, 28, 32);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+}
+
+
+.left-cluster button.panel-logo-btn:hover
+{
+    background-color: rgb(42, 42, 48);
+    border-color: rgba(255, 255, 255, 0.20);
+}
+
+
+.left-cluster button.panel-logo-btn:active
+{
+    background-color: rgb(52, 52, 58);
+}
+
+
+.left-cluster .left-app-pill
+{
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    color: #111827;
+}
+
+
+.left-cluster .left-app-pill:hover
+{
+    background-color: #f3f4f6;
+    border-color: rgba(0, 0, 0, 0.14);
+}
+
+
+.left-cluster .left-app-pill button.app-title-btn,
+.left-cluster .left-app-pill button.func-btn
+{
+    background-color: transparent;
+    color: rgba(17, 24, 39, 0.85);
+}
+
+
+.left-cluster .left-app-pill button.app-title-btn:hover,
+.left-cluster .left-app-pill button.func-btn:hover
+{
+    background-color: rgba(0, 0, 0, 0.06);
+    color: #111827;
+}
+
+
+.left-cluster .left-app-pill button.app-title-btn:active,
+.left-cluster .left-app-pill button.func-btn:active
+{
+    background-color: rgba(0, 0, 0, 0.12);
+    color: #111827;
+}
+
+
+.left-cluster .left-app-pill label.app-menu-sep
+{
+    color: rgba(0, 0, 0, 0.28);
+}
+
+
 .shortcut-label
 {
     color: rgba(0, 0, 0, 0.45);
