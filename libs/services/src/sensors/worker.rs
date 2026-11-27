@@ -32,7 +32,11 @@ impl RotationWorker {
     ///
     /// # Arguments
     /// * `driver` - Resolved driver manager to read gravity samples from.
-    pub fn spawn(mut driver: DriverManager) -> Self {
+    ///
+    /// # Errors
+    /// Returns the thread-creation error when the worker cannot be started, so
+    /// callers never receive a silent, permanently empty sampler.
+    pub fn spawn(mut driver: DriverManager) -> std::io::Result<Self> {
         let name = driver.name().to_owned();
         let interval = driver.poll_interval();
         let (sender, samples) = mpsc::channel();
@@ -45,12 +49,12 @@ impl RotationWorker {
                     }
                 }
                 thread::sleep(interval);
-            });
-        Self {
+            })?;
+        Ok(Self {
             name,
             samples,
-            _thread: thread.ok(),
-        }
+            _thread: Some(thread),
+        })
     }
 
     /// Returns the newest pending sample without blocking.

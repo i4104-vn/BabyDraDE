@@ -69,7 +69,10 @@ impl RotationTracker {
         let current = Orientation::from_gravity(gravity)?;
         let baseline = *self.baseline.get_or_insert(current);
         if self.candidate == Some(current) {
-            self.stable += 1;
+            // `stable` is not reset while `applied == steps` (the common case of
+            // holding the device in its baseline orientation), so it must not
+            // overflow after hundreds of identical samples.
+            self.stable = self.stable.saturating_add(1);
         } else {
             self.candidate = Some(current);
             self.stable = 1;
@@ -133,5 +136,17 @@ mod tests {
         for gravity in [down(), right(), down(), right(), down()] {
             assert_eq!(tracker.update(gravity), None);
         }
+    }
+
+    #[test]
+    fn long_stable_baseline_does_not_overflow_or_rotate() {
+        let mut tracker = RotationTracker::new();
+        for _ in 0..512 {
+            assert_eq!(tracker.update(down()), None);
+        }
+        // A real change still requires the normal three stable readings.
+        assert_eq!(tracker.update(right()), None);
+        assert_eq!(tracker.update(right()), None);
+        assert_eq!(tracker.update(right()), Some(3));
     }
 }
