@@ -26,6 +26,13 @@ thread_local! {
 /// Duration of the corner reveal; shared by the popover slide and `Revealer`.
 const REVEAL_DURATION_MS: u32 = 220;
 
+/// A popover can only be presented when it still has an anchor inside a
+/// realized toplevel. `gtk_popover_realize()` dereferences the parent's native
+/// surface unconditionally, so presenting a detached popover segfaults GTK.
+fn popover_anchored(popover: &gtk4::Popover) -> bool {
+    popover.parent().is_some() && popover.root().and_then(|root| root.surface()).is_some()
+}
+
 /// Clicking another application window cannot leave a context menu open.
 fn active_window_changed() -> bool {
     let current = services::system::get_active_window().map(|info| (info.app_id, info.title));
@@ -84,6 +91,10 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
     // items are registered yet (the temperature widget is still present).
     let last_snapshot: Rc<RefCell<Option<Vec<TrayItem>>>> = Rc::new(RefCell::new(None));
     let animation: Rc<RefCell<Option<gtk4::TickCallbackId>>> = Rc::new(RefCell::new(None));
+    // Only these widgets are rebuilt. The popover is also a child of
+    // `tray_container` (via `set_parent`) and must never be swept away by the
+    // refresh below, or `popup()` would later crash GTK.
+    let collapsed_children: Rc<RefCell<Vec<gtk4::Widget>>> = Rc::new(RefCell::new(Vec::new()));
 
     // Hover tracking for the compact row in the panel.
     let tray_motion = gtk4::EventControllerMotion::new();
@@ -124,6 +135,7 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
     let collapsed_temp_for_refresh = collapsed_temperature.clone();
     let grid_for_refresh = expanded_grid.clone();
     let expanded_temp_for_refresh = expanded_temperature.clone();
+    let collapsed_children_for_refresh = collapsed_children.clone();
 
     glib::timeout_add_local(Duration::from_millis(500), move || {
         // Clicking another application window changes the compositor's active
@@ -137,15 +149,21 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
 
         if needs_rebuild {
             // Compact row: icons first, temperature always last on the right.
-            while let Some(child) = tray_for_refresh.first_child() {
+            // Remove only the widgets this refresh owns; the popover is an
+            // anchor child of the same box and must stay parented.
+            let mut children = collapsed_children_for_refresh.borrow_mut();
+            for child in children.drain(..) {
                 tray_for_refresh.remove(&child);
             }
             for item in render::collapsed_tray_items(&current_items) {
                 let btn = render::build_tray_button(item);
                 attach_tray_click_gesture(&btn, item, &window_for_refresh);
                 tray_for_refresh.append(&btn);
+                children.push(btn.upcast());
             }
             tray_for_refresh.append(&collapsed_temp_for_refresh);
+            children.push(collapsed_temp_for_refresh.clone().upcast());
+            drop(children);
 
             // Expanded grid: all icons in rows of three, temperature on top-right.
             while let Some(child) = grid_for_refresh.first_child() {
@@ -201,7 +219,8 @@ pub fn create_tray_widget(window: &gtk4::ApplicationWindow) -> gtk4::Box {
         }
         state.menu_open = menu_open;
 
-        let show = render::should_show_expanded(&state, Instant::now());
+        let show = render::should_show_expanded(&state, Instant::now())
+            && popover_anchored(&popover_for_close);
         let was_visible = popover_for_close.is_visible();
         drop(state);
 
