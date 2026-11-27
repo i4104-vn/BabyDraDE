@@ -54,8 +54,8 @@ impl TooltipPopover {
             .position(position)
             .css_classes(["status-popover", "tooltip-popover"])
             .build();
-        // Positioning (including the gap below the icon) is owned by the
-        // fitter; GTK must not add a second offset on top of it.
+        // GTK places the card below the icon natively; the fitter only adds
+        // the 12px gap and screen-edge clamping as an offset.
         popover.set_parent(parent.as_ref());
 
         Self {

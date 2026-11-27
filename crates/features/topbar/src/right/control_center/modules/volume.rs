@@ -107,12 +107,9 @@ pub fn create_volume_row(
     let menu_icon = get_icon("go-up-symbolic", 12);
     menu_btn.set_child(Some(&menu_icon));
 
-    // Audio devices popover. The button sits at the right edge of the panel,
-    // so start with a right-side preference; the fitter flips it to the left
-    // when there is not enough room. `End` alignment makes it grow upwards
-    // from the button, leaving the sliders below uncovered. The fitter's
-    // pointing-rect math keeps the popup beside the button (never on top of
-    // its icon) and clamps it to the monitor on either side.
+    // Audio devices popover: Right preference flips to Left at the panel edge.
+    // `CrossAlign::End` keeps its bottom on the button; GTK's native placement
+    // stays intact and the fitter only applies an offset to stay on screen.
     let popover = create_popover(&menu_btn, gtk4::PositionType::Right, "audio-menu-popover");
     let side_padding = 8;
     let max_width = max_popover_width(menu_btn.upcast_ref::<gtk4::Widget>(), EDGE_MARGIN)

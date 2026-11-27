@@ -1,21 +1,29 @@
 //! Screen-edge fitting helpers for overlays.
 //!
-//! GTK places a `Popover` relative to its anchor widget and relies on the
-//! compositor to keep the popup inside the *parent window*. Panels built with
-//! layer shell are short, screen-anchored windows, so a popover anchored in
-//! them can still end up outside the visible monitor. The helpers here use
+//! GTK places a `Popover` relative to its parent widget using the widget's
+//! real bounds (or the pointing rectangle supplied by a caller) and relies on
+//! the compositor to keep the popup inside the *parent window*. Panels built
+//! with layer shell are short, screen-anchored windows, so a popover anchored
+//! in them can still end up outside the visible monitor. The helpers here use
 //! the monitor geometry reported by GDK to compute a rectangle that fits,
-//! optionally flip the popover to the opposite side, and translate the result
-//! back into the pointing rectangle understood by GTK.
+//! optionally flip the popover to the opposite side, and shift GTK's native
+//! placement onto it with `Popover::set_offset()`.
+//!
+//! Widget-anchored popovers never set their own pointing rectangle: a rect
+//! derived from `widget_origin()` is unreliable when the widget-to-root
+//! translation is unavailable (layer-shell roots, unrealized popups) and used
+//! to collapse to (0,0), sending the popup to the window's top-left corner.
+//! GTK's native placement already puts a popover below its icon; only the
+//! screen-edge correction is applied here.
 //!
 //! Topbar/status anchors are special: opening upwards would cover the icon
-//! itself, so they use [`FitPolicy::KeepSide`] and are clamped/shrunk instead
+//! itself, so they use [`FitPolicy::KeepSide`] and are clamped/shifted instead
 //! of flipped. All geometry functions are pure and can be unit tested without
 //! a live display; the GDK helpers degrade gracefully when no display exists.
 
 use gtk4::gdk::Rectangle as GdkRectangle;
 use gtk4::prelude::*;
-use gtk4::{Align, Orientation, Popover, PositionType, Widget};
+use gtk4::{Orientation, Popover, PositionType, Widget};
 
 /// Default space kept between a popover and each monitor edge.
 pub const EDGE_MARGIN: i32 = 8;
@@ -283,11 +291,12 @@ pub fn fit_rect(
 /// GTK anchors a Bottom popover's *top* edge to the pointing rect's bottom
 /// edge, a Top popover's *bottom* edge to the pointing rect's top edge, and
 /// likewise horizontally; `halign`/`valign` select the cross-axis edge. The
-/// old code subtracted the anchor's width/height here for Bottom/Right, which
-/// pulled the popup back over the anchor icon. The main-axis correction is
-/// only the 1px size of the pointing rect, never the anchor's size.
+/// main-axis correction is only the 1px size of the pointing rect, never the
+/// anchor's size.
 ///
 /// `origin` is the parent widget's origin in screen/toplevel coordinates.
+/// Retained for callers that position a popover with an explicit pointing
+/// rectangle; the fitters in this module do not use it (see the module docs).
 pub fn pointing_rect_for(
     rect: ScreenRect,
     position: PositionType,
@@ -313,8 +322,9 @@ pub fn pointing_rect_for(
     )
 }
 
-/// Mirrors GTK's placement of a popover around a pointing rectangle. Pure so
-/// tests can verify that [`pointing_rect_for`] reproduces the fitted rect.
+/// Mirrors GTK's placement of a popover around an explicit pointing rectangle.
+/// Kept as the pure counterpart of [`pointing_rect_for`] for callers that
+/// manage the pointing rectangle themselves.
 pub fn popover_rect_from_pointing(
     pointing: ScreenRect,
     position: PositionType,
@@ -338,6 +348,43 @@ pub fn popover_rect_from_pointing(
         PositionType::Left => ScreenRect::new(pointing.x - width, cross_y, width, height),
         _ => ScreenRect::new(cross_x, pointing.bottom(), width, height),
     }
+}
+
+/// Rectangle GTK places a popover in when no pointing rectangle and no offset
+/// are set.
+///
+/// With GTK's default alignment (`Fill`/`Center` behaves as `Center` here) a
+/// popup is centered on the anchor's cross axis and its leading main-axis edge
+/// touches the anchor's trailing edge. `size` is `(width, height)` and the
+/// result is in the same (toplevel/screen) coordinate space as `anchor`.
+///
+/// This models GTK's *native* placement; this module only computes the offset
+/// that shifts it onto the fitted rectangle. It never writes a pointing rect
+/// for widget-anchored popovers.
+pub fn native_rect_for(anchor: ScreenRect, position: PositionType, size: (i32, i32)) -> ScreenRect {
+    let width = size.0.max(0);
+    let height = size.1.max(0);
+    let cross_x = anchor.x + anchor.width / 2 - width / 2;
+    let cross_y = anchor.y + anchor.height / 2 - height / 2;
+
+    match position {
+        PositionType::Bottom => ScreenRect::new(cross_x, anchor.bottom(), width, height),
+        PositionType::Top => ScreenRect::new(cross_x, anchor.y - height, width, height),
+        PositionType::Right => ScreenRect::new(anchor.right(), cross_y, width, height),
+        PositionType::Left => ScreenRect::new(anchor.x - width, cross_y, width, height),
+        _ => ScreenRect::new(cross_x, anchor.bottom(), width, height),
+    }
+}
+
+/// Offset that moves a natively placed popover from `native` onto `target`.
+///
+/// The values are passed straight to `Popover::set_offset()`; GTK applies them
+/// on top of its own placement, leaving the caller's pointing rect untouched.
+pub fn offset_for_rect(native: ScreenRect, target: ScreenRect) -> (i32, i32) {
+    (
+        target.x.saturating_sub(native.x),
+        target.y.saturating_sub(native.y),
+    )
 }
 
 /// Result of fitting a real `Popover` on screen.
@@ -397,54 +444,46 @@ fn popover_size(popover: &Popover) -> (i32, i32) {
     (natural_width.max(min_width), natural_height.max(min_height))
 }
 
-/// Applies a pointing rectangle computed in the parent widget's coordinates.
-fn apply_pointing(
-    popover: &Popover,
-    position: PositionType,
-    cross: CrossAlign,
-    pointing: ScreenRect,
-) {
+/// Shifts GTK's native placement onto the fitted rectangle.
+///
+/// Only the position and the offset are written. Setting `halign`/`valign` or
+/// a pointing rectangle here would override GTK's own placement, which is
+/// already correct relative to the parent widget.
+fn apply_offset(popover: &Popover, position: PositionType, native: ScreenRect, target: ScreenRect) {
     popover.set_position(position);
-    let align = match cross {
-        CrossAlign::Start => Align::Start,
-        CrossAlign::End => Align::End,
-    };
-    match position {
-        PositionType::Bottom | PositionType::Top => popover.set_halign(align),
-        PositionType::Left | PositionType::Right => popover.set_valign(align),
-        _ => {}
-    }
-    // The gap between anchor and popover is already part of `rect`, so GTK
-    // must not add another one.
-    popover.set_offset(0, 0);
-
-    popover.set_pointing_to(Some(&GdkRectangle::new(
-        pointing.x,
-        pointing.y,
-        pointing.width.max(1),
-        pointing.height.max(1),
-    )));
+    let (dx, dy) = offset_for_rect(native, target);
+    popover.set_offset(dx, dy);
 }
 
-/// Applies a computed rectangle by converting it into a GTK pointing rectangle.
+/// Applies a computed rectangle by shifting GTK's native placement.
+///
+/// `set_pointing_to(None)` restores GTK's default behaviour of using the
+/// parent widget's allocated bounds; a stale pointing rect (or one rebuilt
+/// from `widget_origin()`) can put the popup at the window's top-left corner
+/// when the translation to the root is unreliable.
 fn apply_fit(
     anchor: &Widget,
     popover: &Popover,
     position: PositionType,
+    size: (i32, i32),
     rect: ScreenRect,
-    cross: CrossAlign,
 ) {
-    let pointing = pointing_rect_for(rect, position, cross, widget_origin(anchor));
-    apply_pointing(popover, position, cross, pointing);
+    popover.set_pointing_to(None);
+    apply_offset(
+        popover,
+        position,
+        native_rect_for(widget_rect(anchor), position, size),
+        rect,
+    );
 }
 
 /// Fits `popover` into the monitor containing its parent/anchor widget.
 ///
 /// Call this before `popover.popup()` (after setting its child, so it can be
-/// measured). The popover's position, cross-axis alignment, offset and pointing
-/// rectangle are updated so GTK anchors it at the computed, on-screen
-/// rectangle. Returns `None` when no display/monitor is available, leaving the
-/// popover untouched for backwards compatibility.
+/// measured). GTK keeps its native placement relative to the parent widget;
+/// only the popover's position and offset are updated so it lands on the
+/// computed, on-screen rectangle. Returns `None` when no display/monitor is
+/// available, leaving the popover untouched for backwards compatibility.
 pub fn fit_popover_with_policy(
     popover: &Popover,
     preferred: PositionType,
@@ -456,10 +495,12 @@ pub fn fit_popover_with_policy(
     let anchor = popover.parent()?;
     let bounds = monitor_rect_for(&anchor)?;
 
+    let anchor_rect = widget_rect(&anchor);
+    let size = popover_size(popover);
     let (position, rect) = fit_rect_with_policy(
-        widget_rect(&anchor),
+        anchor_rect,
         preferred,
-        popover_size(popover),
+        size,
         bounds,
         margin,
         gap,
@@ -467,13 +508,17 @@ pub fn fit_popover_with_policy(
         policy,
     );
 
-    apply_fit(&anchor, popover, position, rect, cross);
+    apply_fit(&anchor, popover, position, size, rect);
     Some(PopoverFit { position, rect })
 }
 
 /// Fits `popover` around an explicit pointing rectangle expressed in the
 /// parent widget's coordinate space (e.g. a right-click at pointer position).
-/// Uses the same corrected pointing math as widget-anchored popovers.
+///
+/// The caller's pointing rectangle (set with `set_pointing_to`) is left
+/// untouched: GTK already places the popup around it. Just like the
+/// widget-anchored path, only an offset is applied to keep the result on
+/// screen.
 pub fn fit_popover_at_point(
     popover: &Popover,
     point: ScreenRect,
@@ -493,23 +538,20 @@ pub fn fit_popover_at_point(
         point.height.max(1),
     );
 
-    let (position, rect) = fit_rect_with_policy(
-        anchor,
-        preferred,
-        popover_size(popover),
-        bounds,
-        margin,
-        gap,
-        cross,
-        policy,
-    );
+    let size = popover_size(popover);
+    let (position, rect) =
+        fit_rect_with_policy(anchor, preferred, size, bounds, margin, gap, cross, policy);
 
-    apply_pointing(
-        popover,
-        position,
-        cross,
-        pointing_rect_for(rect, position, cross, (origin_x, origin_y)),
+    // `point` is in parent-widget coordinates; GTK's native placement is
+    // measured there too, so convert it to the toplevel space used by `rect`.
+    let native = native_rect_for(point, position, size);
+    let native = ScreenRect::new(
+        native.x.saturating_add(origin_x),
+        native.y.saturating_add(origin_y),
+        native.width,
+        native.height,
     );
+    apply_offset(popover, position, native, rect);
     Some(PopoverFit { position, rect })
 }
 
@@ -571,26 +613,32 @@ mod tests {
         ScreenRect::new(0, 0, 1920, 1080)
     }
 
-    /// Pure simulation: fit -> pointing rect -> GTK placement -> compare.
+    /// Pure simulation: fit -> native placement -> offset -> final rect.
     fn placed_rect(
         anchor: ScreenRect,
         preferred: PositionType,
         size: (i32, i32),
         policy: FitPolicy,
         cross: CrossAlign,
-        origin: (i32, i32),
-    ) -> (PositionType, ScreenRect, ScreenRect) {
+    ) -> (PositionType, ScreenRect, ScreenRect, (i32, i32)) {
         let (position, rect) = fit_rect_with_policy(
-            anchor, preferred, size, bounds(), EDGE_MARGIN, ANCHOR_GAP, cross, policy,
+            anchor,
+            preferred,
+            size,
+            bounds(),
+            EDGE_MARGIN,
+            ANCHOR_GAP,
+            cross,
+            policy,
         );
-        let pointing = pointing_rect_for(rect, position, cross, origin);
-        // Use the fitted size: GTK's content is capped to the fitted rect by
-        // the caller (ScrolledWindow / size request), not the original request.
-        let mut placed =
-            popover_rect_from_pointing(pointing, position, cross, (rect.width, rect.height));
-        placed.x += origin.0;
-        placed.y += origin.1;
-        (position, rect, placed)
+        // The caller caps the popover content to the fitted size, so simulate
+        // GTK's native placement with that size rather than the raw request.
+        let native = native_rect_for(anchor, position, (rect.width, rect.height));
+        let offset = offset_for_rect(native, rect);
+        let mut placed = native;
+        placed.x += offset.0;
+        placed.y += offset.1;
+        (position, rect, placed, offset)
     }
 
     #[test]
@@ -646,15 +694,32 @@ mod tests {
     }
 
     #[test]
+    fn native_bottom_placement_is_centered_and_flush() {
+        // GTK uses the parent widget's bounds as the pointing rect; with its
+        // default alignment the popup is centered and touches the bottom edge.
+        let anchor = ScreenRect::new(100, 8, 24, 28);
+        let native = native_rect_for(anchor, PositionType::Bottom, (200, 100));
+        assert_eq!(native, ScreenRect::new(12, anchor.bottom(), 200, 100));
+    }
+
+    #[test]
+    fn native_side_placement_is_centered_on_cross_axis() {
+        let anchor = ScreenRect::new(1890, 120, 20, 28);
+        let right = native_rect_for(anchor, PositionType::Right, (240, 100));
+        assert_eq!(right, ScreenRect::new(anchor.right(), 84, 240, 100));
+        let left = native_rect_for(anchor, PositionType::Left, (240, 100));
+        assert_eq!(left, ScreenRect::new(anchor.x - 240, 84, 240, 100));
+    }
+
+    #[test]
     fn popup_near_bottom_flips_to_top_without_touching_anchor() {
         let anchor = ScreenRect::new(960, 1060, 24, 28);
-        let (position, _rect, placed) = placed_rect(
+        let (position, _rect, placed, _offset) = placed_rect(
             anchor,
             PositionType::Bottom,
             (200, 300),
             FitPolicy::Flip,
             CrossAlign::Start,
-            (960, 1060),
         );
         assert_eq!(position, PositionType::Top);
         assert_eq!(placed.bottom(), anchor.y - ANCHOR_GAP);
@@ -665,13 +730,12 @@ mod tests {
     #[test]
     fn popup_near_right_flips_to_left_without_touching_anchor() {
         let anchor = ScreenRect::new(1890, 120, 20, 28);
-        let (position, _rect, placed) = placed_rect(
+        let (position, _rect, placed, _offset) = placed_rect(
             anchor,
             PositionType::Right,
             (240, 100),
             FitPolicy::Flip,
             CrossAlign::Start,
-            (1890, 120),
         );
         assert_eq!(position, PositionType::Left);
         assert_eq!(placed.right(), anchor.x - ANCHOR_GAP);
@@ -725,9 +789,9 @@ mod tests {
     }
 
     #[test]
-    fn pointing_roundtrip_reproduces_fitted_rect_for_every_side() {
-        let wanted = ScreenRect::new(1510, 60, 240, 200);
-        let origin = (1400, 40);
+    fn offset_roundtrip_matches_fitted_rect_for_every_side_and_cross() {
+        let anchor = ScreenRect::new(900, 400, 24, 28);
+        let size = (240, 200);
         for position in [
             PositionType::Bottom,
             PositionType::Top,
@@ -735,44 +799,66 @@ mod tests {
             PositionType::Right,
         ] {
             for cross in [CrossAlign::Start, CrossAlign::End] {
-                let pointing = pointing_rect_for(wanted, position, cross, origin);
-                let mut placed = popover_rect_from_pointing(pointing, position, cross, (240, 200));
-                placed.x += origin.0;
-                placed.y += origin.1;
-                assert_eq!(placed, wanted, "{position:?} / {cross:?}");
+                let (_position, rect, placed, offset) =
+                    placed_rect(anchor, position, size, FitPolicy::Flip, cross);
+                let native = native_rect_for(anchor, position, size);
+                assert_eq!(
+                    offset,
+                    offset_for_rect(native, rect),
+                    "{position:?} / {cross:?}"
+                );
+                assert_eq!(placed, rect, "{position:?} / {cross:?}");
+                assert!(!placed.intersects(&anchor), "{position:?} / {cross:?}");
             }
         }
     }
 
     #[test]
-    fn bottom_pointing_does_not_subtract_anchor_height() {
-        // Regression: pointing.y used to be rect.y - anchor.height, which made
-        // GTK place the popover on top of the icon.
+    fn bottom_offset_keeps_gap_without_covering_anchor() {
+        // Regression: the old fitter rebuilt a pointing rect from
+        // widget_origin() and the popup jumped to the window's top-left. The
+        // gap now comes from the y offset on top of GTK's flush placement.
         let anchor = ScreenRect::new(1500, 8, 24, 28);
-        let rect = ScreenRect::new(1500, anchor.bottom() + ANCHOR_GAP, 240, 200);
-        let pointing = pointing_rect_for(rect, PositionType::Bottom, CrossAlign::Start, (0, 0));
-        assert_eq!(pointing.y, rect.y - 1);
-        let placed = popover_rect_from_pointing(pointing, PositionType::Bottom, CrossAlign::Start, (240, 200));
-        assert_eq!(placed, rect);
+        let (position, rect, placed, offset) = placed_rect(
+            anchor,
+            PositionType::Bottom,
+            (240, 200),
+            FitPolicy::KeepSide,
+            CrossAlign::Start,
+        );
+        assert_eq!(position, PositionType::Bottom);
+        assert_eq!(offset.1, ANCHOR_GAP);
+        assert_eq!(rect, placed);
         assert_eq!(placed.y, anchor.bottom() + ANCHOR_GAP);
         assert!(placed.y >= anchor.bottom() + 10);
         assert!(!placed.intersects(&anchor));
     }
 
     #[test]
+    fn pointer_point_offset_keeps_callers_pointing_rect() {
+        // Callers set a 1x1 pointing rect themselves. GTK centers the popup on
+        // it natively; only the offset moves it to the fitted rectangle.
+        let point = ScreenRect::new(400, 300, 1, 1);
+        let native = native_rect_for(point, PositionType::Bottom, (200, 100));
+        assert_eq!(native, ScreenRect::new(300, 301, 200, 100));
+        let target = ScreenRect::new(400, 313, 200, 100);
+        assert_eq!(offset_for_rect(native, target), (100, 12));
+    }
+
+    #[test]
     fn topbar_tooltip_stays_below_anchor_with_minimum_gap() {
         assert!(ANCHOR_GAP >= 10 && ANCHOR_GAP <= 16);
         let anchor = ScreenRect::new(1500, 6, 28, 28);
-        let (position, rect, placed) = placed_rect(
+        let (position, rect, placed, offset) = placed_rect(
             anchor,
             PositionType::Bottom,
             (260, 300),
             FitPolicy::KeepSide,
             CrossAlign::Start,
-            (0, 0),
         );
         assert_eq!(position, PositionType::Bottom);
         assert_eq!(rect, placed);
+        assert_eq!(offset.1, ANCHOR_GAP);
         assert!(rect.y >= anchor.bottom() + ANCHOR_GAP);
         assert!(rect.y >= anchor.bottom() + 10);
         assert!(!rect.intersects(&anchor));
@@ -783,17 +869,19 @@ mod tests {
     #[test]
     fn topbar_tooltip_near_right_edge_clamps_instead_of_flipping() {
         let anchor = ScreenRect::new(1896, 8, 20, 28);
-        let (position, rect, placed) = placed_rect(
+        let (position, rect, placed, offset) = placed_rect(
             anchor,
             PositionType::Bottom,
             (260, 300),
             FitPolicy::KeepSide,
             CrossAlign::Start,
-            (0, 0),
         );
         assert_eq!(position, PositionType::Bottom);
         assert_eq!(rect, placed);
-        assert_eq!(rect.right(), bounds().right() - EDGE_MARGIN);
+        // The right-edge correction is a purely horizontal shift.
+        assert!(offset.0 < 0);
+        assert_eq!(offset.1, ANCHOR_GAP);
+        assert_eq!(placed.right(), bounds().right() - EDGE_MARGIN);
         assert!(rect.y >= anchor.bottom() + 10);
         assert!(!rect.intersects(&anchor));
     }
@@ -801,16 +889,16 @@ mod tests {
     #[test]
     fn keep_side_shrinks_near_bottom_without_covering_anchor() {
         let anchor = ScreenRect::new(960, 1000, 24, 28);
-        let (position, rect, placed) = placed_rect(
+        let (position, rect, placed, offset) = placed_rect(
             anchor,
             PositionType::Bottom,
             (200, 300),
             FitPolicy::KeepSide,
             CrossAlign::Start,
-            (0, 0),
         );
         assert_eq!(position, PositionType::Bottom);
         assert_eq!(rect, placed);
+        assert_eq!(offset.1, ANCHOR_GAP);
         assert_eq!(rect.y, anchor.bottom() + ANCHOR_GAP);
         assert!(rect.height < 300);
         assert_eq!(rect.bottom(), bounds().bottom() - EDGE_MARGIN);
@@ -822,13 +910,12 @@ mod tests {
         // Audio-device button on the right edge of the panel: the fitter flips
         // it to the left and End alignment keeps its bottom on the button.
         let anchor = ScreenRect::new(1896, 700, 24, 28);
-        let (position, rect, placed) = placed_rect(
+        let (position, rect, placed, _offset) = placed_rect(
             anchor,
             PositionType::Right,
             (240, 180),
             FitPolicy::Flip,
             CrossAlign::End,
-            (0, 0),
         );
         assert_eq!(position, PositionType::Left);
         assert_eq!(rect, placed);
