@@ -7,7 +7,7 @@
 //! This module is a facade over [`crate::app::models`] and holds only the
 //! cross-component orchestration functions.
 
-use std::{ffi::OsString, sync::Arc, time::Instant};
+use std::{error::Error, ffi::OsString, sync::Arc, time::Instant};
 
 use smithay::{
     desktop::PopupManager,
@@ -53,7 +53,7 @@ impl BabydraState {
     /// * `bus` - Sender for the compositor's local protocol peer.
     ///
     /// # Returns
-    /// The fully assembled compositor state.
+    /// The fully assembled compositor state, or the socket/source setup error.
     pub(crate) fn new(
         event_loop: &mut EventLoop<'_, CalloopData>,
         display: Display<Self>,
@@ -61,14 +61,14 @@ impl BabydraState {
         shortcuts: Arc<crate::core::shortcuts::app::ShortcutService>,
         registry: Arc<crate::core::shortcuts::app::ShortcutRegistry>,
         bus: crate::protocol::BusSender,
-    ) -> Self {
+    ) -> Result<Self, Box<dyn Error>> {
         let display_handle = display.handle();
         let wayland = WaylandRuntime::new(&display_handle);
 
-        let socket_name = Self::init_wayland_listener(display, event_loop);
+        let socket_name = Self::init_wayland_listener(display, event_loop)?;
         let config = ConfigSnapshot::new(load_gesture_policy, shortcuts, registry);
 
-        Self {
+        Ok(Self {
             bus,
             wayland,
             clipboard: ClipboardState::default(),
@@ -83,7 +83,7 @@ impl BabydraState {
                 popups: PopupManager::default(),
                 render: RenderState::new(),
             },
-        }
+        })
     }
 
     /// Records that a client installed a new selection.
@@ -123,52 +123,51 @@ impl BabydraState {
     /// * `event_loop` - Loop that owns both sources.
     ///
     /// # Returns
-    /// The allocated Wayland socket name.
+    /// The allocated Wayland socket name, or the socket/source setup error.
     pub(super) fn init_wayland_listener(
         display: Display<Self>,
         event_loop: &mut EventLoop<'_, CalloopData>,
-    ) -> OsString {
-        let listening_socket = ListeningSocketSource::new_auto()
-            .expect("failed to create the Wayland listening socket (check XDG_RUNTIME_DIR)");
+    ) -> Result<OsString, Box<dyn Error>> {
+        let listening_socket = ListeningSocketSource::new_auto()?;
         let socket_name = listening_socket.socket_name().to_os_string();
         let loop_handle = event_loop.handle();
 
-        loop_handle
-            .insert_source(listening_socket, move |client_stream, _, state| {
-                // A single bad client must not take down the whole compositor.
-                if let Err(error) = state
-                    .state
-                    .wayland
-                    .display_handle
-                    .insert_client(client_stream, Arc::new(ClientState::default()))
-                {
-                    tracing::error!("failed to register Wayland client: {error}");
+        loop_handle.insert_source(listening_socket, move |client_stream, _, state| {
+            // A single bad client must not take down the whole compositor.
+            if let Err(error) = state
+                .state
+                .wayland
+                .display_handle
+                .insert_client(client_stream, Arc::new(ClientState::default()))
+            {
+                tracing::error!("failed to register Wayland client: {error}");
+            }
+        })?;
+
+        loop_handle.insert_source(
+            Generic::new(
+                display,
+                Interest::READ,
+                smithay::reexports::calloop::Mode::Level,
+            ),
+            |_, display, state| {
+                // The display is owned by this Level-mode event source and is
+                // not moved or dropped until the event loop stops.
+                // SAFETY: `get_mut` is the documented way to obtain the
+                // `&mut DisplayHandle` backing this registered source; the
+                // pointer stays valid for the duration of the callback and
+                // no other thread dispatches this display concurrently.
+                let dispatch = unsafe { display.get_mut().dispatch_clients(&mut state.state) };
+                if let Err(error) = dispatch {
+                    // Protocol errors from one client are logged and the loop keeps
+                    // running; panicking here would kill every other client.
+                    tracing::error!("Wayland client dispatch failed: {error}");
                 }
-            })
-            .expect("failed to register the Wayland listening socket with the calloop event loop");
+                Ok(PostAction::Continue)
+            },
+        )?;
 
-        loop_handle
-            .insert_source(
-                Generic::new(
-                    display,
-                    Interest::READ,
-                    smithay::reexports::calloop::Mode::Level,
-                ),
-                |_, display, state| {
-                    // The display remains owned by the event source for the compositor lifetime.
-                    // SAFETY: Pointer and lifetime invariants were verified at this call site.
-                    let dispatch = unsafe { display.get_mut().dispatch_clients(&mut state.state) };
-                    if let Err(error) = dispatch {
-                        // Protocol errors from one client are logged and the loop keeps
-                        // running; panicking here would kill every other client.
-                        tracing::error!("Wayland client dispatch failed: {error}");
-                    }
-                    Ok(PostAction::Continue)
-                },
-            )
-            .expect("failed to register the Wayland display with the calloop event loop");
-
-        socket_name
+        Ok(socket_name)
     }
 }
 

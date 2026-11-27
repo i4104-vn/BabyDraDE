@@ -123,13 +123,15 @@ impl RenderState {
 
     /// Hot reloads blur configuration from disk.
     pub(crate) fn reload_config(&self) {
-        if let Ok(mut engine) = self.blur_engine.lock() {
-            engine.reload_config();
-            tracing::info!(
-                "Win+F5: Configuration reloaded from disk ({} app rules registered for blur)",
-                engine.params.app_rules.len()
-            );
-        }
+        let mut engine = self
+            .blur_engine
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        engine.reload_config();
+        tracing::info!(
+            "Win+F5: Configuration reloaded from disk ({} app rules registered for blur)",
+            engine.params.app_rules.len()
+        );
     }
 }
 

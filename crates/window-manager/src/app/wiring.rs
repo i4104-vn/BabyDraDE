@@ -83,7 +83,7 @@ pub(crate) fn build_state<'a>() -> Result<Wiring<'a>, Box<dyn Error>> {
         shortcuts.clone(),
         registry.clone(),
         bus_sender,
-    );
+    )?;
 
     // Toolkit hints must be visible to GTK, but WAYLAND_DISPLAY must still
     // point at the host session here (if any) until the backend is chosen.
