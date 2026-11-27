@@ -83,8 +83,19 @@ fn read_locale(lock: &RwLock<String>) -> String {
 }
 
 /// Sets the current active system locale.
+///
+/// Only `"en"` and `"vi"` are accepted; unsupported values are ignored rather
+/// than silently selecting Vietnamese. A poisoned lock is also ignored so a
+/// translation helper cannot crash the UI.
 pub fn set_locale(locale: &str) {
-    let normalized = if locale == "en" { "en" } else { "vi" };
+    let normalized = match locale {
+        "en" => "en",
+        "vi" => "vi",
+        other => {
+            tracing::warn!("unsupported locale {other:?}; ignoring set_locale");
+            return;
+        }
+    };
 
     let lock = CURRENT_LOCALE.get_or_init(|| RwLock::new(normalized.to_string()));
     if let Ok(mut writer) = lock.write() {
@@ -92,7 +103,12 @@ pub fn set_locale(locale: &str) {
     }
 }
 
-/// Persist locale to ~/.babydra/locale.conf and ~/.config/locale.conf and update env vars.
+/// Persists the locale to `~/.babydra/locale.conf` and `~/.config/locale.conf`.
+///
+/// Process-wide environment variables are intentionally left untouched: a
+/// library must not mutate `LANG`/`LANGUAGE` for unrelated crates. Applications
+/// that need a different process locale should set it at startup.
+///
 pub fn persist_locale(locale: &str) {
     let normalized = if locale == "en" { "en" } else { "vi" };
     let lang_str = if normalized == "vi" {
@@ -101,8 +117,6 @@ pub fn persist_locale(locale: &str) {
         "en_US.UTF-8"
     };
 
-    std::env::set_var("LANG", lang_str);
-    std::env::set_var("LANGUAGE", lang_str);
     set_locale(normalized);
 
     let content = format!("LANG={lang_str}\nLANGUAGE={lang_str}\nLOCALE={normalized}\n");

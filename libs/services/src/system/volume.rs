@@ -198,39 +198,67 @@ pub fn set_volume(pct: f64) {
     tracing::warn!("could not set volume through any available audio backend");
 }
 
+/// Desired mute state of the default output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MuteState {
+    /// Silence the default output.
+    Muted,
+    /// Restore audio on the default output.
+    Unmuted,
+}
+
+impl MuteState {
+    fn wpctl_value(self) -> &'static str {
+        match self {
+            Self::Muted => "1",
+            Self::Unmuted => "0",
+        }
+    }
+
+    fn amixer_value(self) -> &'static str {
+        match self {
+            Self::Muted => "mute",
+            Self::Unmuted => "unmute",
+        }
+    }
+}
+
 /// Sets or clears the default output mute flag.
 ///
 /// # Arguments
-/// * `muted` - `true` to mute, `false` to unmute.
-pub fn set_muted(muted: bool) {
+/// * `state` - Whether to mute or unmute the default output.
+pub fn set_mute(state: MuteState) {
     for backend in backend_order() {
         let ok = match backend {
             AudioBackend::Wpctl => command_succeeds(
                 "wpctl",
-                &[
-                    "set-mute",
-                    "@DEFAULT_AUDIO_SINK@",
-                    if muted { "1" } else { "0" },
-                ],
+                &["set-mute", "@DEFAULT_AUDIO_SINK@", state.wpctl_value()],
             ),
             AudioBackend::Pactl => command_succeeds(
                 "pactl",
-                &[
-                    "set-sink-mute",
-                    "@DEFAULT_SINK@",
-                    if muted { "1" } else { "0" },
-                ],
+                &["set-sink-mute", "@DEFAULT_SINK@", state.wpctl_value()],
             ),
-            AudioBackend::Amixer => command_succeeds(
-                "amixer",
-                &["set", "Master", if muted { "mute" } else { "unmute" }],
-            ),
+            AudioBackend::Amixer => {
+                command_succeeds("amixer", &["set", "Master", state.amixer_value()])
+            }
         };
         if ok {
             return;
         }
     }
     tracing::warn!("could not change mute state through any available audio backend");
+}
+
+/// Compatibility wrapper for callers that pass a boolean.
+///
+/// # Arguments
+/// * `muted` - `true` to mute, `false` to unmute.
+pub fn set_muted(muted: bool) {
+    set_mute(if muted {
+        MuteState::Muted
+    } else {
+        MuteState::Unmuted
+    });
 }
 
 /// Reads the display name of the default audio output.
