@@ -2,9 +2,10 @@
 
 use std::time::{Duration, Instant};
 
+use crate::system::window::active::{fallback_probe_due, parse_wlrctl_line, throttle_due};
 use crate::system::window::get_title_app_part;
 use crate::system::window::identity::cache::{IdentityCache, IdentityKey};
-use crate::system::window::identity::catalogue::AppEntry;
+use crate::system::window::identity::catalogue::{catalogue_due, AppEntry};
 use crate::system::window::identity::process::app_name_from_cmdline_bytes;
 use crate::system::window::identity::resolve::{
     entry_for_executable_hints, find_by_executable, resolve_identity, WindowIdentity,
@@ -214,4 +215,72 @@ fn cmdline_parser_extracts_executable_basename() {
     );
     assert_eq!(app_name_from_cmdline_bytes(b"\0").as_deref(), None);
     assert_eq!(app_name_from_cmdline_bytes(b"").as_deref(), None);
+}
+
+#[test]
+fn fallback_throttle_waits_between_probes() {
+    let now = Instant::now();
+    let interval = Duration::from_secs(1);
+    assert!(throttle_due(None, now, interval));
+    assert!(!throttle_due(Some(now), now + interval / 2, interval));
+    assert!(throttle_due(Some(now), now + interval, interval));
+    // A clock moving backwards must never make a probe look overdue.
+    assert!(!throttle_due(Some(now + interval), now, interval));
+}
+
+#[test]
+fn fallback_probe_never_duplicates_work() {
+    let now = Instant::now();
+    assert!(fallback_probe_due(false, false, false, None, now));
+    // A watcher feeds the cache, and an in-flight probe must not be repeated.
+    assert!(!fallback_probe_due(true, false, false, None, now));
+    assert!(!fallback_probe_due(false, true, false, None, now));
+    assert!(!fallback_probe_due(
+        false,
+        false,
+        false,
+        Some(now),
+        now + Duration::from_millis(999)
+    ));
+    assert!(fallback_probe_due(
+        false,
+        false,
+        false,
+        Some(now),
+        now + Duration::from_secs(1)
+    ));
+    // An unavailable `wlrctl` is retried only after the longer backoff.
+    assert!(!fallback_probe_due(
+        false,
+        false,
+        true,
+        Some(now),
+        now + Duration::from_secs(1)
+    ));
+    assert!(fallback_probe_due(
+        false,
+        false,
+        true,
+        Some(now),
+        now + Duration::from_secs(30)
+    ));
+}
+
+#[test]
+fn catalogue_refresh_uses_its_ttl() {
+    let now = Instant::now();
+    let ttl = Duration::from_secs(30);
+    assert!(catalogue_due(None, now, ttl));
+    assert!(!catalogue_due(Some(now), now + ttl / 2, ttl));
+    assert!(catalogue_due(Some(now), now + ttl, ttl));
+}
+
+#[test]
+fn wlrctl_line_parser_keeps_app_id_and_title() {
+    let info = parse_wlrctl_line("firefox: Room - Firefox\n").expect("focused window");
+    assert_eq!(info.app_id, "firefox");
+    assert_eq!(info.title, "Room - Firefox");
+    assert_eq!(info.process_id, None);
+    assert_eq!(parse_wlrctl_line("  :  \n"), None);
+    assert_eq!(parse_wlrctl_line("no separator\n"), None);
 }

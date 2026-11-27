@@ -93,19 +93,24 @@ struct CachedCatalogue {
 
 static CATALOGUE: OnceLock<Mutex<Option<CachedCatalogue>>> = OnceLock::new();
 
+/// Pure TTL check for the installed-entry catalogue.
+///
+/// `now` is injected so refresh timing can be tested without sleeping.
+pub(crate) fn catalogue_due(loaded_at: Option<Instant>, now: Instant, ttl: Duration) -> bool {
+    loaded_at.is_none_or(|at| now.saturating_duration_since(at) >= ttl)
+}
+
 /// Returns the installed-entry catalogue, refreshing it at most once per TTL.
 pub(super) fn installed_apps() -> Arc<Vec<AppEntry>> {
     let slot = CATALOGUE.get_or_init(|| Mutex::new(None));
     let Ok(mut guard) = slot.lock() else {
         return Arc::new(load_installed_apps());
     };
-    let expired = guard
-        .as_ref()
-        .is_none_or(|cached| cached.loaded_at.elapsed() >= CATALOGUE_TTL);
-    if expired {
+    let now = Instant::now();
+    if catalogue_due(guard.as_ref().map(|cached| cached.loaded_at), now, CATALOGUE_TTL) {
         *guard = Some(CachedCatalogue {
             entries: Arc::new(load_installed_apps()),
-            loaded_at: Instant::now(),
+            loaded_at: now,
         });
     }
     guard

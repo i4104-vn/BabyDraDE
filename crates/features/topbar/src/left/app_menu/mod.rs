@@ -18,6 +18,27 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 use ui_kit::VerticalSeparator;
 
+/// The identity-defining part of a focused window. A document title is not
+/// application identity: it must not trigger a desktop-entry lookup or a D-Bus
+/// menu rediscovery when the application itself did not change.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct AppIdentity {
+    app_id: String,
+    process_id: Option<u32>,
+}
+
+fn app_identity(info: &ActiveWindowInfo) -> AppIdentity {
+    AppIdentity {
+        app_id: info.app_id.clone(),
+        process_id: info.process_id,
+    }
+}
+
+/// True when app id or pid alone is enough evidence to resolve the app.
+fn has_stable_identity(info: &ActiveWindowInfo) -> bool {
+    !info.app_id.trim().is_empty() || info.process_id.is_some()
+}
+
 pub struct AppMenu {
     container: Box,
     sep: VerticalSeparator,
@@ -70,7 +91,10 @@ impl AppMenu {
         let app_title_icon = gtk4::Image::new();
         app_title_icon.set_pixel_size(16);
         app_title_icon.add_css_class("app-title-icon");
-        {
+        // No window yet means no desktop entry to resolve: avoid scanning the
+        // installed applications during startup. The poll fills the icon in as
+        // soon as a focused window is reported.
+        if has_active_window {
             let initial = current_app_info.borrow();
             update_app_icon(
                 &app_title_icon,
@@ -122,12 +146,17 @@ impl AppMenu {
             .build();
         container.append(&menubar_box);
 
-        // GTK4 has no child-added/child-removed signals on Box, so keep the
-        // separator in sync with the asynchronously populated menubar cheaply.
+        // GTK4 has no child-added/child-removed signals on Box, so a slow
+        // timer keeps the separator in sync with the asynchronously populated
+        // menubar. Writing the property only on change avoids touching the
+        // widget twenty times a second while no menu exists.
         let sep_sync = sep.widget().clone();
         let menubar_sync = menubar_box.clone();
-        glib::timeout_add_local(Duration::from_millis(50), move || {
-            sep_sync.set_visible(menubar_sync.first_child().is_some());
+        glib::timeout_add_local(Duration::from_millis(250), move || {
+            let visible = menubar_sync.first_child().is_some();
+            if sep_sync.is_visible() != visible {
+                sep_sync.set_visible(visible);
+            }
             glib::ControlFlow::Continue
         });
 
@@ -162,61 +191,42 @@ impl AppMenu {
 
         glib::timeout_add_local(Duration::from_millis(150), move || {
             let latest = get_active_window().unwrap_or_default();
-            let changed = {
-                let cur = app_info_poll.borrow();
-                cur.app_id != latest.app_id
-                    || cur.title != latest.title
-                    || cur.process_id != latest.process_id
-            };
+            let previous = app_info_poll.borrow().clone();
+            // Only app id / pid changes identify a different application.
+            // Document titles change constantly and must not re-resolve the
+            // desktop entry or rediscover the application's menu.
+            let identity_changed = app_identity(&previous) != app_identity(&latest);
+            let title_changed = previous.title != latest.title;
 
             let has_app = !latest.is_empty();
             let discovery_retry_due = has_app
-                && !changed
+                && !identity_changed
                 && service_poll.borrow().is_none()
                 && last_discovery_poll
                     .borrow()
                     .is_none_or(|attempt| attempt.elapsed() >= Duration::from_secs(1));
 
-            match true {
-                _ if changed => {
-                    *app_info_poll.borrow_mut() = latest.clone();
-                    container_poll.set_visible(has_app);
+            if identity_changed {
+                *app_info_poll.borrow_mut() = latest.clone();
+                container_poll.set_visible(has_app);
 
-                    let next_gen = *gen_poll.borrow() + 1;
-                    *gen_poll.borrow_mut() = next_gen;
-                    clear_menubar(&menubar_poll, &service_poll, &path_poll);
+                let next_gen = *gen_poll.borrow() + 1;
+                *gen_poll.borrow_mut() = next_gen;
+                clear_menubar(&menubar_poll, &service_poll, &path_poll);
 
-                    if has_app {
-                        let display_name = get_app_display_name_with_pid(
-                            &latest.app_id,
-                            &latest.title,
-                            latest.process_id,
-                        );
-                        update_app_icon(
-                            &icon_poll,
-                            &latest.app_id,
-                            &latest.title,
-                            latest.process_id,
-                        );
-                        label_poll.set_label(&display_name);
-                        trigger_dbus_menu_discovery(
-                            &latest.app_id,
-                            latest.process_id,
-                            next_gen,
-                            gen_poll.clone(),
-                            menubar_poll.clone(),
-                            service_poll.clone(),
-                            path_poll.clone(),
-                        );
-                        *last_discovery_poll.borrow_mut() = Some(Instant::now());
-                    } else {
-                        label_poll.set_label("");
-                        *last_discovery_poll.borrow_mut() = None;
-                    }
-                }
-                _ if discovery_retry_due => {
-                    let next_gen = *gen_poll.borrow() + 1;
-                    *gen_poll.borrow_mut() = next_gen;
+                if has_app {
+                    let display_name = get_app_display_name_with_pid(
+                        &latest.app_id,
+                        &latest.title,
+                        latest.process_id,
+                    );
+                    update_app_icon(
+                        &icon_poll,
+                        &latest.app_id,
+                        &latest.title,
+                        latest.process_id,
+                    );
+                    label_poll.set_label(&display_name);
                     trigger_dbus_menu_discovery(
                         &latest.app_id,
                         latest.process_id,
@@ -227,8 +237,43 @@ impl AppMenu {
                         path_poll.clone(),
                     );
                     *last_discovery_poll.borrow_mut() = Some(Instant::now());
+                } else {
+                    label_poll.set_label("");
+                    *last_discovery_poll.borrow_mut() = None;
                 }
-                _ => {}
+            } else if title_changed {
+                // Keep lifecycle actions aimed at the current window, but do
+                // no identity work when the application itself is unchanged.
+                *app_info_poll.borrow_mut() = latest.clone();
+                if has_app && !has_stable_identity(&latest) {
+                    // With neither app id nor pid, the title is the only
+                    // evidence available, so the label must follow it.
+                    let display_name = get_app_display_name_with_pid(
+                        &latest.app_id,
+                        &latest.title,
+                        latest.process_id,
+                    );
+                    update_app_icon(
+                        &icon_poll,
+                        &latest.app_id,
+                        &latest.title,
+                        latest.process_id,
+                    );
+                    label_poll.set_label(&display_name);
+                }
+            } else if discovery_retry_due {
+                let next_gen = *gen_poll.borrow() + 1;
+                *gen_poll.borrow_mut() = next_gen;
+                trigger_dbus_menu_discovery(
+                    &latest.app_id,
+                    latest.process_id,
+                    next_gen,
+                    gen_poll.clone(),
+                    menubar_poll.clone(),
+                    service_poll.clone(),
+                    path_poll.clone(),
+                );
+                *last_discovery_poll.borrow_mut() = Some(Instant::now());
             }
 
             glib::ControlFlow::Continue
@@ -319,5 +364,37 @@ fn update_app_icon(icon: &gtk4::Image, app_id: &str, title: &str, process_id: Op
 impl Default for AppMenu {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn info(app_id: &str, title: &str, process_id: Option<u32>) -> ActiveWindowInfo {
+        ActiveWindowInfo {
+            app_id: app_id.to_string(),
+            title: title.to_string(),
+            process_id,
+        }
+    }
+
+    #[test]
+    fn title_change_keeps_the_same_app_identity() {
+        let first = info("firefox", "notes.md - Firefox", Some(42));
+        let renamed = info("firefox", "other.md - Firefox", Some(42));
+        assert_eq!(app_identity(&first), app_identity(&renamed));
+
+        let other_pid = info("firefox", "notes.md - Firefox", Some(43));
+        let other_app = info("chromium", "notes.md - Firefox", Some(42));
+        assert_ne!(app_identity(&first), app_identity(&other_pid));
+        assert_ne!(app_identity(&first), app_identity(&other_app));
+    }
+
+    #[test]
+    fn stable_identity_does_not_depend_on_the_title() {
+        assert!(has_stable_identity(&info("firefox", "", None)));
+        assert!(has_stable_identity(&info("", "", Some(42))));
+        assert!(!has_stable_identity(&info("", "Firefox", None)));
     }
 }

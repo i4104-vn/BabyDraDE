@@ -36,7 +36,11 @@ impl IslandCapsule {
         }
 
         let tick_engine = engine.clone();
-        glib::timeout_add_local(Duration::from_millis(150), move || {
+        // Arbitration is also requested immediately by listeners, shortcuts
+        // and IPC (`IslandCtx::tick`). This timer only covers time-based
+        // visibility and progress text, so 250 ms keeps it smooth without
+        // ticking every feature seven times a second.
+        glib::timeout_add_local(Duration::from_millis(250), move || {
             let rc = tick_engine.clone();
             rc.borrow_mut().tick(&rc);
             glib::ControlFlow::Continue

@@ -87,9 +87,10 @@ pub fn run() {
         window.set_child(Some(&center_box));
         window.present();
 
-        // The bus reader thread delivers into an in-memory inbox. Without a
-        // periodic drain that inbox grows whenever no widget polls events.
-        gtk4::glib::timeout_add_local(std::time::Duration::from_millis(50), || {
+        // The bus reader thread delivers into an in-memory inbox. No topbar
+        // widget consumes those events, so a slow drain is enough to bound the
+        // inbox without waking the main loop 20 times a second.
+        gtk4::glib::timeout_add_local(std::time::Duration::from_millis(500), || {
             bridge::drain();
             gtk4::glib::ControlFlow::Continue
         });

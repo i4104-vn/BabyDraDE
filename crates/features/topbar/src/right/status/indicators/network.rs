@@ -46,10 +46,18 @@ pub fn create_network_widget() -> gtk4::Box {
     let eth_timer = eth_area.clone();
     let wifi_timer = wifi_icon.clone();
     let conn_timer = is_connected_cell.clone();
+    // Only (type, connected) is visible in this indicator. Reapplying the
+    // same state would reload the Wi-Fi icon and redraw every two seconds.
+    let last_state = Rc::new(Cell::new(None::<(bool, bool)>));
 
     glib::timeout_add_seconds_local(2, move || {
         let net = get_active_network_info();
         let is_eth = net.network_type == ActiveNetworkType::Ethernet;
+        let state = (is_eth, net.is_connected);
+        if last_state.get() == Some(state) {
+            return glib::ControlFlow::Continue;
+        }
+        last_state.set(Some(state));
 
         if is_eth {
             wifi_timer.set_visible(false);
