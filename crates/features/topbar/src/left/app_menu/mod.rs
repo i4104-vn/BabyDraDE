@@ -12,7 +12,7 @@ use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Box, Button, GestureClick, Label, Orientation};
 use menu::show_window_action_menu;
-use services::system::{get_active_window, get_app_display_name, ActiveWindowInfo};
+use services::system::{get_active_window, get_app_display_name_with_pid, ActiveWindowInfo};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -44,7 +44,11 @@ impl AppMenu {
         container.set_visible(has_active_window);
 
         let initial_name = if has_active_window {
-            get_app_display_name(&initial_info.app_id, &initial_info.title)
+            get_app_display_name_with_pid(
+                &initial_info.app_id,
+                &initial_info.title,
+                initial_info.process_id,
+            )
         } else {
             String::new()
         };
@@ -66,7 +70,10 @@ impl AppMenu {
         let app_title_icon = gtk4::Image::new();
         app_title_icon.set_pixel_size(16);
         app_title_icon.add_css_class("app-title-icon");
-        update_app_icon(&app_title_icon, &current_app_info.borrow().app_id);
+        {
+            let initial = current_app_info.borrow();
+            update_app_icon(&app_title_icon, &initial.app_id, &initial.title);
+        }
 
         let app_title_label = Label::builder()
             .label(&initial_name)
@@ -175,8 +182,12 @@ impl AppMenu {
                     clear_menubar(&menubar_poll, &service_poll, &path_poll);
 
                     if has_app {
-                        let display_name = get_app_display_name(&latest.app_id, &latest.title);
-                        update_app_icon(&icon_poll, &latest.app_id);
+                        let display_name = get_app_display_name_with_pid(
+                            &latest.app_id,
+                            &latest.title,
+                            latest.process_id,
+                        );
+                        update_app_icon(&icon_poll, &latest.app_id, &latest.title);
                         label_poll.set_label(&display_name);
                         trigger_dbus_menu_discovery(
                             &latest.app_id,
@@ -231,7 +242,7 @@ impl AppMenu {
         let is_empty = app_name.trim().is_empty() || app_name.eq_ignore_ascii_case("desktop");
         self.container.set_visible(!is_empty);
         if !is_empty {
-            update_app_icon(&self.app_title_icon, app_name);
+            update_app_icon(&self.app_title_icon, app_name, app_name);
             self.app_title_label.set_label(app_name);
             *self.current_app_info.borrow_mut() = ActiveWindowInfo {
                 app_id: app_name.to_string(),
@@ -283,10 +294,10 @@ impl AppMenu {
     }
 }
 
-fn update_app_icon(icon: &gtk4::Image, app_id: &str) {
-    // AppInfo/GIcon resolution is centralized in ui-kit; the GTK Image uses
-    // the gio::Icon directly so the icon theme stays live.
-    if let Some(gicon) = ui_kit::resolve_app_gicon(app_id) {
+fn update_app_icon(icon: &gtk4::Image, app_id: &str, title: &str) {
+    // Identity is resolved from installed desktop entries plus the window's own
+    // title, so Chromium-based apps do not inherit each other's icon.
+    if let Some(gicon) = ui_kit::resolve_app_gicon_for_window(app_id, title) {
         icon.set_from_gicon(&gicon);
         icon.set_pixel_size(16);
         return;

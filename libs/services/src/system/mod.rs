@@ -33,8 +33,9 @@ pub use dbus_menu::{
 };
 pub use shortcuts::{read_all, ShortcutClient, ShortcutError, ShortcutTarget};
 pub use window::{
-    close_window_by_app, get_active_window, get_app_display_name, maximize_active_window,
-    minimize_active_window, send_window_action, toggle_fullscreen_active_window, ActiveWindowInfo,
+    close_window_by_app, get_active_window, get_app_display_name, get_app_display_name_with_pid,
+    maximize_active_window, minimize_active_window, send_window_action,
+    toggle_fullscreen_active_window, ActiveWindowInfo,
 };
 
 pub use hardware::{

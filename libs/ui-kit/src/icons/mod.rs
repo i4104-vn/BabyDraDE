@@ -20,7 +20,9 @@ mod theme;
 mod widget;
 
 pub use app::{
-    get_app_icon_pixbuf, get_app_icon_pixbuf_any, resolve_app_gicon, resolve_app_icon_name,
+    get_app_icon_pixbuf, get_app_icon_pixbuf_any, get_app_icon_pixbuf_any_for_window,
+    get_app_icon_pixbuf_for_window, resolve_app_gicon, resolve_app_gicon_for_window,
+    resolve_app_icon_name, resolve_app_icon_name_for_window,
 };
 pub use image::{
     get_icon_colored, get_icon_from_svg, get_logo_paintable, get_logo_png, LOGO_BYTES,

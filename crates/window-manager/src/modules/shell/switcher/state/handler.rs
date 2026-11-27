@@ -108,7 +108,11 @@ impl BabydraState {
             .filter(|w| !crate::modules::window::ops::is_window_exiting(w))
             .filter_map(|window| {
                 let metadata = crate::modules::window::metadata::get(window)?;
-                let app_id = metadata.app_id;
+                let icon_app_id = services::system::window::get_window_icon_id(
+                    &metadata.app_id,
+                    &metadata.title,
+                    None,
+                );
                 let app_name = if metadata.app_name.is_empty() {
                     "Application".to_string()
                 } else {
@@ -121,7 +125,7 @@ impl BabydraState {
                 // cannot take down the whole compositor — the switcher simply falls
                 // back to a coloured badge when the icon is unavailable.
                 let icon_pixbuf =
-                    std::panic::catch_unwind(|| ui_kit::get_app_icon_pixbuf_any(&app_id, 32))
+                    std::panic::catch_unwind(|| ui_kit::get_app_icon_pixbuf_any(&icon_app_id, 32))
                         .unwrap_or(None);
 
                 Some(AltTabEntry {
