@@ -3,7 +3,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 /// Brightness information for a backlight device.
-/// Brightness information for a backlight device.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BacklightInfo {
     pub device_name: String,
@@ -19,7 +18,17 @@ pub struct BacklightReader {
     device_path: Option<PathBuf>,
 }
 
-/// Reads and writes brightness through sysfs.
+/// Converts a brightness percentage into a raw sysfs value.
+///
+/// Returns `None` when the device reports no usable maximum.
+fn brightness_raw(target_percent: u8, max_brightness: u64) -> Option<u64> {
+    if max_brightness == 0 {
+        return None;
+    }
+    let clamped = target_percent.min(100) as f64;
+    Some((clamped / 100.0 * max_brightness as f64).round() as u64)
+}
+
 /// Reads and writes brightness through sysfs.
 impl BacklightReader {
     /// Creates a reader, probing `/sys/class/backlight` for a device.
@@ -90,15 +99,9 @@ impl BacklightReader {
             .parse()
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-        if max_brightness == 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "max_brightness is 0",
-            ));
-        }
-
-        let clamped = target_percent.min(100);
-        let target_raw = ((clamped as f64 / 100.0) * max_brightness as f64).round() as u64;
+        let target_raw = brightness_raw(target_percent, max_brightness).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidData, "max_brightness is 0")
+        })?;
 
         fs::write(path.join("brightness"), target_raw.to_string())
     }
@@ -145,5 +148,27 @@ impl BacklightReader {
             max_brightness,
             percent: percent.min(100),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn converts_percentage_to_raw_value() {
+        assert_eq!(brightness_raw(50, 200), Some(100));
+        assert_eq!(brightness_raw(100, 250), Some(250));
+        assert_eq!(brightness_raw(1, 1000), Some(10));
+    }
+
+    #[test]
+    fn clamps_to_device_maximum() {
+        assert_eq!(brightness_raw(200, 200), Some(200));
+    }
+
+    #[test]
+    fn rejects_zero_maximum() {
+        assert_eq!(brightness_raw(50, 0), None);
     }
 }

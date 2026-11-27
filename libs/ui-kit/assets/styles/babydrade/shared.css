@@ -669,13 +669,13 @@ label.recording-capsule-timer
 
 .pill-slider-container
 {
-    min-height: 32px;
+    min-height: 18px;
 }
 
 
 scale.pill-slider
 {
-    min-height: 32px;
+    min-height: 18px;
     margin: 0;
     padding: 0;
 }
@@ -683,7 +683,7 @@ scale.pill-slider
 
 scale.pill-slider trough
 {
-    min-height: 32px;
+    min-height: 18px;
     border-radius: 9999px;
     border: none;
 }
@@ -691,7 +691,7 @@ scale.pill-slider trough
 
 scale.pill-slider highlight
 {
-    min-height: 32px;
+    min-height: 18px;
     border-radius: 9999px;
     border: none;
 }

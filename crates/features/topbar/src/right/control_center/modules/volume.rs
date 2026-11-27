@@ -79,7 +79,6 @@ pub fn create_volume_row(
     let slider = PillSlider::new(initial_val, |_| {});
     slider.bind_label(&value_label);
     slider.add_scroll_to(&row_box);
-    slider.add_scroll_to(&main_box);
 
     let vol_icon_c2 = vol_icon.clone();
     let update_mute_icon_c = update_mute_icon.clone();
@@ -88,7 +87,10 @@ pub fn create_volume_row(
     slider.connect_debounced(80, move |val| {
         current_val_c2.set(val);
         set_volume(val);
-        if val > 0.0 {
+        if val > 0.0 && muted_state_c.get() {
+            // set_volume() does not unmute the sink, so a muted slider would
+            // otherwise look like it does nothing.
+            set_muted(false);
             muted_state_c.set(false);
             update_mute_icon_c(false);
         }
@@ -168,11 +170,15 @@ pub fn create_volume_row(
     let update_mute_icon_sync = update_mute_icon;
     let muted_state_sync = muted_state;
     let current_val_sync = current_val;
+    let value_label_sync = value_label.clone();
+    let vol_icon_sync = vol_icon.clone();
     let sync_callback: Rc<dyn Fn(f64, bool)> = Rc::new(move |val: f64, is_muted_val: bool| {
         current_val_sync.set(val);
         muted_state_sync.set(is_muted_val);
         slider_sync.set_value_silent(val);
+        value_label_sync.set_text(&format!("{:.0}%", val));
         update_mute_icon_sync(is_muted_val);
+        update_topbar_volume_state(&vol_icon_sync, val, is_muted_val);
     });
 
     (main_box, sync_callback)

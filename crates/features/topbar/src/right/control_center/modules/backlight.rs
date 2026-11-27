@@ -72,7 +72,6 @@ pub fn create_brightness() -> (gtk4::Box, Rc<dyn Fn(f64)>) {
     });
     slider.bind_label(&value_label);
     slider.add_scroll_to(&row_box);
-    slider.add_scroll_to(&main_box);
 
     let update_icon_debounced = update_icon.clone();
     slider.connect_debounced(80, move |val| {
@@ -93,8 +92,10 @@ pub fn create_brightness() -> (gtk4::Box, Rc<dyn Fn(f64)>) {
 
     let slider_sync = slider.clone();
     let update_icon_sync = update_icon.clone();
+    let value_label_sync = value_label.clone();
     let sync_callback: Rc<dyn Fn(f64)> = Rc::new(move |val: f64| {
         slider_sync.set_value_silent(val);
+        value_label_sync.set_text(&format!("{:.0}%", val));
         update_icon_sync(val);
     });
 

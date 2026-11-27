@@ -22,6 +22,20 @@ pub fn detect_audio_backend() -> AudioBackend {
     }
 }
 
+/// Parses `Volume: 0.50 [MUTED]` (or `Volume: 50%`) into a percentage.
+fn parse_wpctl_volume_percent(stdout: &str) -> Option<f64> {
+    let token = stdout.split_whitespace().nth(1)?;
+    let is_percent = token.ends_with('%');
+    let value = token.trim_end_matches('%').parse::<f64>().ok()?;
+    let percent = if is_percent { value } else { value * 100.0 };
+
+    if percent.is_finite() {
+        Some(percent.clamp(0.0, 100.0))
+    } else {
+        None
+    }
+}
+
 /// Reads current volume percentage and mute state.
 ///
 /// # Returns
@@ -36,12 +50,7 @@ pub fn get_volume_state() -> (f64, bool) {
             {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let is_muted = stdout.contains("[MUTED]");
-                let mut vol = 80.0;
-                if let Some(vol_str) = stdout.split_whitespace().nth(1) {
-                    if let Ok(parsed) = vol_str.parse::<f64>() {
-                        vol = parsed * 100.0;
-                    }
-                }
+                let vol = parse_wpctl_volume_percent(&stdout).unwrap_or(80.0);
                 return (vol, is_muted);
             }
             (80.0, false)
@@ -56,7 +65,7 @@ pub fn get_volume_state() -> (f64, bool) {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 if let Some(pct_str) = stdout.split('/').nth(1) {
                     if let Ok(val) = pct_str.trim().trim_end_matches('%').parse::<f64>() {
-                        vol = val;
+                        vol = val.clamp(0.0, 100.0);
                     }
                 }
             }
@@ -81,12 +90,14 @@ pub fn set_volume(pct: f64) {
     let clamped = pct.clamp(0.0, 150.0);
     match detect_audio_backend() {
         AudioBackend::Wpctl => {
-            let frac = clamped / 100.0;
+            // An explicit `VOL%` is an absolute target (without +/- it is
+            // never treated as a relative step).
+            let pct = clamped.round() as u64;
             let _ = Command::new("wpctl")
                 .args([
                     "set-volume",
                     "@DEFAULT_AUDIO_SINK@",
-                    &format!("{:.2}", frac),
+                    &format!("{}%", pct),
                 ])
                 .output();
         }
@@ -153,4 +164,20 @@ pub fn get_active_output_name() -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_fraction_and_percent_volume() {
+        assert_eq!(parse_wpctl_volume_percent("Volume: 0.50"), Some(50.0));
+        assert_eq!(
+            parse_wpctl_volume_percent("Volume: 0.25 [MUTED]"),
+            Some(25.0)
+        );
+        assert_eq!(parse_wpctl_volume_percent("Volume: 50%"), Some(50.0));
+        assert_eq!(parse_wpctl_volume_percent("garbage"), None);
+    }
 }
