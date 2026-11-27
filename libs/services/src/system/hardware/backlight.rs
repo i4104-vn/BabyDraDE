@@ -1,6 +1,7 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 /// Brightness information for a backlight device.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -82,6 +83,41 @@ impl BacklightReader {
     /// Returns an error when no device exists, sysfs cannot be read/written,
     /// or `max_brightness` is zero.
     pub fn set_brightness_percent(&mut self, target_percent: u8) -> io::Result<()> {
+        let sysfs_result = self.write_sysfs_brightness(target_percent);
+        if sysfs_result.is_ok() {
+            return Ok(());
+        }
+
+        // Direct sysfs writes often require root or a udev rule. Fall back to
+        // the userspace tools that handle permissions themselves.
+        let percent = format!("{}%", target_percent.min(100));
+        let via_brightnessctl = Command::new("brightnessctl")
+            .arg("set")
+            .arg(&percent)
+            .output()
+            .is_ok_and(|output| output.status.success());
+        if via_brightnessctl {
+            return Ok(());
+        }
+        let via_xbacklight = Command::new("xbacklight")
+            .args(["-set", &percent])
+            .output()
+            .is_ok_and(|output| output.status.success());
+        if via_xbacklight {
+            return Ok(());
+        }
+
+        tracing::warn!(
+            "could not set brightness: sysfs and userspace tools all failed ({})",
+            sysfs_result.as_ref().err().map_or_else(
+                || "unknown error".to_string(),
+                |err| err.to_string()
+            )
+        );
+        sysfs_result
+    }
+
+    fn write_sysfs_brightness(&mut self, target_percent: u8) -> io::Result<()> {
         let path = match self.device_path {
             Some(ref p) if p.exists() => p.clone(),
             _ => {
@@ -99,9 +135,8 @@ impl BacklightReader {
             .parse()
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-        let target_raw = brightness_raw(target_percent, max_brightness).ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidData, "max_brightness is 0")
-        })?;
+        let target_raw = brightness_raw(target_percent, max_brightness)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "max_brightness is 0"))?;
 
         fs::write(path.join("brightness"), target_raw.to_string())
     }

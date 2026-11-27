@@ -16,9 +16,39 @@ pub enum AudioBackend {
 /// The detected [`AudioBackend`].
 pub fn detect_audio_backend() -> AudioBackend {
     match true {
-        _ if Command::new("wpctl").arg("--version").output().is_ok() => AudioBackend::Wpctl,
-        _ if Command::new("pactl").arg("--version").output().is_ok() => AudioBackend::Pactl,
+        _ if command_succeeds("wpctl", &["--version"]) => AudioBackend::Wpctl,
+        _ if command_succeeds("pactl", &["--version"]) => AudioBackend::Pactl,
         _ => AudioBackend::Amixer,
+    }
+}
+
+/// Runs a command and reports whether it actually succeeded (not just spawned).
+fn command_succeeds(program: &str, args: &[&str]) -> bool {
+    Command::new(program)
+        .args(args)
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+
+/// Primary backend first, then every other installed backend as a fallback.
+fn backend_order() -> Vec<AudioBackend> {
+    let primary = detect_audio_backend();
+    let mut order = vec![primary];
+    for backend in [AudioBackend::Wpctl, AudioBackend::Pactl, AudioBackend::Amixer] {
+        if !order.contains(&backend) && command_succeeds(backend.program(), &["--version"]) {
+            order.push(backend);
+        }
+    }
+    order
+}
+
+impl AudioBackend {
+    fn program(self) -> &'static str {
+        match self {
+            AudioBackend::Wpctl => "wpctl",
+            AudioBackend::Pactl => "pactl",
+            AudioBackend::Amixer => "amixer",
+        }
     }
 }
 
@@ -75,6 +105,15 @@ fn clean_output_name(line: &str) -> Option<String> {
     }
 }
 
+/// Parses `Volume: 0.50` (or `Volume: 50%`) into a percentage.
+fn parse_wpctl_volume_percent(stdout: &str) -> Option<f64> {
+    let token = stdout.split_whitespace().nth(1)?;
+    let is_percent = token.ends_with('%');
+    let value = token.trim_end_matches('%').parse::<f64>().ok()?;
+    let percent = if is_percent { value } else { value * 100.0 };
+    percent.is_finite().then(|| percent.clamp(0.0, 100.0))
+}
+
 /// Reads current volume percentage and mute state.
 ///
 /// # Returns
@@ -89,12 +128,7 @@ pub fn get_volume_state() -> (f64, bool) {
             {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let is_muted = stdout.contains("[MUTED]");
-                let mut vol = 80.0;
-                if let Some(vol_str) = stdout.split_whitespace().nth(1) {
-                    if let Ok(parsed) = vol_str.parse::<f64>() {
-                        vol = parsed * 100.0;
-                    }
-                }
+                let vol = parse_wpctl_volume_percent(&stdout).unwrap_or(80.0);
                 return (vol, is_muted);
             }
             (80.0, false)
@@ -109,7 +143,7 @@ pub fn get_volume_state() -> (f64, bool) {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 if let Some(pct_str) = stdout.split('/').nth(1) {
                     if let Ok(val) = pct_str.trim().trim_end_matches('%').parse::<f64>() {
-                        vol = val;
+                        vol = val.clamp(0.0, 100.0);
                     }
                 }
             }
@@ -132,32 +166,28 @@ pub fn get_volume_state() -> (f64, bool) {
 /// * `pct` - Target volume percentage (clamped by the backend).
 pub fn set_volume(pct: f64) {
     let clamped = pct.clamp(0.0, 150.0);
-    match detect_audio_backend() {
-        AudioBackend::Wpctl => {
-            let frac = clamped / 100.0;
-            let _ = Command::new("wpctl")
-                .args([
-                    "set-volume",
-                    "@DEFAULT_AUDIO_SINK@",
-                    &format!("{:.2}", frac),
-                ])
-                .output();
-        }
-        AudioBackend::Pactl => {
-            let _ = Command::new("pactl")
-                .args([
-                    "set-sink-volume",
-                    "@DEFAULT_SINK@",
-                    &format!("{:.0}%", clamped),
-                ])
-                .output();
-        }
-        AudioBackend::Amixer => {
-            let _ = Command::new("amixer")
-                .args(["set", "Master", &format!("{:.0}%", clamped)])
-                .output();
+    let percent = format!("{:.0}%", clamped);
+    for backend in backend_order() {
+        let ok = match backend {
+            // An explicit `VOL%` is an absolute target (without +/- it is
+            // never treated as a relative step).
+            AudioBackend::Wpctl => command_succeeds(
+                "wpctl",
+                &["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{}%", clamped.round() as u64)],
+            ),
+            AudioBackend::Pactl => command_succeeds(
+                "pactl",
+                &["set-sink-volume", "@DEFAULT_SINK@", &percent],
+            ),
+            AudioBackend::Amixer => {
+                command_succeeds("amixer", &["set", "Master", &percent])
+            }
+        };
+        if ok {
+            return;
         }
     }
+    tracing::warn!("could not set volume through any available audio backend");
 }
 
 /// Sets or clears the default output mute flag.
@@ -165,24 +195,34 @@ pub fn set_volume(pct: f64) {
 /// # Arguments
 /// * `muted` - `true` to mute, `false` to unmute.
 pub fn set_muted(muted: bool) {
-    let flag = if muted { "1" } else { "0" };
-    match detect_audio_backend() {
-        AudioBackend::Wpctl => {
-            let _ = Command::new("wpctl")
-                .args(["set-mute", "@DEFAULT_AUDIO_SINK@", flag])
-                .output();
-        }
-        AudioBackend::Pactl => {
-            let val = if muted { "1" } else { "0" };
-            let _ = Command::new("pactl")
-                .args(["set-sink-mute", "@DEFAULT_SINK@", val])
-                .output();
-        }
-        AudioBackend::Amixer => {
-            let val = if muted { "mute" } else { "unmute" };
-            let _ = Command::new("amixer").args(["set", "Master", val]).output();
+    for backend in backend_order() {
+        let ok = match backend {
+            AudioBackend::Wpctl => command_succeeds(
+                "wpctl",
+                &[
+                    "set-mute",
+                    "@DEFAULT_AUDIO_SINK@",
+                    if muted { "1" } else { "0" },
+                ],
+            ),
+            AudioBackend::Pactl => command_succeeds(
+                "pactl",
+                &[
+                    "set-sink-mute",
+                    "@DEFAULT_SINK@",
+                    if muted { "1" } else { "0" },
+                ],
+            ),
+            AudioBackend::Amixer => command_succeeds(
+                "amixer",
+                &["set", "Master", if muted { "mute" } else { "unmute" }],
+            ),
+        };
+        if ok {
+            return;
         }
     }
+    tracing::warn!("could not change mute state through any available audio backend");
 }
 
 /// Reads the display name of the default audio output.
@@ -245,4 +285,14 @@ mod tests {
         assert_eq!(clean_output_name(line), None);
     }
 
+    #[test]
+    fn parses_fraction_and_percent_volume() {
+        assert_eq!(parse_wpctl_volume_percent("Volume: 0.50"), Some(50.0));
+        assert_eq!(
+            parse_wpctl_volume_percent("Volume: 0.25 [MUTED]"),
+            Some(25.0)
+        );
+        assert_eq!(parse_wpctl_volume_percent("Volume: 50%"), Some(50.0));
+        assert_eq!(parse_wpctl_volume_percent("garbage"), None);
+    }
 }
