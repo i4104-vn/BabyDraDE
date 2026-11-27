@@ -45,22 +45,3 @@ pub(super) fn dismiss_popups<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
         }
     }
 }
-
-/// Sends a pointer motion/frame pair to refresh focus under the pointer.
-///
-/// # Arguments
-/// * `ctx` - Mutable button context.
-pub(super) fn refresh_pointer_focus<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
-    use smithay::input::pointer::MotionEvent;
-
-    let under = ctx.state.surface_under(ctx.state.pointer_location());
-    ctx.state.pointer_motion(
-        under,
-        &MotionEvent {
-            location: ctx.state.pointer_location(),
-            serial: ctx.serial,
-            time: ctx.time,
-        },
-    );
-    ctx.state.pointer_frame();
-}

@@ -1,15 +1,15 @@
 //! Pointer release handling.
 
-use smithay::input::pointer::MotionEvent;
-
 use crate::modules::input::InputContext;
 
-use super::ButtonContext;
+use super::{focus, ButtonContext};
 
 pub(super) fn release<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
     ctx.state
         .pointer_pressed_buttons_mut()
         .remove(&ctx.button_code);
+
+    let mut compositor_interaction = false;
 
     if let Some(resize_state) = ctx.state.resize_state_mut().take() {
         if let Some(toplevel) = resize_state.window.toplevel() {
@@ -20,6 +20,7 @@ pub(super) fn release<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
                     });
             toplevel.send_configure();
         }
+        compositor_interaction = true;
     }
 
     if let Some(move_state) = ctx.state.move_state_mut().take() {
@@ -28,15 +29,15 @@ pub(super) fn release<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
                 toplevel.send_configure();
             }
         }
-        let under = ctx.state.surface_under(ctx.state.pointer_location());
-        ctx.state.pointer_motion(
-            under,
-            &MotionEvent {
-                location: ctx.state.pointer_location(),
-                serial: ctx.serial,
-                time: ctx.time,
-            },
-        );
-        ctx.state.pointer_frame();
+        compositor_interaction = true;
+    }
+
+    if compositor_interaction {
+        // The compositor ran an interactive move/resize. The release must not
+        // be delivered to the surface now under the pointer (which is often
+        // the window behind the one that was dragged). Clear pointer focus so
+        // the client receives a proper leave, then suppress the button.
+        focus::clear(ctx);
+        ctx.consume();
     }
 }

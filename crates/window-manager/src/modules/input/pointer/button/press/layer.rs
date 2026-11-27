@@ -6,6 +6,7 @@ use crate::modules::input::InputContext;
 
 use crate::modules::input::pointer::button::ButtonContext;
 
+use super::super::focus;
 use super::shared;
 
 /// Handles a press that did not hit an application window.
@@ -18,9 +19,16 @@ pub(super) fn handle<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
     let clicked_layer = ctx.state.layer_under(ctx.state.pointer_location());
     let is_top_or_overlay =
         matches!(clicked_layer, Some(Layer::Top) | Some(Layer::Overlay));
+    // Popups and panel surfaces are clients and must keep receiving their
+    // own button events. An empty spot only dismisses popups, so it belongs
+    // to the compositor.
+    let has_client_surface = ctx
+        .state
+        .surface_under(ctx.state.pointer_location())
+        .is_some();
 
     // Ensure pointer focus is updated to the clicked surface
-    shared::refresh_pointer_focus(ctx);
+    focus::refresh(ctx);
 
     // When interacting with panels, topbar, or overlays, do NOT lose active app focus
     if !is_top_or_overlay {
@@ -32,5 +40,9 @@ pub(super) fn handle<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
         });
         ctx.state.set_keyboard_focus(None, ctx.serial);
         ctx.state.update_active_window(None);
+    }
+
+    if !has_client_surface {
+        ctx.consume();
     }
 }

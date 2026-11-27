@@ -7,6 +7,7 @@ use common::Action;
 
 use crate::modules::input::pointer::button::ButtonContext;
 
+use super::super::focus;
 use super::{layer, shared};
 
 /// Handles a press against an application window: border resize, title-bar
@@ -22,6 +23,10 @@ pub(super) fn pointer<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
         {
             shared::raise_and_focus(ctx, &window);
             ctx.state.update_active_window(Some(&window));
+            // The border is drawn by the compositor. Clear pointer focus so a
+            // window behind the border does not receive this press.
+            focus::clear(ctx);
+            ctx.consume();
             let size = window.geometry().size;
             *ctx.state.resize_state_mut() = Some(ResizeState {
                 window,
@@ -45,6 +50,11 @@ pub(super) fn pointer<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
             ctx.state
                 .titlebar_action(&window, location, ctx.state.pointer_location())
         {
+            // The titlebar is a compositor-drawn frame, not a client surface.
+            // Keep the button away from any window sitting behind it while
+            // still allowing the titlebar action to run below.
+            focus::clear(ctx);
+            ctx.consume();
             match action {
                 Action::Close => {
                     *ctx.state.last_titlebar_click_mut() = None;
@@ -93,12 +103,13 @@ pub(super) fn pointer<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
 
         *ctx.state.last_titlebar_click_mut() = None;
 
-        // Ensure pointer focus is updated to the raised window surface
-        shared::refresh_pointer_focus(ctx);
-
-        // Drag or resize window from anywhere if holding Super (Win) key
+        // Drag or resize window from anywhere if holding Super (Win) key.
+        // The compositor owns that gesture, so the press must not reach the
+        // client surface either.
         let mods = ctx.state.keyboard_modifiers();
         if mods.logo {
+            focus::clear(ctx);
+            ctx.consume();
             if ctx.button_code == common::BTN_RIGHT {
                 let size = window.geometry().size;
                 *ctx.state.resize_state_mut() = Some(ResizeState {
@@ -118,6 +129,10 @@ pub(super) fn pointer<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
                     button: ctx.button_code,
                 });
             }
+        } else {
+            // Normal client-surface click: make sure the raised window owns
+            // pointer focus before the button is forwarded.
+            focus::refresh(ctx);
         }
     } else {
         layer::handle(ctx);

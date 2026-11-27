@@ -20,9 +20,11 @@ pub(super) fn press<C: InputContext>(ctx: &mut ButtonContext<'_, C>) {
         .insert(ctx.button_code);
 
     if ui::switcher(ctx) {
+        ctx.consume();
         return;
     }
     if ui::launcher(ctx) {
+        ctx.consume();
         return;
     }
     if !ctx.state.pointer_is_grabbed() {

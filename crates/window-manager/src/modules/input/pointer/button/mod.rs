@@ -1,5 +1,6 @@
 //! Pointer button press/release handling.
 
+mod focus;
 mod handler;
 mod press;
 mod release;
