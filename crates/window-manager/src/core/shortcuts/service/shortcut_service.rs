@@ -39,7 +39,7 @@ impl ShortcutService {
         let initial = match repository.load() {
             Ok(shortcuts) => shortcuts,
             Err(e) => {
-                tracing::warn!("cannot load initial shortcut table: {}", e.message);
+                tracing::warn!("cannot load initial shortcut table: {e}");
                 Vec::new()
             }
         };
@@ -78,10 +78,7 @@ impl ShortcutService {
             Ok(shortcuts) => {
                 *self.shortcuts.write().unwrap_or_else(|e| e.into_inner()) = shortcuts;
             }
-            Err(e) => tracing::warn!(
-                "kept previous shortcut table after load error: {}",
-                e.message
-            ),
+            Err(e) => tracing::warn!("kept previous shortcut table after load error: {e}"),
         }
     }
 
@@ -92,11 +89,7 @@ impl ShortcutService {
     /// * `command` - Command string from the matched shortcut.
     pub(crate) fn launch(&self, command: String) {
         if let Err(e) = self.launcher.launch(&command) {
-            tracing::warn!(
-                "failed to launch shortcut command {:?}: {}",
-                command,
-                e.message
-            );
+            tracing::warn!("failed to launch shortcut command {command:?}: {e}");
         }
     }
 }

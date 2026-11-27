@@ -43,6 +43,8 @@ mod tests {
     use std::cell::RefCell;
     use std::ffi::OsString;
 
+    use crate::shared::ports::LaunchError;
+
     use super::*;
 
     /// Fake port: records every launch and can be told to reject a command.
@@ -55,12 +57,18 @@ mod tests {
     impl AutostartLauncher for FakeLauncher {
         type Child = &'static str;
 
-        fn spawn(&self, command: &str, wayland_display: &OsStr) -> Result<Self::Child, String> {
+        fn spawn(
+            &self,
+            command: &str,
+            wayland_display: &OsStr,
+        ) -> Result<Self::Child, LaunchError> {
             self.calls
                 .borrow_mut()
                 .push((command.to_owned(), wayland_display.to_owned()));
             if self.fail_on == Some(command) {
-                Err("fake spawn failure".to_owned())
+                Err(LaunchError {
+                    message: "fake spawn failure".to_owned(),
+                })
             } else {
                 Ok("started")
             }

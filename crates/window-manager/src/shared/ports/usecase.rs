@@ -33,7 +33,7 @@ pub(crate) trait AutostartLauncher {
 
     /// Run `command` through the infrastructure with `WAYLAND_DISPLAY` set to
     /// `wayland_display`.
-    fn spawn(&self, command: &str, wayland_display: &OsStr) -> Result<Self::Child, String>;
+    fn spawn(&self, command: &str, wayland_display: &OsStr) -> Result<Self::Child, LaunchError>;
 }
 
 /// Port that loads a fresh gesture policy snapshot.

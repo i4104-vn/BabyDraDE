@@ -15,7 +15,7 @@ use crate::shared::ports::{AutostartLauncher, CommandLauncher, LaunchError};
 /// Failures to start the worker are returned so the `CommandLauncher` port can
 /// surface them as a structured error; failures while running the command are
 /// logged from the worker thread, as before.
-fn try_spawn_detached(command: String) -> Result<(), String> {
+fn try_spawn_detached(command: String) -> Result<(), LaunchError> {
     std::thread::Builder::new()
         .name("babydra-keymap-command".to_string())
         .spawn(move || {
@@ -30,7 +30,9 @@ fn try_spawn_detached(command: String) -> Result<(), String> {
             }
         })
         .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(|e| LaunchError {
+            message: e.to_string(),
+        })
 }
 
 /// Launches configured shortcut commands through the application port.
@@ -39,7 +41,7 @@ pub(crate) struct ShortcutCommandLauncher;
 
 impl CommandLauncher for ShortcutCommandLauncher {
     fn launch(&self, command: &str) -> Result<(), LaunchError> {
-        try_spawn_detached(command.to_string()).map_err(|message| LaunchError { message })
+        try_spawn_detached(command.to_string())
     }
 }
 
@@ -50,12 +52,14 @@ pub(crate) struct ProcessLauncher;
 impl AutostartLauncher for ProcessLauncher {
     type Child = std::process::Child;
 
-    fn spawn(&self, command: &str, wayland_display: &OsStr) -> Result<Self::Child, String> {
+    fn spawn(&self, command: &str, wayland_display: &OsStr) -> Result<Self::Child, LaunchError> {
         std::process::Command::new("sh")
             .arg("-c")
             .arg(command)
             .env("WAYLAND_DISPLAY", wayland_display)
             .spawn()
-            .map_err(|err| err.to_string())
+            .map_err(|err| LaunchError {
+                message: err.to_string(),
+            })
     }
 }
