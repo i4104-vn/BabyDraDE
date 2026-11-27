@@ -55,11 +55,15 @@ pub use resources::{CpuInfo, CpuReader, DiskInfo, DiskReader, MemoryInfo, Memory
 pub use temperature::{
     get_all_temperatures, get_cpu_temperature, get_important_temperatures, TemperatureReading,
 };
-pub use volume::{get_active_output_name, get_volume_state, set_muted, set_volume, AudioBackend};
+pub use volume::{
+    get_active_output_name, get_volume_state, set_mute, set_muted, set_volume, AudioBackend,
+    MuteState,
+};
 pub use vpn::is_vpn_active;
 
 /// A point-in-time collection of all monitored system metrics.
 #[derive(Debug, Clone, Default, PartialEq)]
+#[non_exhaustive]
 pub struct SystemSnapshot {
     pub cpu: CpuInfo,
     pub memory: MemoryInfo,
@@ -72,16 +76,19 @@ pub struct SystemSnapshot {
 }
 
 /// Owns the readers used to collect a [`SystemSnapshot`].
+///
+/// Readers are private implementation details; use the accessors below or
+/// [`Self::snapshot`] instead of depending on them directly.
 #[derive(Debug, Clone)]
 pub struct SystemService {
-    pub cpu: CpuReader,
-    pub memory: MemoryReader,
-    pub battery: BatteryReader,
-    pub backlight: BacklightReader,
-    pub thermal: ThermalReader,
-    pub disk: DiskReader,
-    pub network: NetworkReader,
-    pub uptime: UptimeReader,
+    cpu: CpuReader,
+    memory: MemoryReader,
+    battery: BatteryReader,
+    backlight: BacklightReader,
+    thermal: ThermalReader,
+    disk: DiskReader,
+    network: NetworkReader,
+    uptime: UptimeReader,
 }
 
 impl Default for SystemService {
@@ -106,6 +113,46 @@ impl SystemService {
             network: NetworkReader::new(),
             uptime: UptimeReader::new(),
         }
+    }
+
+    /// Returns the CPU reader.
+    pub fn cpu(&self) -> &CpuReader {
+        &self.cpu
+    }
+
+    /// Returns the memory reader.
+    pub fn memory(&self) -> &MemoryReader {
+        &self.memory
+    }
+
+    /// Returns the battery reader.
+    pub fn battery(&self) -> &BatteryReader {
+        &self.battery
+    }
+
+    /// Returns the backlight reader.
+    pub fn backlight(&self) -> &BacklightReader {
+        &self.backlight
+    }
+
+    /// Returns the thermal reader.
+    pub fn thermal(&self) -> &ThermalReader {
+        &self.thermal
+    }
+
+    /// Returns the disk reader.
+    pub fn disk(&self) -> &DiskReader {
+        &self.disk
+    }
+
+    /// Returns the network reader.
+    pub fn network(&self) -> &NetworkReader {
+        &self.network
+    }
+
+    /// Returns the uptime reader.
+    pub fn uptime(&self) -> &UptimeReader {
+        &self.uptime
     }
 
     /// Samples every subsystem once into a [`SystemSnapshot`].

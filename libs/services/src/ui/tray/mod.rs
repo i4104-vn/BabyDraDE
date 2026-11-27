@@ -34,6 +34,7 @@ const MAX_PROBES_PER_CYCLE: usize = 48;
 
 /// One Status Notifier Item as displayed by a panel.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct TrayItem {
     /// Bus name that owns the item.
     pub service: String,

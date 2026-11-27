@@ -25,6 +25,20 @@ pub use paths::{
     get_display_config_path, get_home_dir, get_input_config_path, get_keymap_path,
     get_legacy_keymap_path, get_lockscreen_config_path, get_logs_dir, get_wallpaper_dir,
 };
+
+// Rust API Guidelines C-GETTER: unprefixed aliases for the path helpers. The
+// original `get_*` names remain public so existing callers keep compiling.
+pub use paths::{
+    get_babydra_dir as babydra_dir, get_blur_config_path as blur_config_path,
+    get_clipboard_config_path as clipboard_config_path, get_conf_path as conf_path,
+    get_config_dir as config_dir, get_cursor_config_path as cursor_config_path,
+    get_cursor_dir as cursor_dir, get_desktop_config_path as desktop_config_path,
+    get_display_config_path as display_config_path, get_home_dir as home_dir,
+    get_input_config_path as input_config_path, get_keymap_path as keymap_path,
+    get_legacy_keymap_path as legacy_keymap_path,
+    get_lockscreen_config_path as lockscreen_config_path, get_logs_dir as logs_dir,
+    get_wallpaper_dir as wallpaper_dir,
+};
 pub use sections::{
     invalidate_cache, load_autostart_config, load_babydra_config, load_blur_config,
     load_clipboard_config, load_cursor_config, load_desktop_config, load_display_config,

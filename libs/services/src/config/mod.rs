@@ -25,3 +25,12 @@ pub use settings::{
     save_lockscreen_config, save_mouse_config, save_notification_config, save_power_config,
     save_touchpad_config, save_wallpaper_config,
 };
+
+/// Unprefixed aliases for the path helpers (Rust API Guidelines C-GETTER).
+/// The `get_*` spellings above are kept as compatibility re-exports.
+pub use settings::{
+    babydra_dir, blur_config_path, clipboard_config_path, conf_path, config_dir,
+    cursor_config_path, cursor_dir, desktop_config_path, display_config_path, home_dir,
+    input_config_path, keymap_path, legacy_keymap_path, lockscreen_config_path, logs_dir,
+    wallpaper_dir,
+};

@@ -86,11 +86,20 @@ pub fn set_position(name: String, x: i32, y: i32) {
 /// # Arguments
 /// * `batch` - `(name, x, y)` triples to apply.
 pub fn set_positions(batch: Vec<(String, i32, i32)>) {
+    set_positions_slice(&batch);
+}
+
+/// Borrowing variant of [`set_positions`] that does not take ownership of the
+/// caller's buffer.
+///
+/// # Arguments
+/// * `batch` - `(name, x, y)` triples to apply.
+pub fn set_positions_slice(batch: &[(String, i32, i32)]) {
     let mut map = write_map();
     let mut changed = false;
     for (name, x, y) in batch {
-        if map.get(&name) != Some(&(x, y)) {
-            map.insert(name, (x, y));
+        if map.get(name) != Some(&(*x, *y)) {
+            map.insert(name.clone(), (*x, *y));
             changed = true;
         }
     }
@@ -103,11 +112,12 @@ pub fn set_positions(batch: Vec<(String, i32, i32)>) {
 ///
 /// # Arguments
 /// * `existing_names` - Names of icons that still exist on disk.
-pub fn cleanup_stale(existing_names: &[String]) {
+pub fn cleanup_stale(existing_names: &[impl AsRef<str>]) {
     let mut map = write_map();
-    let set: std::collections::HashSet<&String> = existing_names.iter().collect();
+    let set: std::collections::HashSet<&str> =
+        existing_names.iter().map(|name| name.as_ref()).collect();
     let initial_len = map.len();
-    map.retain(|k, _| set.contains(k));
+    map.retain(|k, _| set.contains(k.as_str()));
     if map.len() != initial_len {
         DIRTY.store(true, Ordering::Relaxed);
     }
