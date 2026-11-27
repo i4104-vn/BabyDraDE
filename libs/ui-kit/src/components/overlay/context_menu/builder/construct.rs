@@ -2,6 +2,7 @@
 
 use super::models::{notify_visibility, OPEN_MENUS};
 use super::*;
+use crate::components::overlay::{max_popover_height, max_popover_width, EDGE_MARGIN};
 
 impl ContextMenu {
     /// Starts building a context menu attached to `parent`.
@@ -13,7 +14,21 @@ impl ContextMenu {
         popover.add_css_class("desktop-context-menu");
 
         let vbox = create_menu_box(200);
-        popover.set_child(Some(&vbox));
+        // Long menus must not run past the monitor bottom. Keep the original
+        // `vbox` API for callers, but host it in a capped scrolled window.
+        let scrolled = gtk4::ScrolledWindow::new();
+        scrolled.set_hscrollbar_policy(gtk4::PolicyType::Never);
+        scrolled.set_vscrollbar_policy(gtk4::PolicyType::Automatic);
+        scrolled.set_propagate_natural_width(true);
+        scrolled.set_propagate_natural_height(true);
+        if let Some(max_height) = max_popover_height(parent.as_ref(), EDGE_MARGIN) {
+            scrolled.set_max_content_height(max_height);
+        }
+        if let Some(max_width) = max_popover_width(parent.as_ref(), EDGE_MARGIN) {
+            scrolled.set_max_content_width(max_width);
+        }
+        scrolled.set_child(Some(&vbox));
+        popover.set_child(Some(&scrolled));
 
         let active_subpopover: Rc<RefCell<Option<Popover>>> = Rc::new(RefCell::new(None));
         let active_sub_close = active_subpopover.clone();

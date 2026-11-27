@@ -2,6 +2,7 @@
 
 use super::models::wire_row_hover;
 use super::*;
+use crate::components::overlay::{max_popover_height, max_popover_width, popup_fit, EDGE_MARGIN};
 
 impl ContextMenu {
     /// Appends a standard clickable item.
@@ -95,11 +96,24 @@ impl ContextMenu {
         };
 
         let sub_built = build_sub(sub_builder);
-        sub_popover.set_child(Some(&sub_built.vbox));
+        let sub_scrolled = gtk4::ScrolledWindow::new();
+        sub_scrolled.set_hscrollbar_policy(gtk4::PolicyType::Never);
+        sub_scrolled.set_vscrollbar_policy(gtk4::PolicyType::Automatic);
+        sub_scrolled.set_propagate_natural_width(true);
+        sub_scrolled.set_propagate_natural_height(true);
+        let anchor = btn.upcast_ref::<gtk4::Widget>();
+        if let Some(max_height) = max_popover_height(anchor, EDGE_MARGIN) {
+            sub_scrolled.set_max_content_height(max_height);
+        }
+        if let Some(max_width) = max_popover_width(anchor, EDGE_MARGIN) {
+            sub_scrolled.set_max_content_width(max_width);
+        }
+        sub_scrolled.set_child(Some(&sub_built.vbox));
+        sub_popover.set_child(Some(&sub_scrolled));
 
         let sub_pop_click = sub_popover.clone();
         btn.connect_clicked(move |_| {
-            sub_pop_click.popup();
+            popup_fit(&sub_pop_click, sub_pop_click.position());
         });
 
         let sub_pop_hover = sub_popover.clone();
@@ -112,7 +126,7 @@ impl ContextMenu {
                     prev.popdown();
                 }
             }
-            sub_pop_hover.popup();
+            popup_fit(&sub_pop_hover, sub_pop_hover.position());
             *cur = Some(sub_pop_hover.clone());
         });
         btn.add_controller(motion);

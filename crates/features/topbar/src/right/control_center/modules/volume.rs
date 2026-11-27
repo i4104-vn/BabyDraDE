@@ -5,6 +5,9 @@ use services::i18n::trans;
 use services::system::volume::{get_active_output_name, get_volume_state, set_muted, set_volume};
 use std::cell::Cell;
 use std::rc::Rc;
+use ui_kit::components::overlay::{
+    fit_popover, max_popover_height, max_popover_width, CrossAlign, ANCHOR_GAP, EDGE_MARGIN,
+};
 use ui_kit::components::{create_popover, create_slider_header, PillSlider};
 use ui_kit::icons::{get_icon, get_icon_colored, set_image_from_icon};
 
@@ -103,11 +106,17 @@ pub fn create_volume_row(
     let menu_icon = get_icon("go-up-symbolic", 12);
     menu_btn.set_child(Some(&menu_icon));
 
-    // Audio devices popover
-    let popover = create_popover(&menu_btn, gtk4::PositionType::Bottom, "audio-menu-popover");
-    popover.set_offset(0, 8);
+    // Audio devices popover. The button sits at the right edge of the panel,
+    // so start with a right-side preference; the fitter flips it to the left
+    // when there is not enough room. `End` alignment makes it grow upwards
+    // from the button, leaving the sliders below uncovered.
+    let popover = create_popover(&menu_btn, gtk4::PositionType::Right, "audio-menu-popover");
+    let side_padding = 8;
+    let max_width = max_popover_width(menu_btn.upcast_ref::<gtk4::Widget>(), EDGE_MARGIN)
+        .unwrap_or(248);
+    let content_width = max_width.saturating_sub(side_padding).min(240).max(1);
     let dev_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
-    dev_box.set_size_request(240, -1);
+    dev_box.set_size_request(content_width, -1);
     dev_box.set_margin_start(4);
     dev_box.set_margin_end(4);
 
@@ -123,6 +132,7 @@ pub fn create_volume_row(
     dev_lbl.set_ellipsize(gtk4::pango::EllipsizeMode::End);
     dev_lbl.set_halign(gtk4::Align::Start);
     dev_lbl.set_hexpand(true);
+    dev_lbl.set_width_request(1);
     let check = gtk4::Label::new(Some("✓"));
     check.add_css_class("audio-menu-item-check");
 
@@ -136,11 +146,41 @@ pub fn create_volume_row(
     dev_row.set_child(Some(&dev_item));
     dev_box.append(&dev_row);
 
-    popover.set_child(Some(&dev_box));
+    let scrolled = gtk4::ScrolledWindow::new();
+    scrolled.set_hscrollbar_policy(gtk4::PolicyType::Never);
+    scrolled.set_vscrollbar_policy(gtk4::PolicyType::Automatic);
+    scrolled.set_propagate_natural_width(true);
+    scrolled.set_propagate_natural_height(true);
+    scrolled.set_max_content_width(max_width);
+    if let Some(max_height) =
+        max_popover_height(menu_btn.upcast_ref::<gtk4::Widget>(), EDGE_MARGIN)
+    {
+        scrolled.set_max_content_height(max_height);
+    }
+    scrolled.set_child(Some(&dev_box));
+    popover.set_child(Some(&scrolled));
 
     let popover_c = popover.clone();
     let on_popover_toggled_c = on_popover_toggled.clone();
+    let menu_btn_c = menu_btn.clone();
+    let dev_box_c = dev_box.clone();
+    let scrolled_c = scrolled.clone();
     menu_btn.connect_clicked(move |_| {
+        // At creation time the panel window may not be realized yet; refresh
+        // the width cap from the actual monitor right before presenting.
+        if let Some(width) =
+            max_popover_width(menu_btn_c.upcast_ref::<gtk4::Widget>(), EDGE_MARGIN)
+        {
+            scrolled_c.set_max_content_width(width.min(max_width));
+            dev_box_c.set_size_request(width.saturating_sub(side_padding).min(240).max(1), -1);
+        }
+        fit_popover(
+            &popover_c,
+            gtk4::PositionType::Right,
+            CrossAlign::End,
+            EDGE_MARGIN,
+            ANCHOR_GAP,
+        );
         popover_c.popup();
         if let Some(ref cb) = on_popover_toggled_c {
             cb(true);

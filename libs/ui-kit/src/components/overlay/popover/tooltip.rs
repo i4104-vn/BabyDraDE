@@ -1,5 +1,6 @@
 //! Rich Card-style Tooltip Popover component.
 
+use super::popup_fit;
 use gtk4::prelude::*;
 use gtk4::{Box, Label, Orientation, Popover, PositionType, Widget};
 use std::cell::RefCell;
@@ -96,9 +97,9 @@ impl TooltipPopover {
         }
     }
 
-    /// Displays the tooltip popover.
+    /// Displays the tooltip popover, keeping it inside the anchor's monitor.
     pub fn popup(&self) {
-        self.popover.popup();
+        popup_fit(&self.popover, self.popover.position());
     }
 
     /// Dismisses the tooltip popover.
@@ -209,7 +210,7 @@ impl TooltipPopover {
             if let Some(ref update) = update_c {
                 update();
             }
-            pop_enter.popup();
+            popup_fit(&pop_enter, pop_enter.position());
         });
 
         let is_h_motion = is_hovered.clone();

@@ -1,5 +1,6 @@
 //! Standardized Fluent Popover overlay component.
 
+use super::popup_fit;
 use gtk4::prelude::*;
 use gtk4::{Box, Button, Orientation, Popover, PositionType, Widget};
 use std::ops::Deref;
@@ -100,9 +101,9 @@ impl FluentPopover {
         btn
     }
 
-    /// Displays the popover.
+    /// Displays the popover, keeping it inside the anchor's monitor.
     pub fn popup(&self) {
-        self.popover.popup();
+        popup_fit(&self.popover, self.popover.position());
     }
 
     /// Dismisses the popover.

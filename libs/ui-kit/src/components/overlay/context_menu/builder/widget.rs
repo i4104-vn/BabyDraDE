@@ -2,6 +2,7 @@
 
 use super::models::{notify_visibility, wire_row_hover};
 use super::*;
+use crate::components::overlay::popup_fit;
 
 impl ContextMenu {
     /// Appends an arbitrary widget into the menu container.
@@ -16,9 +17,9 @@ impl ContextMenu {
     pub fn container(&self) -> &Box {
         &self.vbox
     }
-    /// Displays the context menu immediately.
+    /// Displays the context menu immediately, keeping it inside the monitor.
     pub fn popup(&self) {
-        self.popover.popup();
+        popup_fit(&self.popover, self.popover.position());
         notify_visibility(true);
     }
     /// Dismisses the context menu.

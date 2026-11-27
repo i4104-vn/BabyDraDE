@@ -1,5 +1,6 @@
 //! Standalone builders for context menu elements (items, separators, headers, footers).
 
+use crate::components::overlay::{max_popover_height, max_popover_width, EDGE_MARGIN};
 use gtk4::prelude::*;
 use gtk4::{Align, Box, Button, Image, Label, Orientation, Popover, PositionType, Separator};
 use std::path::Path;
@@ -19,6 +20,23 @@ pub fn resolve_icon(name_or_path: &str, size: i32) -> Image {
     img
 }
 
+/// Hosts a menu container in a scrolled window capped to the anchor's monitor.
+fn capped_menu_scrolled(parent: &gtk4::Widget, vbox: &Box) -> gtk4::ScrolledWindow {
+    let scrolled = gtk4::ScrolledWindow::new();
+    scrolled.set_hscrollbar_policy(gtk4::PolicyType::Never);
+    scrolled.set_vscrollbar_policy(gtk4::PolicyType::Automatic);
+    scrolled.set_propagate_natural_width(true);
+    scrolled.set_propagate_natural_height(true);
+    if let Some(max_height) = max_popover_height(parent, EDGE_MARGIN) {
+        scrolled.set_max_content_height(max_height);
+    }
+    if let Some(max_width) = max_popover_width(parent, EDGE_MARGIN) {
+        scrolled.set_max_content_width(max_width);
+    }
+    scrolled.set_child(Some(vbox));
+    scrolled
+}
+
 /// Creates a new context menu popover positioned at specific `(x, y)` coordinates.
 pub fn create_menu_popover(parent: &gtk4::Widget, x: f64, y: f64) -> (Popover, Box) {
     let popover = Popover::builder().has_arrow(false).autohide(true).build();
@@ -31,7 +49,8 @@ pub fn create_menu_popover(parent: &gtk4::Widget, x: f64, y: f64) -> (Popover, B
     popover.set_pointing_to(Some(&rect));
 
     let vbox = create_menu_box(200);
-    popover.set_child(Some(&vbox));
+    let scrolled = capped_menu_scrolled(parent, &vbox);
+    popover.set_child(Some(&scrolled));
     (popover, vbox)
 }
 
@@ -47,7 +66,8 @@ pub fn create_menu_for(parent: &gtk4::Widget, position: PositionType) -> (Popove
     popover.add_css_class("tray-context-menu");
 
     let vbox = create_menu_box(190);
-    popover.set_child(Some(&vbox));
+    let scrolled = capped_menu_scrolled(parent, &vbox);
+    popover.set_child(Some(&scrolled));
     (popover, vbox)
 }
 
