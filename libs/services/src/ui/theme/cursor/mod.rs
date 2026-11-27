@@ -33,7 +33,9 @@ impl CursorImage {
         if width == 0 || height == 0 {
             return None;
         }
-        let expected = width as usize * height as usize * 4;
+        // Dimensions come from callers (theme/image metadata): check every
+        // multiplication so a hostile size cannot overflow `usize`.
+        let expected = usize::try_from(width.checked_mul(height)?.checked_mul(4)?).ok()?;
         if rgba.len() != expected {
             return None;
         }

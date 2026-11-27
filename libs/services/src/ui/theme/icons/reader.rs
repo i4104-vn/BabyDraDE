@@ -28,6 +28,9 @@ pub fn list_available_icon_themes() -> Vec<String> {
         }
     }
 
+    // `read_dir` order is filesystem-dependent; the documented contract is a
+    // stable, sorted list for dropdowns and tests.
+    themes.sort();
     themes
 }
 
@@ -39,6 +42,17 @@ pub fn list_available_icon_themes() -> Vec<String> {
 /// # Returns
 /// The theme directory, or `None` if not found.
 pub fn find_icon_theme_path(name: &str) -> Option<PathBuf> {
+    // Theme names come from config files; reject path separators so a crafted
+    // name cannot escape the theme directories.
+    if name.is_empty()
+        || name == "."
+        || name == ".."
+        || name.contains('/')
+        || name.contains('\\')
+        || name.contains('\0')
+    {
+        return None;
+    }
     let search_paths = get_icon_search_paths();
     for base in search_paths {
         let candidate = base.join(name);

@@ -71,7 +71,20 @@ pub fn read_default_index_theme() -> Option<String> {
 ///
 /// # Returns
 /// The theme directory, or `None` if not found.
+/// Rejects theme names that could escape a theme search directory.
+pub(crate) fn valid_theme_name(name: &str) -> bool {
+    !name.is_empty()
+        && name != "."
+        && name != ".."
+        && !name.contains('/')
+        && !name.contains('\\')
+        && !name.contains('\0')
+}
+
 pub fn find_cursor_theme_path(name: &str) -> Option<PathBuf> {
+    if !valid_theme_name(name) {
+        return None;
+    }
     let search_paths = cursor_theme_search_paths();
     for base in search_paths {
         let candidate = base.join(name).join("cursors");
@@ -109,6 +122,8 @@ pub fn list_available_cursor_themes() -> Vec<String> {
         }
     }
 
+    // `read_dir` order is filesystem-dependent; callers expect a stable list.
+    themes.sort();
     themes
 }
 

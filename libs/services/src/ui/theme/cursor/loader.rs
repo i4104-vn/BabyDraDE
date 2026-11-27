@@ -78,7 +78,11 @@ mod png {
 
 use cursor_icon::CursorIcon;
 
-use super::{reader::cursor_theme_search_paths, xcursor::parse_xcursor, CursorImage};
+use super::{
+    reader::{cursor_theme_search_paths, valid_theme_name},
+    xcursor::parse_xcursor,
+    CursorImage,
+};
 use png::parse_png;
 
 /// Maximum number of inherited themes followed while looking for a cursor image.
@@ -109,7 +113,7 @@ pub fn load_cursor_icon(
     hotspot_y: u32,
 ) -> Option<CursorImage> {
     let theme = theme.trim();
-    if theme.is_empty() {
+    if !valid_theme_name(theme) {
         return None;
     }
 
@@ -147,6 +151,9 @@ fn load_from_theme(
     hotspot_x: u32,
     hotspot_y: u32,
 ) -> Option<CursorImage> {
+    if !valid_theme_name(theme) {
+        return None;
+    }
     for dir in cursor_theme_search_paths()
         .into_iter()
         .map(|base| base.join(theme).join("cursors"))
@@ -201,7 +208,7 @@ fn read_inherits(theme: &str) -> Vec<String> {
                         .map(str::trim)
                         // Some themes quote values, e.g. Inherits="hicolor".
                         .map(|parent| parent.trim_matches('"').trim_matches('\''))
-                        .filter(|parent| !parent.is_empty())
+                        .filter(|parent| valid_theme_name(parent))
                         .map(str::to_string),
                 );
             }
