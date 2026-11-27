@@ -34,9 +34,10 @@ pub fn create_clock_widget(app: &gtk4::Application, cal_slot: WindowSlot) -> gtk
             return;
         }
         let new_win = calendar::show_calendar_window(&app_c, cal_inner.clone());
-        if let Ok(mut borrow) = cal_inner.try_borrow_mut() {
-            *borrow = Some(new_win);
-        }
+        // The slot is not borrowed at this point (close_all_panels has run), so
+        // update it unconditionally: a silent skip would leave the window
+        // untracked and the next click would open a duplicate.
+        *cal_inner.borrow_mut() = Some(new_win);
     });
 
     clock_button

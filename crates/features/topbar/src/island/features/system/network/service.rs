@@ -17,7 +17,7 @@ fn wifi_strength(interface: &str) -> u8 {
         .args(["dev", interface, "link"])
         .output()
     else {
-        return 100;
+        return 0;
     };
     let text = String::from_utf8_lossy(&output.stdout);
     let Some(dbm) = text.lines().find_map(|line| {
@@ -26,9 +26,12 @@ fn wifi_strength(interface: &str) -> u8 {
             .and_then(|rest| rest.split_whitespace().next())
             .and_then(|value| value.parse::<i32>().ok())
     }) else {
-        return 100;
+        // No signal sample is not evidence of a full-strength link.
+        return 0;
     };
-    ((dbm + 90) * 100 / 60).clamp(0, 100) as u8
+    // Widen before arithmetic: the value comes from an external `iw` process
+    // and must not overflow i32 (or wrap into a bogus percentage).
+    ((i64::from(dbm) + 90) * 100 / 60).clamp(0, 100) as u8
 }
 
 /// Reads the active connection once.

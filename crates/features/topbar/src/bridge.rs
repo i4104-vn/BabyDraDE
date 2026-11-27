@@ -21,12 +21,12 @@ pub const OWNER: &str = "org.babydrade.topbar";
 /// # Errors
 /// Returns the socket error raised while connecting.
 fn bus() -> io::Result<&'static Bus> {
-    static BUS: OnceLock<Bus> = OnceLock::new();
-    if BUS.get().is_none() {
-        let _ = BUS.set(Bus::connect(OWNER)?);
-    }
-    BUS.get()
-        .ok_or_else(|| io::Error::other("protocol bus unavailable"))
+    // Store the connection *attempt* so concurrent callers share one connect
+    // and a failed connect stays cached instead of being raced/retried.
+    static BUS: OnceLock<io::Result<Bus>> = OnceLock::new();
+    BUS.get_or_init(|| Bus::connect(OWNER))
+        .as_ref()
+        .map_err(|error| io::Error::new(error.kind(), error.to_string()))
 }
 
 /// Requests a window lifecycle action from the compositor.

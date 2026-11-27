@@ -56,6 +56,11 @@ pub fn select_recording_area_action(
                 config.borrow_mut().mode = RecordingMode::Window(geometry);
             }
         }
-        popover.popup();
+        // Only reopen if area mode is still selected: the user may have
+        // cancelled the selector or switched mode while `slurp` was running.
+        let still_area = matches!(config.borrow().mode, RecordingMode::Area(_));
+        if still_area && popover.root().is_some() {
+            popover.popup();
+        }
     });
 }

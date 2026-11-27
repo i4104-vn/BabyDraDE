@@ -35,9 +35,9 @@ pub fn create_status_icons(
             return;
         }
         let new_win = create_cc_window(&app_c, cc_inner.clone(), vol_icon_c.clone());
-        if let Ok(mut borrow) = cc_inner.try_borrow_mut() {
-            *borrow = Some(new_win);
-        }
+        // No nested borrow is active after close_all_panels; store the window
+        // unconditionally so the next click can toggle it closed.
+        *cc_inner.borrow_mut() = Some(new_win);
     });
 
     let clock_button = super::clock::create_clock_widget(app, cal_slot);
