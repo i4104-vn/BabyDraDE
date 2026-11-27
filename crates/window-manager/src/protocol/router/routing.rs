@@ -93,7 +93,7 @@ impl Router {
         }
         match envelope.kind {
             Kind::Request => self.route_request(from, origin_name, envelope),
-            Kind::Event => self.route_event(from, origin_name, envelope),
+            Kind::Event => self.route_event(from, envelope),
             Kind::Response | Kind::Error => {}
         }
     }
@@ -199,20 +199,15 @@ impl Router {
     ///
     /// # Arguments
     /// * `from` - Sending connection.
-    /// * `origin_name` - Registered name of the sender.
     /// * `envelope` - Event frame.
-    fn route_event(&mut self, from: PeerId, origin_name: PeerName, envelope: Envelope) {
+    fn route_event(&mut self, from: PeerId, envelope: Envelope) {
         match envelope.target.clone() {
             Target::Peer(name) => self.route_peer_event(name, envelope),
             Target::Topic(topic) => self.route_topic_event(from, topic, envelope),
             Target::Broadcast => self.route_broadcast_event(from, envelope),
-            Target::Router => {
-                let error = BusError::new(
-                    BusErrorCode::InvalidTarget,
-                    "router target is reserved for control frames",
-                );
-                self.reject(from, origin_name, error, envelope.id);
-            }
+            // `route_ready` diverts every Router-targeted frame to `route_control`
+            // before dispatching by kind, so this arm is unreachable.
+            Target::Router => {}
         }
     }
 

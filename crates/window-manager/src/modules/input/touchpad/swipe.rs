@@ -57,10 +57,11 @@ where
 
     if state.trackpad_swipe().is_some() {
         {
-            let gesture = state.trackpad_swipe_mut().as_mut().unwrap();
-            gesture.total_delta.x += delta.x;
-            gesture.total_delta.y += delta.y;
-            gesture.updates.push((delta, time));
+            if let Some(gesture) = state.trackpad_swipe_mut().as_mut() {
+                gesture.total_delta.x += delta.x;
+                gesture.total_delta.y += delta.y;
+                gesture.updates.push((delta, time));
+            }
         }
 
         // 3-finger horizontal drag scrubs the switcher live instead of
@@ -79,10 +80,11 @@ where
                 && should_start_scrub(dx, dy, state.gesture_config())
             {
                 if let Some(base_index) = state.begin_switcher_scrub() {
-                    let gesture = state.trackpad_swipe_mut().as_mut().unwrap();
-                    gesture.scrubbing = true;
-                    gesture.scrub_start_x = dx;
-                    gesture.scrub_base_index = base_index;
+                    if let Some(gesture) = state.trackpad_swipe_mut().as_mut() {
+                        gesture.scrubbing = true;
+                        gesture.scrub_start_x = dx;
+                        gesture.scrub_base_index = base_index;
+                    }
                 }
             }
 

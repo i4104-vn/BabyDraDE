@@ -13,12 +13,6 @@ impl BabydraState {
         &self,
         point: Point<f64, Logical>,
     ) -> Option<(Window, Point<i32, Logical>)> {
-        if let Some(layer) = self.layer_under(point) {
-            if matches!(layer, Layer::Overlay | Layer::Top) {
-                return None;
-            }
-        }
-
         // If an overlay or top layer surface (bars, popovers, menus) occludes this point,
         // no normal window can be under it.
         if let Some(layer) = self.layer_under(point) {
