@@ -20,11 +20,17 @@ use widgets::{setup_clock_timer, setup_focus_management};
 
 use ui_kit::layer_shell::{init_layer_window, LayerWindowConfig};
 
+/// Which monitor owns the exclusive keyboard focus and the authentication card.
+pub(crate) enum KeyboardRole {
+    Primary,
+    Secondary,
+}
+
 /// Spawns a lock window assigned to a specific monitor.
 pub(crate) fn create_lock_window(
     app: &gtk4::Application,
     monitor: Option<&gtk4::gdk::Monitor>,
-    is_primary: bool,
+    keyboard_role: KeyboardRole,
     custom_wallpaper: Option<&str>,
     transition_image: Option<&Path>,
     transition_stacks: Rc<RefCell<Vec<LockTransition>>>,
@@ -32,7 +38,8 @@ pub(crate) fn create_lock_window(
 ) {
     let window = gtk4::ApplicationWindow::new(app);
 
-    let kbd_mode = if is_primary {
+    let primary = matches!(keyboard_role, KeyboardRole::Primary);
+    let kbd_mode = if primary {
         KeyboardMode::Exclusive
     } else {
         KeyboardMode::None
@@ -80,7 +87,7 @@ pub(crate) fn create_lock_window(
     center_box.set_hexpand(true);
     center_box.set_vexpand(true);
 
-    if is_primary {
+    if primary {
         let (clock_label, date_label) = build_clock_labels();
         setup_clock_timer(&clock_label, &date_label);
 

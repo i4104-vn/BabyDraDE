@@ -1,7 +1,8 @@
 //! BabyDraDE Lock Screen — Multi-monitor lock screen with PAM authentication.
 
 use super::render::{
-    capture_transition_images, create_lock_window, reverse_lock_transition, LockTransition,
+    capture_transition_images, create_lock_window, reverse_lock_transition, KeyboardRole,
+    LockTransition,
 };
 use gtk4::prelude::*;
 use std::cell::{Cell, RefCell};
@@ -19,12 +20,18 @@ pub(crate) fn spawn() {
         return;
     }
 
-    let _ = std::thread::Builder::new()
+    if let Err(err) = std::thread::Builder::new()
         .name("babydra-lock-screen".to_string())
         .spawn(|| {
             run();
             LOCK_SCREEN_RUNNING.store(false, Ordering::Release);
-        });
+        })
+    {
+        // The flag was already claimed above; release it or every later lock
+        // request would be silently ignored for the rest of the session.
+        tracing::warn!("cannot start lock-screen thread: {err}");
+        LOCK_SCREEN_RUNNING.store(false, Ordering::Release);
+    }
 }
 
 fn run() {
@@ -96,7 +103,7 @@ fn run() {
             create_lock_window(
                 app,
                 None,
-                true,
+                KeyboardRole::Primary,
                 custom_image.as_deref(),
                 transition_images.first().and_then(|image| image.as_deref()),
                 transition_stacks_on_activate.clone(),
@@ -108,11 +115,15 @@ fn run() {
                     .item(i)
                     .and_then(|obj| obj.downcast::<gtk4::gdk::Monitor>().ok())
                 {
-                    let is_primary = i == 0;
+                    let role = if i == 0 {
+                        KeyboardRole::Primary
+                    } else {
+                        KeyboardRole::Secondary
+                    };
                     create_lock_window(
                         app,
                         Some(&monitor),
-                        is_primary,
+                        role,
                         custom_image.as_deref(),
                         transition_images
                             .get(i as usize)
