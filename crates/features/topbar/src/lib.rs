@@ -1,16 +1,16 @@
 pub mod bridge;
-pub mod center;
-pub mod left;
-pub mod right;
+pub mod control;
+pub mod island;
+pub mod system;
 
 use bridge::OWNER;
-use center::DynamicIsland;
+use control::create_right_section;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, CenterBox};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
-use left::LeftPill;
-use right::create_right_section;
+use island::DynamicIsland;
 use std::cell::RefCell;
+use system::LeftPill;
 
 thread_local! {
     static DISMISS_LAYER: RefCell<Option<ApplicationWindow>> = const { RefCell::new(None) };
@@ -53,7 +53,7 @@ pub fn run() {
         let dismiss_window = window.clone();
         let outside_click = gtk4::GestureClick::new();
         outside_click.connect_pressed(move |_, _, x, y| {
-            center::ui::popover::dismiss_outside(dismiss_window.upcast_ref(), x, y);
+            island::ui::popover::dismiss_outside(dismiss_window.upcast_ref(), x, y);
             ui_kit::overlay::context_menu::dismiss_all();
         });
         window.add_controller(outside_click);
@@ -132,7 +132,7 @@ fn create_dismiss_layer(app: &Application) -> ApplicationWindow {
     gesture.connect_pressed(move |_, _, _, _| {
         catcher.set_visible(false);
         ui_kit::overlay::context_menu::dismiss_all();
-        center::ui::popover::dismiss_all_popovers();
+        island::ui::popover::dismiss_all_popovers();
     });
     window.add_controller(gesture);
     window.set_visible(false);
