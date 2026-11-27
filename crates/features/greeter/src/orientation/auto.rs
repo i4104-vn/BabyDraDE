@@ -73,7 +73,13 @@ pub(super) fn start_auto_rotate() {
     }
     // Sampling happens on a worker thread: a stalled proxy must never block
     // the login UI's main loop.
-    let driver = RotationWorker::spawn(manager);
+    let driver = match RotationWorker::spawn(manager) {
+        Ok(driver) => driver,
+        Err(err) => {
+            tracing::warn!("greeter: cannot start rotation worker: {err}");
+            return;
+        }
+    };
     let interval = driver.poll_interval();
     let session = match RotationSession::new(driver) {
         Ok(session) => Rc::new(RefCell::new(session)),

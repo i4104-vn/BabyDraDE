@@ -24,8 +24,8 @@ pub(super) struct OutputState {
     pub(super) heads: Vec<(String, ZwlrOutputHeadV1)>,
     /// Head currently being described by the compositor.
     pending_head: Option<ZwlrOutputHeadV1>,
-    /// Transform announced for the head currently being described.
-    pending_transform: Option<Transform>,
+    /// Name announced for that head (the compositor sends it before `transform`).
+    pending_name: Option<String>,
     /// Transform each named head reported at session start (rotation baseline).
     pub(super) transforms: HashMap<String, Transform>,
     /// Serial of the current output configuration, used by `create_configuration`.
@@ -85,14 +85,17 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for OutputState {
         match event {
             HeadEvent::Name { name } => {
                 if let Some(head) = state.pending_head.take() {
-                    let transform = state.pending_transform.take().unwrap_or(Transform::Normal);
-                    state.transforms.insert(name.clone(), transform);
+                    state.pending_name = Some(name.clone());
                     state.heads.push((name, head));
                 }
             }
             HeadEvent::Transform { transform } => {
-                state.pending_transform =
-                    Some(transform.into_result().unwrap_or(Transform::Normal));
+                // The transform arrives after the name in wlr's event order,
+                // so record the baseline here instead of at `Name`.
+                let transform = transform.into_result().unwrap_or(Transform::Normal);
+                if let Some(name) = state.pending_name.take() {
+                    state.transforms.insert(name, transform);
+                }
             }
             _ => {}
         }
@@ -170,7 +173,7 @@ pub(super) fn connect_outputs() -> Result<OutputConnection, Box<dyn Error>> {
     let mut state = OutputState::default();
     let deadline = Instant::now() + PROTOCOL_TIMEOUT;
     while !state.done && Instant::now() < deadline {
-        dispatch(&mut queue, &mut state)?;
+        dispatch(&connection, &mut queue, &mut state)?;
     }
     if !state.done {
         return Err("compositor did not announce its outputs".into());
@@ -216,7 +219,7 @@ pub(super) fn apply_protocol(config: &DisplayConfig) -> Result<usize, Box<dyn Er
 
     let deadline = Instant::now() + PROTOCOL_TIMEOUT;
     while outputs.state.result.is_none() && Instant::now() < deadline {
-        dispatch(&mut outputs.queue, &mut outputs.state)?;
+        dispatch(&outputs.connection, &mut outputs.queue, &mut outputs.state)?;
     }
     match outputs.state.result {
         Some(true) => Ok(applied),
@@ -225,12 +228,27 @@ pub(super) fn apply_protocol(config: &DisplayConfig) -> Result<usize, Box<dyn Er
     }
 }
 
-/// Dispatches one batch of Wayland events.
+/// Dispatches at most one non-blocking batch of Wayland events.
+///
+/// The caller owns the deadline loop, so a stalled compositor can never keep
+/// the greeter's login UI from appearing.
 fn dispatch(
+    connection: &Connection,
     queue: &mut EventQueue<OutputState>,
     state: &mut OutputState,
 ) -> Result<(), Box<dyn Error>> {
-    queue.blocking_dispatch(state)?;
+    connection.flush()?;
+    if let Some(guard) = queue.prepare_read() {
+        match guard.read() {
+            Ok(_) => {}
+            // A non-blocking socket has nothing available right now.
+            Err(wayland_client::backend::WaylandError::Io(err))
+                if err.kind() == std::io::ErrorKind::WouldBlock => {}
+            Err(err) => return Err(Box::new(err)),
+        }
+    }
+    queue.dispatch_pending(state)?;
+    std::thread::sleep(std::time::Duration::from_millis(10));
     Ok(())
 }
 

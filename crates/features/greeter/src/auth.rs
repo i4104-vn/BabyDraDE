@@ -15,12 +15,19 @@ fn write_req(stream: &mut UnixStream, req: &Request) -> Result<(), String> {
         .map_err(|err| err.to_string())
 }
 
+/// Upper bound on a single greetd reply, so a corrupt length prefix cannot
+/// make the greeter allocate gigabytes before the login screen appears.
+const MAX_RESPONSE_BYTES: usize = 1024 * 1024;
+
 fn read_res(stream: &mut UnixStream) -> Result<Response, String> {
     let mut len_bytes = [0u8; 4];
     stream
         .read_exact(&mut len_bytes)
         .map_err(|err| err.to_string())?;
     let len = u32::from_ne_bytes(len_bytes) as usize;
+    if len > MAX_RESPONSE_BYTES {
+        return Err(format!("greetd response too large: {len} bytes"));
+    }
     let mut body = vec![0u8; len];
     stream
         .read_exact(&mut body)

@@ -125,6 +125,23 @@ impl LoginRefs {
     }
 }
 
+/// Restores the login form and shows `message` after a failed attempt.
+fn show_login_error(refs: &LoginRefs, message: &str) {
+    refs.btn_spinner.stop();
+    refs.login_btn.set_child(Option::<&gtk4::Widget>::None);
+    refs.login_btn.set_label("➔");
+    refs.set_controls_sensitive(true);
+    refs.error_label.set_text(message);
+    refs.error_box.set_visible(true);
+    refs.pass_entry.set_text("");
+    refs.pass_entry.grab_focus();
+    refs.login_panel.add_css_class("shake-error");
+    let panel = refs.login_panel.clone();
+    glib::timeout_add_local_once(Duration::from_millis(400), move || {
+        panel.remove_css_class("shake-error");
+    });
+}
+
 fn setup_login_flow(greeter: &GreeterWidgets) {
     let refs = LoginRefs::from_greeter(greeter);
 
@@ -162,23 +179,14 @@ fn setup_login_flow(greeter: &GreeterWidgets) {
                     glib::ControlFlow::Break
                 }
                 Ok(Err(err)) => {
-                    completed.btn_spinner.stop();
-                    completed.login_btn.set_child(Option::<&gtk4::Widget>::None);
-                    completed.login_btn.set_label("➔");
-                    completed.set_controls_sensitive(true);
-                    completed.error_label.set_text(&err);
-                    completed.error_box.set_visible(true);
-                    completed.pass_entry.set_text("");
-                    completed.pass_entry.grab_focus();
-                    completed.login_panel.add_css_class("shake-error");
-                    let panel = completed.login_panel.clone();
-                    glib::timeout_add_local_once(Duration::from_millis(400), move || {
-                        panel.remove_css_class("shake-error");
-                    });
+                    show_login_error(&completed, &err);
                     glib::ControlFlow::Break
                 }
                 Err(mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-                Err(mpsc::TryRecvError::Disconnected) => glib::ControlFlow::Break,
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    show_login_error(&completed, "Authentication thread stopped unexpectedly");
+                    glib::ControlFlow::Break
+                }
             });
         }
     };
