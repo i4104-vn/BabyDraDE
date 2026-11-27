@@ -9,6 +9,17 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+/// Handle that pauses (`true`) or resumes (`false`) the wallpaper reveal.
+#[derive(Clone)]
+pub struct WallpaperFreeze(Rc<dyn Fn(bool)>);
+
+impl WallpaperFreeze {
+    /// Sets whether the reveal animation is frozen.
+    pub fn set(&self, frozen: bool) {
+        (self.0)(frozen);
+    }
+}
+
 /// Decides if a freshly read config path must replace the displayed one.
 ///
 /// The first load must always go through, even when both paths are `None`
@@ -20,9 +31,9 @@ fn needs_apply(ready: bool, current: &Option<PathBuf>, next: &Option<PathBuf>) -
 /// Builds the background wallpaper widget and returns it with its freeze handle.
 ///
 /// # Returns
-/// The layer-shell background overlay plus a callback that pauses/resumes its
+/// The layer-shell background overlay plus a handle that pauses/resumes its
 /// reveal animation.
-pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
+pub fn create_wallpaper_w() -> (gtk4::Overlay, WallpaperFreeze) {
     let container = gtk4::Overlay::new();
     container.set_hexpand(true);
     container.set_vexpand(true);
@@ -38,13 +49,18 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
     let wallpaper_ready = Rc::new(Cell::new(false));
     let reveal_tween = Rc::new(Cell::new(None::<Tween>));
     let image_prepared = Rc::new(Cell::new(false));
+    let frozen = Rc::new(Cell::new(false));
     let progress_for_draw = reveal_progress.clone();
     let center_for_draw = reveal_center.clone();
     let path_for_draw = wallpaper_path.clone();
     let ready_for_draw = wallpaper_ready.clone();
     let tween_for_draw = reveal_tween.clone();
     let prepared_for_draw = image_prepared.clone();
+    let frozen_for_draw = frozen.clone();
     drawing_area.set_draw_func(move |_, cr, width, height| {
+        if frozen_for_draw.get() {
+            return;
+        }
         if !ready_for_draw.get() {
             cr.set_source_rgb(0.02, 0.025, 0.04);
             let _ = cr.paint();
@@ -52,11 +68,7 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
         }
         let path_ref = path_for_draw.borrow();
         if !prepared_for_draw.get() {
-            render::prepare_wallpaper_background(
-                width as f64,
-                height as f64,
-                path_ref.as_deref(),
-            );
+            render::prepare_wallpaper_background(width as f64, height as f64, path_ref.as_deref());
             prepared_for_draw.set(true);
             tween_for_draw.set(Some(Tween::new(
                 0.0,
@@ -95,7 +107,11 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
     // refresh rate.
     let tween_for_tick = reveal_tween.clone();
     let reveal_progress_tick = reveal_progress.clone();
+    let frozen_for_tick = frozen.clone();
     drawing_area.add_tick_callback(move |widget, _| {
+        if frozen_for_tick.get() {
+            return glib::ControlFlow::Continue;
+        }
         if let Some(tween) = tween_for_tick.get() {
             reveal_progress_tick.set(tween.value());
             widget.queue_draw();
@@ -156,7 +172,6 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
 
     container.set_child(Some(&drawing_area));
 
-    let frozen = Rc::new(Cell::new(false));
     let draw_freeze = drawing_area.clone();
     let set_frozen = Rc::new(move |should_freeze| {
         frozen.set(should_freeze);
@@ -165,7 +180,7 @@ pub fn create_wallpaper_w() -> (gtk4::Overlay, Rc<dyn Fn(bool)>) {
         }
     });
 
-    (container, set_frozen)
+    (container, WallpaperFreeze(set_frozen))
 }
 
 #[cfg(test)]

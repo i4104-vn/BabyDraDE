@@ -7,9 +7,10 @@ pub mod wallpaper;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, Overlay};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
-use std::rc::Rc;
 
-pub fn build_desktop_window(app: &Application) -> (ApplicationWindow, Rc<dyn Fn(bool)>) {
+use crate::wallpaper::WallpaperFreeze;
+
+pub fn build_desktop_window(app: &Application) -> (ApplicationWindow, WallpaperFreeze) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("BabyDraDE Desktop")
