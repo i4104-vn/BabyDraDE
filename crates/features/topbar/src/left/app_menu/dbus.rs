@@ -6,9 +6,8 @@
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Box, Button, PositionType};
-use services::system::{
-    activate_dbus_menu_item, fetch_dbus_menu_with_prepared_submenus, find_app_menu_service,
-    DbusMenuItem,
+use services::system::dbus_menu::{
+    activate_app_menu_item, fetch_app_menu, find_app_menu_service, DbusMenuItem,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -106,7 +105,7 @@ fn load_and_render_dbus_menu_internal(
     let p_clone = path_str.clone();
 
     std::thread::spawn(move || {
-        let menu_items = fetch_dbus_menu_with_prepared_submenus(&s_clone, &p_clone);
+        let menu_items = fetch_app_menu(&s_clone, &p_clone);
         let _ = tx.send(menu_items);
     });
 
@@ -142,6 +141,10 @@ fn load_and_render_dbus_menu_internal(
                         continue;
                     }
 
+                    if top_item.label.trim().is_empty() {
+                        continue;
+                    }
+
                     if displayed_items >= 3 {
                         overflow_started = true;
                         overflow_items.push(top_item);
@@ -154,14 +157,15 @@ fn load_and_render_dbus_menu_internal(
                         .sensitive(top_item.enabled)
                         .build();
 
-                    if top_item.has_submenu || !top_item.children.is_empty() {
+                    if top_item.has_submenu && !top_item.children.is_empty() {
                         attach_dbus_submenu(&btn, &top_item.children, &service_str, &path_str);
                     } else {
                         let s = service_str.clone();
                         let p = path_str.clone();
                         let id = top_item.id;
+                        let action = top_item.action.clone();
                         btn.connect_clicked(move |_| {
-                            activate_dbus_menu_item(&s, &p, id);
+                            activate_app_menu_item(&s, &p, id, action.clone());
                         });
                     }
 
@@ -219,7 +223,11 @@ fn populate_menu_items(
             continue;
         }
 
-        if item.has_submenu || !item.children.is_empty() {
+        if item.label.trim().is_empty() {
+            continue;
+        }
+
+        if item.has_submenu && !item.children.is_empty() {
             let sub_items = item.children.clone();
             let svc = service.to_string();
             let path = menu_path.to_string();
@@ -230,9 +238,10 @@ fn populate_menu_items(
             let s = service.to_string();
             let p = menu_path.to_string();
             let id = item.id;
+            let action = item.action.clone();
 
             menu = menu.item_sensitive(&item.label, "", item.enabled, move || {
-                activate_dbus_menu_item(&s, &p, id);
+                activate_app_menu_item(&s, &p, id, action.clone());
             });
         }
     }

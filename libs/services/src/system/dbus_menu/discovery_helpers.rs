@@ -2,6 +2,33 @@
 
 use gio::glib::Variant;
 
+/// Reads a string-like variant. Object paths have type `o`, so `get::<String>()`
+/// cannot be used for them; `str()` accepts `s`, `o` and `g`.
+pub(super) fn variant_string(var: &Variant) -> Option<String> {
+    var.str()
+        .map(str::to_string)
+        .or_else(|| var.get::<String>())
+}
+
+/// `GetMenus` returns `a(so)`. Older Qt/KDE registrars returned `a(sso)` or
+/// `a(uso)` (window id first), so tolerate both layouts.
+pub(super) fn parse_registered_menu_entry(entry: &Variant) -> Option<(String, String)> {
+    if !entry.is_container() {
+        return None;
+    }
+    let children = entry.n_children();
+    if children < 2 {
+        return None;
+    }
+    let (service_index, path_index) = if children >= 3 { (1, 2) } else { (0, 1) };
+    let service = variant_string(&entry.child_value(service_index))?;
+    let path = variant_string(&entry.child_value(path_index))?;
+    if service.is_empty() || !path.starts_with('/') {
+        return None;
+    }
+    Some((service, path))
+}
+
 pub(super) fn find_registered_appmenus(conn: &gio::DBusConnection) -> Vec<(String, String)> {
     let reply = match conn.call_sync(
         Some("com.canonical.AppMenu.Registrar"),
@@ -19,47 +46,70 @@ pub(super) fn find_registered_appmenus(conn: &gio::DBusConnection) -> Vec<(Strin
     };
 
     let menus = reply.child_value(0);
-    let mut matches = Vec::new();
-
-    for i in 0..menus.n_children() {
-        let menu = menus.child_value(i);
-        if menu.n_children() < 3 {
-            continue;
-        }
-
-        let service = menu.child_value(1).get::<String>();
-        let path = menu.child_value(2).get::<String>();
-        if let (Some(service), Some(path)) = (service, path) {
-            matches.push((service, path));
-        }
+    if !menus.is_container() {
+        return Vec::new();
     }
-
-    matches
+    (0..menus.n_children())
+        .filter_map(|index| parse_registered_menu_entry(&menus.child_value(index)))
+        .collect()
 }
 
-pub(super) fn service_matches_app_id(service: &str, app_id: &str) -> bool {
-    let service = service.trim().to_ascii_lowercase();
-    let app_id = app_id
+/// Flattens an app id or bus name to printable lowercase characters.
+pub(super) fn normalize_app_id(value: &str) -> String {
+    let value = value
         .trim()
         .strip_suffix(".desktop")
-        .unwrap_or(app_id.trim())
-        .to_ascii_lowercase();
-    if service.is_empty() || app_id.is_empty() {
+        .unwrap_or(value.trim());
+    value
+        .to_ascii_lowercase()
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .collect()
+}
+
+/// Dot/dash/underscore separated components of an app id or bus name.
+pub(super) fn app_tokens(value: &str) -> Vec<String> {
+    let value = value.trim();
+    let value = value.strip_suffix(".desktop").unwrap_or(value);
+    value
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|token| token.len() >= 2)
+        .map(str::to_ascii_lowercase)
+        .collect()
+}
+
+/// Matches a bus name against an app id without hardcoding any application.
+///
+/// Handles desktop ids (`org.gnome.Nautilus.desktop`), short executable names
+/// (`code` vs `com.visualstudio.code`), and per-instance suffixes
+/// (`org.kde.kate_4578`) used by KDE and Electron helpers.
+pub(super) fn service_matches_app_id(service: &str, app_id: &str) -> bool {
+    let service_normalized = normalize_app_id(service);
+    let app_normalized = normalize_app_id(app_id);
+    if service_normalized.is_empty() || app_normalized.is_empty() {
         return false;
     }
-    if service == app_id || service.ends_with(&format!(".{app_id}")) {
+    if service_normalized == app_normalized {
+        return true;
+    }
+    if app_normalized.len() >= 3
+        && (service_normalized.starts_with(&app_normalized)
+            || service_normalized.ends_with(&app_normalized))
+    {
         return true;
     }
 
-    let normalized_service: String = service
-        .chars()
-        .filter(char::is_ascii_alphanumeric)
-        .collect();
-    let normalized_app: String = app_id.chars().filter(char::is_ascii_alphanumeric).collect();
-    normalized_app.len() >= 3
-        && (normalized_service == normalized_app
-            || normalized_service.starts_with(&normalized_app)
-            || normalized_service.ends_with(&normalized_app))
+    let app_id_tokens = app_tokens(app_id);
+    let service_tokens = app_tokens(service);
+    // The last token is the application's own name; namespace tokens such as
+    // `org` or `gnome` are shared by unrelated apps and must not count.
+    let Some(distinctive) = app_id_tokens.iter().rev().find(|token| token.len() >= 3) else {
+        return false;
+    };
+    service_tokens.iter().any(|candidate| {
+        candidate.starts_with(distinctive)
+            || (distinctive.starts_with(candidate) && candidate.len() >= 4)
+    })
 }
 
 pub(super) fn get_connection_process_id(conn: &gio::DBusConnection, name: &str) -> Option<u32> {
@@ -80,15 +130,21 @@ pub(super) fn get_connection_process_id(conn: &gio::DBusConnection, name: &str) 
     .get::<u32>()
 }
 
-pub(super) fn find_dbusmenu_path(conn: &gio::DBusConnection, service: &str) -> Option<String> {
-    const MAX_NODES: usize = 64;
+/// Returns every object path exporting `com.canonical.dbusmenu`, shallowest first.
+pub(super) fn find_dbusmenu_paths(
+    conn: &gio::DBusConnection,
+    service: &str,
+) -> Vec<(String, usize)> {
+    const MAX_NODES: usize = 96;
     const MAX_DEPTH: usize = 8;
+    const MAX_RESULTS: usize = 16;
 
     let mut pending = vec![("/".to_string(), 0usize)];
     let mut visited = 0;
+    let mut matches = Vec::new();
 
     while let Some((path, depth)) = pending.pop() {
-        if visited >= MAX_NODES {
+        if visited >= MAX_NODES || matches.len() >= MAX_RESULTS {
             break;
         }
         visited += 1;
@@ -119,7 +175,8 @@ pub(super) fn find_dbusmenu_path(conn: &gio::DBusConnection, service: &str) -> O
             .iter()
             .any(|interface| interface.name() == "com.canonical.dbusmenu")
         {
-            return Some(path);
+            matches.push((path, depth));
+            continue;
         }
 
         if depth < MAX_DEPTH {
@@ -136,12 +193,52 @@ pub(super) fn find_dbusmenu_path(conn: &gio::DBusConnection, service: &str) -> O
         }
     }
 
-    None
+    matches.sort_by_key(|(_, depth)| *depth);
+    matches
 }
 
 #[cfg(test)]
 mod tests {
-    use super::service_matches_app_id;
+    use gio::glib::Variant;
+
+    use super::{
+        app_tokens, normalize_app_id, parse_registered_menu_entry, service_matches_app_id,
+    };
+
+    #[test]
+    fn registrar_entries_accept_both_a_so_and_a_sso_shapes() {
+        let pair = Variant::from((
+            "org.example.App".to_string(),
+            "/com/canonical/menu".to_string(),
+        ));
+        assert_eq!(
+            parse_registered_menu_entry(&pair),
+            Some((
+                "org.example.App".to_string(),
+                "/com/canonical/menu".to_string()
+            ))
+        );
+
+        let triple = Variant::from((42u32, "org.example.App".to_string(), "/MenuBar".to_string()));
+        assert_eq!(
+            parse_registered_menu_entry(&triple),
+            Some(("org.example.App".to_string(), "/MenuBar".to_string()))
+        );
+
+        assert_eq!(parse_registered_menu_entry(&Variant::from(1u32)), None);
+    }
+
+    #[test]
+    fn app_id_normalization_keeps_useful_tokens() {
+        assert_eq!(
+            normalize_app_id("org.gnome.Nautilus.desktop"),
+            "orggnomenautilus"
+        );
+        assert_eq!(
+            app_tokens("firefox_firefox.desktop"),
+            vec!["firefox", "firefox"]
+        );
+    }
 
     #[test]
     fn service_matching_accepts_desktop_and_helper_name_variants() {
@@ -151,6 +248,7 @@ mod tests {
         ));
         assert!(service_matches_app_id("com.visualstudio.code", "code"));
         assert!(service_matches_app_id("org.kde.kate_4578", "org.kde.kate"));
+        assert!(service_matches_app_id("firefox", "firefox_firefox.desktop"));
         assert!(!service_matches_app_id(
             "org.gnome.Terminal",
             "org.gnome.Nautilus"
