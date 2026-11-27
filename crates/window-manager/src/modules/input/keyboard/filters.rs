@@ -17,6 +17,7 @@ use crate::modules::input::{
     },
     InputContext,
 };
+use crate::shared::ports::{CaretSelection, CaretUnit};
 
 /// Handles keys while the launcher is visible.
 ///
@@ -116,9 +117,19 @@ pub(crate) fn handle_launcher<C: InputContext>(
             _ => None,
         };
         if let Some((direction, word)) = caret_move {
+            let unit = if word {
+                CaretUnit::Word
+            } else {
+                CaretUnit::Character
+            };
+            let selection = if modifiers.shift {
+                CaretSelection::Extend
+            } else {
+                CaretSelection::Move
+            };
             ctx.state
                 .launcher_search_text_mut()
-                .move_caret(direction, word, modifiers.shift);
+                .move_caret(direction, unit, selection);
             return true;
         }
     }

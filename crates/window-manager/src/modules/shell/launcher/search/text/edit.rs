@@ -2,6 +2,7 @@
 
 use super::words::{byte_at, word_end, word_start};
 use super::SearchText;
+use crate::shared::ports::{CaretSelection, CaretUnit};
 
 impl SearchText {
     /// Inserts text at the caret, replacing the selection if there is one.
@@ -11,7 +12,6 @@ impl SearchText {
     ///
     /// # Returns
     /// Nothing; the state is updated in place.
-    /// Inserts text at the caret, replacing the selection if there is one.
     pub(crate) fn insert(&mut self, text: &str) {
         if text.is_empty() {
             return;
@@ -29,7 +29,6 @@ impl SearchText {
     ///
     /// # Returns
     /// Nothing; the state is updated in place.
-    /// Deletes the selection, or the character before the caret.
     pub(crate) fn backspace(&mut self) {
         if let Some((start, end)) = self.selection() {
             self.remove_range(start, end);
@@ -42,7 +41,6 @@ impl SearchText {
     ///
     /// # Returns
     /// Nothing; the state is updated in place.
-    /// Deletes the selection, or the character after the caret.
     pub(crate) fn delete(&mut self) {
         if let Some((start, end)) = self.selection() {
             self.remove_range(start, end);
@@ -55,7 +53,6 @@ impl SearchText {
     ///
     /// # Returns
     /// Nothing; the state is updated in place.
-    /// Deletes from the start of the word before the caret up to the caret.
     pub(crate) fn delete_word(&mut self) {
         if let Some((start, end)) = self.selection() {
             self.remove_range(start, end);
@@ -71,14 +68,19 @@ impl SearchText {
     ///
     /// # Arguments
     /// * `direction` - Negative moves left, positive moves right.
-    /// * `word` - Whether to step by words.
-    /// * `extend` - Whether to extend the selection.
+    /// * `unit` - Whether to step by characters or words.
+    /// * `selection` - Whether to move or extend the selection.
     ///
     /// # Returns
     /// Nothing; the state is updated in place.
-    /// Moves the caret. `word` switches to word steps, `extend` keeps the
-    /// selection bound so Shift+Arrow extends instead of moving.
-    pub(crate) fn move_caret(&mut self, direction: i32, word: bool, extend: bool) {
+    pub(crate) fn move_caret(
+        &mut self,
+        direction: i32,
+        unit: CaretUnit,
+        selection: CaretSelection,
+    ) {
+        let word = unit == CaretUnit::Word;
+        let extend = selection == CaretSelection::Extend;
         let current = self.cursor;
         let target = if direction < 0 {
             if word {
@@ -133,7 +135,6 @@ impl SearchText {
     ///
     /// # Returns
     /// Nothing; the state is updated in place.
-    /// Places the caret at a character index (used by pointer hit-testing).
     pub(crate) fn set_caret_index(&mut self, index: usize) {
         self.anchor = None;
         self.cursor = index.min(self.text.chars().count());

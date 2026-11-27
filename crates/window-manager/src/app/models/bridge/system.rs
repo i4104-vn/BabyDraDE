@@ -5,7 +5,7 @@ use common::ShortcutTarget;
 use crate::app::models::runtime::BabydraState;
 use crate::core::shortcuts::Mods;
 use crate::modules::shell::launcher::search::SearchText;
-use crate::shared::ports::{GesturePolicy, QueryText, SystemActions};
+use crate::shared::ports::{CaretSelection, CaretUnit, GesturePolicy, QueryText, SystemActions};
 
 impl QueryText for SearchText {
     fn insert(&mut self, text: &str) {
@@ -20,8 +20,8 @@ impl QueryText for SearchText {
     fn delete_word(&mut self) {
         SearchText::delete_word(self);
     }
-    fn move_caret(&mut self, direction: i32, word: bool, extend: bool) {
-        SearchText::move_caret(self, direction, word, extend);
+    fn move_caret(&mut self, direction: i32, unit: CaretUnit, selection: CaretSelection) {
+        SearchText::move_caret(self, direction, unit, selection);
     }
     fn home(&mut self, extend: bool) {
         SearchText::home(self, extend);

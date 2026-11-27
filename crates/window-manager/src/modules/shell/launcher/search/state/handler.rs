@@ -127,6 +127,7 @@ impl SearchState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::ports::{CaretSelection, CaretUnit};
 
     #[test]
     fn query_is_the_only_thing_that_rebuilds_results() {
@@ -142,7 +143,9 @@ mod tests {
         );
 
         // Caret movement alone must not touch the result set.
-        state.text_mut().move_caret(-1, false, false);
+        state
+            .text_mut()
+            .move_caret(-1, CaretUnit::Character, CaretSelection::Move);
         state.sync(&[]);
         assert_eq!(state.query, "a");
         assert_eq!(state.caret(), 0);

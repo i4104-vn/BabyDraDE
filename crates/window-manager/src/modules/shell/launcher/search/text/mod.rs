@@ -68,6 +68,7 @@ mod words;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::ports::{CaretSelection, CaretUnit};
 
     #[test]
     fn inserts_at_caret_and_handles_utf8() {
@@ -85,7 +86,7 @@ mod tests {
         text.insert("firefox");
         text.home(false);
         for _ in 0..3 {
-            text.move_caret(1, false, true);
+            text.move_caret(1, CaretUnit::Character, CaretSelection::Extend);
         }
         assert_eq!(text.selection(), Some((0, 3)));
         text.insert("chrome");
@@ -112,7 +113,7 @@ mod tests {
         let mut text = SearchText::new();
         text.insert("one two");
         text.end(false);
-        text.move_caret(-1, true, false);
+        text.move_caret(-1, CaretUnit::Word, CaretSelection::Move);
         assert_eq!(text.caret(), 4);
         text.home(true);
         assert_eq!(text.selection(), Some((0, 4)));

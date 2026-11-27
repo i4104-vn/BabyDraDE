@@ -10,8 +10,8 @@ pub(crate) use crate::core::models::policy::GesturePolicy;
 pub(crate) use crate::shared::models::ports::{ConfigError, LaunchError};
 
 pub(crate) use input_ports::{
-    HitTestQuery, InputContext, InteractionBuffer, OverlayBridge, QueryText, SeatSink,
-    SystemActions, WindowControl,
+    CaretSelection, CaretUnit, HitTestQuery, InputContext, InteractionBuffer, OverlayBridge,
+    QueryText, SeatSink, SystemActions, WindowControl,
 };
 pub(crate) use usecase::{
     AutostartLauncher, CommandLauncher, LoadGesturePolicy, RotationTarget, ShortcutRepository,

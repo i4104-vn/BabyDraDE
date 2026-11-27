@@ -42,6 +42,24 @@ use crate::modules::window::interaction::{
 /// Toolkit-neutral editing operations exposed by a search query.
 ///
 /// The input layer edits text through this port instead of importing the
+/// Granularity of a caret movement step.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CaretUnit {
+    /// Move by a single character.
+    Character,
+    /// Move by a word boundary.
+    Word,
+}
+
+/// Whether a caret movement keeps or clears the current selection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CaretSelection {
+    /// Move the caret and drop the selection.
+    Move,
+    /// Extend the selection to the new caret position.
+    Extend,
+}
+
 /// launcher's concrete query model, keeping the dependency one-way.
 pub(crate) trait QueryText {
     /// Inserts text at the caret, replacing the current selection.
@@ -53,7 +71,7 @@ pub(crate) trait QueryText {
     /// Deletes from the previous word boundary up to the caret.
     fn delete_word(&mut self);
     /// Moves the caret, optionally by words and optionally extending selection.
-    fn move_caret(&mut self, direction: i32, word: bool, extend: bool);
+    fn move_caret(&mut self, direction: i32, unit: CaretUnit, selection: CaretSelection);
     /// Moves the caret to the start of the query.
     fn home(&mut self, extend: bool);
     /// Moves the caret to the end of the query.
