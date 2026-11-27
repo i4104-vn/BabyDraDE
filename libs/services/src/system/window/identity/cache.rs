@@ -80,9 +80,8 @@ static IDENTITY_CACHE: OnceLock<Mutex<IdentityCache>> = OnceLock::new();
 /// Cached resolution shared by the display-name and icon helpers, so the label
 /// and the icon always come from the very same desktop entry.
 ///
-/// # Panics
-/// Panics with `"identity cache lock poisoned"` when another thread panicked
-/// while holding the cache lock.
+/// A poisoned lock is recovered after a warning: title resolution is a
+/// best-effort UI helper and must never crash the caller.
 pub(super) fn resolve_window_identity(
     app_id: &str,
     title: &str,
@@ -96,14 +95,20 @@ pub(super) fn resolve_window_identity(
     let now = Instant::now();
     let cache = IDENTITY_CACHE.get_or_init(|| Mutex::new(IdentityCache::default()));
     {
-        let cache = cache.lock().expect("identity cache lock poisoned");
+        let cache = cache.lock().unwrap_or_else(|err| {
+            tracing::warn!("identity cache lock poisoned; recovering");
+            err.into_inner()
+        });
         if let Some(hit) = cache.get(&key, now, IDENTITY_TTL) {
             return hit;
         }
     }
     let identity = resolve_identity_for_pid(installed_apps().as_slice(), app_id, title, process_id);
     {
-        let mut cache = cache.lock().expect("identity cache lock poisoned");
+        let mut cache = cache.lock().unwrap_or_else(|err| {
+            tracing::warn!("identity cache lock poisoned; recovering");
+            err.into_inner()
+        });
         cache.insert(
             key,
             identity.clone(),

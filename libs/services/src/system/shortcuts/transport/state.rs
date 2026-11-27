@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use common::protocol::Incoming;
@@ -23,7 +23,9 @@ static NEXT_PEER: AtomicU64 = AtomicU64::new(1);
 /// Bus connection and responses received for requests still in flight.
 #[derive(Default)]
 pub(crate) struct ClientState {
-    pub(crate) bus: Option<Bus>,
+    /// Shared so a request can release the state mutex while waiting for its
+    /// reply, without serialising other calls on the same client.
+    pub(crate) bus: Option<Arc<Bus>>,
     pub(crate) deferred: VecDeque<Incoming>,
 }
 
@@ -35,11 +37,13 @@ pub(crate) struct ClientState {
 /// # Returns
 /// A guard for the client state.
 ///
-/// # Panics
-/// Panics with `"client state lock poisoned"` when another thread panicked
-/// while holding the lock; a poisoned state cannot be trusted.
+/// A poisoned lock is recovered: the transport state is best-effort and a
+/// panic in a previous request must not make every later request fail.
 pub(crate) fn lock_state(state: &Mutex<ClientState>) -> MutexGuard<'_, ClientState> {
-    state.lock().expect("client state lock poisoned")
+    state.lock().unwrap_or_else(|err| {
+        tracing::warn!("shortcut client state lock poisoned; recovering");
+        err.into_inner()
+    })
 }
 
 /// Returns whether an owner id can be sent to the compositor.
@@ -73,16 +77,16 @@ pub(crate) fn connect_bus() -> Result<Bus, ShortcutError> {
 /// * `state` - Mutable client state holding the optional connection.
 ///
 /// # Returns
-/// A reference to the connected bus.
+/// A shared handle to the connected bus that can outlive the state lock.
 ///
 /// # Errors
 /// Returns a connection failure when no bus is available.
-pub(crate) fn ensure_bus(state: &mut ClientState) -> Result<&Bus, ShortcutError> {
+pub(crate) fn ensure_bus(state: &mut ClientState) -> Result<Arc<Bus>, ShortcutError> {
     if state.bus.is_none() {
-        state.bus = Some(connect_bus()?);
+        state.bus = Some(Arc::new(connect_bus()?));
     }
     state
         .bus
-        .as_ref()
+        .clone()
         .ok_or_else(|| ShortcutError::Failed("shortcut bus is unavailable".to_string()))
 }

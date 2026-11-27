@@ -155,14 +155,14 @@ fn start_probe(state: &mut ActiveState, now: Instant) {
 /// `FALLBACK_INTERVAL` (and much more rarely when the tool is unavailable).
 /// Every caller sees the same cached snapshot between probes.
 ///
-/// # Panics
-/// Panics with `"active window state lock poisoned"` when another thread
-/// panicked while holding the lock.
+/// A poisoned cache lock is recovered after a warning: a panic in a watcher
+/// callback must not make every subsequent poll crash the caller.
 pub fn get_active_window() -> Option<ActiveWindowInfo> {
     let now = Instant::now();
-    let mut state = active_state()
-        .lock()
-        .expect("active window state lock poisoned");
+    let mut state = active_state().lock().unwrap_or_else(|err| {
+        tracing::warn!("active window state lock poisoned; recovering");
+        err.into_inner()
+    });
     collect_probe_result(&mut state, now);
     ensure_active_watcher(&mut state, now);
 

@@ -17,6 +17,9 @@ use super::snapshot::entries_for_owner;
 pub struct ShortcutClient {
     owner: String,
     state: Mutex<ClientState>,
+    /// Serialises the response-wait phase: one bus has one inbox, so two
+    /// concurrent waits would otherwise steal each other's replies.
+    recv_gate: Mutex<()>,
 }
 
 impl fmt::Debug for ShortcutClient {
@@ -49,6 +52,7 @@ impl ShortcutClient {
         Self {
             owner: owner.to_string(),
             state: Mutex::new(ClientState::default()),
+            recv_gate: Mutex::new(()),
         }
     }
 
@@ -163,19 +167,23 @@ impl ShortcutClient {
     /// # Errors
     /// Returns a connection, timeout or malformed-response failure.
     fn exchange(&self, request: &Request) -> Result<Response, ShortcutError> {
-        let mut state = lock_state(&self.state);
-        let id = ensure_bus(&mut state)?
-            .request(WM_PEER, request)
-            .map_err(io_error)?;
-        let mut deferred = std::mem::take(&mut state.deferred);
-        let result = {
-            let bus = state
-                .bus
-                .as_ref()
-                .ok_or_else(|| ShortcutError::Failed("shortcut bus is unavailable".to_string()))?;
-            await_response(bus, &mut deferred, id)
+        // The bus has a single inbox: only one wait may consume it at a time.
+        // This gate is separate from `state`, so connection setup and deferred
+        // bookkeeping never block on the compositor's response time.
+        let _wait_guard = self.recv_gate.lock().unwrap_or_else(|err| {
+            tracing::warn!("shortcut receive gate poisoned; recovering");
+            err.into_inner()
+        });
+
+        let (bus, id, mut deferred) = {
+            let mut state = lock_state(&self.state);
+            let bus = ensure_bus(&mut state)?;
+            let id = bus.request(WM_PEER, request).map_err(io_error)?;
+            (bus, id, std::mem::take(&mut state.deferred))
         };
-        state.deferred = deferred;
+        let result = await_response(&bus, &mut deferred, id);
+        // Always restore deferred replies, including on error.
+        lock_state(&self.state).deferred.extend(deferred);
         result
     }
 }

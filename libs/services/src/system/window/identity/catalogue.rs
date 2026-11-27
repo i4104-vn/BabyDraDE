@@ -102,12 +102,14 @@ pub(crate) fn catalogue_due(loaded_at: Option<Instant>, now: Instant, ttl: Durat
 
 /// Returns the installed-entry catalogue, refreshing it at most once per TTL.
 ///
-/// # Panics
-/// Panics with `"catalogue lock poisoned"` when another thread panicked while
-/// holding the cache lock.
+/// A poisoned lock is recovered after a warning so a single panicking caller
+/// cannot disable application-name resolution for the rest of the session.
 pub(super) fn installed_apps() -> Arc<Vec<AppEntry>> {
     let slot = CATALOGUE.get_or_init(|| Mutex::new(None));
-    let mut guard = slot.lock().expect("catalogue lock poisoned");
+    let mut guard = slot.lock().unwrap_or_else(|err| {
+        tracing::warn!("application catalogue lock poisoned; recovering");
+        err.into_inner()
+    });
     let now = Instant::now();
     if catalogue_due(
         guard.as_ref().map(|cached| cached.loaded_at),

@@ -66,9 +66,10 @@ fn watcher_loop() {
         match bus.recv_timeout(Duration::from_secs(1)) {
             Some(Incoming::Event(message)) if message.topic.as_deref() == Some("window.active") => {
                 if let Ok(Event::ActiveWindowChanged { info }) = message.decode::<Event>() {
-                    let mut state = active_state()
-                        .lock()
-                        .expect("active window state lock poisoned");
+                    let mut state = active_state().lock().unwrap_or_else(|err| {
+                        tracing::warn!("active window state lock poisoned; recovering");
+                        err.into_inner()
+                    });
                     state.bus_info = Some(info);
                 }
             }
@@ -83,9 +84,10 @@ fn watcher_loop() {
 
 /// Marks the watcher as gone so throttled fallback probing can resume.
 fn watcher_stopped() {
-    let mut state = active_state()
-        .lock()
-        .expect("active window state lock poisoned");
+    let mut state = active_state().lock().unwrap_or_else(|err| {
+        tracing::warn!("active window state lock poisoned; recovering");
+        err.into_inner()
+    });
     state.watcher_pending = false;
     state.bus_info = None;
 }
